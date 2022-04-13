@@ -9,6 +9,7 @@ specifiers:
   '@vitejs/plugin-vue': ^2.3.1
   '@vueuse/core': ^8.2.5
   '@vueuse/head': ^0.7.6
+  consola: ^2.15.3
   critters: ^0.0.16
   cross-env: ^7.0.3
   eslint: ^8.13.0
@@ -55,6 +56,7 @@ devDependencies:
   '@types/markdown-it-link-attributes': 3.0.1
   '@types/nprogress': 0.2.0
   '@vitejs/plugin-vue': 2.3.1_vite@2.9.2+vue@3.2.32
+  consola: 2.15.3
   critters: 0.0.16
   cross-env: 7.0.3
   eslint: 8.13.0

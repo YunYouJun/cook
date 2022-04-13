@@ -5,6 +5,7 @@
 declare module '@vue/runtime-core' {
   export interface GlobalComponents {
     BaseFooter: typeof import('./components/BaseFooter.vue')['default']
+    ChooseFood: typeof import('./components/ChooseFood.vue')['default']
     Counter: typeof import('./components/Counter.vue')['default']
     Menu: typeof import('./components/Menu.vue')['default']
     README: typeof import('./components/README.md')['default']

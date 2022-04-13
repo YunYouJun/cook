@@ -6,5 +6,8 @@
     <p m="2">
       好的，今天我们来做菜！
     </p>
+    <p>
+      <ChooseFood />
+    </p>
   </div>
 </template>

@@ -1,0 +1,14 @@
+html {
+  color: var(--c-text);
+  background-color: var(--c-bg);
+}
+
+a {
+  color: var(--c-text);
+}
+
+.tag {
+  margin: 4px;
+  padding: 2px 4px;
+  border: 1px solid var(--c-text);
+}

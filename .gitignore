@@ -1,5 +1,5 @@
 # auto generate
-public/data/recipe.json
+src/data/recipe.json
 
 .DS_Store
 .vite-ssg-dist
