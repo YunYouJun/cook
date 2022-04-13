@@ -1,3 +1,6 @@
+# auto generate
+public/data/recipe.json
+
 .DS_Store
 .vite-ssg-dist
 .vite-ssg-temp
