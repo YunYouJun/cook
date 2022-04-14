@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { storeToRefs } from 'pinia'
+import { useGtm } from '@gtm-support/vue-gtm'
 import MeatTag from './MeatTag.vue'
 import StapleTag from './StapleTag.vue'
 import DishTag from './DishTag.vue'
@@ -28,8 +29,37 @@ const displayedRecipe = computed(() => {
   })
 })
 
-const toggleStuff = (item: StuffItem) => {
+const gtm = useGtm()
+
+const toggleStuff = (item: StuffItem, category = '') => {
+  gtm?.trackEvent({
+    event: 'stuff',
+    category,
+    action: 'click',
+    label: '食材',
+    value: item.name,
+  })
+
   rStore.toggleStuff(item.name)
+}
+
+/**
+ * toggle tool
+ * @param item
+ */
+const clickTool = (item: StuffItem) => {
+  if (curTool.value === item.name)
+    curTool.value = ''
+  else
+    curTool.value = item.name
+
+  gtm?.trackEvent({
+    event: 'tool',
+    category: 'tool',
+    action: 'click',
+    label: '工具',
+    value: item.name,
+  })
 }
 </script>
 
@@ -50,7 +80,7 @@ const toggleStuff = (item: StuffItem) => {
     <VegetableTag
       v-for="item, i in vegetable" :key="i"
       :active="curStuff.includes(item.name)"
-      @click="toggleStuff(item)"
+      @click="toggleStuff(item, 'vegetable')"
     >
       <span v-if="item.emoji" class="inline-flex">{{ item.emoji }}</span>
       <span v-else-if="item.image" class="inline-flex">
@@ -70,7 +100,7 @@ const toggleStuff = (item: StuffItem) => {
     <MeatTag
       v-for="item, i in meat" :key="i"
       :active="curStuff.includes(item.name)"
-      @click="toggleStuff(item)"
+      @click="toggleStuff(item, 'meat')"
     >
       <span>{{ item.emoji }}</span>
       <span m="l-1">
@@ -87,7 +117,7 @@ const toggleStuff = (item: StuffItem) => {
     <StapleTag
       v-for="item, i in staple" :key="i"
       :active="curStuff.includes(item.name)"
-      @click="toggleStuff(item)"
+      @click="toggleStuff(item, 'staple')"
     >
       <span>{{ item.emoji }}</span>
       <span m="l-1">
@@ -104,7 +134,7 @@ const toggleStuff = (item: StuffItem) => {
     <ToolTag
       v-for="item, i in tools" :key="i"
       :active="curTool === item.name"
-      @click="curTool === item.name ? curTool = '' : curTool = item.name"
+      @click="clickTool(item)"
     >
       <span v-if="item.emoji" class="inline-flex">{{ item.emoji }}</span>
       <span v-else-if="item.icon" class="inline-flex">
