@@ -49,6 +49,6 @@ jobs:
 
       - name: Convert CSV to JSON
         run: npm run convert
-        
+
       - name: Typecheck
         run: pnpm run typecheck

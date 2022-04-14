@@ -1,3 +1,4 @@
 {
-  "extends": "@antfu"
+  "extends": "@antfu",
+  "ignorePatterns": "*.json"
 }
