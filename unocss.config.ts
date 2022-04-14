@@ -11,7 +11,7 @@ import {
 
 import { tools } from './src/data/foot'
 
-const safelist = 'm-auto text-left'.split(' ')
+const safelist = 'prose prose-sm m-auto text-left'.split(' ')
 
 tools.forEach((item) => {
   if (item.icon)
