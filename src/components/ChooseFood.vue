@@ -55,7 +55,7 @@ const toggleStuff = (item: StuffItem) => {
     >
       <span v-if="item.emoji" class="inline-flex">{{ item.emoji }}</span>
       <span v-else-if="item.image" class="inline-flex">
-        <img class="inline-flex" width="10" height="10" :src="item.image" :alt="item.name">
+        <img class="inline-flex" w="2" h="2" width="10" height="10" :src="item.image" :alt="item.name">
       </span>
       <span class="inline-flex" m="l-1">
         {{
