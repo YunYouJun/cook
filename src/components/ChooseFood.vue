@@ -54,7 +54,7 @@ const clickTool = (item: StuffItem) => {
     curTool.value = item.name
 
   gtm?.trackEvent({
-    event: 'tool',
+    event: 'stuff',
     category: 'tool',
     action: 'click',
     label: '工具',
