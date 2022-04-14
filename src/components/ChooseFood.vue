@@ -30,8 +30,6 @@ const displayedRecipe = computed(() => {
 
 const toggleStuff = (item: StuffItem) => {
   rStore.toggleStuff(item.name)
-  if (item.alias)
-    rStore.toggleStuff(item.alias)
 }
 </script>
 
@@ -131,7 +129,7 @@ const toggleStuff = (item: StuffItem) => {
         😢 还没有这样的食谱呢……
         <br>
         <a class="text-sm text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt" target="_blank">
-          隔离食用手册大全
+          ❤️ 隔离食用手册大全 ❤️
         </a>
       </p>
     </Transition>
