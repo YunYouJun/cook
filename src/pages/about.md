@@ -3,8 +3,6 @@ title: 关于
 ---
 
 <div class="text-center">
-  <!-- You can use Vue components inside markdown -->
-  <div i-ri-information-line class="text-4xl -mb-6 m-auto" />
   <h3>关于</h3>
 </div>
 

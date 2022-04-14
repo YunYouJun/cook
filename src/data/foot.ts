@@ -11,6 +11,10 @@ export interface StuffItem {
    * 图片链接
    */
   image?: string
+  /**
+   * 别名，譬如：西红柿/番茄
+   */
+  alias?: string
 }
 
 /**
@@ -40,6 +44,7 @@ export const vegetable: StuffItem[] = [
   {
     name: '番茄',
     emoji: '🍅',
+    alias: '西红柿',
   },
   {
     name: '芹菜',
