@@ -34,10 +34,9 @@ const gtm = useGtm()
 const toggleStuff = (item: StuffItem, category = '') => {
   gtm?.trackEvent({
     event: 'stuff',
-    category,
+    category: `${category}_${item.name}`,
     action: 'click',
     label: '食材',
-    value: item.name,
   })
 
   rStore.toggleStuff(item.name)
@@ -55,10 +54,9 @@ const clickTool = (item: StuffItem) => {
 
   gtm?.trackEvent({
     event: 'stuff',
-    category: 'tool',
+    category: `tool_${item.name}`,
     action: 'click',
     label: '工具',
-    value: item.name,
   })
 }
 </script>
