@@ -105,7 +105,7 @@ const toggleStuff = (item: StuffItem) => {
     <ToolTag
       v-for="item, i in tools" :key="i"
       :active="curTool === item.name"
-      @click="curTool = item.name"
+      @click="curTool === item.name ? curTool = '' : curTool = item.name"
     >
       <span v-if="item.emoji" class="inline-flex">{{ item.emoji }}</span>
       <span v-else-if="item.icon" class="inline-flex">
