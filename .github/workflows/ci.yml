@@ -47,5 +47,8 @@ jobs:
       - name: Install
         run: pnpm install
 
+      - name: Convert CSV to JSON
+        run: npm run convert
+        
       - name: Typecheck
         run: pnpm run typecheck

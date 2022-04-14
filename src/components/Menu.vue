@@ -3,7 +3,7 @@ import { toggleDark } from '~/composables'
 </script>
 
 <template>
-  <nav text-xl mt-6>
+  <nav text-xl p="t-6">
     <RouterLink class="icon-btn mx-2" to="/" title="首页">
       <div i-ri-home-2-line />
     </RouterLink>
