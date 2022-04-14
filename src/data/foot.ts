@@ -80,8 +80,8 @@ export const vegetable: StuffItem[] = [
   },
   {
     name: '包菜',
-    emoji: '',
-    image: '/images/cabbage-dog.jpg',
+    emoji: '🥗',
+    // image: '/images/cabbage-dog.jpg',
   },
 ]
 
