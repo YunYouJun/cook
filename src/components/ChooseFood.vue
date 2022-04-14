@@ -36,14 +36,15 @@ const toggleStuff = (item: StuffItem) => {
 </script>
 
 <template>
-  <button m="x-1" class="btn" :bg="strict && 'orange-500 hover:orange-600'" @click="strict = !strict">
-    <span v-if="strict">
-      严格模式
-    </span>
-    <span v-else>
-      宽松模式
-    </span>
-  </button>
+  <div class="inline-flex justify-center items-center">
+    <span :class="!strict && 'text-green-600'" font="bold" m="x-1" @click="strict = false">模糊匹配</span>
+    <label m="x-1" class="switch">
+      <input v-model="strict" type="checkbox">
+      <span class="slider round" />
+    </label>
+    <span :class="strict && 'text-green-600'" font="bold" m="x-1" @click="strict = true">严格匹配</span>
+  </div>
+
   <div m="y-4">
     <h2 text="xl" font="bold" p="1">
       🥬 菜菜
@@ -136,3 +137,63 @@ const toggleStuff = (item: StuffItem) => {
     </Transition>
   </div>
 </template>
+
+<style lang="scss">
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 28px;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+$size: 20px;
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: $size;
+  width: $size;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: green;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX($size);
+  -ms-transform: translateX($size);
+  transform: translateX($size);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 28px;
+
+  &:before {
+    border-radius: 50%;
+  }
+}
+</style>
