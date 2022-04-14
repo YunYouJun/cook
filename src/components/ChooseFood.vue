@@ -36,7 +36,7 @@ const toggleStuff = (item: StuffItem) => {
       @click="toggleStuff(item)"
     >
       <span v-if="item.emoji">{{ item.emoji }}</span>
-      <img v-else-if="item.image" class="inline-flex" width="12" w="3" :src="item.image">
+      <img v-else-if="item.image" class="inline-flex" width="12" w="3" :src="item.image" :alt="item.name">
       <span m="l-1">
         {{
           item.name
@@ -78,8 +78,7 @@ const toggleStuff = (item: StuffItem) => {
       </span>
     </StapleTag>
   </div>
-  <hr p="2" opacity="10">
-  <div>
+  <div p="2 t-3" m="2" class="transition shadow hover:shadow-md" bg="gray-400/8">
     <h2 text="xl" font="bold" p="1">
       📄 菜谱
     </h2>
@@ -90,7 +89,7 @@ const toggleStuff = (item: StuffItem) => {
       <p v-else p="2">
         😢 还没有这样的食谱呢……
         <br>
-        <a class="text-sm text-blue-500" href="https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt" target="_blank">
+        <a class="text-sm text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt" target="_blank">
           隔离食用手册大全
         </a>
       </p>
