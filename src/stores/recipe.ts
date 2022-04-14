@@ -2,6 +2,8 @@ import { acceptHMRUpdate, defineStore } from 'pinia'
 
 export const useRecipeStore = defineStore('recipe', () => {
   const curStuff = ref(new Set<string>())
+  const curTool = ref('')
+
   const selectedStuff = computed(() => Array.from(curStuff.value))
 
   function toggleStuff(name: string) {
@@ -14,6 +16,7 @@ export const useRecipeStore = defineStore('recipe', () => {
   }
 
   return {
+    curTool,
     selectedStuff,
     toggleStuff,
   }

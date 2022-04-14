@@ -9,6 +9,15 @@ import {
   transformerVariantGroup,
 } from 'unocss'
 
+import { tools } from './src/data/foot'
+
+const safelist = 'm-auto text-left'.split(' ')
+
+tools.forEach((item) => {
+  if (item.icon)
+    safelist.push(item.icon)
+})
+
 export default defineConfig({
   shortcuts: [
     ['tag', 'text-sm cursor-pointer inline-flex justify-center items-center transition shadow hover:shadow-md'],
@@ -35,5 +44,5 @@ export default defineConfig({
     transformerDirectives(),
     transformerVariantGroup(),
   ],
-  safelist: 'prose prose-sm m-auto text-left'.split(' '),
+  safelist,
 })

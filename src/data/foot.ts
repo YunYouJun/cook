@@ -15,6 +15,10 @@ export interface StuffItem {
    * 别名，譬如：西红柿/番茄
    */
   alias?: string
+  /**
+   * 图标名称
+   */
+  icon?: string
 }
 
 /**
@@ -146,5 +150,28 @@ export const staple: StuffItem[] = [
   {
     name: '方便面',
     emoji: '🍜',
+  },
+]
+
+export const tools: StuffItem[] = [
+  {
+    name: '烤箱',
+    emoji: '',
+    icon: 'i-mdi-toaster-oven',
+  },
+  {
+    name: '空气炸锅',
+    emoji: '',
+    icon: 'i-fe-frying-pan',
+  },
+  {
+    name: '微波炉',
+    emoji: '',
+    icon: 'i-ic-outline-microwave',
+  },
+  {
+    name: '电饭煲',
+    emoji: '',
+    icon: 'i-gg-smart-home-cooker',
   },
 ]

@@ -15,6 +15,7 @@ declare module '@vue/runtime-core' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     StapleTag: typeof import('./components/StapleTag.vue')['default']
+    ToolTag: typeof import('./components/ToolTag.vue')['default']
     VegetableTag: typeof import('./components/VegetableTag.vue')['default']
   }
 }

@@ -1,9 +1,10 @@
 <script lang="ts" setup>
+import { storeToRefs } from 'pinia'
 import MeatTag from './MeatTag.vue'
 import StapleTag from './StapleTag.vue'
 import DishTag from './DishTag.vue'
 import type { StuffItem } from '~/data/foot'
-import { meat, staple, vegetable } from '~/data/foot'
+import { meat, staple, tools, vegetable } from '~/data/foot'
 import recipeData from '~/data/recipe.json'
 import type { Recipe } from '~/types'
 import { useRecipeStore } from '~/stores/recipe'
@@ -11,14 +12,19 @@ const recipe = ref(recipeData as Recipe)
 
 const rStore = useRecipeStore()
 const curStuff = computed(() => rStore.selectedStuff)
+const { curTool } = storeToRefs(rStore)
 
 const strict = ref(false)
 const displayedRecipe = computed(() => {
   return recipe.value.filter((item) => {
-    if (strict.value)
-      return curStuff.value.every(stuff => item.stuff.includes(stuff))
-    else
-      return curStuff.value.some(stuff => item.stuff.includes(stuff))
+    if (strict.value) {
+      const stuffFlag = curStuff.value.every(stuff => item.stuff.includes(stuff))
+      return curTool.value ? stuffFlag && item.tools?.includes(curTool.value) : stuffFlag
+    }
+    else {
+      const stuffFlag = curStuff.value.some(stuff => item.stuff.includes(stuff))
+      return stuffFlag || item.tools?.includes(curTool.value)
+    }
   })
 })
 
@@ -91,6 +97,26 @@ const toggleStuff = (item: StuffItem) => {
         }}
       </span>
     </StapleTag>
+  </div>
+  <div m="y-4">
+    <h2 text="xl" font="bold" p="1">
+      🔧 工具
+    </h2>
+    <ToolTag
+      v-for="item, i in tools" :key="i"
+      :active="curTool === item.name"
+      @click="curTool = item.name"
+    >
+      <span v-if="item.emoji" class="inline-flex">{{ item.emoji }}</span>
+      <span v-else-if="item.icon" class="inline-flex">
+        <div :class="item.icon" />
+      </span>
+      <span class="inline-flex" m="l-1">
+        {{
+          item.name
+        }}
+      </span>
+    </ToolTag>
   </div>
   <div p="2 y-3" m="2" class="transition shadow hover:shadow-md" bg="gray-400/8">
     <h2 text="xl" font="bold" p="1">

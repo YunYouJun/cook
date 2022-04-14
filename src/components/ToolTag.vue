@@ -1,0 +1,16 @@
+<script lang="ts" setup>
+defineProps<{
+  active: boolean
+}>()
+</script>
+
+<template>
+  <span
+    class="tag rounded" p="x-2"
+    border="~ stone-200 dark:stone-800"
+    :bg="active ? 'stone-500 opacity-90' : 'stone-300 opacity-20'"
+    :text="active ? 'stone-100' : 'stone-800 dark:stone-200'"
+  >
+    <slot />
+  </span>
+</template>
