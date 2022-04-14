@@ -2,7 +2,7 @@
 import fs from 'fs'
 import path from 'path'
 import consola from 'consola'
-import type { Recipe } from '~/types'
+import type { Recipe, RecipeItem } from '~/types'
 
 const recipeCsvFile = path.resolve(__dirname, '../src/data/recipe.csv')
 const recipeJsonFile = path.resolve(__dirname, '../src/data/recipe.json')
@@ -11,7 +11,7 @@ function run() {
   const csvData = fs.readFileSync(recipeCsvFile, 'utf-8')
   const lines = csvData.split(/\r?\n/)
 
-  if (lines[0].trim() !== '名称,食材,链接,标签/描述,方法,工具') {
+  if (lines[0].trim() !== 'name,stuff,link,difficulty,tags,methods,tools') {
     consola.warn(`Headers Changed: ${lines[0]}`)
     return
   }
@@ -26,9 +26,10 @@ function run() {
         name: attrs[0].trim(),
         stuff: attrs[1].trim().split(sep),
         link: attrs[2].trim(),
-        tags: attrs[3].trim().split(sep),
-        methods: attrs[4].trim().split(sep),
-        tools: attrs[5].trim().split(sep),
+        difficulty: attrs[3] && attrs[3].trim() as RecipeItem['difficulty'],
+        tags: attrs[4] ? attrs[4].trim().split(sep) : [],
+        methods: attrs[5] ? (attrs[5].trim().split(sep)) as RecipeItem['methods'] : [],
+        tools: attrs[6] ? attrs[6].trim().split(sep) : [],
       })
     }
   })

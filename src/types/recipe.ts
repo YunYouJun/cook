@@ -1,3 +1,5 @@
+export type Difficulty = '简单' | '普通' | '困难'
+
 export interface RecipeItem {
   /**
    * 菜名
@@ -12,17 +14,21 @@ export interface RecipeItem {
    */
   stuff: string[]
   /**
+   * 难度
+   */
+  difficulty?: Difficulty | ''
+  /**
    * 标签
    */
-  tags: string[]
+  tags?: string[]
   /**
    * 方式
    */
-  methods: string[]
+  methods?: ('炒' | '煎' | '烘' | '炸')[]
   /**
    * 工具
    */
-  tools: string[]
+  tools?: string[]
 }
 
 export type Recipe = RecipeItem[]

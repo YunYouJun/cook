@@ -12,9 +12,13 @@ const recipe = ref(recipeData as Recipe)
 const rStore = useRecipeStore()
 const curStuff = computed(() => rStore.selectedStuff)
 
+const strict = ref(false)
 const displayedRecipe = computed(() => {
   return recipe.value.filter((item) => {
-    return curStuff.value.some(stuff => item.stuff.includes(stuff))
+    if (strict.value)
+      return curStuff.value.every(stuff => item.stuff.includes(stuff))
+    else
+      return curStuff.value.some(stuff => item.stuff.includes(stuff))
   })
 })
 
@@ -26,18 +30,28 @@ const toggleStuff = (item: StuffItem) => {
 </script>
 
 <template>
+  <button m="x-1" class="btn" :bg="strict && 'orange-500 hover:orange-600'" @click="strict = !strict">
+    <span v-if="strict">
+      严格模式
+    </span>
+    <span v-else>
+      宽松模式
+    </span>
+  </button>
   <div m="y-4">
     <h2 text="xl" font="bold" p="1">
-      🥬 蔬菜区
+      🥬 菜菜
     </h2>
     <VegetableTag
       v-for="item, i in vegetable" :key="i"
       :active="curStuff.includes(item.name)"
       @click="toggleStuff(item)"
     >
-      <span v-if="item.emoji">{{ item.emoji }}</span>
-      <img v-else-if="item.image" class="inline-flex" width="12" w="3" :src="item.image" :alt="item.name">
-      <span m="l-1">
+      <span v-if="item.emoji" class="inline-flex">{{ item.emoji }}</span>
+      <span v-else-if="item.image" class="inline-flex">
+        <img class="inline-flex" width="10" height="10" :src="item.image" :alt="item.name">
+      </span>
+      <span class="inline-flex" m="l-1">
         {{
           item.name
         }}
@@ -46,7 +60,7 @@ const toggleStuff = (item: StuffItem) => {
   </div>
   <div m="y-4">
     <h2 text="xl" font="bold" p="1">
-      🥩 荤菜区
+      🥩 肉肉
     </h2>
     <MeatTag
       v-for="item, i in meat" :key="i"
@@ -63,7 +77,7 @@ const toggleStuff = (item: StuffItem) => {
   </div>
   <div m="y-4">
     <h2 text="xl" font="bold" p="1">
-      🍚 主食区
+      🍚 主食
     </h2>
     <StapleTag
       v-for="item, i in staple" :key="i"
@@ -78,7 +92,7 @@ const toggleStuff = (item: StuffItem) => {
       </span>
     </StapleTag>
   </div>
-  <div p="2 t-3" m="2" class="transition shadow hover:shadow-md" bg="gray-400/8">
+  <div p="2 y-3" m="2" class="transition shadow hover:shadow-md" bg="gray-400/8">
     <h2 text="xl" font="bold" p="1">
       📄 菜谱
     </h2>
