@@ -13,19 +13,19 @@ const recipe = ref(recipeData as Recipe)
 
 const rStore = useRecipeStore()
 const curStuff = computed(() => rStore.selectedStuff)
-const { curTool } = storeToRefs(rStore)
+const curTools = computed(() => rStore.selectedTools)
 
 const strict = ref(false)
 const displayedRecipe = computed(() => {
   return recipe.value.filter((item) => {
     if (strict.value) {
       const stuffFlag = curStuff.value.every(stuff => item.stuff.includes(stuff))
-      const toolFlag = curTool.value ? item.tools?.includes(curTool.value) : true
+      const toolFlag = curTools.value.every(tool => item.tools?.includes(tool))
       return stuffFlag && toolFlag
     }
     else {
       const stuffFlag = curStuff.value.some(stuff => item.stuff.includes(stuff))
-      const toolFlag = curTool.value ? item.tools?.includes(curTool.value) : true
+      const toolFlag = curTools.value.some(tool => item.tools?.includes(tool))
       return stuffFlag || toolFlag
     }
   })
@@ -49,11 +49,8 @@ const toggleStuff = (item: StuffItem, category = '') => {
  * @param item
  */
 const clickTool = (item: StuffItem) => {
-  const value = typeof item.value !== 'undefined' ? item.value : item.name
-  if (curTool.value === value)
-    curTool.value = ''
-  else
-    curTool.value = value
+  const value = item.name
+  rStore.toggleTools(value)
 
   gtm?.trackEvent({
     event: 'stuff',
@@ -125,7 +122,7 @@ const clickTool = (item: StuffItem) => {
     </h2>
     <ToolTag
       v-for="item, i in tools" :key="i"
-      :active="[item.value, item.name].includes(curTool)"
+      :active="curTools.includes(item.name)"
       @click="clickTool(item)"
     >
       <span v-if="item.emoji" class="inline-flex">{{ item.emoji }}</span>
@@ -134,7 +131,7 @@ const clickTool = (item: StuffItem) => {
       </span>
       <span class="inline-flex" m="l-1">
         {{
-          item.name
+          item.label || item.name
         }}
       </span>
     </ToolTag>
@@ -157,7 +154,7 @@ const clickTool = (item: StuffItem) => {
     <h2 text="xl" font="bold" p="1">
       🍲 今天的菜
       <br>
-      <small class="inline-flex justify-center items-center" text="xs">数据来源：
+      <small class="inline-flex justify-center items-center" text="xs">菜谱数据来源：
         <a class="inline-flex justify-center items-center" style="color: #ea7a99" href="https://www.bilibili.com/v/food" target="_blank">
           <div class="inline-flex" i-ri-bilibili-line />
           <span m="l-1" class="inline-flex" style="margin-top: 1px;">B 站</span>

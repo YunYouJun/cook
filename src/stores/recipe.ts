@@ -2,9 +2,10 @@ import { acceptHMRUpdate, defineStore } from 'pinia'
 
 export const useRecipeStore = defineStore('recipe', () => {
   const curStuff = ref(new Set<string>())
-  const curTool = ref('')
+  const curTools = ref(new Set<string>())
 
   const selectedStuff = computed(() => Array.from(curStuff.value))
+  const selectedTools = computed(() => Array.from(curTools.value))
 
   function toggleStuff(name: string) {
     if (!curStuff)
@@ -15,10 +16,20 @@ export const useRecipeStore = defineStore('recipe', () => {
       curStuff.value.add(name)
   }
 
+  function toggleTools(name: string) {
+    if (!curTools)
+      return
+    if (curTools.value.has(name))
+      curTools.value.delete(name)
+    else
+      curTools.value.add(name)
+  }
+
   return {
-    curTool,
+    selectedTools,
     selectedStuff,
     toggleStuff,
+    toggleTools,
   }
 })
 

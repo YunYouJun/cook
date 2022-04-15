@@ -20,9 +20,9 @@ export interface StuffItem {
    */
   icon?: string
   /**
-   * value
+   * 显示标签
    */
-  value?: string
+  label?: string
 }
 
 /**
@@ -179,9 +179,9 @@ export const tools: StuffItem[] = [
     icon: 'i-gg-smart-home-cooker',
   },
   {
-    name: '一口啥都能煮的大锅',
+    label: '一口啥都能煮的大锅',
+    name: '一口大锅',
     emoji: '',
     icon: 'i-mdi-pot-steam-outline',
-    value: '',
   },
 ]
