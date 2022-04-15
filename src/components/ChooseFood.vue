@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { storeToRefs } from 'pinia'
 import { useGtm } from '@gtm-support/vue-gtm'
 import MeatTag from './MeatTag.vue'
 import StapleTag from './StapleTag.vue'
