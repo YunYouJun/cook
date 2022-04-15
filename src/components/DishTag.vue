@@ -9,9 +9,9 @@ const gtm = useGtm()
 
 const triggerGtm = (val: string) => {
   gtm?.trackEvent({
-    event: 'recipe',
+    event: 'click',
     category: `dish_${val}`,
-    action: 'click',
+    action: 'click_recipe',
     label: '跳转菜谱',
   })
 }

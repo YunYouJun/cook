@@ -36,9 +36,9 @@ const gtm = useGtm()
 
 const toggleStuff = (item: StuffItem, category = '') => {
   gtm?.trackEvent({
-    event: 'stuff',
+    event: 'click',
     category: `${category}_${item.name}`,
-    action: 'click',
+    action: 'click_stuff',
     label: '食材',
   })
 
@@ -54,9 +54,9 @@ const clickTool = (item: StuffItem) => {
   rStore.toggleTools(value)
 
   gtm?.trackEvent({
-    event: 'stuff',
+    event: 'click',
     category: `tool_${value}`,
-    action: 'click',
+    action: 'click_tool',
     label: '工具',
   })
 }
@@ -151,7 +151,7 @@ const clickTool = (item: StuffItem) => {
     </span>
   </div> -->
 
-  <div m="2" p="2" class="transition shadow hover:shadow-md" bg="gray-400/8">
+  <div m="2 t-4" p="2" class="transition shadow hover:shadow-md" bg="gray-400/8">
     <h2 text="xl" font="bold" p="1">
       🍲 今天的菜
       <br>
