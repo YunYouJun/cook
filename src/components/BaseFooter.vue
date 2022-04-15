@@ -4,7 +4,7 @@ const displayICP = ref(true)
 
 onBeforeMount(() => {
   if (isClient)
-    displayICP.value = ['www.yunyoujun.cn', 'localhost'].includes(window.location.hostname)
+    displayICP.value = ['cook.yunyoujun.cn', 'localhost'].includes(window.location.hostname)
 })
 </script>
 
