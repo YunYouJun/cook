@@ -21,7 +21,7 @@ const displayedRecipe = computed(() => {
     if (strict.value) {
       const stuffFlag = curStuff.value.every(stuff => item.stuff.includes(stuff))
       const toolFlag = curTool.value ? item.tools?.includes(curTool.value) : true
-      return curTool.value ? stuffFlag && toolFlag : stuffFlag
+      return stuffFlag && toolFlag
     }
     else {
       const stuffFlag = curStuff.value.some(stuff => item.stuff.includes(stuff))
@@ -49,14 +49,15 @@ const toggleStuff = (item: StuffItem, category = '') => {
  * @param item
  */
 const clickTool = (item: StuffItem) => {
-  if (curTool.value === item.name)
+  const value = typeof item.value !== 'undefined' ? item.value : item.name
+  if (curTool.value === value)
     curTool.value = ''
   else
-    curTool.value = item.name
+    curTool.value = value
 
   gtm?.trackEvent({
     event: 'stuff',
-    category: `tool_${item.name}`,
+    category: `tool_${value}`,
     action: 'click',
     label: '工具',
   })
@@ -124,7 +125,7 @@ const clickTool = (item: StuffItem) => {
     </h2>
     <ToolTag
       v-for="item, i in tools" :key="i"
-      :active="curTool === item.name"
+      :active="[item.value, item.name].includes(curTool)"
       @click="clickTool(item)"
     >
       <span v-if="item.emoji" class="inline-flex">{{ item.emoji }}</span>

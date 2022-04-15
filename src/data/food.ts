@@ -19,6 +19,10 @@ export interface StuffItem {
    * 图标名称
    */
   icon?: string
+  /**
+   * value
+   */
+  value?: string
 }
 
 /**
@@ -178,5 +182,6 @@ export const tools: StuffItem[] = [
     name: '一口啥都能煮的大锅',
     emoji: '',
     icon: 'i-mdi-pot-steam-outline',
+    value: '',
   },
 ]
