@@ -22,7 +22,7 @@ const displayedRecipe = computed(() => {
       const stuffFlag = curStuff.value.every(stuff => item.stuff.includes(stuff))
       // const toolFlag = curTools.value.every(tool => item.tools?.includes(tool))
       const toolFlag = curTools.value.some(tool => item.tools?.includes(tool))
-      return stuffFlag && toolFlag
+      return curTools.value.length ? stuffFlag && toolFlag : stuffFlag
     }
     else {
       const stuffFlag = curStuff.value.some(stuff => item.stuff.includes(stuff))
