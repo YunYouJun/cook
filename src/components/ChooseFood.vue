@@ -20,11 +20,13 @@ const displayedRecipe = computed(() => {
   return recipe.value.filter((item) => {
     if (strict.value) {
       const stuffFlag = curStuff.value.every(stuff => item.stuff.includes(stuff))
-      return curTool.value ? stuffFlag && item.tools?.includes(curTool.value) : stuffFlag
+      const toolFlag = curTool.value ? item.tools?.includes(curTool.value) : true
+      return curTool.value ? stuffFlag && toolFlag : stuffFlag
     }
     else {
       const stuffFlag = curStuff.value.some(stuff => item.stuff.includes(stuff))
-      return stuffFlag || item.tools?.includes(curTool.value)
+      const toolFlag = curTool.value ? item.tools?.includes(curTool.value) : true
+      return stuffFlag || toolFlag
     }
   })
 })
