@@ -26,6 +26,7 @@ specifiers:
   pnpm: ^6.32.7
   prism-theme-vars: ^0.2.2
   sass: ^1.50.0
+  star-markdown-css: ^0.3.3
   typescript: ^4.6.3
   unocss: ^0.31.3
   unplugin-auto-import: ^0.7.1
@@ -74,6 +75,7 @@ devDependencies:
   markdown-it-prism: 2.2.3
   pnpm: 6.32.7
   sass: 1.50.0
+  star-markdown-css: 0.3.3
   typescript: 4.6.3
   unocss: 0.31.3_vite@2.9.5
   unplugin-auto-import: 0.7.1_@vueuse+core@8.2.6+vite@2.9.5
@@ -4563,7 +4565,7 @@ packages:
     dependencies:
       universalify: 2.0.0
     optionalDependencies:
-      graceful-fs: 4.2.9
+      graceful-fs: 4.2.10
     dev: true
 
   /jsonpointer/5.0.0:
@@ -5732,6 +5734,10 @@ packages:
 
   /sprintf-js/1.0.3:
     resolution: {integrity: sha1-BOaSb2YolTVPPdAVIDYzuFcpfiw=}
+    dev: true
+
+  /star-markdown-css/0.3.3:
+    resolution: {integrity: sha512-F8hrbZQIM4CryGJbNGkbUfLTgnDF0+bTuo7Omtw0+OOjf5JGPWWj0rVqcKFCuypZwuyraDh3CZ46Yhf5LDj8SA==}
     dev: true
 
   /statuses/1.5.0:

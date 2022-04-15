@@ -1,15 +1,8 @@
 /* https://github.com/antfu/prism-theme-vars */
-@import 'prism-theme-vars/base.css';
+@use 'prism-theme-vars/base.css';
+@use 'star-markdown-css/src/scss/theme/yun.scss';
 
-.prose {
-  --prism-font-family: 'DM Mono', monospace;
-}
-
-.prose img {
-  width: 100%;
-}
-
-html:not(.dark) .prose {
+html:not(.dark) .markdown-body {
   --prism-foreground: #393a34;
   --prism-background: #fbfbfb;
   --prism-comment: #a0ada0;
@@ -31,7 +24,7 @@ html:not(.dark) .prose {
   --prism-json-property: #698c96;
 }
 
-html.dark .prose {
+html.dark .markdown-body {
   --prism-foreground: #d4cfbf;
   --prism-background: #151515;
   --prism-comment: #758575;

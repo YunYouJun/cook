@@ -13,7 +13,7 @@ import Prism from 'markdown-it-prism'
 import LinkAttributes from 'markdown-it-link-attributes'
 import Unocss from 'unocss/vite'
 
-const markdownWrapperClasses = 'prose prose-sm m-auto text-left'
+import { markdownWrapperClasses } from './config'
 
 export default defineConfig({
   resolve: {

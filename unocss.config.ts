@@ -8,10 +8,11 @@ import {
   transformerDirectives,
   transformerVariantGroup,
 } from 'unocss'
+import { markdownWrapperClasses } from './config'
 
 import { tools } from './src/data/food'
 
-const safelist = 'prose prose-sm m-auto text-left'.split(' ')
+const safelist = markdownWrapperClasses.split(' ')
 
 tools.forEach((item) => {
   if (item.icon)

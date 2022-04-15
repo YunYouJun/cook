@@ -8,13 +8,13 @@ title: 关于
 
 ### **🍜 好的，今天我们来做菜！**
 
-<br />
+> 希望大家吃的开心！
 
 <div class="inline-flex justify-center items-center">
-代码请见 <div inline-flex i-ri-github-line /><a href="https://github.com/YunYouJun/cook" target="_blank">YunYouJun/cook</a>
+代码请见：<a class="inline-flex items-center justify-center" href="https://github.com/YunYouJun/cook" target="_blank">
+<div m="r-1" inline-flex i-ri-github-line />YunYouJun/cook</a>
 </div>
 
-<br />
 <br />
 
 <div class="inline-flex justify-center items-center">
