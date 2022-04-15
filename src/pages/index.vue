@@ -1,7 +1,7 @@
 <template>
   <div>
     <div text-4xl m="t-4">
-      <div i-mdi-pot-steam-outline inline-block />
+      <div class="bg-gradient-to-b from-dark-100 to-black-900 dark:(from-stone-200 to-light-900)" i-mdi-pot-steam-outline inline-block />
     </div>
     <p text="sm" m="b-4">
       好的，今天我们来做菜！
