@@ -16,6 +16,10 @@ import { toggleDark } from '~/composables'
       <div i-ri-information-line />
     </RouterLink>
 
+    <a class="icon-btn mx-2" rel="noreferrer" href="https://space.bilibili.com/1579790" target="_blank" title="BiliBili">
+      <div i-ri-bilibili-line />
+    </a>
+
     <a class="icon-btn mx-2" rel="noreferrer" href="https://github.com/YunYouJun/cook" target="_blank" title="GitHub">
       <div i-ri-github-line />
     </a>

@@ -5,6 +5,6 @@ export const install: UserModule = ({ app }) => {
   // add google tag manager, and add GA4 in gtag
   app.use(createGtm({
     id: 'GTM-5FJSV46',
-    debug: true,
+    debug: import.meta.env.DEV,
   }))
 }

@@ -30,5 +30,5 @@ title: 关于
 
 <div class="flex justify-center items-center">
 Made by
-<div class="inline-flex" m="x-1" i-ri-bilibili-line /><a class="inline-flex" href="https://space.bilibili.com/1579790" target="_blank">云游君 Official</a>
+<a m="l-2" class="inline-flex" href="https://www.yunyoujun.cn" target="_blank">云游君</a>
 </div>
