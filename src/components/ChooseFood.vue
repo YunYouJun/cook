@@ -14,12 +14,14 @@ const rStore = useRecipeStore()
 const curStuff = computed(() => rStore.selectedStuff)
 const curTools = computed(() => rStore.selectedTools)
 
-const strict = ref(false)
+// 默认严格模式
+const strict = ref(true)
 const displayedRecipe = computed(() => {
   return recipe.value.filter((item) => {
     if (strict.value) {
       const stuffFlag = curStuff.value.every(stuff => item.stuff.includes(stuff))
-      const toolFlag = curTools.value.every(tool => item.tools?.includes(tool))
+      // const toolFlag = curTools.value.every(tool => item.tools?.includes(tool))
+      const toolFlag = curTools.value.some(tool => item.tools?.includes(tool))
       return stuffFlag && toolFlag
     }
     else {
@@ -136,20 +138,20 @@ const clickTool = (item: StuffItem) => {
     </ToolTag>
   </div>
 
-  <div class="inline-flex justify-center items-center" m="y-4">
+  <!-- <div class="inline-flex justify-center items-center" m="y-4">
     <span :class="!strict && 'text-green-600'" font="bold" m="x-1" @click="strict = false">
       可做的所有菜
     </span>
     <label m="x-1" class="switch">
       <input v-model="strict" type="checkbox">
-      <span class="slider round" />
+      <span class="inline-flex justify-center items-center slider round" />
     </label>
     <span :class="strict && 'text-green-600'" font="bold" m="x-1" @click="strict = true">
       一起做一道菜
     </span>
-  </div>
+  </div> -->
 
-  <div p="2 y-4" class="transition shadow hover:shadow-md" bg="gray-400/8">
+  <div m="2" p="2" class="transition shadow hover:shadow-md" bg="gray-400/8">
     <h2 text="xl" font="bold" p="1">
       🍲 今天的菜
       <br>
@@ -217,7 +219,7 @@ $size: 20px;
 }
 
 input:checked + .slider {
-  background-color: green;
+  @apply bg-green-600;
 }
 
 input:checked + .slider:before {
