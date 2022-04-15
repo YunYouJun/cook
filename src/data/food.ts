@@ -174,4 +174,9 @@ export const tools: StuffItem[] = [
     emoji: '',
     icon: 'i-gg-smart-home-cooker',
   },
+  {
+    name: '一口啥都能煮的大锅',
+    emoji: '',
+    icon: 'i-mdi-pot-steam-outline',
+  },
 ]

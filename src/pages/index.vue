@@ -6,6 +6,9 @@
     <p text="sm" m="b-4">
       好的，今天我们来做菜！
     </p>
+    <p text="sm" opacity="80">
+      选你囤的食材和有的厨具，看看今天能做什么菜吧！
+    </p>
     <p>
       <ChooseFood />
     </p>

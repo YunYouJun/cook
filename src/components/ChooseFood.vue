@@ -4,8 +4,8 @@ import { useGtm } from '@gtm-support/vue-gtm'
 import MeatTag from './MeatTag.vue'
 import StapleTag from './StapleTag.vue'
 import DishTag from './DishTag.vue'
-import type { StuffItem } from '~/data/foot'
-import { meat, staple, tools, vegetable } from '~/data/foot'
+import type { StuffItem } from '~/data/food'
+import { meat, staple, tools, vegetable } from '~/data/food'
 import recipeData from '~/data/recipe.json'
 import type { Recipe } from '~/types'
 import { useRecipeStore } from '~/stores/recipe'
@@ -62,18 +62,9 @@ const clickTool = (item: StuffItem) => {
 </script>
 
 <template>
-  <div class="inline-flex justify-center items-center">
-    <span :class="!strict && 'text-green-600'" font="bold" m="x-1" @click="strict = false">模糊匹配</span>
-    <label m="x-1" class="switch">
-      <input v-model="strict" type="checkbox">
-      <span class="slider round" />
-    </label>
-    <span :class="strict && 'text-green-600'" font="bold" m="x-1" @click="strict = true">严格匹配</span>
-  </div>
-
   <div m="y-4">
     <h2 text="xl" font="bold" p="1">
-      🥬 菜菜
+      如果有 🥬 菜菜
     </h2>
     <VegetableTag
       v-for="item, i in vegetable" :key="i"
@@ -93,7 +84,7 @@ const clickTool = (item: StuffItem) => {
   </div>
   <div m="y-4">
     <h2 text="xl" font="bold" p="1">
-      🥩 肉肉
+      如果有 🥩 肉肉
     </h2>
     <MeatTag
       v-for="item, i in meat" :key="i"
@@ -110,7 +101,7 @@ const clickTool = (item: StuffItem) => {
   </div>
   <div m="y-4">
     <h2 text="xl" font="bold" p="1">
-      🍚 主食
+      想来点 🍚 主食
     </h2>
     <StapleTag
       v-for="item, i in staple" :key="i"
@@ -125,9 +116,9 @@ const clickTool = (item: StuffItem) => {
       </span>
     </StapleTag>
   </div>
-  <div m="y-4">
+  <div m="t-4">
     <h2 text="xl" font="bold" p="1">
-      🔧 工具
+      打算用 🍳 厨具
     </h2>
     <ToolTag
       v-for="item, i in tools" :key="i"
@@ -145,9 +136,30 @@ const clickTool = (item: StuffItem) => {
       </span>
     </ToolTag>
   </div>
-  <div p="2 y-3" m="2" class="transition shadow hover:shadow-md" bg="gray-400/8">
+
+  <div class="inline-flex justify-center items-center" m="y-4">
+    <span :class="!strict && 'text-green-600'" font="bold" m="x-1" @click="strict = false">
+      可做的所有菜
+    </span>
+    <label m="x-1" class="switch">
+      <input v-model="strict" type="checkbox">
+      <span class="slider round" />
+    </label>
+    <span :class="strict && 'text-green-600'" font="bold" m="x-1" @click="strict = true">
+      一起做一道菜
+    </span>
+  </div>
+
+  <div p="2 y-4" class="transition shadow hover:shadow-md" bg="gray-400/8">
     <h2 text="xl" font="bold" p="1">
-      📄 菜谱
+      🍲 今天的菜
+      <br>
+      <small class="inline-flex justify-center items-center" text="xs">数据来源：
+        <a class="inline-flex justify-center items-center" style="color: #ea7a99" href="https://www.bilibili.com/v/food" target="_blank">
+          <div class="inline-flex" i-ri-bilibili-line />
+          <span m="l-1" class="inline-flex" style="margin-top: 1px;">B 站</span>
+        </a>
+      </small>
     </h2>
     <Transition mode="out-in">
       <div v-if="displayedRecipe.length">
@@ -155,6 +167,7 @@ const clickTool = (item: StuffItem) => {
       </div>
       <p v-else p="2">
         😢 还没有这样的食谱呢……
+        <br>
         <br>
         <a class="text-sm text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt" target="_blank">
           ❤️ 隔离食用手册大全 ❤️
@@ -185,7 +198,7 @@ const clickTool = (item: StuffItem) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
+  background-color: rgba(122,122,122,0.3);
   -webkit-transition: .4s;
   transition: .4s;
 }
