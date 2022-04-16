@@ -183,7 +183,7 @@ const clickTool = (item: StuffItem) => {
 
         <br>
         <a m="t-4" border="b-1 dashed" class="inline-flex text-sm text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt" target="_blank">
-          更多干饭攻略：隔离食用手册大全
+          更多囤货、水培攻略：隔离食用手册大全
         </a>
       </div>
     </Transition>

@@ -2,7 +2,7 @@ lockfileVersion: 5.3
 
 specifiers:
   '@antfu/eslint-config': ^0.20.3
-  '@gtm-support/vue-gtm': ^1.3.0
+  '@gtm-support/vue-gtm': ^1.4.0
   '@iconify-json/fe': ^1.1.1
   '@iconify-json/gg': ^1.1.1
   '@iconify-json/ic': ^1.1.2
@@ -45,7 +45,7 @@ specifiers:
   vue-tsc: ^0.34.7
 
 dependencies:
-  '@gtm-support/vue-gtm': 1.3.0_vue@3.2.33
+  '@gtm-support/vue-gtm': 1.4.0_vue@3.2.33
   '@vueuse/core': 8.2.6_vue@3.2.33
   '@vueuse/head': 0.7.6_vue@3.2.33
   nprogress: 0.2.0
@@ -1363,19 +1363,19 @@ packages:
       - supports-color
     dev: true
 
-  /@gtm-support/core/1.1.0:
-    resolution: {integrity: sha512-GyiZEfKejkAQq2lDS0u2mv6NDVdNWqXi+uQX0zcBOsIpWHfQxWpuCeTTCSv3DZEKv2LMkC0cwv6ukVRJvPmpaA==}
+  /@gtm-support/core/1.2.0:
+    resolution: {integrity: sha512-zBXBkQAmC5+cUyyHDy8syiiqRLnPV1hspFVncSaRhf62IQ0sn2opLr696uHvNmuD/+dup4IIB6qBu7F/NBqdgg==}
     dev: false
 
-  /@gtm-support/vue-gtm/1.3.0_vue@3.2.33:
-    resolution: {integrity: sha512-QN7BmkE6RQ9bDgfqKdC/7KBALEM1vEjgbJ83c1nO6EJ3AUuc76l44DMH2q9npueQ2Vvl1FaqscQJzYH+rxjZmg==}
+  /@gtm-support/vue-gtm/1.4.0_vue@3.2.33:
+    resolution: {integrity: sha512-X5MgJbkxZLPV6SVtjgfJ4b3o/W/kqJvFrcK6nw4E0DxWI7H7SXwYAkSnNpfTAkp6POAF9d1w/4iPCll8OB6bvA==}
     peerDependencies:
       vue: ^3.0.0
     peerDependenciesMeta:
       vue-router:
         optional: true
     dependencies:
-      '@gtm-support/core': 1.1.0
+      '@gtm-support/core': 1.2.0
       vue: 3.2.33
     optionalDependencies:
       vue-router: 4.0.14_vue@3.2.33

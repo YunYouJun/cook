@@ -11,7 +11,7 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@gtm-support/vue-gtm": "^1.3.0",
+    "@gtm-support/vue-gtm": "^1.4.0",
     "@vueuse/core": "^8.2.6",
     "@vueuse/head": "^0.7.6",
     "nprogress": "^0.2.0",
