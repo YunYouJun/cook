@@ -30,10 +30,6 @@ export interface StuffItem {
  */
 export const vegetable: StuffItem[] = [
   {
-    name: '白菜',
-    emoji: '🥬',
-  },
-  {
     name: '土豆',
     emoji: '🥔',
   },
@@ -90,6 +86,10 @@ export const vegetable: StuffItem[] = [
     name: '包菜',
     emoji: '🥗',
     // image: '/images/cabbage-dog.jpg',
+  },
+  {
+    name: '白菜',
+    emoji: '🥬',
   },
 ]
 
