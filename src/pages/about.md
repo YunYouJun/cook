@@ -21,7 +21,7 @@ title: 关于
 菜谱数据来源：
 <a class="inline-flex items-center text-sm text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt" target="_blank">
   <div m="r-1" inline-flex i-ri-bilibili-line></div>
-  <span class="inline-flex">❤️ 隔离食用手册大全 ❤️</span>
+  <span class="inline-flex">隔离食用手册大全</span>
 </a>
 </div>
 

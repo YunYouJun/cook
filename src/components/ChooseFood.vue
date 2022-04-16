@@ -157,7 +157,7 @@ const clickTool = (item: StuffItem) => {
 
   <div m="2 t-4" p="2" class="transition shadow hover:shadow-md" bg="gray-400/8">
     <h2 text="xl" font="bold" p="1">
-      🍲 今天的饭菜
+      🍲 来看看组合出的菜谱吧！
       <br>
       <small class="inline-flex justify-center items-center" text="xs">
         <a class="inline-flex justify-center items-center" style="color: #ea7a99" href="https://www.bilibili.com/v/food" target="_blank">

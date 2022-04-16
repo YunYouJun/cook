@@ -7,7 +7,7 @@
 
 ## 参考
 
-- [❤️ 隔离食用手册大全 ❤️](https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt)
+- [隔离食用手册大全](https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt)
 
 ## 参与开发
 
