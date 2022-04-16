@@ -14,6 +14,10 @@ export interface RecipeItem {
    */
   stuff: string[]
   /**
+   * 根据材料生成
+   */
+  emojis: string[]
+  /**
    * 难度
    */
   difficulty?: Difficulty | ''

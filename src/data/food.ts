@@ -68,7 +68,7 @@ export const vegetable: StuffItem[] = [
   },
   {
     name: '莴笋',
-    emoji: '🥗',
+    emoji: '🎍',
   },
   {
     name: '菌菇',

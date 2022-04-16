@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { useGtm } from '@gtm-support/vue-gtm'
-import { meat, staple, vegetable } from '~/data/food'
 import type { RecipeItem } from '~/types'
 defineProps<{
   dish: RecipeItem
@@ -16,21 +15,6 @@ const triggerGtm = (val: string) => {
     label: '跳转菜谱',
   })
 }
-
-const getDishName = (dish: RecipeItem) => {
-  const name = dish.name
-  const emojis: string[] = []
-  dish.stuff.forEach((item) => {
-    const kinds = [vegetable, meat, staple]
-    kinds.forEach((kind) => {
-      kind.forEach((m) => {
-        if (m.name === item)
-          emojis.push(m.emoji)
-      })
-    })
-  })
-  return `${emojis.join(' ')} ${name}`
-}
 </script>
 
 <template>
@@ -40,6 +24,6 @@ const getDishName = (dish: RecipeItem) => {
     bg="blue-300 opacity-20"
     @click="triggerGtm(dish.name)"
   >
-    <span text="sm blue-700 dark:blue-200">{{ getDishName(dish) }}</span>
+    <span text="sm blue-700 dark:blue-200">{{ dish.emojis.join(' ') + ' ' + dish.name }}</span>
   </a>
 </template>

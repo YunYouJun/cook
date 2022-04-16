@@ -8,7 +8,12 @@ import { meat, staple, tools, vegetable } from '~/data/food'
 import recipeData from '~/data/recipe.json'
 import type { Recipe } from '~/types'
 import { useRecipeStore } from '~/stores/recipe'
-const recipe = ref(recipeData as Recipe)
+import { generateEmojisFromStuff } from '~/utils'
+
+(recipeData as Recipe).forEach((recipe) => {
+  recipe.emojis = generateEmojisFromStuff(recipe.stuff)
+})
+const recipe = ref<Recipe>(recipeData as Recipe)
 
 const rStore = useRecipeStore()
 const curStuff = computed(() => rStore.selectedStuff)
@@ -65,7 +70,7 @@ const clickTool = (item: StuffItem) => {
 <template>
   <div m="y-4">
     <h2 text="xl" font="bold" p="1">
-      如果有 🥬 菜菜
+      🥬 今天想吃菜
     </h2>
     <VegetableTag
       v-for="item, i in vegetable" :key="i"
@@ -85,7 +90,7 @@ const clickTool = (item: StuffItem) => {
   </div>
   <div m="y-4">
     <h2 text="xl" font="bold" p="1">
-      如果有 🥩 肉肉
+      🥩 还想吃点肉
     </h2>
     <MeatTag
       v-for="item, i in meat" :key="i"
@@ -102,7 +107,7 @@ const clickTool = (item: StuffItem) => {
   </div>
   <div m="y-4">
     <h2 text="xl" font="bold" p="1">
-      想来点 🍚 主食
+      🍚 想来点主食
     </h2>
     <StapleTag
       v-for="item, i in staple" :key="i"
@@ -119,7 +124,7 @@ const clickTool = (item: StuffItem) => {
   </div>
   <div m="t-4">
     <h2 text="xl" font="bold" p="1">
-      打算用 🍳 厨具
+      🍳 打算用厨具
     </h2>
     <ToolTag
       v-for="item, i in tools" :key="i"
