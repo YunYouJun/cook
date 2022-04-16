@@ -3,6 +3,8 @@
 html {
   color: var(--c-text);
   background-color: var(--c-bg);
+
+  scroll-behavior: smooth;
 }
 
 a {

@@ -65,7 +65,7 @@ const clickTool = (item: StuffItem) => {
 
 <template>
   <h2 m="t-4" text="xl" font="bold" p="1">
-    🥘 选择食材
+    🥘 先选一下食材
   </h2>
   <div>
     <h2 opacity="90" text="base" font="bold" p="1">
@@ -123,7 +123,7 @@ const clickTool = (item: StuffItem) => {
   </div>
   <div m="t-4">
     <h2 text="xl" font="bold" p="1">
-      🍳 选择厨具
+      🍳 再选一下厨具
     </h2>
     <ToolTag
       v-for="item, i in tools" :key="i"
@@ -160,7 +160,7 @@ const clickTool = (item: StuffItem) => {
       🍲 来看看组合出的菜谱吧！
       <br>
       <small class="inline-flex justify-center items-center" text="xs">
-        <a class="inline-flex justify-center items-center" style="color: #ea7a99" href="https://www.bilibili.com/v/food" target="_blank">
+        <a class="inline-flex justify-center items-center" style="color: #ea7a99" href="https://www.bilibili.com" target="_blank">
           <span inline-flex>菜谱视频来源：</span>
           <div class="inline-flex" i-ri-bilibili-line />
           <span m="l-1" class="inline-flex" style="margin-top: 1px;">B 站</span>
@@ -178,7 +178,10 @@ const clickTool = (item: StuffItem) => {
         </span>
 
         <span v-else text="sm">
-          还没有这样组合出的食谱呢…重新选择一下吧
+          还没有完美匹配的菜谱呢……
+          <br>
+          大胆尝试一下，或者<a href="#" @click="rStore.reset()">
+            <strong>换个组合</strong></a>？
         </span>
 
         <br>
