@@ -39,31 +39,29 @@ const recipeBtn = ref<HTMLButtonElement>()
 
 const { top, left } = useElementBounding(recipeBtn)
 
-const curEmoji = ref('')
-const playAnimation = () => {
+const playAnimation = (emoji: string) => {
   if (!isClient)
     return
 
   // 单个 Vue 组件实现不适合创建多个元素和清除动画
-  const emoji = document.createElement('span')
-  emoji.style.position = 'fixed'
-  emoji.style.left = `${x.value}px`
-  emoji.style.top = `${y.value}px`
-  emoji.style.zIndex = '10'
-  emoji.style.transition = 'left .4s linear, top .4s cubic-bezier(0.5, -0.5, 1, 1)'
-  emoji.textContent = curEmoji.value
-
-  document.body.appendChild(emoji)
+  const emojiEl = document.createElement('span')
+  emojiEl.style.position = 'fixed'
+  emojiEl.style.left = `${x.value}px`
+  emojiEl.style.top = `${y.value}px`
+  emojiEl.style.zIndex = '10'
+  emojiEl.style.transition = 'left .4s linear, top .4s cubic-bezier(0.5, -0.5, 1, 1)'
+  emojiEl.textContent = emoji
+  document.body.appendChild(emojiEl)
 
   setTimeout(() => {
     if (top.value)
-      emoji.style.top = `${top.value}px`
+      emojiEl.style.top = `${top.value}px`
     if (left.value)
-      emoji.style.left = `${left.value + 12}px`
+      emojiEl.style.left = `${left.value + 12}px`
   }, 0)
 
-  emoji.ontransitionend = () => {
-    emoji.remove()
+  emojiEl.ontransitionend = () => {
+    emojiEl.remove()
   }
 }
 
@@ -72,10 +70,8 @@ const gtm = useGtm()
 const toggleStuff = (item: StuffItem, category = '', e?: Event) => {
   rStore.toggleStuff(item.name)
 
-  if (curStuff.value.includes(item.name)) {
-    playAnimation()
-    curEmoji.value = item.emoji
-  }
+  if (curStuff.value.includes(item.name))
+    playAnimation(item.emoji)
 
   gtm?.trackEvent({
     event: 'click',
