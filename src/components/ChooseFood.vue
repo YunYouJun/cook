@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { useGtm } from '@gtm-support/vue-gtm'
+import AnimateStuff from './AnimateStuff.vue'
 import type { StuffItem } from '~/data/food'
 import { meat, staple, tools, vegetable } from '~/data/food'
 import recipeData from '~/data/recipe.json'
@@ -32,17 +33,52 @@ const displayedRecipe = computed(() => {
   })
 })
 
+const { x, y } = usePointer()
+
+const animateStuff = ref()
+const recipeBtn = ref<HTMLButtonElement>()
+
+const { top, left } = useElementBounding(recipeBtn)
+
+const playAnimation = () => {
+  if (animateStuff.value) {
+    const el = animateStuff.value.$el
+    el.style.visibility = 'visible'
+    el.style.top = `${y.value}px`
+    el.style.left = `${x.value}px`
+    el.style.transition = 'none'
+
+    setTimeout(() => {
+      el.style.visibility = 'visible'
+      el.style.top = `${top.value}px`
+      el.style.left = `${left.value}px`
+      el.style.transition = 'left .4s linear, top .4s cubic-bezier(0.5, -0.5, 1, 1)'
+    }, 0)
+
+    el.ontransitionend = () => {
+      el.style.visibility = 'hidden'
+    }
+  }
+}
+
 const gtm = useGtm()
 
-const toggleStuff = (item: StuffItem, category = '') => {
+const curEmoji = ref('')
+
+const toggleStuff = (item: StuffItem, category = '', e?: Event) => {
+  rStore.toggleStuff(item.name)
+
+  if (curStuff.value.includes(item.name)) {
+    playAnimation()
+    curEmoji.value = item.emoji
+  }
+
   gtm?.trackEvent({
     event: 'click',
     category: `${category}_${item.name}`,
     action: 'click_stuff',
     label: '食材',
   })
-
-  rStore.toggleStuff(item.name)
 }
 
 /**
@@ -52,6 +88,11 @@ const toggleStuff = (item: StuffItem, category = '') => {
 const clickTool = (item: StuffItem) => {
   const value = item.name
   rStore.toggleTools(value)
+
+  if (curTools.value.includes(value)) {
+    playAnimation()
+    curEmoji.value = item.emoji
+  }
 
   gtm?.trackEvent({
     event: 'click',
@@ -67,15 +108,25 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
 
 <template>
   <Transition>
+    <AnimateStuff ref="animateStuff">
+      {{ curEmoji }}
+    </AnimateStuff>
+  </Transition>
+  <Transition>
     <button
-      v-if="displayedRecipe.length !== recipe.length && displayedRecipe.length && !isVisible"
-      class="fixed inline-flex justify-center items-center rounded rounded-full shadow hover:shadow-md"
+      v-if="displayedRecipe.length !== recipe.length && isVisible"
+      ref="recipeBtn"
+      class="cursor-pointer fixed inline-flex justify-center items-center rounded rounded-full shadow hover:shadow-md"
       bg="green-50" w="10" h="10" bottom="4" right="4"
       text="green-600"
       @click="show"
     >
-      <!-- <div i-mdi-bowl-mix-outline /> -->
-      🍲
+      <span v-if="displayedRecipe.length">
+        <div i-mdi-bowl-mix-outline />
+      </span>
+      <span v-else>
+        <div i-mdi-bowl-outline />
+      </span>
     </button>
   </Transition>
 
@@ -89,7 +140,7 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
     <VegetableTag
       v-for="item, i in vegetable" :key="i"
       :active="curStuff.includes(item.name)"
-      @click="toggleStuff(item, 'vegetable')"
+      @click="() => toggleStuff(item, 'vegetable')"
     >
       <span v-if="item.emoji" class="inline-flex">{{ item.emoji }}</span>
       <span v-else-if="item.image" class="inline-flex">
@@ -177,11 +228,6 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
           大胆尝试一下，或者<a href="#" @click="rStore.reset()">
             <strong>换个组合</strong></a>？
         </span>
-
-        <br>
-        <a m="t-4" border="b-1 dashed" class="inline-flex text-sm text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt?referrer=1&tab=mwn1v5" target="_blank">
-          更多囤货、水培攻略：隔离食用手册大全
-        </a>
       </div>
     </Transition>
   </div>
