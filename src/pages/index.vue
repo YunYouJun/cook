@@ -8,6 +8,7 @@ const rStore = useRecipeStore()
     <div text-4xl m="t-4">
       <button
         class="cursor-pointer transition hover:(text-green-600) active:text-green-800"
+        title="重置"
         @click="rStore.reset"
       >
         <div v-if="rStore.selectedStuff.length" i-mdi-pot-steam-outline />

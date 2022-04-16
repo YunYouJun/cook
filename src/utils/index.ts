@@ -1,5 +1,10 @@
 import { meat, staple, vegetable } from '~/data/food'
 
+/**
+ * 从材料生成 Emoji
+ * @param stuff
+ * @returns
+ */
 export function generateEmojisFromStuff(stuff: string[]) {
   const emojis: string[] = []
   stuff.forEach((item) => {
