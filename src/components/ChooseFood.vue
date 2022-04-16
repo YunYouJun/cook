@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { useGtm } from '@gtm-support/vue-gtm'
-import AnimateStuff from './AnimateStuff.vue'
+import { isClient } from '@vueuse/core'
 import type { StuffItem } from '~/data/food'
 import { meat, staple, tools, vegetable } from '~/data/food'
 import recipeData from '~/data/recipe.json'
@@ -35,38 +35,39 @@ const displayedRecipe = computed(() => {
 
 const { x, y } = usePointer()
 
-const animateStuff = ref()
 const recipeBtn = ref<HTMLButtonElement>()
 
-const { top, left, right, bottom } = useElementBounding(recipeBtn)
+const { top, left } = useElementBounding(recipeBtn)
 
+const curEmoji = ref('')
 const playAnimation = () => {
-  console.log(top.value)
-  console.log(bottom.value)
+  if (!isClient)
+    return
 
-  if (animateStuff.value) {
-    const el = animateStuff.value.$el
-    el.style.visibility = 'visible'
-    el.style.top = `${y.value}px`
-    el.style.left = `${x.value}px`
-    el.style.transition = 'none'
+  // 单个 Vue 组件实现不适合创建多个元素和清除动画
+  const emoji = document.createElement('span')
+  emoji.style.position = 'fixed'
+  emoji.style.left = `${x.value}px`
+  emoji.style.top = `${y.value}px`
+  emoji.style.zIndex = '10'
+  emoji.style.transition = 'left .4s linear, top .4s cubic-bezier(0.5, -0.5, 1, 1)'
+  emoji.textContent = curEmoji.value
 
-    setTimeout(() => {
-      el.style.visibility = 'visible'
-      el.style.top = `${(top.value + bottom.value) / 2}px`
-      el.style.left = `${(left.value + right.value) / 2}px`
-      el.style.transition = 'left .4s linear, top .4s cubic-bezier(0.5, -0.5, 1, 1)'
-    }, 0)
+  document.body.appendChild(emoji)
 
-    el.ontransitionend = () => {
-      el.style.visibility = 'hidden'
-    }
+  setTimeout(() => {
+    if (top.value)
+      emoji.style.top = `${top.value}px`
+    if (left.value)
+      emoji.style.left = `${left.value + 12}px`
+  }, 0)
+
+  emoji.ontransitionend = () => {
+    emoji.remove()
   }
 }
 
 const gtm = useGtm()
-
-const curEmoji = ref('')
 
 const toggleStuff = (item: StuffItem, category = '', e?: Event) => {
   rStore.toggleStuff(item.name)
@@ -105,11 +106,6 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
 </script>
 
 <template>
-  <Transition>
-    <AnimateStuff ref="animateStuff">
-      {{ curEmoji }}
-    </AnimateStuff>
-  </Transition>
   <Transition>
     <button
       v-if="displayedRecipe.length !== recipe.length && isVisible"
