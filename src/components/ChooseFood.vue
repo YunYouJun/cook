@@ -106,7 +106,7 @@ const clickTool = (item: StuffItem) => {
   </div>
   <div m="y-4">
     <h2 text="base" font="bold" p="1">
-      🍚 主食们
+      🍚 一起下锅的主食（不选也行）
     </h2>
     <StapleTag
       v-for="item, i in staple" :key="i"
