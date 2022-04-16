@@ -7,7 +7,7 @@
 <style>
 .animate-stuff {
   visibility: hidden;
-  position: absolute;
+  position: fixed;
   z-index: 10;
   border-radius: 50%;
   transition: left .6s linear, top .6s cubic-bezier(0.5, -0.5, 1, 1);

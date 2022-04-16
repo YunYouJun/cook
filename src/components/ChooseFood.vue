@@ -38,9 +38,12 @@ const { x, y } = usePointer()
 const animateStuff = ref()
 const recipeBtn = ref<HTMLButtonElement>()
 
-const { top, left } = useElementBounding(recipeBtn)
+const { top, left, right, bottom } = useElementBounding(recipeBtn)
 
 const playAnimation = () => {
+  console.log(top.value)
+  console.log(bottom.value)
+
   if (animateStuff.value) {
     const el = animateStuff.value.$el
     el.style.visibility = 'visible'
@@ -50,8 +53,8 @@ const playAnimation = () => {
 
     setTimeout(() => {
       el.style.visibility = 'visible'
-      el.style.top = `${top.value}px`
-      el.style.left = `${left.value}px`
+      el.style.top = `${(top.value + bottom.value) / 2}px`
+      el.style.left = `${(left.value + right.value) / 2}px`
       el.style.transition = 'left .4s linear, top .4s cubic-bezier(0.5, -0.5, 1, 1)'
     }, 0)
 
@@ -88,11 +91,6 @@ const toggleStuff = (item: StuffItem, category = '', e?: Event) => {
 const clickTool = (item: StuffItem) => {
   const value = item.name
   rStore.toggleTools(value)
-
-  if (curTools.value.includes(value)) {
-    playAnimation()
-    curEmoji.value = item.emoji
-  }
 
   gtm?.trackEvent({
     event: 'click',
