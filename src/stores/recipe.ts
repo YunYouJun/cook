@@ -25,11 +25,21 @@ export const useRecipeStore = defineStore('recipe', () => {
       curTools.value.add(name)
   }
 
+  /**
+   * 重置
+   */
+  function reset() {
+    curStuff.value.clear()
+    curTools.value.clear()
+    curTools.value.add('一口大锅')
+  }
+
   return {
     selectedTools,
     selectedStuff,
     toggleStuff,
     toggleTools,
+    reset,
   }
 })
 
