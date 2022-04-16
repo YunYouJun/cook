@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import consola from 'consola'
 import type { Recipe, RecipeItem } from '~/types'
+import { generateEmojisFromStuff } from '~/utils'
 
 const recipeCsvFile = path.resolve(__dirname, '../src/data/recipe.csv')
 const recipeJsonFile = path.resolve(__dirname, '../src/data/recipe.json')
@@ -22,9 +23,11 @@ function run() {
   lines.slice(1).forEach((line) => {
     if (line) {
       const attrs = line.split(',')
+      const stuff = attrs[1].trim().split(sep)
       recipeJson.push({
         name: attrs[0].trim(),
-        stuff: attrs[1].trim().split(sep),
+        stuff,
+        emojis: generateEmojisFromStuff(stuff),
         link: attrs[2].trim(),
         difficulty: attrs[3] && attrs[3].trim() as RecipeItem['difficulty'],
         tags: attrs[4] ? attrs[4].trim().split(sep) : [],

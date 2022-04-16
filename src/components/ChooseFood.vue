@@ -8,11 +8,7 @@ import { meat, staple, tools, vegetable } from '~/data/food'
 import recipeData from '~/data/recipe.json'
 import type { Recipe } from '~/types'
 import { useRecipeStore } from '~/stores/recipe'
-import { generateEmojisFromStuff } from '~/utils'
 
-(recipeData as Recipe).forEach((recipe) => {
-  recipe.emojis = generateEmojisFromStuff(recipe.stuff)
-})
 const recipe = ref<Recipe>(recipeData as Recipe)
 
 const rStore = useRecipeStore()

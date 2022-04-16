@@ -25,8 +25,7 @@ title: 关于
 </a>
 </div>
 
-<br/>
-<br/>
+如果您有任何建议或反馈可前往 [Issues](https://github.com/YunYouJun/cook/issues) / [Discussions](https://github.com/YunYouJun/cook/issues)。
 
 <div class="flex justify-center items-center">
 Made by
