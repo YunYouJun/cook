@@ -9,8 +9,6 @@
   visibility: hidden;
   position: absolute;
   z-index: 10;
-  top: 0;
-  left: 0;
   border-radius: 50%;
   transition: left .6s linear, top .6s cubic-bezier(0.5, -0.5, 1, 1);
 }
