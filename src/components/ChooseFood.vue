@@ -65,7 +65,7 @@ const clickTool = (item: StuffItem) => {
 
 <template>
   <h2 m="t-4" text="xl" font="bold" p="1">
-    第一步：🥘 选择食材
+    🥘 选择食材
   </h2>
   <div>
     <h2 opacity="90" text="base" font="bold" p="1">
@@ -105,8 +105,8 @@ const clickTool = (item: StuffItem) => {
     </MeatTag>
   </div>
   <div m="y-4">
-    <h2 text="xl" font="bold" p="1">
-      第二步：🍚 选择主食
+    <h2 text="base" font="bold" p="1">
+      🍚 主食们
     </h2>
     <StapleTag
       v-for="item, i in staple" :key="i"
@@ -123,7 +123,7 @@ const clickTool = (item: StuffItem) => {
   </div>
   <div m="t-4">
     <h2 text="xl" font="bold" p="1">
-      第三步：🍳 选择厨具
+      🍳 选择厨具
     </h2>
     <ToolTag
       v-for="item, i in tools" :key="i"
