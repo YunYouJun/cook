@@ -12,7 +12,6 @@
   top: 0;
   left: 0;
   border-radius: 50%;
-  background: #02b6fd;
   transition: left .6s linear, top .6s cubic-bezier(0.5, -0.5, 1, 1);
 }
 </style>
