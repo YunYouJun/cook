@@ -26,7 +26,9 @@ const triggerGtm = (val: string) => {
     bg="blue-300 opacity-20"
     @click="triggerGtm(dish.name)"
   >
-    <span m="r-1" class="inline-flex justify-center items-center" text="sm blue-700 dark:blue-200">{{ dish.emojis.join(' ') + ' ' + dish.name }}</span>
+    <span m="r-1" class="inline-flex justify-center items-center" text="sm blue-700 dark:blue-200">
+      {{ (dish.tags?.includes('杂烩') ? '🍲' : dish.emojis.join(' ')) + ' ' + dish.name }}
+    </span>
     <span v-for="tool, i in tools" :key="i" inline-flex>
       <div v-if="dish.tools?.includes(tool.name)" :class="tool.icon" />
     </span>
