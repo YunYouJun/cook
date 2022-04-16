@@ -1,6 +1,8 @@
 import { acceptHMRUpdate, defineStore } from 'pinia'
 
 export const useRecipeStore = defineStore('recipe', () => {
+  const strict = ref(true)
+
   const curStuff = ref(new Set<string>())
   const curTools = ref(new Set<string>())
 
@@ -34,6 +36,7 @@ export const useRecipeStore = defineStore('recipe', () => {
   }
 
   return {
+    strict,
     selectedTools,
     selectedStuff,
     toggleStuff,

@@ -8,15 +8,16 @@ declare module '@vue/runtime-core' {
     BaseFooter: typeof import('./components/BaseFooter.vue')['default']
     ChooseFood: typeof import('./components/ChooseFood.vue')['default']
     Counter: typeof import('./components/Counter.vue')['default']
-    DishTag: typeof import('./components/DishTag.vue')['default']
-    MeatTag: typeof import('./components/MeatTag.vue')['default']
+    DishTag: typeof import('./components/tags/DishTag.vue')['default']
+    MeatTag: typeof import('./components/tags/MeatTag.vue')['default']
     Menu: typeof import('./components/Menu.vue')['default']
     README: typeof import('./components/README.md')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    StapleTag: typeof import('./components/StapleTag.vue')['default']
-    ToolTag: typeof import('./components/ToolTag.vue')['default']
-    VegetableTag: typeof import('./components/VegetableTag.vue')['default']
+    StapleTag: typeof import('./components/tags/StapleTag.vue')['default']
+    Switch: typeof import('./components/Switch.vue')['default']
+    ToolTag: typeof import('./components/tags/ToolTag.vue')['default']
+    VegetableTag: typeof import('./components/tags/VegetableTag.vue')['default']
   }
 }
 
