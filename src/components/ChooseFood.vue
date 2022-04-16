@@ -158,14 +158,6 @@ const clickTool = (item: StuffItem) => {
   <div m="2 t-4" p="2" class="transition shadow hover:shadow-md" bg="gray-400/8">
     <h2 text="xl" font="bold" p="1">
       🍲 来看看组合出的菜谱吧！
-      <br>
-      <small class="inline-flex justify-center items-center" text="xs">
-        <a class="inline-flex justify-center items-center" style="color: #ea7a99" href="https://www.bilibili.com" target="_blank">
-          <span inline-flex>菜谱视频来源：</span>
-          <div class="inline-flex" i-ri-bilibili-line />
-          <span m="l-1" class="inline-flex" style="margin-top: 1px;">B 站</span>
-        </a>
-      </small>
     </h2>
     <Transition mode="out-in">
       <div p="2">
@@ -185,7 +177,7 @@ const clickTool = (item: StuffItem) => {
         </span>
 
         <br>
-        <a m="t-4" border="b-1 dashed" class="inline-flex text-sm text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt" target="_blank">
+        <a m="t-4" border="b-1 dashed" class="inline-flex text-sm text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt?referrer=1&tab=mwn1v5" target="_blank">
           更多囤货、水培攻略：隔离食用手册大全
         </a>
       </div>
