@@ -2,7 +2,7 @@ import { acceptHMRUpdate, defineStore } from 'pinia'
 
 export const useRecipeStore = defineStore('recipe', () => {
   const curStuff = ref(new Set<string>())
-  const curTools = ref(new Set<string>(['一口大锅']))
+  const curTools = ref(new Set<string>())
 
   const selectedStuff = computed(() => Array.from(curStuff.value))
   const selectedTools = computed(() => Array.from(curTools.value))
@@ -31,7 +31,6 @@ export const useRecipeStore = defineStore('recipe', () => {
   function reset() {
     curStuff.value.clear()
     curTools.value.clear()
-    curTools.value.add('一口大锅')
   }
 
   return {

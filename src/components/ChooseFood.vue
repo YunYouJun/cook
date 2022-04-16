@@ -64,9 +64,12 @@ const clickTool = (item: StuffItem) => {
 </script>
 
 <template>
-  <div m="y-4">
-    <h2 text="xl" font="bold" p="1">
-      🥬 今天想吃菜
+  <h2 m="t-4" text="xl" font="bold" p="1">
+    第一步：🥘 选择食材
+  </h2>
+  <div>
+    <h2 opacity="90" text="base" font="bold" p="1">
+      🥬 菜菜们
     </h2>
     <VegetableTag
       v-for="item, i in vegetable" :key="i"
@@ -85,8 +88,8 @@ const clickTool = (item: StuffItem) => {
     </VegetableTag>
   </div>
   <div m="y-4">
-    <h2 text="xl" font="bold" p="1">
-      🥩 还想吃点肉
+    <h2 opacity="90" text="base" font="bold" p="1">
+      🥩 肉肉们
     </h2>
     <MeatTag
       v-for="item, i in meat" :key="i"
@@ -103,7 +106,7 @@ const clickTool = (item: StuffItem) => {
   </div>
   <div m="y-4">
     <h2 text="xl" font="bold" p="1">
-      🍚 想来点主食
+      第二步：🍚 选择主食
     </h2>
     <StapleTag
       v-for="item, i in staple" :key="i"
@@ -120,7 +123,7 @@ const clickTool = (item: StuffItem) => {
   </div>
   <div m="t-4">
     <h2 text="xl" font="bold" p="1">
-      🍳 打算用厨具
+      第三步：🍳 选择厨具
     </h2>
     <ToolTag
       v-for="item, i in tools" :key="i"
@@ -156,25 +159,33 @@ const clickTool = (item: StuffItem) => {
     <h2 text="xl" font="bold" p="1">
       🍲 今天的饭菜
       <br>
-      <small class="inline-flex justify-center items-center" text="xs">菜谱数据来源：
+      <small class="inline-flex justify-center items-center" text="xs">
         <a class="inline-flex justify-center items-center" style="color: #ea7a99" href="https://www.bilibili.com/v/food" target="_blank">
+          <span inline-flex>菜谱视频来源：</span>
           <div class="inline-flex" i-ri-bilibili-line />
           <span m="l-1" class="inline-flex" style="margin-top: 1px;">B 站</span>
         </a>
       </small>
     </h2>
     <Transition mode="out-in">
-      <div v-if="displayedRecipe.length">
-        <DishTag v-for="item, i in displayedRecipe" :key="i" :dish="item" />
-      </div>
-      <p v-else p="2">
-        😢 还没有这样的食谱呢……
+      <div p="2">
+        <span v-if="!curStuff.length && !curTools.length" text="sm" p="2">
+          你要先选食材或工具哦～
+        </span>
+
+        <span v-else-if="displayedRecipe.length">
+          <DishTag v-for="item, i in displayedRecipe" :key="i" :dish="item" />
+        </span>
+
+        <span v-else text="sm">
+          还没有这样组合出的食谱呢…重新选择一下吧
+        </span>
+
         <br>
-        <br>
-        <a class="text-sm text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt" target="_blank">
-          ❤️ 隔离食用手册大全 ❤️
+        <a m="t-4" border="b-1 dashed" class="inline-flex text-sm text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt" target="_blank">
+          干饭攻略：隔离食用手册大全
         </a>
-      </p>
+      </div>
     </Transition>
   </div>
 </template>
