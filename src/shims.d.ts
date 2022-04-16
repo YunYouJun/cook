@@ -1,5 +1,6 @@
 declare interface Window {
   // extend the window
+  wx: any
 }
 
 // with vite-plugin-md, markdowns can be treat as Vue components

@@ -38,6 +38,7 @@ function run() {
   })
 
   fs.writeFileSync(recipeJsonFile, JSON.stringify(recipeJson))
+  consola.success(`Generate file: ${recipeJsonFile}`)
 }
 
 run()
