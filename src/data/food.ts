@@ -30,6 +30,10 @@ export interface StuffItem {
  */
 export const vegetable: StuffItem[] = [
   {
+    name: '白菜',
+    emoji: '🥬',
+  },
+  {
     name: '土豆',
     emoji: '🥔',
   },

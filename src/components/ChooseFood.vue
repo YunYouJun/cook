@@ -105,7 +105,7 @@ const clickTool = (item: StuffItem) => {
     </MeatTag>
   </div>
   <div m="y-4">
-    <h2 text="base" font="bold" p="1">
+    <h2 opacity="90" text="base" font="bold" p="1">
       🍚 一起下锅的主食（不选也行）
     </h2>
     <StapleTag
