@@ -98,7 +98,8 @@ const toggleStuff = (item: StuffItem, category = '', e?: Event) => {
     label: '食材',
   })
   gtm?.trackEvent({
-    event: `click_stuff_${item.name}`,
+    event: 'click_stuff',
+    action: item.name,
   })
 }
 
@@ -117,7 +118,8 @@ const clickTool = (item: StuffItem) => {
     label: '工具',
   })
   gtm?.trackEvent({
-    event: `click_tool_${item.name}`,
+    event: 'click_tool',
+    action: item.name,
   })
 }
 
