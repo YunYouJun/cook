@@ -102,7 +102,7 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
 <template>
   <Transition>
     <button
-      v-if="displayedRecipe.length !== recipe.length && isVisible"
+      v-show="displayedRecipe.length !== recipe.length && isVisible"
       ref="recipeBtn"
       class="cursor-pointer fixed inline-flex justify-center items-center rounded rounded-full shadow hover:shadow-md"
       bg="green-50" w="10" h="10" bottom="4" right="4"
@@ -128,7 +128,7 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
     <VegetableTag
       v-for="item, i in vegetable" :key="i"
       :active="curStuff.includes(item.name)"
-      @click="() => toggleStuff(item, 'vegetable')"
+      @click="toggleStuff(item, 'vegetable')"
     >
       <span v-if="item.emoji" class="inline-flex">{{ item.emoji }}</span>
       <span v-else-if="item.image" class="inline-flex">
