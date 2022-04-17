@@ -14,25 +14,36 @@ import { useInvisibleElement } from '~/composables/helper'
 const recipe = ref<Recipe>(recipeData as Recipe)
 
 const rStore = useRecipeStore()
-const { strict } = storeToRefs(rStore)
+const { strict, curTool } = storeToRefs(rStore)
 const curStuff = computed(() => rStore.selectedStuff)
-const curTools = computed(() => rStore.selectedTools)
 
 // 默认严格模式
 const displayedRecipe = computed(() => {
-  return recipe.value.filter((item) => {
+  const recipes = recipe.value.filter((item) => {
     if (strict.value) {
       const stuffFlag = curStuff.value.every(stuff => item.stuff.includes(stuff))
-      // const toolFlag = curTools.value.every(tool => item.tools?.includes(tool))
-      const toolFlag = curTools.value.some(tool => item.tools?.includes(tool))
-      return curTools.value.length ? stuffFlag && toolFlag : stuffFlag
+      const toolFlag = item.tools?.includes(curTool.value)
+      return curTool.value ? stuffFlag && toolFlag : stuffFlag
     }
     else {
       const stuffFlag = curStuff.value.some(stuff => item.stuff.includes(stuff))
-      const toolFlag = curTools.value.every(tool => item.tools?.includes(tool))
-      return curTools.value.length ? stuffFlag && toolFlag : stuffFlag
+      const toolFlag = item.tools?.includes(curTool.value)
+
+      // 同时存在 厨具和材料，则同时判断
+      if (curTool.value && curStuff.value.length) {
+        return stuffFlag && toolFlag
+      }
+      else {
+        if (curStuff.value.length)
+          return stuffFlag
+        else if (curTool.value)
+          return toolFlag
+
+        return false
+      }
     }
   })
+  return recipes
 })
 
 const { x, y } = usePointer()
@@ -190,7 +201,7 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
     </h2>
     <ToolTag
       v-for="item, i in tools" :key="i"
-      :active="curTools.includes(item.name)"
+      :active="curTool === item.name"
       @click="clickTool(item)"
     >
       <span v-if="item.emoji" class="inline-flex">{{ item.emoji }}</span>
@@ -212,7 +223,7 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
     <Switch />
     <Transition mode="out-in">
       <div p="2">
-        <span v-if="!curStuff.length && !curTools.length" text="sm" p="2">
+        <span v-if="!curStuff.length && !curTool" text="sm" p="2">
           你要先选食材或工具哦～
         </span>
 
