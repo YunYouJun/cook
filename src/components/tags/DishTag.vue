@@ -15,6 +15,9 @@ const triggerGtm = (val: string) => {
     action: 'click_recipe',
     label: '跳转菜谱',
   })
+  gtm?.trackEvent({
+    event: `click_dish_${val}`,
+  })
 }
 
 </script>
