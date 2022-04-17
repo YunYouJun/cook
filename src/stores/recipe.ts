@@ -1,7 +1,7 @@
 import { acceptHMRUpdate, defineStore } from 'pinia'
 
 export const useRecipeStore = defineStore('recipe', () => {
-  const strict = ref(true)
+  const strict = ref(false)
 
   const curStuff = ref(new Set<string>())
   const curTools = ref(new Set<string>())

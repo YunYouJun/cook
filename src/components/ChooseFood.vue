@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { useGtm } from '@gtm-support/vue-gtm'
 import { isClient } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import Switch from './Switch.vue'
 import type { StuffItem } from '~/data/food'
 import { meat, staple, tools, vegetable } from '~/data/food'
 import recipeData from '~/data/recipe.json'
@@ -12,11 +14,11 @@ import { useInvisibleElement } from '~/composables/helper'
 const recipe = ref<Recipe>(recipeData as Recipe)
 
 const rStore = useRecipeStore()
+const { strict } = storeToRefs(rStore)
 const curStuff = computed(() => rStore.selectedStuff)
 const curTools = computed(() => rStore.selectedTools)
 
 // 默认严格模式
-const strict = ref(true)
 const displayedRecipe = computed(() => {
   return recipe.value.filter((item) => {
     if (strict.value) {
@@ -207,6 +209,7 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
     <h2 text="xl" font="bold" p="1">
       🍲 来看看组合出的菜谱吧！
     </h2>
+    <Switch />
     <Transition mode="out-in">
       <div p="2">
         <span v-if="!curStuff.length && !curTools.length" text="sm" p="2">

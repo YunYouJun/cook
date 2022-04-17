@@ -6,16 +6,16 @@ const { strict } = storeToRefs(rStore)
 </script>
 
 <template>
-  <div class="inline-flex justify-center items-center" m="y-4">
+  <div class="inline-flex justify-center items-center" m="t-2">
     <span :class="!strict && 'text-green-600'" font="bold" m="x-1" @click="strict = false">
-      可做的所有菜
+      模糊匹配
     </span>
     <label m="x-1" class="switch">
       <input v-model="strict" type="checkbox">
       <span class="inline-flex justify-center items-center slider round" />
     </label>
     <span :class="strict && 'text-green-600'" font="bold" m="x-1" @click="strict = true">
-      一起做一道菜
+      精准匹配
     </span>
   </div>
 </template>
