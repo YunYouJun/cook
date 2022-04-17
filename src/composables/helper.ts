@@ -1,4 +1,4 @@
-import { useElementBounding } from '@vueuse/core'
+import { isClient, useElementBounding } from '@vueuse/core'
 import type { Ref } from 'vue'
 
 /**
@@ -10,11 +10,12 @@ export function useInvisibleElement(target: Ref<HTMLElement>) {
   const { top } = useElementBounding(target)
 
   const isVisible = computed(() => {
-    return window.scrollY < top.value
+    return isClient ? window.scrollY < top.value : true
   })
 
   const show = () => {
-    window.scrollTo(0, top.value)
+    if (isClient)
+      window.scrollTo(0, top.value)
   }
 
   return {
