@@ -29,8 +29,8 @@ const displayedRecipe = computed(() => {
     }
     else {
       const stuffFlag = curStuff.value.some(stuff => item.stuff.includes(stuff))
-      const toolFlag = curTools.value.some(tool => item.tools?.includes(tool))
-      return stuffFlag || toolFlag
+      const toolFlag = curTools.value.every(tool => item.tools?.includes(tool))
+      return curTools.value.length ? stuffFlag && toolFlag : stuffFlag
     }
   })
 })
@@ -169,7 +169,7 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
   </div>
   <div m="y-4">
     <h2 opacity="90" text="base" font="bold" p="1">
-      🍚 一起下锅的主食（不选也行）
+      🍚 主食也要一起下锅吗？（不选也行）
     </h2>
     <StapleTag
       v-for="item, i in staple" :key="i"

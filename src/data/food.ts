@@ -148,7 +148,7 @@ export const staple: StuffItem[] = [
     emoji: '🍞',
   },
   {
-    name: '米饭',
+    name: '米',
     emoji: '🍚',
   },
   {
