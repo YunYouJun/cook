@@ -7,7 +7,7 @@ const { strict } = storeToRefs(rStore)
 
 <template>
   <div class="inline-flex justify-center items-center" m="t-2">
-    <span :class="!strict && 'text-green-600'" font="bold" m="x-1" @click="strict = false">
+    <span :class="!strict && 'text-orange-600'" font="bold" m="x-1" @click="strict = false">
       模糊匹配
     </span>
     <label m="x-1" class="switch">
@@ -35,13 +35,14 @@ const { strict } = storeToRefs(rStore)
 }
 
 .slider {
+  @apply bg-orange-600;
+
   position: absolute;
   cursor: pointer;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(122,122,122,0.3);
   -webkit-transition: .4s;
   transition: .4s;
 }
