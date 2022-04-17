@@ -54,11 +54,9 @@ const playAnimation = (emoji: string) => {
   document.body.appendChild(emojiEl)
 
   setTimeout(() => {
-    if (top.value)
-      emojiEl.style.top = `${top.value}px`
-    if (left.value)
-      emojiEl.style.left = `${left.value + 12}px`
-  }, 0)
+    emojiEl.style.top = `${top.value}px`
+    emojiEl.style.left = `${left.value + 12}px`
+  }, 1)
 
   emojiEl.ontransitionend = () => {
     emojiEl.remove()
