@@ -27,6 +27,18 @@ title: 关于
 
 如果您有任何建议或反馈可前往 [Issues](https://github.com/YunYouJun/cook/issues) / [Discussions](https://github.com/YunYouJun/cook/issues)。
 
+## **致谢**
+
+感谢以下小伙伴为本项目提供的数据支持和 QA ！
+
+- [Runny](https://weibo.com/runny)
+- 山竹太凉
+- leo
+- 麒麟
+- 课代表阿伟
+
+<br />
+
 <div class="flex justify-center items-center">
 Made by
 <a m="l-2" class="inline-flex" href="https://www.yunyoujun.cn" target="_blank">云游君</a>
