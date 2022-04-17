@@ -110,7 +110,7 @@ export const meat: StuffItem[] = [
     emoji: '🌭',
   },
   {
-    name: '鸡翅',
+    name: '鸡肉',
     emoji: '🐤',
   },
   {
@@ -130,10 +130,6 @@ export const meat: StuffItem[] = [
     emoji: '🐮',
   },
   {
-    name: '鸡胸肉',
-    emoji: '💪',
-  },
-  {
     name: '骨头',
     emoji: '🦴',
   },
@@ -144,7 +140,7 @@ export const meat: StuffItem[] = [
  */
 export const staple: StuffItem[] = [
   {
-    name: '面条',
+    name: '面食',
     emoji: '🍝',
   },
   {
