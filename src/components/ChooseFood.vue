@@ -54,8 +54,15 @@ const playAnimation = (emoji: string) => {
   document.body.appendChild(emojiEl)
 
   setTimeout(() => {
-    emojiEl.style.top = `${top.value}px`
-    emojiEl.style.left = `${left.value + 12}px`
+    // 以防万一，按钮位置没检测出来，就不播放动画了
+    if (!top.value || !left.value) {
+      emojiEl.style.top = `${x.value}px`
+      emojiEl.style.left = `${y.value}px`
+    }
+    else {
+      emojiEl.style.top = `${top.value}px`
+      emojiEl.style.left = `${left.value + 12}px`
+    }
   }, 1)
 
   emojiEl.ontransitionend = () => {
