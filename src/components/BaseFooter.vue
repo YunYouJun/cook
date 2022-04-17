@@ -14,7 +14,7 @@ onBeforeMount(() => {
       苏ICP备17038157号
     </a>
     <div m="y-2" class="inline-flex justify-center items-center" text="xs">
-      <a class="inline-flex justify-center items-center" style="color: #ea7b99" href="https://www.bilibili.com" target="_blank">
+      <a class="inline-flex justify-center items-center" style="color: #ea7b99" href="https://www.bilibili.com/blackboard/dynamic/306882" target="_blank">
         <span inline-flex>菜谱视频来源：</span>
         <div class="inline-flex" i-ri-bilibili-line />
         <span m="l-1" class="inline-flex" style="margin-top: 1px;">B 站</span>

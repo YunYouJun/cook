@@ -6,6 +6,7 @@
     "convert": "esno scripts/convert.ts",
     "dev": "vite --port 3333 --open",
     "lint": "eslint .",
+    "postinstall": "npm run convert",
     "preview": "vite preview",
     "preview-https": "serve dist",
     "typecheck": "vue-tsc --noEmit"

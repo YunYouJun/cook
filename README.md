@@ -9,13 +9,29 @@
 
 - [隔离食用手册大全](https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt)
 
-## 参与开发
+## 说明
+
+本项目初衷是方便特殊时期隔离在家而材料有限的小伙伴，因此菜谱材料会尽量限制在特定范围内。
+
+## 开发
 
 ```bash
 # install dependencies
 pnpm install
 
+# convert csv to json
+# automatically executed when postinstall
+pnpm convert
+
 # start
 pnpm dev
 # http://localhost:3333
 ```
+
+## [Sponsors](https://sponsors.yunyoujun.cn)
+
+<p align="center">
+  <a href="https://cdn.jsdelivr.net/gh/YunYouJun/sponsors/public/sponsors.svg">
+    <img src='https://cdn.jsdelivr.net/gh/YunYouJun/sponsors/public/sponsors.svg'/>
+  </a>
+</p>
