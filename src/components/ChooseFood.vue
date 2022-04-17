@@ -229,8 +229,8 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
       🍲 来看看组合出的菜谱吧！
     </h2>
     <Switch />
-    <Transition mode="out-in">
-      <div p="2">
+    <div p="2">
+      <Transition mode="out-in">
         <span v-if="!curStuff.length && !curTool" text="sm" p="2">
           你要先选食材或工具哦～
         </span>
@@ -245,7 +245,7 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
           大胆尝试一下，或者<a href="#" @click="rStore.reset()">
             <strong>换个组合</strong></a>？
         </span>
-      </div>
-    </Transition>
+      </Transition>
+    </div>
   </div>
 </template>
