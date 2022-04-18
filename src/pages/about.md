@@ -38,7 +38,9 @@ title: 关于
 - 晴方啾
 - 课代表阿伟
 
-<br />
+## **友情提示**
+
+点击首页最上方的大锅图标，可以清空所选食材和工具。（本来想当作彩蛋，但是感觉还挺实用的。）
 
 <div class="flex justify-center items-center">
 Made by

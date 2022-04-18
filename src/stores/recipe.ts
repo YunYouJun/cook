@@ -1,11 +1,13 @@
 import { acceptHMRUpdate, defineStore } from 'pinia'
 
-export const useRecipeStore = defineStore('recipe', () => {
-  const strict = ref(false)
+const namespace = 'cook'
 
-  const curStuff = ref(new Set<string>())
+export const useRecipeStore = defineStore('recipe', () => {
+  const strict = useStorage(`${namespace}:strict`, false)
+
+  const curStuff = useStorage(`${namespace}:stuff`, new Set<string>())
   // const curTools = ref(new Set<string>())
-  const curTool = ref('')
+  const curTool = useStorage(`${namespace}:tool`, '')
 
   const selectedStuff = computed(() => Array.from(curStuff.value))
   // const selectedTools = computed(() => Array.from(curTools.value))
