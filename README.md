@@ -36,6 +36,7 @@ pnpm dev
 - 山竹太凉
 - leo
 - 麒麟
+- 晴方啾
 - 课代表阿伟
 
 ## [Sponsors](https://sponsors.yunyoujun.cn)

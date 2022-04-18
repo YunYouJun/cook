@@ -39,7 +39,7 @@
     "esno": "^0.14.1",
     "https-localhost": "^4.7.1",
     "markdown-it-link-attributes": "^4.0.0",
-    "markdown-it-prism": "^2.2.3",
+    "markdown-it-prism": "^2.2.4",
     "pnpm": "^6.32.8",
     "sass": "^1.50.0",
     "star-markdown-css": "^0.3.3",

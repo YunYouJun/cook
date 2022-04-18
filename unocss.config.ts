@@ -35,9 +35,12 @@ export default defineConfig({
     presetTypography(),
     presetWebFonts({
       fonts: {
-        sans: 'DM Sans',
-        serif: 'DM Serif Display',
-        mono: 'DM Mono',
+        serif: [
+          {
+            name: 'Noto Serif SC',
+            weights: [900],
+          },
+        ],
       },
     }),
   ],
