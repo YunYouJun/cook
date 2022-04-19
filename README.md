@@ -28,6 +28,15 @@ pnpm dev
 # http://localhost:3333
 ```
 
+## docker
+
+```bash
+# build
+docker build . -t henryclw/cook:dev
+# start, then open http://localhost:3333
+docker run -it -d --name cook_dev -p 3333:3333 henryclw/cook:dev
+```
+
 ## 致谢
 
 感谢以下小伙伴为本项目提供的数据支持和 QA ！

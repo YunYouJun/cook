@@ -4,7 +4,7 @@
   "scripts": {
     "build": "npm run convert && vite-ssg build",
     "convert": "esno scripts/convert.ts",
-    "dev": "vite --port 3333 --open",
+    "dev": "vite --port 3333 --open --host",
     "lint": "eslint .",
     "postinstall": "npm run convert",
     "preview": "vite preview",
@@ -32,6 +32,7 @@
     "@types/markdown-it-link-attributes": "^3.0.1",
     "@types/nprogress": "^0.2.0",
     "@vitejs/plugin-vue": "^2.3.1",
+    "@unocss/reset": "^0.6.3",
     "consola": "^2.15.3",
     "critters": "^0.0.16",
     "cross-env": "^7.0.3",
