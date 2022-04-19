@@ -25,7 +25,8 @@ title: 关于
 </a>
 </div>
 
-如果您有任何建议或反馈可前往 [Issues](https://github.com/YunYouJun/cook/issues) / [Discussions](https://github.com/YunYouJun/cook/issues)。
+- 如果您发现了任何「故障」或希望有某个「新功能」，可前往 [Issues](https://github.com/YunYouJun/cook/issues)。
+- 如果您有任何想要交流的内容，包括但不局限于建议/反馈/分享等，可前往 [Discussions](https://github.com/YunYouJun/cook/issues)。
 
 ## **致谢**
 
