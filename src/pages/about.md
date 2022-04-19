@@ -3,7 +3,7 @@ title: 关于
 ---
 
 <div class="text-center">
-  <h3>关于</h3>
+  <h3 font="serif black">关于</h3>
 </div>
 
 ### **🍜 好的，今天我们来做菜！**
@@ -42,7 +42,4 @@ title: 关于
 
 点击首页最上方的大锅图标，可以清空所选食材和工具。（本来想当作彩蛋，但是感觉还挺实用的。）
 
-<div class="flex justify-center items-center">
-Made by
-<a m="l-2" class="inline-flex" href="https://www.yunyoujun.cn" target="_blank">云游君</a>
-</div>
+<AboutMe />
