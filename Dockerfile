@@ -8,11 +8,9 @@ RUN npm install -g pnpm
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY . .
 
 RUN pnpm install
-
-COPY . .
 
 # convert csv to json
 # automatically executed when postinstall
