@@ -16,7 +16,7 @@ import { toggleDark } from '~/composables'
       <div i-ri-information-line />
     </RouterLink>
 
-    <a class="icon-btn mx-2 hover:text-green-400" rel="noreferrer" href="https://cdn.jsdelivr.net/gh/YunYouJun/cdn/img/about/white-qrcode-and-search.jpg" target="_blank" title="BiliBili">
+    <a class="icon-btn mx-2 hover:text-green-400" rel="noreferrer" href="https://cdn.jsdelivr.net/gh/YunYouJun/cdn/img/about/white-qrcode-and-search.jpg" target="_blank" title="WeChat">
       <div i-ri-wechat-2-line />
     </a>
 
