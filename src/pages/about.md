@@ -3,7 +3,7 @@ title: 关于
 ---
 
 <div class="text-center">
-  <h3>关于</h3>
+  <h3 font="serif black">关于</h3>
 </div>
 
 ### **🍜 好的，今天我们来做菜！**
@@ -25,7 +25,8 @@ title: 关于
 </a>
 </div>
 
-如果您有任何建议或反馈可前往 [Issues](https://github.com/YunYouJun/cook/issues) / [Discussions](https://github.com/YunYouJun/cook/issues)。
+- 如果您发现了任何「故障」或希望有某个「新功能」，可前往 [Issues](https://github.com/YunYouJun/cook/issues)。
+- 如果您有任何想要交流的内容，包括但不局限于建议/反馈/分享等，可前往 [Discussions](https://github.com/YunYouJun/cook/issues)。
 
 ## **致谢**
 
@@ -38,9 +39,8 @@ title: 关于
 - 晴方啾
 - 课代表阿伟
 
-<br />
+## **友情提示**
 
-<div class="flex justify-center items-center">
-Made by
-<a m="l-2" class="inline-flex" href="https://www.yunyoujun.cn" target="_blank">云游君</a>
-</div>
+点击首页最上方的大锅图标，可以清空所选食材和工具。（本来想当作彩蛋，但是感觉还挺实用的。）
+
+<AboutMe />
