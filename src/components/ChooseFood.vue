@@ -224,10 +224,20 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
     </ToolTag>
   </div>
 
-  <div ref="recipePanel" m="2 t-4" p="2" class="transition shadow hover:shadow-md" bg="gray-400/8">
+  <div ref="recipePanel" m="2 t-4" p="2" class="transition shadow hover:shadow-md relative" bg="gray-400/8">
     <h2 text="xl" font="bold" p="1">
       🍲 来看看组合出的菜谱吧！
     </h2>
+    <div text-4xl m="t-4">
+      <button
+        class="cursor-pointer transition hover:(text-green-600) active:text-green-800 absolute right-5 top-5"
+        title="重置"
+        @click="rStore.reset"
+      >
+        <div v-if="rStore.selectedStuff.length" i-mdi-pot-steam-outline />
+        <div v-else i-mdi-pot-mix-outline />
+      </button>
+    </div>
     <Switch />
     <div p="2">
       <Transition mode="out-in">
