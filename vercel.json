@@ -1,5 +1,6 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/about", "destination": "/index.html" },
+    { "source": "/wechat", "destination": "/index.html" }
   ]
 }
