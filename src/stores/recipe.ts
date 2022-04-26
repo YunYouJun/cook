@@ -2,6 +2,11 @@ import { acceptHMRUpdate, defineStore } from 'pinia'
 
 const namespace = 'cook'
 
+/**
+ * survival: 生存模式
+ */
+type CookMode = 'survival' | ''
+
 export const useRecipeStore = defineStore('recipe', () => {
   const strict = useStorage(`${namespace}:strict`, false)
 
@@ -12,6 +17,8 @@ export const useRecipeStore = defineStore('recipe', () => {
   const selectedStuff = computed(() => Array.from(curStuff.value))
   // const selectedTools = computed(() => Array.from(curTools.value))
   // const selectedTools = ref('')
+
+  const mode = ref<CookMode>('')
 
   function toggleStuff(name: string) {
     if (!curStuff)

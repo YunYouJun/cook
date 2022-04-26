@@ -224,10 +224,15 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
     </ToolTag>
   </div>
 
-  <div ref="recipePanel" m="2 t-4" p="2" class="transition shadow hover:shadow-md" bg="gray-400/8">
+  <div ref="recipePanel" m="2 t-4" p="2" class="relative transition shadow hover:shadow-md" bg="gray-400/8">
     <h2 text="xl" font="bold" p="1">
       🍲 来看看组合出的菜谱吧！
     </h2>
+
+    <!-- <div class="absolute left-5 top-5 icon-btn">
+      <div i-ri-compass-line />
+    </div> -->
+
     <Switch />
     <div p="2">
       <Transition mode="out-in">

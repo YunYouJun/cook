@@ -12,12 +12,12 @@ import { toggleDark } from '~/composables'
       <div i="ri-sun-line dark:ri-moon-line" />
     </button>
 
-    <RouterLink class="icon-btn mx-2 hover:text-blue-400" to="/about" title="关于">
-      <div i-ri-information-line />
+    <RouterLink class="icon-btn mx-2 hover:text-orange-400" to="/help" title="帮助">
+      <div i-ri-question-line />
     </RouterLink>
 
-    <RouterLink class="icon-btn mx-2 hover:text-green-400" to="/wechat" title="微信公众号 - 云游君">
-      <div i-ri-wechat-2-line />
+    <RouterLink class="icon-btn mx-2 hover:text-blue-400" to="/about" title="关于">
+      <div i-ri-information-line />
     </RouterLink>
 
     <a class="icon-btn mx-2 hover:text-pink-400" rel="noreferrer" href="https://space.bilibili.com/1579790" target="_blank" title="BiliBili">
