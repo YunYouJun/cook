@@ -1,20 +1,20 @@
 <script lang="ts" setup>
-import { storeToRefs } from 'pinia'
-import { useRecipeStore } from '~/stores/recipe'
-const rStore = useRecipeStore()
-const { strict } = storeToRefs(rStore)
+defineProps<{
+  strict: boolean
+  toggleStrict: (val: boolean) => void
+}>()
 </script>
 
 <template>
   <div class="inline-flex justify-center items-center" m="t-2">
-    <span :class="!strict && 'text-orange-600'" font="bold" m="x-1" @click="strict = false">
+    <span :class="!strict && 'text-orange-600'" font="bold" m="x-1" @click="toggleStrict(false)">
       模糊匹配
     </span>
     <label m="x-1" class="switch">
       <input v-model="strict" type="checkbox">
       <span class="inline-flex justify-center items-center slider round" />
     </label>
-    <span :class="strict && 'text-green-600'" font="bold" m="x-1" @click="strict = true">
+    <span :class="strict && 'text-green-600'" font="bold" m="x-1" @click="toggleStrict(true)">
       精准匹配
     </span>
   </div>
