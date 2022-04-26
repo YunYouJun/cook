@@ -1,6 +1,9 @@
 {
   "private": true,
   "packageManager": "pnpm@6.32.3",
+  "engines": {
+    "node": ">=14"
+  },
   "scripts": {
     "build": "npm run convert && vite-ssg build",
     "convert": "esno scripts/convert.ts",
