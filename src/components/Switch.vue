@@ -11,7 +11,7 @@ defineProps<{
       模糊匹配
     </span>
     <label m="x-1" class="switch">
-      <input v-model="strict" type="checkbox">
+      <input :modelValue="strict" type="checkbox" @update:modelValue="toggleStrict">
       <span class="inline-flex justify-center items-center slider round" />
     </label>
     <span :class="strict && 'text-green-600'" font="bold" m="x-1" @click="toggleStrict(true)">
