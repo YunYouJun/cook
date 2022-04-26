@@ -1,8 +1,6 @@
 <script lang="ts" setup>
 import { useGtm } from '@gtm-support/vue-gtm'
-import { isClient } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import Switch from './Switch.vue'
 import type { StuffItem } from '~/data/food'
 import { meat, staple, tools, vegetable } from '~/data/food'
 import recipeData from '~/data/recipe.json'
@@ -10,22 +8,25 @@ import type { Recipe } from '~/types'
 import { useRecipeStore } from '~/stores/recipe'
 
 import { useInvisibleElement } from '~/composables/helper'
+import { useEmojiAnimation } from '~/composables/animation'
 
 const recipe = ref<Recipe>(recipeData as Recipe)
 
 const rStore = useRecipeStore()
-const { strict, curTool } = storeToRefs(rStore)
+const { curMode, curTool } = storeToRefs(rStore)
 const curStuff = computed(() => rStore.selectedStuff)
 
 // 默认严格模式
 const displayedRecipe = computed(() => {
-  const recipes = recipe.value.filter((item) => {
-    if (strict.value) {
+  if (curMode.value === 'strict') {
+    return recipe.value.filter((item) => {
       const stuffFlag = curStuff.value.every(stuff => item.stuff.includes(stuff))
       const toolFlag = item.tools?.includes(curTool.value)
       return curTool.value ? stuffFlag && toolFlag : stuffFlag
-    }
-    else {
+    })
+  }
+  else if (curMode.value === 'loose') {
+    return recipe.value.filter((item) => {
       const stuffFlag = curStuff.value.some(stuff => item.stuff.includes(stuff))
       const toolFlag = item.tools?.includes(curTool.value)
 
@@ -41,47 +42,20 @@ const displayedRecipe = computed(() => {
 
         return false
       }
-    }
-  })
-  return recipes
+    })
+  }
+  // survival
+  else {
+    return recipe.value.filter((item) => {
+      const stuffFlag = item.stuff.every(stuff => curStuff.value.includes(stuff))
+      const toolFlag = item.tools?.includes(curTool.value)
+      return curTool.value ? stuffFlag && toolFlag : stuffFlag
+    })
+  }
 })
 
-const { x, y } = usePointer()
-
 const recipeBtn = ref<HTMLButtonElement>()
-
-const { top, left } = useElementBounding(recipeBtn)
-
-const playAnimation = (emoji: string) => {
-  if (!isClient)
-    return
-
-  // 单个 Vue 组件实现不适合创建多个元素和清除动画
-  const emojiEl = document.createElement('span')
-  emojiEl.style.position = 'fixed'
-  emojiEl.style.left = `${x.value}px`
-  emojiEl.style.top = `${y.value}px`
-  emojiEl.style.zIndex = '10'
-  emojiEl.style.transition = 'left .4s linear, top .4s cubic-bezier(0.5, -0.5, 1, 1)'
-  emojiEl.textContent = emoji
-  document.body.appendChild(emojiEl)
-
-  setTimeout(() => {
-    // 以防万一，按钮位置没检测出来，就不播放动画了
-    if (!top.value || !left.value) {
-      emojiEl.style.top = `${x.value}px`
-      emojiEl.style.left = `${y.value}px`
-    }
-    else {
-      emojiEl.style.top = `${top.value}px`
-      emojiEl.style.left = `${left.value + 12}px`
-    }
-  }, 1)
-
-  emojiEl.ontransitionend = () => {
-    emojiEl.remove()
-  }
-}
+const { playAnimation } = useEmojiAnimation(recipeBtn)
 
 const gtm = useGtm()
 
@@ -233,7 +207,9 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
       <div i-ri-compass-line />
     </div> -->
 
-    <Switch />
+    <ToggleMode />
+
+    <!-- <Switch /> -->
     <div p="2">
       <Transition mode="out-in">
         <span v-if="!curStuff.length && !curTool" text="sm" p="2">

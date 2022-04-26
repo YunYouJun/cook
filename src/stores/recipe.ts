@@ -4,12 +4,12 @@ const namespace = 'cook'
 
 /**
  * survival: 生存模式
+ * strict: 严格
+ * loose: 模糊
  */
-type CookMode = 'survival' | ''
+export type SearchMode = 'survival' | 'loose' | 'strict'
 
 export const useRecipeStore = defineStore('recipe', () => {
-  const strict = useStorage(`${namespace}:strict`, false)
-
   const curStuff = useStorage(`${namespace}:stuff`, new Set<string>())
   // const curTools = ref(new Set<string>())
   const curTool = useStorage(`${namespace}:tool`, '')
@@ -18,7 +18,7 @@ export const useRecipeStore = defineStore('recipe', () => {
   // const selectedTools = computed(() => Array.from(curTools.value))
   // const selectedTools = ref('')
 
-  const mode = ref<CookMode>('')
+  const curMode = useStorage<SearchMode>(`${namespace}:mode`, 'loose')
 
   function toggleStuff(name: string) {
     if (!curStuff)
@@ -40,6 +40,10 @@ export const useRecipeStore = defineStore('recipe', () => {
     //   curTools.value.add(name)
   }
 
+  function setMode(mode: SearchMode) {
+    curMode.value = mode
+  }
+
   /**
    * 重置
    */
@@ -50,12 +54,14 @@ export const useRecipeStore = defineStore('recipe', () => {
   }
 
   return {
-    strict,
     curTool,
+    curMode,
     selectedStuff,
+
     toggleStuff,
     toggleTools,
     reset,
+    setMode,
   }
 })
 
