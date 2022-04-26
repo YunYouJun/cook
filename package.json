@@ -24,7 +24,7 @@
     "vue-router": "^4.0.14"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^0.20.7",
+    "@antfu/eslint-config": "^0.21.1",
     "@iconify-json/fe": "^1.1.1",
     "@iconify-json/gg": "^1.1.1",
     "@iconify-json/ic": "^1.1.2",
@@ -41,11 +41,11 @@
     "https-localhost": "^4.7.1",
     "markdown-it-link-attributes": "^4.0.0",
     "markdown-it-prism": "^2.2.4",
-    "pnpm": "^6.32.9",
-    "sass": "^1.50.1",
+    "pnpm": "^6.32.10",
+    "sass": "^1.51.0",
     "star-markdown-css": "^0.3.3",
     "typescript": "^4.6.3",
-    "unocss": "^0.31.13",
+    "unocss": "^0.31.16",
     "unplugin-auto-import": "^0.7.1",
     "unplugin-vue-components": "^0.19.3",
     "vite": "^2.9.5",
