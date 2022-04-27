@@ -1,7 +1,6 @@
 FROM node:lts-alpine
 
 RUN apk update
-
 RUN apk add xdg-utils
 
 RUN npm install -g pnpm
