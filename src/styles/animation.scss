@@ -1,0 +1,38 @@
+/* we will explain what these classes do next! */
+.v-enter-active,
+.v-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.v-enter-from,
+.v-leave-to {
+  opacity: 0;
+}
+
+// scrollbar
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  border-radius: 2px;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 2px;
+  background-color: rgba(122, 122, 122, 0.3);
+
+  &:window-inactive {
+    background-color: rgba(122, 122, 122, 0.3);
+  }
+
+  &:hover {
+    background-color: rgba(122, 122, 122, 0.7);
+  }
+
+  &:active {
+    background-color: rgba(122, 122, 122, 0.9);
+  }
+}

@@ -1,6 +1,9 @@
 {
   "private": true,
   "packageManager": "pnpm@6.32.3",
+  "engines": {
+    "node": ">=14"
+  },
   "scripts": {
     "build": "npm run convert && vite-ssg build",
     "convert": "esno scripts/convert.ts",
@@ -19,12 +22,12 @@
     "pinia": "^2.0.13",
     "prism-theme-vars": "^0.2.2",
     "vue": "^3.2.33",
-    "vue-about-me": "^1.2.6",
+    "vue-about-me": "^1.2.7",
     "vue-demi": "^0.12.5",
     "vue-router": "^4.0.14"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^0.20.6",
+    "@antfu/eslint-config": "^0.21.1",
     "@iconify-json/fe": "^1.1.1",
     "@iconify-json/gg": "^1.1.1",
     "@iconify-json/ic": "^1.1.2",
@@ -36,26 +39,27 @@
     "consola": "^2.15.3",
     "critters": "^0.0.16",
     "cross-env": "^7.0.3",
-    "eslint": "^8.13.0",
+    "eslint": "^8.14.0",
     "esno": "^0.14.1",
     "https-localhost": "^4.7.1",
     "markdown-it-link-attributes": "^4.0.0",
     "markdown-it-prism": "^2.2.4",
-    "pnpm": "^6.32.9",
-    "sass": "^1.50.1",
+    "pnpm": "^6.32.10",
+    "sass": "^1.51.0",
     "star-markdown-css": "^0.3.3",
     "typescript": "^4.6.3",
-    "unocss": "^0.31.6",
+    "unocss": "^0.31.17",
     "unplugin-auto-import": "^0.7.1",
     "unplugin-vue-components": "^0.19.3",
-    "vite": "^2.9.5",
+    "vite": "^2.9.6",
     "vite-plugin-inspect": "^0.5.0",
-    "vite-plugin-md": "^0.12.4",
+    "vite-plugin-md": "^0.13.0",
     "vite-plugin-pages": "^0.23.0",
     "vite-plugin-pwa": "^0.12.0",
     "vite-plugin-vue-layouts": "^0.6.0",
     "vite-ssg": "^0.19.2",
     "vite-ssg-sitemap": "^0.2.4",
-    "vue-tsc": "^0.34.7"
+    "vue-toastification": "^2.0.0-rc.5",
+    "vue-tsc": "^0.34.10"
   }
 }

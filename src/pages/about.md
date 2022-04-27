@@ -11,7 +11,7 @@ title: 关于
 > 希望大家吃的开心！
 
 <div class="inline-flex justify-center items-center">
-代码请见：<a class="inline-flex items-center justify-center" href="https://github.com/YunYouJun/cook" target="_blank">
+代码仓库：<a class="inline-flex items-center justify-center" href="https://github.com/YunYouJun/cook" target="_blank">
 <div m="r-1" inline-flex i-ri-github-line />YunYouJun/cook</a>
 </div>
 
@@ -25,9 +25,6 @@ title: 关于
 </a>
 </div>
 
-- 如果您发现了任何「故障」或希望有某个「新功能」，可前往 [Issues](https://github.com/YunYouJun/cook/issues)。
-- 如果您有任何想要交流的内容，包括但不局限于建议/反馈/分享等，可前往 [Discussions](https://github.com/YunYouJun/cook/issues)。
-
 ## **致谢**
 
 感谢以下小伙伴为本项目提供的数据支持和 QA ！
@@ -39,8 +36,31 @@ title: 关于
 - 晴方啾
 - 课代表阿伟
 
-## **友情提示**
+## **关于我**
 
-点击首页最上方的大锅图标，可以清空所选食材和工具。（本来想当作彩蛋，但是感觉还挺实用的。）
+Hello，我是云游君。
+
+很高兴能在这里与你相遇，也很希望这个网站可以真的帮助到你。
+
+同时，我也以我或许不值一提的脸面保证它会以免费开源的形式维护运营下去。
+
+此外，我也会继续尝试做一些有趣或有用的东西，并分享给大家。
+你也可以在这些地方找到我。
 
 <AboutMe />
+
+对了，给微信公众号「云游君」发送「做菜」也可以快速找到这个网址。
+
+## [**赞助者**](https://sponsors.yunyoujun.cn)
+
+也非常感谢至今以来的所有赞助者们！
+
+如果觉得我的[小项目们](https://sponsors.yunyoujun.cn/projects)还算有趣的话，要不要考虑[赞助](https://sponsors.yunyoujun.cn/)我？
+
+我会将其公开在[账簿](https://sponsors.yunyoujun.cn/account)中，并投入在周边的服务器、域名、CDN 等费用上。
+
+<p align="center">
+  <a href="https://sponsors.yunyoujun.cn">
+    <img src='https://cdn.jsdelivr.net/gh/YunYouJun/sponsors/public/sponsors.svg'/>
+  </a>
+</p>
