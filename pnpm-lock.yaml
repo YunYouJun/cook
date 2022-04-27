@@ -6,7 +6,7 @@ specifiers:
   '@iconify-json/fe': ^1.1.1
   '@iconify-json/gg': ^1.1.1
   '@iconify-json/ic': ^1.1.2
-  '@iconify-json/mdi': ^1.1.9
+  '@iconify-json/mdi': ^1.1.10
   '@iconify-json/ri': ^1.1.1
   '@types/markdown-it-link-attributes': ^3.0.1
   '@types/nprogress': ^0.2.0
@@ -63,7 +63,7 @@ devDependencies:
   '@iconify-json/fe': 1.1.1
   '@iconify-json/gg': 1.1.1
   '@iconify-json/ic': 1.1.2
-  '@iconify-json/mdi': 1.1.9
+  '@iconify-json/mdi': 1.1.10
   '@iconify-json/ri': 1.1.1
   '@types/markdown-it-link-attributes': 3.0.1
   '@types/nprogress': 0.2.0
@@ -1400,8 +1400,8 @@ packages:
       '@iconify/types': 1.1.0
     dev: true
 
-  /@iconify-json/mdi/1.1.9:
-    resolution: {integrity: sha512-iZY3d7nLmEhSxLU5YBHIxVVPySqNjj6zYcf448TXGBPp2PyToITCOuLEaub0rQ9jBAPOlupQsuPX9ylBfgIJ1w==}
+  /@iconify-json/mdi/1.1.10:
+    resolution: {integrity: sha512-M3ObDNtqnCr6MI5D+psxaGcAWVDE+aLA1nP4SESNxAdMhcXd3FOMBkg//qPXNFPgwnloGT7cbJMkU0zislDSTw==}
     dependencies:
       '@iconify/types': 1.1.0
     dev: true

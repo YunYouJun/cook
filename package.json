@@ -31,7 +31,7 @@
     "@iconify-json/fe": "^1.1.1",
     "@iconify-json/gg": "^1.1.1",
     "@iconify-json/ic": "^1.1.2",
-    "@iconify-json/mdi": "^1.1.9",
+    "@iconify-json/mdi": "^1.1.10",
     "@iconify-json/ri": "^1.1.1",
     "@types/markdown-it-link-attributes": "^3.0.1",
     "@types/nprogress": "^0.2.0",
