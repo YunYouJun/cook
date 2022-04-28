@@ -9,12 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-
       - name: Check Out Repo
         uses: actions/checkout@main
-
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@master
@@ -25,17 +22,16 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-
+            # set latest tag for default branch
+            type=raw,value=latest,enable={{is_default_branch}}
       - name: Login to Docker Hub
         uses: docker/login-action@master
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@master
-
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@master
@@ -45,6 +41,5 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
