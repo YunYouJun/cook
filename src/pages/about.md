@@ -25,6 +25,8 @@ title: 关于
 </a>
 </div>
 
+<router-link to="/help">使用帮助</router-link>
+
 ## **致谢**
 
 感谢以下小伙伴为本项目提供的数据支持和 QA ！
