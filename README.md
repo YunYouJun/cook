@@ -15,6 +15,13 @@
 
 更多可参见 [来做菜 | 关于](https://cook.yunyoujun.cn/about)。
 
+欢迎反馈更多菜谱数据：
+
+- [菜谱数据](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS)
+  - [新菜谱反馈](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=uykkic)
+  - [晒晒你的菜](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=dmeahc)
+  - [反馈建议](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=snaau2)
+
 ### Features
 
 本项目支持 PWA，使用浏览器打开时，可将其添加到主屏幕以获得近原生 APP 的体验。

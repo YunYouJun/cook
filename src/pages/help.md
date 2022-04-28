@@ -6,9 +6,13 @@ title: 帮助
 使用帮助
 </h3>
 
-- 菜谱反馈/晒晒你做的菜：<https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=uykkic>
-- 故障/新功能反馈：[Issues](https://github.com/YunYouJun/cook/issues)
-- 交流/建议/分享：[Discussions](https://github.com/YunYouJun/cook/issues)
+- [菜谱数据](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS)
+  - [新菜谱反馈](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=uykkic)
+  - [晒晒你的菜](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=dmeahc)
+  - [反馈建议](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=snaau2)
+- 网站相关
+  - 故障/新功能反馈：[Issues](https://github.com/YunYouJun/cook/issues)
+  - 交流/建议/分享：[Discussions](https://github.com/YunYouJun/cook/issues)
 
 ## **模式说明**
 
