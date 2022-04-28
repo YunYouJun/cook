@@ -32,7 +32,7 @@ jobs:
           context: ./
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/cook:${GITHUB_REF##*/}
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/cook:${GITHUB_REF#refs/heads/}
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
