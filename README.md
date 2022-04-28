@@ -36,24 +36,24 @@ pnpm dev
 
 ## docker
 
-You can either choose to pull the image from docker hub or build your own one locally.
+你可以选择从Docker Hub拉取最新的镜像或者你自己本地构建一个
 
-### pull image from docker hub
+### 从Docker Hub拉取最新的镜像
 
 ```bash
-# pull the image from docker hub
-docker pull yourname/cook:dev
-# start the container, then open http://localhost:3333
-docker run -it -d --name cook_dev -p 3333:3333 henryclw/cook:dev
+# 从Docker Hub拉取最新的镜像
+docker pull yunyoujun/cook:latest
+# 启动容器，然后打开 http://localhost:3333
+docker run -it -d --name cook_dev -p 3333:3333 yunyoujun/cook:latest
 ```
 
-### local build
+### 自己本地构建
 
 ```bash
-# build the image locally
-docker build . -t ourname//cook:dev
-# start the container, then open http://localhost:3333
-docker run -it -d --name cook_dev -p 3333:3333 henryclw/cook:dev
+# 本地构建
+docker build . -t ourname//cook:localdev
+# 启动容器，然后打开 http://localhost:3333
+docker run -it -d --name cook_dev -p 3333:3333 yunyoujun/cook:localdev
 ```
 
 ## 致谢
