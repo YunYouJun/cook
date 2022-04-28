@@ -36,10 +36,23 @@ pnpm dev
 
 ## docker
 
+You can either choose to pull the image from docker hub or build your own one locally.
+
+### pull image from docker hub
+
 ```bash
-# build
-docker build . -t henryclw/cook:dev
-# start, then open http://localhost:3333
+# pull the image from docker hub
+docker pull yourname/cook:dev
+# start the container, then open http://localhost:3333
+docker run -it -d --name cook_dev -p 3333:3333 henryclw/cook:dev
+```
+
+### local build
+
+```bash
+# build the image locally
+docker build . -t ourname//cook:dev
+# start the container, then open http://localhost:3333
 docker run -it -d --name cook_dev -p 3333:3333 henryclw/cook:dev
 ```
 
