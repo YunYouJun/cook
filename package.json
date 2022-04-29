@@ -7,7 +7,7 @@
   "scripts": {
     "build": "npm run convert && vite-ssg build",
     "convert": "esno scripts/convert.ts",
-    "dev": "vite --port 3333 --open",
+    "dev": "vite --port 3333 --open --host",
     "lint": "eslint .",
     "postinstall": "npm run convert",
     "preview": "vite preview",

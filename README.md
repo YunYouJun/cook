@@ -41,6 +41,28 @@ pnpm dev
 # http://localhost:3333
 ```
 
+## docker
+
+你可以选择从 Docker Hub 拉取最新的镜像，或本地自行构建。
+
+### 从 Docker Hub 拉取最新的镜像
+
+```bash
+# 从 Docker Hub 拉取最新的镜像
+docker pull yunyoujun/cook:latest
+# 启动容器，然后打开 http://localhost:3333
+docker run -it -d --name cook_dev -p 3333:3333 yunyoujun/cook:latest
+```
+
+### 自己本地构建
+
+```bash
+# 本地构建
+docker build . -t yourname/cook:localdev
+# 启动容器，然后打开 http://localhost:3333
+docker run -it -d --name cook_dev -p 3333:3333 yourname/cook:localdev
+```
+
 ## 致谢
 
 感谢以下小伙伴为本项目提供的数据支持和 QA ！
