@@ -13,6 +13,7 @@ declare module '@vue/runtime-core' {
     MeatTag: typeof import('./components/tags/MeatTag.vue')['default']
     Menu: typeof import('./components/Menu.vue')['default']
     README: typeof import('./components/README.md')['default']
+    ReloadPrompt: typeof import('./components/ReloadPrompt.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     StapleTag: typeof import('./components/tags/StapleTag.vue')['default']

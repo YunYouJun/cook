@@ -225,6 +225,11 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
           <br>
           大胆尝试一下，或者<a href="#" @click="rStore.reset()">
             <strong>换个组合</strong></a>？
+          <br>
+          <span m="t-1">欢迎来
+            <a class="font-bold text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=uykkic" target="_blank">这里</a>
+            反馈新的菜谱！
+          </span>
         </span>
       </Transition>
     </div>

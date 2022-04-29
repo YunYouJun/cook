@@ -81,7 +81,9 @@ export default defineConfig({
 
     // https://github.com/antfu/vite-plugin-pwa
     VitePWA({
-      registerType: 'autoUpdate',
+      // use default prompt
+      // registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'safari-pinned-tab.svg'],
       manifest: {
         name: '今天我们来做菜',
