@@ -10,6 +10,7 @@ declare module '@vue/runtime-core' {
     ChooseFood: typeof import('./components/ChooseFood.vue')['default']
     Counter: typeof import('./components/Counter.vue')['default']
     DishTag: typeof import('./components/tags/DishTag.vue')['default']
+    InstallPwa: typeof import('./components/InstallPwa.vue')['default']
     MeatTag: typeof import('./components/tags/MeatTag.vue')['default']
     Menu: typeof import('./components/Menu.vue')['default']
     README: typeof import('./components/README.md')['default']
