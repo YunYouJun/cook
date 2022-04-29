@@ -54,6 +54,8 @@ pnpm dev
 
 ## [Sponsors](https://sponsors.yunyoujun.cn)
 
+感谢至今以来的所有赞助者们！因为你们的支持让我更有动力去做各种尝试。
+
 <p align="center">
   <a href="https://cdn.jsdelivr.net/gh/YunYouJun/sponsors/public/sponsors.svg">
     <img src='https://cdn.jsdelivr.net/gh/YunYouJun/sponsors/public/sponsors.svg'/>
