@@ -43,7 +43,7 @@ pnpm dev
 
 ## docker
 
-你可以选择从 Docker Hub 拉取最新的镜像，或本地自行构建。
+您可以选择从 Docker Hub 拉取最新的镜像，或本地自行构建。
 
 ### 从 Docker Hub 拉取最新的镜像
 
