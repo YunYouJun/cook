@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { installPrompt } from './utils/pwa'
 import { isDark } from '~/composables'
 // https://github.com/vueuse/head
 // you can use this to manipulate the document head in any components,
@@ -16,6 +17,8 @@ useHead({
     },
   ],
 })
+
+installPrompt()
 </script>
 
 <template>
