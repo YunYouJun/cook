@@ -21,7 +21,7 @@ const install = () => {
 <template>
   <Transition>
     <div v-if="app.deferredPrompt" text="center" m="t-2">
-      <button class="shadow" bg="green-500" p="x-4 y-0" m="2" @click="install">
+      <button class="shadow" text="white" bg="green-500" p="x-4 y-0" m="2" @click="install">
         安装
       </button>
     </div>
