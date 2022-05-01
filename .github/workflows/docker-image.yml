@@ -1,4 +1,5 @@
-name: Build and Publish Docker Image
+# Build and Publish
+name: Docker Image
 
 on:
   push:
@@ -22,8 +23,8 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            # set latest tag for default branch
-            type=raw,value=latest,enable={{is_default_branch}}
+            # set latest tag for main branch
+            type=raw,value=latest
       - name: Login to Docker Hub
         uses: docker/login-action@master
         with:
@@ -32,7 +33,7 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@master
-      - name: Build and push
+      - name: Build and Push
         id: docker_build
         uses: docker/build-push-action@master
         with:
