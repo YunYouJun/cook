@@ -1,0 +1,15 @@
+FROM node:lts-alpine as build-deps
+MAINTAINER abe<abe520@msn.cn>
+    
+WORKDIR /cook
+COPY . ./
+RUN npm i -g pnpm
+RUN pnpm install
+RUN pnpm build
+  
+FROM nginx:1.21-alpine
+COPY --from=build-deps /cook/dist /usr/share/nginx/html    
+    
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+

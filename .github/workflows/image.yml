@@ -1,0 +1,68 @@
+name: Image
+
+on:
+  push:
+    branches: [ main ]
+  #pull_request:
+  #  branches: [ main ]
+  workflow_dispatch: 
+
+jobs:
+
+#  build:
+
+#    runs-on: ubuntu-latest
+    #steps:
+    #- uses: actions/checkout@v3
+    #- name: Build the Docker image
+    #  run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      -
+        name: Set up metadata
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: |
+            ${{ secrets.DOCKER_HUB_USERNAME }}/cook
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            # set latest tag for main branch
+            type=raw,value=latest
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@master
+      - 
+        name: Build and Push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: ./
+          file: ./Dockerfile2
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
+          
