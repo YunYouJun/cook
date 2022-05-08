@@ -5,6 +5,8 @@
 - 网站链接：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)
 - 备用：[cook.yyj.moe](https://cook.yyj.moe)
 
+> This is a purely Chinese project, because the content of its recipes  is completely oriented towards Chinese, so the relevant content is given priority in Chinese.
+
 ## 参考
 
 - [隔离食用手册大全](https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt)

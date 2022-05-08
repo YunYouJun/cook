@@ -2,10 +2,6 @@
 title: 关于
 ---
 
-<div class="text-center">
-  <h3 font="serif black">关于</h3>
-</div>
-
 ### **🍜 好的，今天我们来做菜！**
 
 > 希望大家吃的开心！
@@ -61,8 +57,6 @@ Hello，我是云游君。
 
 我会将其公开在[账簿](https://sponsors.yunyoujun.cn/account)中，并投入在周边的服务器、域名、CDN 等费用上。
 
-<p align="center">
-  <a href="https://sponsors.yunyoujun.cn">
-    <img src='https://cdn.jsdelivr.net/gh/YunYouJun/sponsors/public/sponsors.svg'/>
-  </a>
-</p>
+<a href="https://sponsors.yunyoujun.cn" target="_blank">
+  <img src='https://cdn.jsdelivr.net/gh/YunYouJun/sponsors/public/sponsors.svg'/>
+</a>

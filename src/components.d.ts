@@ -22,6 +22,7 @@ declare module '@vue/runtime-core' {
     ToggleMode: typeof import('./components/ToggleMode.vue')['default']
     ToolTag: typeof import('./components/tags/ToolTag.vue')['default']
     VegetableTag: typeof import('./components/tags/VegetableTag.vue')['default']
+    WrapperMd: typeof import('./components/WrapperMd.vue')['default']
   }
 }
 

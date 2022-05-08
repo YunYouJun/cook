@@ -4,15 +4,14 @@ import {
   presetIcons,
   presetTypography,
   presetUno,
-  presetWebFonts,
+  // presetWebFonts,
   transformerDirectives,
   transformerVariantGroup,
 } from 'unocss'
-import { markdownWrapperClasses } from './config'
 
 import { tools } from './src/data/food'
 
-const safelist = markdownWrapperClasses.split(' ')
+const safelist: string[] = []
 
 tools.forEach((item) => {
   if (item.icon)
@@ -33,16 +32,17 @@ export default defineConfig({
       warn: true,
     }),
     presetTypography(),
-    presetWebFonts({
-      fonts: {
-        serif: [
-          {
-            name: 'Noto Serif SC',
-            weights: [900],
-          },
-        ],
-      },
-    }),
+    // simplify size
+    // presetWebFonts({
+    //   fonts: {
+    //     serif: [
+    //       {
+    //         name: 'Noto Serif SC',
+    //         weights: [900],
+    //       },
+    //     ],
+    //   },
+    // }),
   ],
   transformers: [
     transformerDirectives(),

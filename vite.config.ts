@@ -13,8 +13,6 @@ import Prism from 'markdown-it-prism'
 import LinkAttributes from 'markdown-it-link-attributes'
 import Unocss from 'unocss/vite'
 
-import { markdownWrapperClasses } from './config'
-
 export default defineConfig({
   resolve: {
     alias: {
@@ -64,7 +62,7 @@ export default defineConfig({
     // https://github.com/antfu/vite-plugin-md
     // Don't need this? Try vitesse-lite: https://github.com/antfu/vitesse-lite
     Markdown({
-      wrapperClasses: markdownWrapperClasses,
+      wrapperComponent: 'WrapperMd',
       headEnabled: true,
       markdownItSetup(md) {
         // https://prismjs.com/
