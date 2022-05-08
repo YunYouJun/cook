@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import type { StuffItem } from '~/data/food'
 import { meat, staple, tools, vegetable } from '~/data/food'
 import recipeData from '~/data/recipe.json'
-import type { Recipe } from '~/types'
+import type { Recipe, RecipeItem } from '~/types'
 import { useRecipeStore } from '~/stores/recipe'
 
 import { useInvisibleElement } from '~/composables/helper'
@@ -99,6 +99,13 @@ const clickTool = (item: StuffItem) => {
 
 const recipePanel = ref()
 const { isVisible, show } = useInvisibleElement(recipePanel)
+
+
+
+function generateRandomRecipe() {
+  return recipe.value[Math.floor(Math.random() * recipe.value.length)]
+}
+const randomRecipe = ref<RecipeItem>(generateRandomRecipe())
 </script>
 
 <template>
@@ -231,7 +238,17 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
             反馈新的菜谱！
           </span>
         </span>
+
       </Transition>
+
+      <hr m="y-2" />
+
+      <div class="inline-flex justify-center items-center">
+        今天吃什么？<div class="transition" hover="text-blue-500" inline-block cursor-pointer i-ri-refresh-line @click="randomRecipe = generateRandomRecipe()" />
+      </div>
+      <p m="t-2">
+        <DishTag :dish="randomRecipe" />
+      </p>
     </div>
   </div>
 </template>
