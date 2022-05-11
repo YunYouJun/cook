@@ -53,7 +53,7 @@ pnpm dev
 # 从 Docker Hub 拉取最新的镜像
 docker pull yunyoujun/cook:latest
 # 新建并启动容器，然后打开 http://localhost:3333
-docker run -it -d --name cook -p 3333:3333 yunyoujun/cook:latest
+docker run -it -d --name cook -p 3333:80 yunyoujun/cook:latest
 
 # 启动与停止
 docker start cook
@@ -66,7 +66,7 @@ docker stop cook
 # 本地构建
 docker build . -t yourname/cook:localdev
 # 启动容器，然后打开 http://localhost:3333
-docker run -it -d --name cook -p 3333:3333 yourname/cook:localdev
+docker run -it -d --name cook -p 3333:80 yourname/cook:localdev
 ```
 
 ## 致谢
