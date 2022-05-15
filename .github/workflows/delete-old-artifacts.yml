@@ -1,0 +1,14 @@
+name: 'Delete old artifacts'
+on:
+  push:
+  #  branches: 
+  workflow_dispatch: 
+
+jobs:
+  delete-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: kolpav/purge-artifacts-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          expire-in: 7days
