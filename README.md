@@ -5,6 +5,8 @@
 - 网站链接：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)
 - 备用：[cook.yyj.moe](https://cook.yyj.moe)
 
+> This is a purely Chinese project, because the content of its recipes  is completely oriented towards Chinese, so the relevant content is given priority in Chinese.
+
 ## 参考
 
 - [隔离食用手册大全](https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt)
@@ -41,26 +43,19 @@ pnpm dev
 # http://localhost:3333
 ```
 
-## docker
+## 部署
 
-您可以选择从 Docker Hub 拉取最新的镜像，或本地自行构建。
-
-### 从 Docker Hub 拉取最新的镜像
+### Docker
 
 ```bash
 # 从 Docker Hub 拉取最新的镜像
 docker pull yunyoujun/cook:latest
-# 启动容器，然后打开 http://localhost:3333
-docker run -it -d --name cook_dev -p 3333:3333 yunyoujun/cook:latest
-```
+# 新建并启动容器，然后打开 http://localhost:3333
+docker run -it -d --name cook -p 8080:80 yunyoujun/cook:latest
 
-### 自己本地构建
-
-```bash
-# 本地构建
-docker build . -t yourname/cook:localdev
-# 启动容器，然后打开 http://localhost:3333
-docker run -it -d --name cook_dev -p 3333:3333 yourname/cook:localdev
+# 启动与停止
+docker start cook
+docker stop cook
 ```
 
 ## 致谢

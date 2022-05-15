@@ -4,55 +4,20 @@ import { storeToRefs } from 'pinia'
 import type { StuffItem } from '~/data/food'
 import { meat, staple, tools, vegetable } from '~/data/food'
 import recipeData from '~/data/recipe.json'
-import type { Recipe } from '~/types'
+import type { Recipe, RecipeItem } from '~/types'
 import { useRecipeStore } from '~/stores/recipe'
 
 import { useInvisibleElement } from '~/composables/helper'
 import { useEmojiAnimation } from '~/composables/animation'
+import { useRecipe } from '~/composables/recipe'
 
 const recipe = ref<Recipe>(recipeData as Recipe)
 
 const rStore = useRecipeStore()
-const { curMode, curTool } = storeToRefs(rStore)
+const { curTool } = storeToRefs(rStore)
 const curStuff = computed(() => rStore.selectedStuff)
 
-// 默认严格模式
-const displayedRecipe = computed(() => {
-  if (curMode.value === 'strict') {
-    return recipe.value.filter((item) => {
-      const stuffFlag = curStuff.value.every(stuff => item.stuff.includes(stuff))
-      const toolFlag = item.tools?.includes(curTool.value)
-      return curTool.value ? stuffFlag && toolFlag : stuffFlag
-    })
-  }
-  else if (curMode.value === 'loose') {
-    return recipe.value.filter((item) => {
-      const stuffFlag = curStuff.value.some(stuff => item.stuff.includes(stuff))
-      const toolFlag = item.tools?.includes(curTool.value)
-
-      // 同时存在 厨具和材料，则同时判断
-      if (curTool.value && curStuff.value.length) {
-        return stuffFlag && toolFlag
-      }
-      else {
-        if (curStuff.value.length)
-          return stuffFlag
-        else if (curTool.value)
-          return toolFlag
-
-        return false
-      }
-    })
-  }
-  // survival
-  else {
-    return recipe.value.filter((item) => {
-      const stuffFlag = item.stuff.every(stuff => curStuff.value.includes(stuff))
-      const toolFlag = item.tools?.includes(curTool.value)
-      return curTool.value ? stuffFlag && toolFlag : stuffFlag
-    })
-  }
-})
+const { displayedRecipe, clickTool } = useRecipe(recipe)
 
 const recipeBtn = ref<HTMLButtonElement>()
 const { playAnimation } = useEmojiAnimation(recipeBtn)
@@ -77,28 +42,13 @@ const toggleStuff = (item: StuffItem, category = '', e?: Event) => {
   })
 }
 
-/**
- * toggle tool
- * @param item
- */
-const clickTool = (item: StuffItem) => {
-  const value = item.name
-  rStore.toggleTools(value)
-
-  gtm?.trackEvent({
-    event: 'click',
-    category: `tool_${value}`,
-    action: 'click_tool',
-    label: '工具',
-  })
-  gtm?.trackEvent({
-    event: 'click_tool',
-    action: item.name,
-  })
-}
-
 const recipePanel = ref()
 const { isVisible, show } = useInvisibleElement(recipePanel)
+
+function generateRandomRecipe() {
+  return recipe.value[Math.floor(Math.random() * recipe.value.length)]
+}
+const randomRecipe = ref<RecipeItem>(generateRandomRecipe())
 </script>
 
 <template>
@@ -232,6 +182,15 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
           </span>
         </span>
       </Transition>
+
+      <hr m="y-2">
+
+      <div class="inline-flex justify-center items-center">
+        今天吃什么？<div class="transition" hover="text-blue-500" inline-block cursor-pointer i-ri-refresh-line @click="randomRecipe = generateRandomRecipe()" />
+      </div>
+      <p m="t-2">
+        <DishTag :dish="randomRecipe" />
+      </p>
     </div>
   </div>
 </template>

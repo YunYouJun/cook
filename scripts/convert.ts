@@ -12,7 +12,8 @@ function run() {
   const csvData = fs.readFileSync(recipeCsvFile, 'utf-8')
   const lines = csvData.split(/\r?\n/)
 
-  if (lines[0].trim() !== 'name,stuff,link,difficulty,tags,methods,tools') {
+  const headers = 'name,stuff,link,difficulty,tags,methods,tools,'
+  if (lines[0].trim() !== headers) {
     consola.warn(`Headers Changed: ${lines[0]}`)
     return
   }

@@ -1,20 +1,13 @@
-FROM node:lts-alpine
+FROM node:lts-alpine AS builder
 
 RUN apk update
-RUN apk add xdg-utils
-
 RUN npm install -g pnpm
 
 WORKDIR /app
-
 COPY . .
 
-RUN pnpm install
+RUN pnpm install && pnpm run build
 
-# convert csv to json
-# automatically executed when postinstall
-RUN pnpm convert
-
-EXPOSE 3333
-
-ENTRYPOINT ["pnpm", "dev"]
+FROM nginx:stable-alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+EXPOSE 80

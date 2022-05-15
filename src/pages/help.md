@@ -2,10 +2,6 @@
 title: 帮助
 ---
 
-<h3 text="center" font="serif black">
-使用帮助
-</h3>
-
 - [菜谱数据](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS)
   - [新菜谱反馈](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=uykkic)
   - [晒晒你的菜](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=dmeahc)
