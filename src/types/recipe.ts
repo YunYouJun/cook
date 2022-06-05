@@ -8,7 +8,11 @@ export interface RecipeItem {
   /**
    * 链接
    */
-  link: string
+  link?: string
+  /**
+   * BiliBili video id
+   */
+  bv?: string
   /**
    * 材料
    */
