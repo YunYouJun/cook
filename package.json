@@ -1,12 +1,12 @@
 {
   "private": true,
-  "packageManager": "pnpm@7.0.0",
+  "packageManager": "pnpm@7.2.1",
   "engines": {
     "node": ">=14"
   },
   "scripts": {
     "build": "npm run convert && vite-ssg build",
-    "convert": "esno scripts/convert.ts",
+    "convert": "tsx scripts/convert.ts",
     "dev": "vite --port 3333 --open --host",
     "lint": "eslint .",
     "postinstall": "npm run convert",
@@ -21,10 +21,10 @@
     "nprogress": "^0.2.0",
     "pinia": "^2.0.14",
     "prism-theme-vars": "^0.2.3",
-    "vue": "^3.2.36",
+    "vue": "^3.2.37",
     "vue-about-me": "^1.2.7",
     "vue-demi": "^0.13.1",
-    "vue-router": "^4.0.15"
+    "vue-router": "^4.0.16"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^0.25.1",
@@ -40,18 +40,18 @@
     "critters": "^0.0.16",
     "cross-env": "^7.0.3",
     "eslint": "^8.17.0",
-    "esno": "^0.14.1",
     "https-localhost": "^4.7.1",
     "markdown-it-link-attributes": "^4.0.0",
     "markdown-it-prism": "^2.2.4",
-    "pnpm": "^7.1.8",
-    "sass": "^1.52.2",
+    "pnpm": "^7.2.1",
+    "sass": "^1.52.3",
     "star-markdown-css": "^0.3.3",
+    "tsx": "^3.4.2",
     "typescript": "^4.7.3",
-    "unocss": "^0.37.4",
-    "unplugin-auto-import": "^0.7.1",
+    "unocss": "^0.39.0",
+    "unplugin-auto-import": "^0.7.2",
     "unplugin-vue-components": "^0.19.6",
-    "vite": "^2.9.9",
+    "vite": "^2.9.12",
     "vite-plugin-inspect": "^0.5.0",
     "vite-plugin-md": "^0.13.1",
     "vite-plugin-pages": "^0.23.0",
@@ -60,6 +60,6 @@
     "vite-ssg": "0.20.1",
     "vite-ssg-sitemap": "^0.2.7",
     "vue-toastification": "^2.0.0-rc.5",
-    "vue-tsc": "^0.36.1"
+    "vue-tsc": "^0.37.8"
   }
 }
