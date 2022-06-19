@@ -5,7 +5,7 @@
 - 网站链接：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)
 - 备用：[cook.yyj.moe](https://cook.yyj.moe)
 
-> This is a purely Chinese project, because the content of its recipes  is completely oriented towards Chinese, so the relevant content is given priority in Chinese.
+> This is a project pruely in Chinese（Mandarin）, because th all of the recipes is completely in chinese, therfore, relevant contents will be given mainly in Chinese.
 
 ## 参考
 
