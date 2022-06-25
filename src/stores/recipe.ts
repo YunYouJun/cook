@@ -54,6 +54,7 @@ export const useRecipeStore = defineStore('recipe', () => {
   }
 
   return {
+    curStuff,
     curTool,
     curMode,
     selectedStuff,

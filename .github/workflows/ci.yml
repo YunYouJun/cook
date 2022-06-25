@@ -47,3 +47,25 @@ jobs:
 
       - name: Typecheck
         run: pnpm run typecheck
+
+  test:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+        os: [ubuntu-latest]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://registry.npmjs.org/
+          cache: pnpm
+
+      - run: pnpm install
+      - run: pnpm run test
