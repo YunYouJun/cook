@@ -13,6 +13,8 @@ import Prism from 'markdown-it-prism'
 import LinkAttributes from 'markdown-it-link-attributes'
 import Unocss from 'unocss/vite'
 
+import legacy from '@vitejs/plugin-legacy'
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -21,6 +23,10 @@ export default defineConfig({
   },
 
   plugins: [
+    legacy({
+      targets: ['defaults', 'not IE 11'],
+    }),
+
     Vue({
       include: [/\.vue$/, /\.md$/],
       reactivityTransform: true,

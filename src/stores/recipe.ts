@@ -10,6 +10,7 @@ const namespace = 'cook'
 export type SearchMode = 'survival' | 'loose' | 'strict'
 
 export const useRecipeStore = defineStore('recipe', () => {
+  // can not exported
   const curStuff = useStorage(`${namespace}:stuff`, new Set<string>())
   // const curTools = ref(new Set<string>())
   const curTool = useStorage(`${namespace}:tool`, '')
@@ -23,7 +24,6 @@ export const useRecipeStore = defineStore('recipe', () => {
   function toggleStuff(name: string) {
     if (!curStuff.value)
       return
-
     if (curStuff.value.has(name))
       curStuff.value.delete(name)
     else
@@ -54,8 +54,11 @@ export const useRecipeStore = defineStore('recipe', () => {
     curTool.value = ''
   }
 
+  function addStuff(name: string) {
+    curStuff.value.add(name)
+  }
+
   return {
-    curStuff,
     curTool,
     curMode,
     selectedStuff,
@@ -64,6 +67,8 @@ export const useRecipeStore = defineStore('recipe', () => {
     toggleTools,
     reset,
     setMode,
+
+    addStuff,
   }
 })
 

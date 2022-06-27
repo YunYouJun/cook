@@ -41,9 +41,9 @@ describe('recipe mode', () => {
     const rStore = useRecipeStore()
     const { displayedRecipe } = useRecipe(recipe)
 
-    rStore.curStuff.clear()
-    rStore.curStuff.add('土豆')
-    rStore.curStuff.add('腊肠')
+    rStore.reset()
+    rStore.addStuff('土豆')
+    rStore.addStuff('腊肠')
 
     rStore.curTool = '电饭煲'
 
@@ -60,9 +60,9 @@ describe('recipe mode', () => {
     const rStore = useRecipeStore()
     const { displayedRecipe } = useRecipe(recipe)
 
-    rStore.curStuff.clear()
-    rStore.curStuff.add('土豆')
-    rStore.curStuff.add('腊肠')
+    rStore.reset()
+    rStore.addStuff('土豆')
+    rStore.addStuff('腊肠')
 
     rStore.curTool = '电饭煲'
 
@@ -79,19 +79,16 @@ describe('recipe mode', () => {
     const rStore = useRecipeStore()
     const { displayedRecipe } = useRecipe(recipe)
 
-    rStore.curStuff.clear()
-    rStore.curStuff.add('土豆')
-    rStore.curStuff.add('腊肠')
+    rStore.reset()
+    rStore.addStuff('土豆')
+    rStore.addStuff('腊肠')
 
     expect(rStore.selectedStuff).toStrictEqual(['土豆', '腊肠'])
     rStore.setMode('survival')
 
     displayedRecipe.value.forEach((item) => {
-      let canCook = false
-      item.stuff.forEach((stuff) => {
-        canCook = canCook && rStore.selectedStuff.includes(stuff)
-      })
-      expect(canCook).toBe(true)
+      const filtered = item.stuff.every(stuff => rStore.selectedStuff.includes(stuff))
+      expect(filtered).toBe(true)
     })
   })
 })
