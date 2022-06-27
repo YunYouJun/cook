@@ -23,7 +23,7 @@ useHead({
 
 <template>
   <RouterView />
-  <ClientOnly>
+  <!-- <ClientOnly>
     <ReloadPrompt />
-  </ClientOnly>
+  </ClientOnly> -->
 </template>
