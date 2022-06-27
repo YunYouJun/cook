@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// @ts-expect-error remove pwa
 import { useRegisterSW } from 'virtual:pwa-register/vue'
 
 const {

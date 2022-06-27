@@ -10,10 +10,11 @@
   <meta name="description" content="好的，今天我们来做菜！">
   <title>隔离食用手册</title>
   <script>
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      for (const registration of registrations)
-        registration.unregister()
-})
+    (function () {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) registration.unregister()
+      })
+    })()
   </script>
   <script>
     (function () {

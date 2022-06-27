@@ -21,8 +21,9 @@ export const useRecipeStore = defineStore('recipe', () => {
   const curMode = useStorage<SearchMode>(`${namespace}:mode`, 'loose')
 
   function toggleStuff(name: string) {
-    if (!curStuff)
+    if (!curStuff.value)
       return
+
     if (curStuff.value.has(name))
       curStuff.value.delete(name)
     else
