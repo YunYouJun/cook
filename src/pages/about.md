@@ -27,7 +27,7 @@ title: 关于
 
 本页面为网页版本，小程序版本请在微信搜索「来做菜」。
 
-![微信小程序版本](./public/search-cook.png)
+![微信小程序版本](/search-cook.png)
 
 ## **致谢**
 
