@@ -1,11 +1,20 @@
 # Cook
 
 > 好的，今天我们来做菜 🥬
+> This is a purely Chinese project, because the content of its recipes  is completely oriented towards Chinese, so the relevant content is given priority in Chinese.
+
+## 版本
+
+### 网页版本
 
 - 网站链接：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)
 - 备用：[cook.yyj.moe](https://cook.yyj.moe)
 
-> This is a purely Chinese project, because the content of its recipes  is completely oriented towards Chinese, so the relevant content is given priority in Chinese.
+### 小程序版本
+
+本仓库为网页版本，小程序版本请在微信搜索「来做菜」。
+
+![微信小程序版本](./public/search-cook.png)
 
 ## 参考
 
