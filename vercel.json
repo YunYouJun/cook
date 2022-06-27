@@ -2,6 +2,6 @@
   "rewrites": [
     { "source": "/about", "destination": "/index.html" },
     { "source": "/help", "destination": "/index.html" },
-    { "source": "/wechat", "destination": "/index.html" },
+    { "source": "/wechat", "destination": "/index.html" }
   ]
 }
