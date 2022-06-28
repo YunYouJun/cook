@@ -5,7 +5,7 @@
 - 网站链接：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)
 - 备用：[cook.yyj.moe](https://cook.yyj.moe)
 
-> This is a project pruely in Chinese（Mandarin）, because th all of the recipes is completely in chinese, therfore, relevant contents will be given mainly in Chinese.
+> Note: This is primarily a Chinese project and we do not intend to translate to English due to the fact that all the ingredients we are familiar with are in Chinese.
 
 ## 参考
 
