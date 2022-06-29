@@ -24,7 +24,7 @@ const triggerGtm = (val: string) => {
 
 <template>
   <a
-    :href="dish.link || `https://www.bilibili.com/video/${dish.bv}`" target="_blank" class="tag rounded" p="x-2"
+    :href="dish.link || `https://www.bilibili.com/video/${dish.bv}`" target="_blank" class="dish-tag tag rounded" p="x-2"
     border="~ blue-200 dark:blue-800"
     bg="blue-300 opacity-20"
     @click="triggerGtm(dish.name)"

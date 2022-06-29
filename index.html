@@ -10,12 +10,19 @@
   <meta name="description" content="好的，今天我们来做菜！">
   <title>隔离食用手册</title>
   <script>
-    (function() {
+    (function () {
       const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
       const setting = localStorage.getItem('vueuse-color-scheme') || 'auto'
       if (setting === 'dark' || (prefersDark && setting !== 'light'))
         document.documentElement.classList.toggle('dark', true)
     })()
+  </script>
+  <script>
+    // remove pwa
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations)
+        registration.unregister()
+    })
   </script>
 </head>
 <body class="font-sans">

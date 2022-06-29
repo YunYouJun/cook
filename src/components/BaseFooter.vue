@@ -27,7 +27,7 @@ onBeforeMount(() => {
     </div>
     <div m="t-2" opacity="80" class="footer-support flex justify-center items-center">
       <span>本网站由</span><a class="footer-support-logo" href="https://www.upyun.com" target="blank" title="又拍云">
-        <img m="x-1" width="50" src="https://cdn.jsdelivr.net/gh/YunYouJun/cdn/img/logo/upyun-logo.png" alt="又拍云">
+        <img m="x-1" width="50" src="https://cdn.yunyoujun.cn/img/logo/upyun-logo.png" alt="又拍云">
       </a><span>提供 CDN 加速</span>
     </div>
   </div>

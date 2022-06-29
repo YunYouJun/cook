@@ -1,11 +1,20 @@
 # Cook
 
 > 好的，今天我们来做菜 🥬
+> Note: This is primarily a Chinese project and we do not intend to translate to English due to the fact that all the ingredients we are familiar with are in Chinese.
+
+## 版本
+
+### 网页版本
 
 - 网站链接：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)
 - 备用：[cook.yyj.moe](https://cook.yyj.moe)
 
-> Note: This is primarily a Chinese project and we do not intend to translate to English due to the fact that all the ingredients we are familiar with are in Chinese.
+### 小程序版本
+
+本仓库为网页版本，小程序版本请在微信搜索「来做菜」。
+
+![微信小程序版本](./public/search-cook.png)
 
 ## 参考
 
@@ -24,9 +33,9 @@
   - [晒晒你的菜](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=dmeahc)
   - [反馈建议](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=snaau2)
 
-### Features
+<!-- ### Features -->
 
-本项目支持 PWA，使用浏览器打开时，可将其添加到主屏幕以获得近原生 APP 的体验。
+<!-- 本项目支持 PWA，使用浏览器打开时，可将其添加到主屏幕以获得近原生 APP 的体验。 -->
 
 ## 开发
 

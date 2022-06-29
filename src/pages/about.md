@@ -23,6 +23,12 @@ title: 关于
 
 相关使用请查看 <router-link to="/help">帮助</router-link>。
 
+### 小程序版本
+
+本页面为网页版本，小程序版本请在微信搜索「来做菜」。
+
+![微信小程序版本](/search-cook.png)
+
 ## **致谢**
 
 感谢以下小伙伴为本项目提供的数据支持和 QA ！
@@ -58,5 +64,5 @@ Hello，我是云游君。
 我会将其公开在[账簿](https://sponsors.yunyoujun.cn/account)中，并投入在周边的服务器、域名、CDN 等费用上。
 
 <a href="https://sponsors.yunyoujun.cn" target="_blank">
-  <img src='https://cdn.jsdelivr.net/gh/YunYouJun/sponsors/public/sponsors.svg'/>
+  <img src='https://sponsors.yunyoujun.cn/sponsors.svg'/>
 </a>
