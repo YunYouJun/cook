@@ -1,7 +1,7 @@
 # Cook
 
 > 好的，今天我们来做菜 🥬
-> This is a purely Chinese project, because the content of its recipes  is completely oriented towards Chinese, so the relevant content is given priority in Chinese.
+> Note: This is primarily a Chinese project and we do not intend to translate to English due to the fact that all the ingredients we are familiar with are in Chinese.
 
 ## 版本
 
