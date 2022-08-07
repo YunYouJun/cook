@@ -2,9 +2,11 @@
 import fs from 'fs'
 import path from 'path'
 import consola from 'consola'
+import url from "url";
 import type { Recipe, RecipeItem } from '~/types'
 import { generateEmojisFromStuff } from '~/utils'
 
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 const recipeCsvFile = path.resolve(__dirname, '../src/data/recipe.csv')
 const recipeJsonFile = path.resolve(__dirname, '../src/data/recipe.json')
 
