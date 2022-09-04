@@ -56,7 +56,7 @@ const randomRecipe = ref<RecipeItem>(generateRandomRecipe())
     <button
       v-show="displayedRecipe.length !== recipe.length && isVisible"
       ref="recipeBtn"
-      class="cursor-pointer fixed inline-flex justify-center items-center rounded rounded-full shadow hover:shadow-md"
+      class="cursor-pointer fixed inline-flex justify-center items-center rounded rounded-full shadow hover:shadow-md z-9"
       bg="green-50 dark:green-900" w="10" h="10" bottom="4" right="4"
       text="green-600 dark:green-300"
       @click="show"
