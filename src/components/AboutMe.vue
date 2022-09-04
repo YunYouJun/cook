@@ -53,5 +53,5 @@ const links = [
 </script>
 
 <template>
-  <vue-about-me :is-dark="isDark" :copyright="copyright" :links="links" />
+  <VueAboutMe :is-dark="isDark" :copyright="copyright" :links="links" />
 </template>
