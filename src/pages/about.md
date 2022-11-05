@@ -14,8 +14,8 @@ title: 关于
 <br />
 
 <div class="inline-flex justify-center items-center">
-菜谱视频来源：
-<a class="inline-flex items-center text-sm text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt" target="_blank">
+菜谱主要视频来源：
+<a class="inline-flex items-center text-sm text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS" target="_blank">
   <div m="r-1" inline-flex i-ri-bilibili-line></div>
   <span class="inline-flex">隔离食用手册大全</span>
 </a>

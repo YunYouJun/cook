@@ -19,10 +19,6 @@
 
 <!-- ![微信小程序版本](./public/search-cook.png) -->
 
-## 参考
-
-- [隔离食用手册大全](https://docs.qq.com/sheet/DZUpJS0tQZm1YYWlt)
-
 ## 说明
 
 本项目初衷是方便特殊时期隔离在家而材料有限的小伙伴，因此菜谱材料会尽量限制在特定范围内。
@@ -31,8 +27,8 @@
 
 欢迎反馈更多菜谱数据：
 
-- [菜谱数据](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS)
-  - [新菜谱反馈](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=uykkic)
+- 相关链接
+  - [居家菜谱投稿](https://docs.qq.com/form/page/DWk9GWW9oTmlXZU9V)
   - [晒晒你的菜](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=dmeahc)
   - [反馈建议](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=snaau2)
 
