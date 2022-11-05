@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import type { SearchMode } from '~/stores/recipe'
-import { useRecipeStore } from '~/stores/recipe'
+import type { SearchMode } from '~/store/recipe'
+import { useRecipeStore } from '~/store/recipe'
 
 const rStore = useRecipeStore()
 

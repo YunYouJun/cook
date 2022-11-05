@@ -13,6 +13,10 @@ html.dark {
   background: #121212;
 }
 
+input:focus {
+  outline: none;
+}
+
 #nprogress {
   pointer-events: none;
 }

@@ -5,7 +5,7 @@ import type { StuffItem } from '~/data/food'
 import { meat, staple, tools, vegetable } from '~/data/food'
 import recipeData from '~/data/recipe.json'
 import type { Recipe, RecipeItem } from '~/types'
-import { useRecipeStore } from '~/stores/recipe'
+import { useRecipeStore } from '~/store/recipe'
 
 import { useInvisibleElement } from '~/composables/helper'
 import { useEmojiAnimation } from '~/composables/animation'
@@ -161,6 +161,8 @@ const randomRecipe = ref<RecipeItem>(generateRandomRecipe())
 
     <!-- <Switch /> -->
     <div class="cook-recipes" p="2">
+      <SearchFood />
+
       <Transition mode="out-in">
         <div class="cook-filter-recipes">
           <span v-if="!curStuff.length && !curTool" text="sm" p="2">

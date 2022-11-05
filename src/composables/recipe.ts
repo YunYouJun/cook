@@ -3,7 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useGtm } from '@gtm-support/vue-gtm'
 import type { Recipe } from '~/types'
 
-import { useRecipeStore } from '~/stores/recipe'
+import { useRecipeStore } from '~/store/recipe'
 import type { StuffItem } from '~/data/food'
 
 export function useRecipe(recipe: Ref<Recipe>) {
@@ -15,6 +15,12 @@ export function useRecipe(recipe: Ref<Recipe>) {
 
   // 默认严格模式
   const displayedRecipe = computed(() => {
+    // if keyword exist, return result directly
+    const keyword = rStore.keyword
+    if (keyword) {
+      return recipe.value.filter(item => item.name.includes(keyword))
+    }
+
     if (curMode.value === 'strict') {
       return recipe.value.filter((item) => {
         const stuffFlag = curStuff.value.every(stuff => item.stuff.includes(stuff))

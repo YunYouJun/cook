@@ -1,5 +1,5 @@
 import { isClient } from '@vueuse/core'
-import { useAppStore } from '~/stores/app'
+import { useAppStore } from '~/store/app'
 
 /**
  * https://web.dev/customize-install/#detect-install

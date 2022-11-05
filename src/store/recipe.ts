@@ -10,6 +10,11 @@ const namespace = 'cook'
 export type SearchMode = 'survival' | 'loose' | 'strict'
 
 export const useRecipeStore = defineStore('recipe', () => {
+  /**
+   * 搜索关键字
+   */
+  const keyword = ref('')
+
   // can not exported
   const curStuff = useStorage(`${namespace}:stuff`, new Set<string>())
   // const curTools = ref(new Set<string>())
@@ -59,6 +64,7 @@ export const useRecipeStore = defineStore('recipe', () => {
   }
 
   return {
+    keyword,
     curTool,
     curMode,
     selectedStuff,

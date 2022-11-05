@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useRecipe } from '~/composables/recipe'
 import type { Recipe } from '~/types'
 import recipeData from '~/data/recipe.json'
-import { useRecipeStore } from '~/stores/recipe'
+import { useRecipeStore } from '~/store/recipe'
 
 const recipe = ref<Recipe>(recipeData as Recipe)
 

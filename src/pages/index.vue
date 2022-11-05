@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { links } from '~/constants';
-import { useRecipeStore } from '~/stores/recipe'
+import { useRecipeStore } from '~/store/recipe'
 const rStore = useRecipeStore()
 
 </script>
