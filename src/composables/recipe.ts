@@ -17,9 +17,8 @@ export function useRecipe(recipe: Ref<Recipe>) {
   const displayedRecipe = computed(() => {
     // if keyword exist, return result directly
     const keyword = rStore.keyword
-    if (keyword) {
+    if (keyword)
       return recipe.value.filter(item => item.name.includes(keyword))
-    }
 
     if (curMode.value === 'strict') {
       return recipe.value.filter((item) => {

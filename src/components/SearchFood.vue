@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { useRecipeStore } from "~/store/recipe";
+import { useRecipeStore } from '~/store/recipe'
 const rStore = useRecipeStore()
 
 const clearKeyword = () => {
