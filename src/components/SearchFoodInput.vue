@@ -1,16 +1,15 @@
 <script lang="ts" setup>
-import { useRecipeStore } from '~/store/recipe'
 const rStore = useRecipeStore()
-
-const clearKeyword = () => {
-  rStore.keyword = ''
-}
 </script>
 
 <template>
   <div m="auto b-2" max-w="500px">
     <div relative text-xs>
-      <div v-show="rStore.keyword" cursor="pointer" absolute right-2 inline-flex justify="center" items-center h="full" opacity="70" @click="clearKeyword">
+      <div
+        v-if="rStore.keyword" cursor="pointer"
+        absolute right-2 inline-flex justify="center" items-center h="full" opacity="70"
+        @click="rStore.clearKeyWord()"
+      >
         <div i-ri-close-line />
       </div>
       <input

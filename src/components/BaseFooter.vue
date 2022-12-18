@@ -1,15 +1,23 @@
 <script lang="ts" setup>
 import { isClient } from '@vueuse/core'
+
 const displayICP = ref(true)
 
 onBeforeMount(() => {
   if (isClient)
-    displayICP.value = ['cook.yunyoujun.cn', 'localhost'].includes(window.location.hostname)
+    displayICP.value = ['cook.yunyoujun.cn', 'localhost', '127.0.0.1'].includes(window.location.hostname)
 })
+
+const commitSha = import.meta.env.CF_PAGES_COMMIT_SHA || ''
+const now = import.meta.env.VITE_APP_BUILD_TIME
+const buildDate = (new Date(parseInt(now) * 1000)).toLocaleDateString()
 </script>
 
 <template>
   <div p="4" class="flex flex-col justify-center items-center" text="sm">
+    <div v-if="commitSha && buildDate" mb-2>
+      当前版本（ {{ buildDate }} ）: {{ commitSha }}
+    </div>
     <a v-if="displayICP" opacity="80" class="flex" href="https://beian.miit.gov.cn/" target="_blank">
       苏ICP备17038157号
     </a>

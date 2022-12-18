@@ -20,6 +20,7 @@ declare module '@vue/runtime-core' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SearchFood: typeof import('./components/SearchFood.vue')['default']
+    SearchFoodInput: typeof import('./components/SearchFoodInput.vue')['default']
     StapleTag: typeof import('./components/tags/StapleTag.vue')['default']
     Switch: typeof import('./components/Switch.vue')['default']
     ToggleMode: typeof import('./components/ToggleMode.vue')['default']

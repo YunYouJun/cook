@@ -69,6 +69,7 @@ export const useRecipeStore = defineStore('recipe', () => {
     curMode,
     selectedStuff,
 
+    clearKeyWord: () => { keyword.value = '' },
     toggleStuff,
     toggleTools,
     reset,

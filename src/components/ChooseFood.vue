@@ -161,7 +161,7 @@ const randomRecipe = ref<RecipeItem>(generateRandomRecipe())
 
     <!-- <Switch /> -->
     <div class="cook-recipes" p="2">
-      <SearchFood />
+      <SearchFoodInput />
 
       <Transition mode="out-in">
         <div class="cook-filter-recipes">
