@@ -2,7 +2,9 @@
 import { useGtm } from '@gtm-support/vue-gtm'
 import { tools } from '~/data/food'
 import type { RecipeItem } from '~/types'
-defineProps<{
+import { getEmojisFromStuff } from '~/utils'
+
+const props = defineProps<{
   dish: RecipeItem
 }>()
 
@@ -20,6 +22,11 @@ const triggerGtm = (val: string) => {
     action: val,
   })
 }
+
+const dishLabel = computed(() => {
+  const emojis = getEmojisFromStuff(props.dish.stuff)
+  return `${props.dish.tags?.includes('杂烩') ? '🍲' : emojis.join(' ')} ${props.dish.name}`
+})
 </script>
 
 <template>
@@ -30,7 +37,7 @@ const triggerGtm = (val: string) => {
     @click="triggerGtm(dish.name)"
   >
     <span m="r-1" class="inline-flex justify-center items-center" text="sm blue-700 dark:blue-200">
-      {{ `${dish.tags?.includes('杂烩') ? '🍲' : dish.emojis.join(' ')} ${dish.name}` }}
+      {{ dishLabel }}
     </span>
     <span v-for="tool, i in tools" :key="i" inline-flex>
       <div v-if="dish.tools?.includes(tool.name)" :class="tool.icon" />

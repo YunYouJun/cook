@@ -5,7 +5,6 @@ import type { StuffItem } from '~/data/food'
 import { meat, staple, tools, vegetable } from '~/data/food'
 import recipeData from '~/data/recipe.json'
 import type { Recipe, RecipeItem } from '~/types'
-import { useRecipeStore } from '~/store/recipe'
 
 import { useInvisibleElement } from '~/composables/helper'
 import { useEmojiAnimation } from '~/composables/animation'

@@ -1,20 +1,17 @@
 import { meat, staple, vegetable } from '~/data/food'
 
+const foodItems = [...vegetable, ...meat, ...staple]
+const foodEmojiMap = new Map()
+foodItems.forEach((item) => {
+  foodEmojiMap.set(item.name, item.emoji)
+})
+
 /**
- * 从材料生成 Emoji
+ * get emojis from stuff name array
  * @param stuff
  * @returns
  */
-export function generateEmojisFromStuff(stuff: string[]) {
-  const emojis: string[] = []
-  stuff.forEach((item) => {
-    const kinds = [vegetable, meat, staple]
-    kinds.forEach((kind) => {
-      kind.forEach((m) => {
-        if (m.name === item)
-          emojis.push(m.emoji)
-      })
-    })
-  })
+export function getEmojisFromStuff(stuff: string[]) {
+  const emojis: string[] = stuff.map(name => foodEmojiMap.get(name)).filter(item => !!item)
   return emojis
 }

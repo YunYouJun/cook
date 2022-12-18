@@ -8,7 +8,7 @@ onBeforeMount(() => {
     displayICP.value = ['cook.yunyoujun.cn', 'localhost', '127.0.0.1'].includes(window.location.hostname)
 })
 
-const commitSha = import.meta.env.CF_PAGES_COMMIT_SHA || ''
+const commitSha = import.meta.env.VITE_COMMIT_REF || ''
 const now = import.meta.env.VITE_APP_BUILD_TIME
 const buildDate = (new Date(parseInt(now) * 1000)).toLocaleDateString()
 </script>

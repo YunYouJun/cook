@@ -4,7 +4,6 @@ import path from 'path'
 import url from 'url'
 import consola from 'consola'
 import type { Recipe, RecipeItem } from '~/types'
-import { generateEmojisFromStuff } from '~/utils'
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 const recipeCsvFile = path.resolve(__dirname, '../src/data/recipe.csv')
@@ -30,7 +29,6 @@ function run() {
       recipeJson.push({
         name: attrs[0].trim(),
         stuff,
-        emojis: generateEmojisFromStuff(stuff),
         // link: attrs[2].trim(),
         // bv id
         bv: attrs[2].trim().replace('https://www.bilibili.com/video/', ''),

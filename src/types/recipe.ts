@@ -20,7 +20,7 @@ export interface RecipeItem {
   /**
    * 根据材料生成
    */
-  emojis: string[]
+  emojis?: string[]
   /**
    * 难度
    */

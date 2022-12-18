@@ -15,6 +15,10 @@ import Unocss from 'unocss/vite'
 
 import legacy from '@vitejs/plugin-legacy'
 
+Object.assign(process.env, {
+  VITE_COMMIT_REF: process.env.CF_PAGES_COMMIT_SHA || '',
+})
+
 export default defineConfig({
   resolve: {
     alias: {
