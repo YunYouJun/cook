@@ -8,7 +8,7 @@ onBeforeMount(() => {
     displayICP.value = ['cook.yunyoujun.cn', 'localhost', '127.0.0.1'].includes(window.location.hostname)
 })
 
-const commitSha = import.meta.env.VITE_COMMIT_REF || ''
+const commitSha = (import.meta.env.VITE_COMMIT_REF || '').slice(0, 7)
 const now = import.meta.env.VITE_APP_BUILD_TIME
 const buildDate = (new Date(parseInt(now) * 1000)).toLocaleDateString()
 </script>
@@ -16,7 +16,14 @@ const buildDate = (new Date(parseInt(now) * 1000)).toLocaleDateString()
 <template>
   <div p="4" class="flex flex-col justify-center items-center" text="sm">
     <div v-if="commitSha && buildDate" mb-2>
-      当前版本（ {{ buildDate }} ）: {{ commitSha }}
+      <span>
+        当前版本（{{ buildDate }}）:
+      </span>
+      <span>
+        <a border="b-1 dashed" :href="`https://github.com/YunYouJun/cook/commit/${commitSha}`" target="_blank" alt="Cook | GitHub Commit">
+          {{ commitSha }}
+        </a>
+      </span>
     </div>
     <a v-if="displayICP" opacity="80" class="flex" href="https://beian.miit.gov.cn/" target="_blank">
       苏ICP备17038157号
