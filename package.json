@@ -6,7 +6,7 @@
     "node": ">=14"
   },
   "scripts": {
-    "build": "cross-env VITE_APP_BUILD_TIME=$(date +%s) npm run convert && vite-ssg build",
+    "build": "npm run convert && cross-env VITE_APP_BUILD_TIME=$(date +%s) vite-ssg build",
     "convert": "tsx scripts/convert.ts",
     "dev": "cross-env VITE_APP_BUILD_TIME=$(date +%s) vite --port 3333 --open --host",
     "lint": "eslint .",
@@ -38,8 +38,8 @@
     "@pinia/testing": "^0.0.14",
     "@types/markdown-it-link-attributes": "^3.0.1",
     "@types/nprogress": "^0.2.0",
-    "@vitejs/plugin-legacy": "^2.3.1",
-    "@vitejs/plugin-vue": "^3.2.0",
+    "@vitejs/plugin-legacy": "^3.0.1",
+    "@vitejs/plugin-vue": "^4.0.0",
     "@vue/test-utils": "^2.2.6",
     "consola": "^2.15.3",
     "critters": "^0.0.16",
@@ -57,7 +57,7 @@
     "unocss": "^0.47.6",
     "unplugin-auto-import": "^0.12.1",
     "unplugin-vue-components": "^0.22.12",
-    "vite": "^3.2.4",
+    "vite": "^4.0.2",
     "vite-plugin-inspect": "^0.7.10",
     "vite-plugin-pages": "^0.28.0",
     "vite-plugin-vue-layouts": "^0.7.0",
