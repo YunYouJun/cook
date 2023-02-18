@@ -10,3 +10,5 @@ dist-ssr
 node_modules
 .idea/
 *.log
+
+esbuild-kit
