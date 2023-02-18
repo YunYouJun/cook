@@ -24,7 +24,7 @@ export function useRecipe(recipe: Ref<Recipe>) {
       return recipe.value.filter((item) => {
         const stuffFlag = curStuff.value.every(stuff => item.stuff.includes(stuff))
         const toolFlag = item.tools?.includes(curTool.value)
-        return curTool.value ? stuffFlag && toolFlag : stuffFlag
+        return curTool.value ? (stuffFlag && toolFlag) : stuffFlag
       })
     }
     else if (curMode.value === 'loose') {
@@ -51,7 +51,7 @@ export function useRecipe(recipe: Ref<Recipe>) {
       return recipe.value.filter((item) => {
         const stuffFlag = item.stuff.every(stuff => curStuff.value.includes(stuff))
         const toolFlag = item.tools?.includes(curTool.value)
-        return curTool.value ? stuffFlag && toolFlag : stuffFlag
+        return curTool.value ? (stuffFlag && toolFlag) : stuffFlag
       })
     }
   })
