@@ -23,7 +23,7 @@ const { playAnimation } = useEmojiAnimation(recipeBtn)
 
 const gtm = useGtm()
 
-const toggleStuff = (item: StuffItem, category = '', _e?: Event) => {
+function toggleStuff(item: StuffItem, category = '', _e?: Event) {
   rStore.toggleStuff(item.name)
 
   if (curStuff.value.includes(item.name))

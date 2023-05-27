@@ -1,8 +1,9 @@
 <script lang="ts" setup>
 import { useAppStore } from '~/store/app'
+
 const app = useAppStore()
 
-const install = () => {
+function install() {
   const deferredPrompt = app.deferredPrompt
   // Show the install prompt
   deferredPrompt.prompt()

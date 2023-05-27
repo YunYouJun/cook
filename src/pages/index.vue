@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { useRecipeStore } from '~/store/recipe'
+
 const rStore = useRecipeStore()
 </script>
 

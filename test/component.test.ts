@@ -1,6 +1,7 @@
 // import { mount } from '@vue/test-utils'
 // import { describe, expect, it, vi } from 'vitest'
 import { describe, it } from 'vitest'
+
 // import { createTestingPinia } from '@pinia/testing'
 // import ChooseFood from '../src/components/ChooseFood.vue'
 // import { useRecipeStore } from '~/store/recipe'

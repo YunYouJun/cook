@@ -10,7 +10,7 @@ const props = defineProps<{
 
 const gtm = useGtm()
 
-const triggerGtm = (val: string) => {
+function triggerGtm(val: string) {
   gtm?.trackEvent({
     event: 'click',
     category: `dish_${val}`,
