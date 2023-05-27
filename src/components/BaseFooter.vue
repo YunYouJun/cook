@@ -57,6 +57,13 @@ const buildDate = (new Date(parseInt(now) * 1000)).toLocaleDateString()
         <span m="l-1" class="inline-flex" style="margin-top: 1px;">B 站</span>
       </a>
     </div>
+    <div mt-2>
+      本站点由
+      <a color="#F6821F" href="https://www.cloudflare-cn.com/" target="_blank" title="Cloudflare" border="b-1 dashed">
+        <span>Cloudflare</span>
+      </a>
+      提供 CDN 支持
+    </div>
     <div m="t-2" opacity="80" class="flex justify-center items-center">
       ©️&nbsp;<a href="https://github.com/YunYouJun/cook" target="_blank">Cook</a>
       <div text="xs" m="x-1" i-ri-cloud-line />
