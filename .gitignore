@@ -5,10 +5,14 @@ src/data/recipe.json
 .vite-ssg-dist
 .vite-ssg-temp
 *.local
-dist
-dist-ssr
-node_modules
-.idea/
-*.log
 
 esbuild-kit
+
+# nuxt
+node_modules
+*.log
+dist
+.output
+.nuxt
+.env
+.idea/

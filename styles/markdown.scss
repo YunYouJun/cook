@@ -1,0 +1,7 @@
+@use 'star-markdown-css/src/scss/theme/yun.scss';
+
+.markdown-body {
+  li {
+    list-style: disc;
+  }
+}

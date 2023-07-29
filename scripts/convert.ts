@@ -3,11 +3,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import url from 'node:url'
 import consola from 'consola'
-import type { Recipe, RecipeItem } from '~/types'
+import type { Recipe, RecipeItem } from '../types'
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
-const recipeCsvFile = path.resolve(__dirname, '../src/data/recipe.csv')
-const recipeJsonFile = path.resolve(__dirname, '../src/data/recipe.json')
+const recipeCsvFile = path.resolve(__dirname, '../data/recipe.csv')
+const recipeJsonFile = path.resolve(__dirname, '../data/recipe.json')
 
 function run() {
   const csvData = fs.readFileSync(recipeCsvFile, 'utf-8')

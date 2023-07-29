@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useRecipe } from '~/composables/recipe'
-import type { Recipe } from '~/types'
+import { useRecipe } from 'composables/recipe'
+import type { Recipes } from '~/types'
 import recipeData from '~/data/recipe.json'
-import { useRecipeStore } from '~/store/recipe'
 
-const recipe = ref<Recipe>(recipeData as Recipe)
+const recipe = ref<Recipes>(recipeData as Recipes)
 
 describe('recipe interaction', () => {
   beforeEach(() => {

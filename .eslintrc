@@ -1,4 +1,7 @@
 {
-  "extends": "@antfu",
+  "extends": [
+    "@antfu",
+    "@unocss"
+  ],
   "ignorePatterns": "*.json"
 }
