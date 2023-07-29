@@ -3,6 +3,7 @@ import { useStorage } from '@vueuse/core'
 import type { RecipeItem, Recipes } from '~/types'
 
 import recipeData from '~/data/recipe.json'
+import type { StuffItem } from '~/data/food'
 
 const namespace = 'cook'
 
@@ -80,6 +81,69 @@ export const useRecipeStore = defineStore('recipe', () => {
 
   const randomRecipe = ref<RecipeItem>(generateRandomRecipe(recipes))
 
+  const gtm = useGtm()
+
+  // 默认严格模式
+  const displayedRecipe = computed(() => {
+    if (keyword.value)
+      return recipes.filter(item => item.name.includes(keyword.value))
+
+    if (curMode.value === 'strict') {
+      return recipes.filter((item) => {
+        const stuffFlag = selectedStuff.value.every(stuff => item.stuff.includes(stuff))
+        const toolFlag = item.tools?.includes(curTool.value)
+        return curTool.value ? (stuffFlag && toolFlag) : stuffFlag
+      })
+    }
+    else if (curMode.value === 'loose') {
+      return recipes.filter((item) => {
+        const stuffFlag = selectedStuff.value.some(stuff => item.stuff.includes(stuff))
+        const toolFlag = item.tools?.includes(curTool.value)
+
+        // 同时存在 厨具和材料，则同时判断
+        if (curTool.value && selectedStuff.value.length) {
+          return stuffFlag && toolFlag
+        }
+        else {
+          if (selectedStuff.value.length)
+            return stuffFlag
+          else if (curTool.value)
+            return toolFlag
+
+          return false
+        }
+      })
+    }
+    // survival
+    else {
+      return recipes.filter((item) => {
+        const stuffFlag = item.stuff.every(stuff => selectedStuff.value.includes(stuff))
+        const toolFlag = item.tools?.includes(curTool.value)
+        return curTool.value ? (stuffFlag && toolFlag) : stuffFlag
+      })
+    }
+  })
+
+  /**
+   * toggle tool
+   * @param item
+   */
+  const clickTool = (item: StuffItem) => {
+    const value = item.name
+    toggleTools(value)
+
+    gtm?.trackEvent({
+      event: 'click',
+      category: `tool_${value}`,
+      action: 'click_tool',
+      label: '工具',
+    })
+    gtm?.trackEvent({
+      event: 'click_tool',
+      action: item.name,
+    })
+  }
+
   return {
     recipes,
 
@@ -98,6 +162,10 @@ export const useRecipeStore = defineStore('recipe', () => {
     setMode,
 
     addStuff,
+
+    // useRecipe
+    displayedRecipe,
+    clickTool,
   }
 })
 

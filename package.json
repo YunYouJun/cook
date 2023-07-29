@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^0.39.8",
+    "@headlessui/vue": "^1.7.15",
     "@iconify-json/carbon": "^1.1.18",
     "@iconify-json/fe": "^1.1.6",
     "@iconify-json/gg": "^1.1.5",
@@ -40,6 +41,7 @@
     "@vite-pwa/nuxt": "^0.1.0",
     "@vue/test-utils": "^2.4.1",
     "@vueuse/nuxt": "^10.2.1",
+    "@yunlefun/vue": "^0.0.7",
     "@zadigetvoltaire/nuxt-gtm": "^0.0.13",
     "consola": "^3.2.3",
     "cross-env": "^7.0.3",

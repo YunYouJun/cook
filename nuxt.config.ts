@@ -14,7 +14,10 @@ export default defineNuxtConfig({
     '@nuxtjs/color-mode',
     '@vite-pwa/nuxt',
     '@nuxt/content',
+
     '@zadigetvoltaire/nuxt-gtm',
+
+    '@yunlefun/vue/nuxt',
   ],
 
   experimental: {

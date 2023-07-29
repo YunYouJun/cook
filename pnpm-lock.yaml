@@ -13,6 +13,9 @@ devDependencies:
   '@antfu/eslint-config':
     specifier: ^0.39.8
     version: 0.39.8(eslint@8.46.0)(typescript@5.1.6)
+  '@headlessui/vue':
+    specifier: ^1.7.15
+    version: 1.7.15(vue@3.3.4)
   '@iconify-json/carbon':
     specifier: ^1.1.18
     version: 1.1.18
@@ -64,6 +67,9 @@ devDependencies:
   '@vueuse/nuxt':
     specifier: ^10.2.1
     version: 10.2.1(nuxt@3.6.3)(rollup@2.79.1)(vue@3.3.4)
+  '@yunlefun/vue':
+    specifier: ^0.0.7
+    version: 0.0.7
   '@zadigetvoltaire/nuxt-gtm':
     specifier: ^0.0.13
     version: 0.0.13(nuxt@3.6.3)(rollup@2.79.1)(vue@3.3.4)
@@ -1954,6 +1960,15 @@ packages:
     resolution: {integrity: sha512-foQZKJig7Ob0BMAYBfcJk8d77QtOe7Wo4ox7ff1lQYoNNAb6jwcY1ncdoy2e9wQZzvNy7ODZCYJkK8kzmcAnAg==}
     dependencies:
       '@hapi/hoek': 9.3.0
+    dev: true
+
+  /@headlessui/vue@1.7.15(vue@3.3.4):
+    resolution: {integrity: sha512-3ozVEgQ8mw09nWvUPN+8S6C8l3SM0lVT1aEN/+oP5Y4LF0WNMM9UrVisVTN9LLQ06v/X3EFA0blyL/vg8XNZlg==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      vue: ^3.2.0
+    dependencies:
+      vue: 3.3.4
     dev: true
 
   /@humanwhocodes/config-array@0.11.10:
@@ -4107,6 +4122,10 @@ packages:
 
   /@xtuc/long@4.2.2:
     resolution: {integrity: sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ==}
+    dev: true
+
+  /@yunlefun/vue@0.0.7:
+    resolution: {integrity: sha512-d5CSyg5LDlg/r6lm+99MZrlS9TzqmAA+pEM+7CpezkhsRkRpqXJWg/K12dex7hcewC9gRYb3GrEVnI7NeAuhTw==}
     dev: true
 
   /@zadigetvoltaire/nuxt-gtm@0.0.13(nuxt@3.6.3)(rollup@2.79.1)(vue@3.3.4):

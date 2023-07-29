@@ -1,11 +1,5 @@
 <template>
-  <nav text-xl p="t-6">
-    <NuxtLink class="mx-2 icon-btn" to="/" title="首页">
-      <div i-ri-home-2-line />
-    </NuxtLink>
-
-    <DarkToggle />
-
+  <div>
     <NuxtLink class="mx-2 icon-btn hover:text-orange-400" to="/help" title="帮助">
       <div i-ri-question-line />
     </NuxtLink>
@@ -21,5 +15,5 @@
     <a class="hover:text-black-400 mx-2 icon-btn" rel="noreferrer" href="https://github.com/YunYouJun/cook" target="_blank" title="GitHub">
       <div i-ri-github-line />
     </a>
-  </nav>
+  </div>
 </template>

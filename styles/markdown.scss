@@ -5,3 +5,32 @@
     list-style: disc;
   }
 }
+
+blockquote {
+  border-left: 0.25em solid #ddd;
+  padding: 0 1em;
+  color: #777;
+  quotes: '\\201C''\\201D''\\2018''\\2019';
+}
+
+ol {
+  list-style: decimal;
+  padding-left: 2em;
+
+  li {
+    line-height: 2;
+  }
+}
+
+ul {
+  list-style: disc;
+  padding-left: 2em;
+
+  li {
+    line-height: 2;
+  }
+}
+
+a {
+  border-bottom: 1px dashed #ddd;
+}

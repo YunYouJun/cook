@@ -1,12 +1,12 @@
+import type { MaybeComputedElementRef } from '@vueuse/core'
 import { isClient, useElementBounding } from '@vueuse/core'
-import type { Ref } from 'vue'
 
 /**
  * trigger show invisible element
  * @param target
  * @returns
  */
-export function useInvisibleElement(target: Ref<HTMLElement>) {
+export function useInvisibleElement(target: MaybeComputedElementRef<HTMLElement>) {
   const { top } = useElementBounding(target)
 
   const isVisible = computed(() => {

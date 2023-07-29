@@ -3,15 +3,11 @@ import { storeToRefs } from 'pinia'
 import type { StuffItem } from '~/data/food'
 import { meat, staple, tools, vegetable } from '~/data/food'
 
-import { useInvisibleElement } from '~/composables/helper'
 import { useEmojiAnimation } from '~/composables/animation'
-import { useRecipe } from '~/composables/recipe'
 
 const rStore = useRecipeStore()
 const { curTool } = storeToRefs(rStore)
 const curStuff = computed(() => rStore.selectedStuff)
-
-const { displayedRecipe, clickTool } = useRecipe(rStore.recipes)
 
 const recipeBtn = ref<HTMLButtonElement>()
 const { playAnimation } = useEmojiAnimation(recipeBtn)
@@ -35,30 +31,9 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
     action: item.name,
   })
 }
-
-const recipePanel = ref()
-const { isVisible, show } = useInvisibleElement(recipePanel)
 </script>
 
 <template>
-  <Transition>
-    <button
-      v-show="displayedRecipe.length !== rStore.recipes.length && isVisible"
-      ref="recipeBtn"
-      class="fixed z-9 inline-flex cursor-pointer items-center justify-center rounded rounded-full shadow hover:shadow-md"
-      bg="green-50 dark:green-900" w="10" h="10" bottom="4" right="4"
-      text="green-600 dark:green-300"
-      @click="show"
-    >
-      <span v-if="displayedRecipe.length">
-        <div i-mdi-bowl-mix-outline />
-      </span>
-      <span v-else>
-        <div i-mdi-bowl-outline />
-      </span>
-    </button>
-  </Transition>
-
   <h2 m="t-4" text="xl" font="bold" p="1">
     🥘 先选一下食材
   </h2>
@@ -123,7 +98,7 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
     <ToolTag
       v-for="item, i in tools" :key="i"
       :active="curTool === item.name"
-      @click="clickTool(item)"
+      @click="rStore.clickTool(item)"
     >
       <span v-if="item.emoji" class="inline-flex">{{ item.emoji }}</span>
       <span v-else-if="item.icon" class="inline-flex">
@@ -137,44 +112,5 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
     </ToolTag>
   </div>
 
-  <div ref="recipePanel" m="2 t-4" p="2" class="relative shadow transition hover:shadow-md" bg="gray-400/8">
-    <h2 text="xl" font="bold" p="1">
-      🍲 来看看组合出的菜谱吧！
-    </h2>
-
-    <ToggleMode />
-
-    <!-- <Switch /> -->
-    <div class="cook-recipes" p="2">
-      <SearchFoodInput />
-
-      <Transition mode="out-in">
-        <div class="cook-filter-recipes">
-          <span v-if="!curStuff.length && !curTool" text="sm" p="2">
-            你要先选食材或工具哦～
-          </span>
-
-          <span v-else-if="displayedRecipe.length">
-            <DishTag v-for="item, i in displayedRecipe" :key="i" :dish="item" />
-          </span>
-
-          <span v-else text="sm">
-            还没有完美匹配的菜谱呢……
-            <br>
-            大胆尝试一下，或者<a href="#" @click="rStore.reset()">
-              <strong>换个组合</strong></a>？
-            <br>
-            <span m="t-1">欢迎来
-              <a class="font-bold text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=uykkic" target="_blank">这里</a>
-              反馈新的菜谱！
-            </span>
-          </span>
-        </div>
-      </Transition>
-
-      <hr m="y-2">
-
-      <RandomRecipe />
-    </div>
-  </div>
+  <RecipePanel />
 </template>
