@@ -1,11 +1,10 @@
-<script lang="ts" setup>
-</script>
-
 <template>
   <div class="w-full px-2 pt-8">
     <h1 text-2xl font="bold" my="4">
       帮助
     </h1>
+    <FeedbackActions />
+
     <div class="mx-auto max-w-md w-full rounded-2xl bg-white p-2" text-left>
       <FAQItem title="什么是模式？">
         <ul>
@@ -19,6 +18,11 @@
         <div inline-flex items-center justify-center>
           点击顶部 <div i-mdi-pot-steam-outline mx-1 inline-block /> 图标即可。
         </div>
+      </FAQItem>
+
+      <FAQItem title="是否有微信小程序?">
+        因不可抗力（小程序因跳转 B 站视频而被判定为导流违规）下架。
+        将不再提供小程序版本。
       </FAQItem>
 
       <FAQItem title="是否有 APP?">
@@ -65,10 +69,7 @@
                 <a href="https://docs.qq.com/form/page/DWk9GWW9oTmlXZU9V" target="_blank">居家菜谱投稿</a>
               </li>
               <li>
-                <a href="https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=dmeahc" target="_blank">晒晒你的菜</a>
-              </li>
-              <li>
-                <a href="https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=snaau2" target="_blank">反馈建议</a>
+                <a href="https://support.qq.com/products/507827" target="_blank">反馈建议分享（兔小巢）</a>
               </li>
             </ul>
           </li>
@@ -89,4 +90,5 @@
       </FAQItem>
     </div>
   </div>
+  <BaseFooter mt-4 />
 </template>

@@ -29,8 +29,7 @@
 
 - 相关链接
   - [居家菜谱投稿](https://docs.qq.com/form/page/DWk9GWW9oTmlXZU9V)
-  - [晒晒你的菜](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=dmeahc)
-  - [反馈建议](https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=snaau2)
+  - [反馈建议分享-兔小巢](https://support.qq.com/products/507827)
 
 <!-- ### Features -->
 

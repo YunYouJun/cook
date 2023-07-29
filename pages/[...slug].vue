@@ -5,4 +5,5 @@
       <ContentRenderer :value="doc" />
     </ContentDoc>
   </main>
+  <BaseFooter />
 </template>

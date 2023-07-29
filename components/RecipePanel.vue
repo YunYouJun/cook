@@ -1,16 +1,13 @@
 <script lang="ts" setup>
-const recipePanel = ref()
+import { storeToRefs } from 'pinia'
+
 const rStore = useRecipeStore()
 
-const { isVisible, show } = useInvisibleElement(recipePanel)
+const { displayedRecipe, selectedStuff, curTool } = storeToRefs(rStore)
 </script>
 
 <template>
-  <Transition>
-    <BasketButton :is-visible="isVisible" @click="show" />
-  </Transition>
-
-  <div ref="recipePanel" m="2 t-4" p="2" class="recipe-panel relative shadow transition hover:shadow-md" bg="gray-400/8">
+  <div m="x-2 y-4" p="2" class="recipe-panel relative shadow transition hover:shadow-md" bg="gray-400/8">
     <h2 text="xl" font="bold" p="1">
       🍲 来看看组合出的菜谱吧！
     </h2>
@@ -23,12 +20,12 @@ const { isVisible, show } = useInvisibleElement(recipePanel)
 
       <Transition mode="out-in">
         <div class="cook-filter-recipes">
-          <span v-if="!rStore.selectedStuff.length && !rStore.curTool" text="sm" p="2">
+          <span v-if="!selectedStuff.length && !curTool" text="sm" p="2">
             你要先选食材或工具哦～
           </span>
 
-          <span v-else-if="rStore.displayedRecipe.length">
-            <DishTag v-for="item, i in rStore.displayedRecipe" :key="i" :dish="item" />
+          <span v-else-if="displayedRecipe.length">
+            <DishTag v-for="item, i in displayedRecipe" :key="i" :dish="item" />
           </span>
 
           <span v-else text="sm">

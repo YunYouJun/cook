@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { isClient } from '@vueuse/core'
-import { links } from '~/constants'
 
 const displayICP = ref(true)
 
@@ -16,27 +15,6 @@ const buildDate = (new Date(Number.parseInt(now) * 1000)).toLocaleDateString()
 
 <template>
   <div p="4 t-2" class="flex flex-col items-center justify-center" text="sm">
-    <div>
-      <a
-        m="2"
-        border="b-1 dashed"
-        class="inline-flex text-sm text-blue-600 dark:text-blue-400"
-        :href="links.contribute" target="_blank"
-        title="居家菜谱投稿"
-      >
-        立即投稿
-      </a>
-
-      <a
-        m="2"
-        class="inline-flex text-sm text-blue-600 dark:text-blue-400"
-        :href="links.feedback" target="_blank"
-        alt="通过兔小巢反馈"
-      >
-        立即反馈
-      </a>
-    </div>
-
     <div v-if="commitSha && buildDate" mb-2>
       <span>
         当前版本（{{ buildDate }}）:
@@ -82,4 +60,3 @@ const buildDate = (new Date(Number.parseInt(now) * 1000)).toLocaleDateString()
     </div> -->
   </div>
 </template>
-constants

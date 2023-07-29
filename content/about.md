@@ -9,14 +9,14 @@ title: 关于
 > 希望大家吃的开心！
 
 <div class="inline-flex justify-center items-center">
-  代码仓库：<a class="inline-flex items-center justify-center" href="https://github.com/YunYouJun/cook" target="_blank">
+- 代码仓库：<a class="inline-flex items-center justify-center" href="https://github.com/YunYouJun/cook" target="_blank">
   <div m="r-1" inline-flex i-ri-github-line></div>YunYouJun/cook</a>
 </div>
 
 <br />
 
 <div class="inline-flex justify-center items-center">
-菜谱主要视频来源：
+- 菜谱主要视频来源：
 <a class="inline-flex items-center text-sm text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS" target="_blank">
   <div m="r-1" inline-flex i-ri-bilibili-line></div>
   <span class="inline-flex">隔离食用手册大全</span>
@@ -24,15 +24,6 @@ title: 关于
 </div>
 
 相关使用请查看 <router-link to="/help">帮助</router-link>。
-
-### 小程序版本
-
-~~本页面为网页版本，小程序版本请在微信搜索「来做菜」。~~
-
-因不可抗力，小程序因跳转 B 站视频而被判定为导流违规下架。
-将不再提供小程序版本。
-
-<!-- ![微信小程序版本](/search-cook.png) -->
 
 ## **致谢**
 

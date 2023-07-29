@@ -29,9 +29,10 @@ const items: BottomMenuItem[] = [
   },
 ]
 
+const route = useRoute()
 const router = useRouter()
 
-const active = ref('/')
+const active = ref(route.path)
 function onClick(item: BottomMenuItem) {
   active.value = item.to || ''
   router.push(item.to || '/')

@@ -13,6 +13,8 @@ const recipeBtn = ref<HTMLButtonElement>()
 const { playAnimation } = useEmojiAnimation(recipeBtn)
 
 const gtm = useGtm()
+const recipePanel = ref()
+const { isVisible, show } = useInvisibleElement(recipePanel)
 
 function toggleStuff(item: StuffItem, category = '', _e?: Event) {
   rStore.toggleStuff(item.name)
@@ -112,5 +114,8 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
     </ToolTag>
   </div>
 
-  <RecipePanel />
+  <Transition>
+    <BasketButton ref="recipeBtn" :is-visible="isVisible" @click="show" />
+  </Transition>
+  <RecipePanel ref="recipePanel" />
 </template>
