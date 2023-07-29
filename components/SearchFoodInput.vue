@@ -1,5 +1,10 @@
 <script lang="ts" setup>
 const rStore = useRecipeStore()
+
+const searchInput = ref<HTMLInputElement>()
+onMounted(() => {
+  searchInput.value?.focus()
+})
 </script>
 
 <template>
@@ -14,6 +19,7 @@ const rStore = useRecipeStore()
       </div>
       <input
         id="input"
+        ref="searchInput"
         v-model="rStore.keyword"
         placeholder="关键字过滤"
         aria-label="搜索关键字"

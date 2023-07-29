@@ -4,6 +4,8 @@ import { storeToRefs } from 'pinia'
 const rStore = useRecipeStore()
 
 const { displayedRecipe, selectedStuff, curTool } = storeToRefs(rStore)
+
+const showSearchInput = ref(false)
 </script>
 
 <template>
@@ -14,9 +16,14 @@ const { displayedRecipe, selectedStuff, curTool } = storeToRefs(rStore)
 
     <ToggleMode />
 
+    <button absolute right-4 top-4 @click="showSearchInput = !showSearchInput">
+      <div v-if="!showSearchInput" i-ri-search-line />
+      <div v-else i-ri-search-fill />
+    </button>
+
     <!-- <Switch /> -->
     <div class="cook-recipes" p="2">
-      <SearchFoodInput />
+      <SearchFoodInput v-if="showSearchInput" />
 
       <Transition mode="out-in">
         <div class="cook-filter-recipes">
