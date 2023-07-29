@@ -24,7 +24,7 @@ const rStore = useRecipeStore()
         text="center"
         bg="transparent"
         border="~ rounded gray-200 dark:gray-700"
-        class="focus:(dark:gray-500)"
+        class="focus:dark:gray-500"
       >
       <label class="hidden" for="input">快速搜索</label>
     </div>

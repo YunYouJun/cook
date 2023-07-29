@@ -6,13 +6,13 @@ defineProps<{
 </script>
 
 <template>
-  <div class="inline-flex justify-center items-center" m="t-2">
+  <div class="inline-flex items-center justify-center" m="t-2">
     <span :class="!strict && 'text-orange-600'" font="bold" m="x-1" @click="toggleStrict(false)">
       模糊匹配
     </span>
     <label m="x-1" class="switch">
       <input :modelValue="strict" type="checkbox" @update:modelValue="toggleStrict">
-      <span class="inline-flex justify-center items-center slider round" />
+      <span class="slider round inline-flex items-center justify-center" />
     </label>
     <span :class="strict && 'text-green-600'" font="bold" m="x-1" @click="toggleStrict(true)">
       精准匹配

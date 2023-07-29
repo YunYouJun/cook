@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import url from 'node:url'
 import consola from 'consola'
-import type { Recipe, RecipeItem } from '../types'
+import type { RecipeItem, Recipes } from '../types'
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 const recipeCsvFile = path.resolve(__dirname, '../data/recipe.csv')
@@ -19,7 +19,7 @@ function run() {
     return
   }
 
-  const recipeJson: Recipe = []
+  const recipeJson: Recipes = []
   const sep = '、'
 
   lines.slice(1).forEach((line) => {

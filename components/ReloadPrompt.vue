@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// @ts-expect-error remove pwa
 import { useRegisterSW } from 'virtual:pwa-register/vue'
 
 const {
@@ -17,7 +16,7 @@ async function close() {
 <template>
   <div
     v-if="offlineReady || needRefresh"
-    class="pwa-toast transition shadow-lg hover:shadow-md rounded"
+    class="pwa-toast rounded shadow-lg transition hover:shadow-md"
     border="~ stone-200 dark:stone-600"
     text="center"
     p="4"
@@ -44,7 +43,7 @@ async function close() {
     </button>
     <button
       m="x-2" p="x-4 y-1" text="sm"
-      class="shadow rounded transition active:shadow-md"
+      class="rounded shadow transition active:shadow-md"
       border="~ stone-200 dark:stone-600"
       bg="active:(white opacity-20)"
       @click="close"

@@ -1,9 +1,10 @@
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
+import { computed, ref } from 'vue'
+import { useGtm } from '@gtm-support/vue-gtm'
+import recipeData from '../../data/recipe.json'
+import type { StuffItem } from '../../data/food'
 import type { RecipeItem, Recipes } from '~/types'
-
-import recipeData from '~/data/recipe.json'
-import type { StuffItem } from '~/data/food'
 
 const namespace = 'cook'
 
@@ -25,6 +26,7 @@ export type SearchMode = 'survival' | 'loose' | 'strict'
 
 export const useRecipeStore = defineStore('recipe', () => {
   const recipes = recipeData as Recipes
+  const gtm = useGtm()
 
   /**
    * 搜索关键字
@@ -80,8 +82,6 @@ export const useRecipeStore = defineStore('recipe', () => {
   }
 
   const randomRecipe = ref<RecipeItem>(generateRandomRecipe(recipes))
-
-  const gtm = useGtm()
 
   // 默认严格模式
   const displayedRecipe = computed(() => {
