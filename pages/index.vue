@@ -3,8 +3,8 @@ const rStore = useRecipeStore()
 </script>
 
 <template>
-  <div>
-    <div text-4xl m="t-4">
+  <div pt-4>
+    <div text-4xl>
       <button
         class="cursor-pointer transition active:text-green-800 hover:(text-green-600)"
         title="重置"
