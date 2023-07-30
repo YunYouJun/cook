@@ -16,7 +16,7 @@
     "lint": "eslint .",
     "postinstall": "nuxi prepare && npm run convert",
     "preview-https": "serve dist",
-    "release": "bumpp --commit --push --tag",
+    "release": "bumpp",
     "test": "vitest",
     "typecheck": "vue-tsc --noEmit"
   },
