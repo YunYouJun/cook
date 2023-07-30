@@ -28,16 +28,17 @@ jobs:
         run: pnpm install
 
       - run: npm run generate --if-present
-      - uses: actions/upload-artifact@v3
-        with:
-          name: Cook Dist
-          path: .output/public/
 
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: .output/public/
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: Cook Dist
+          path: .output/public/
 
       - run: npx changelogithub # or changelogithub@0.12 if ensure the stable result
         env:
