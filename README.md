@@ -5,6 +5,8 @@
 
 ## 版本
 
+[![Release](https://github.com/YunYouJun/cook/actions/workflows/release.yml/badge.svg)](https://github.com/YunYouJun/cook/actions/workflows/release.yml)
+
 ### 网页版本
 
 - 网站链接：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)

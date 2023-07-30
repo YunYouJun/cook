@@ -31,7 +31,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: Cook Dist
-          path: dist/
+          path: .output/public/
 
       - run: npx changelogithub # or changelogithub@0.12 if ensure the stable result
         env:
