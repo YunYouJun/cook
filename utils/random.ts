@@ -1,19 +1,17 @@
-import type { RecipeItem, Recipes } from '../types'
-
 /**
- * 生成随机菜谱，默认一道
+ * 生成随机数组
  * @param recipes
  * @returns
  */
-export function generateRandomRecipe(recipes: Recipes, total = 1) {
-  const randomRecipes: RecipeItem[] = []
+export function generateRandomArray(length: number, total = 1) {
+  const randomArr: number[] = []
   for (let i = 0; i < total; i++) {
-    const randomIndex = Math.floor(Math.random() * recipes.length)
-    if (randomRecipes.includes(recipes[randomIndex])) {
+    const randomIndex = Math.floor(Math.random() * length)
+    if (randomArr.includes(randomIndex)) {
       i--
       continue
     }
-    randomRecipes.push(recipes[randomIndex])
+    randomArr.push(randomIndex)
   }
-  return randomRecipes
+  return randomArr
 }

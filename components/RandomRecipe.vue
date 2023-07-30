@@ -22,7 +22,9 @@ const { random, randomRecipes } = useRandomRecipe(count)
       <div>随机一下</div>
     </button>
     <div m="t-8" flex="~ col">
-      <DishTag v-for="recipe, i in randomRecipes" :key="i" :dish="recipe" />
+      <template v-for="recipe, i in randomRecipes" :key="i">
+        <DishTag v-if="recipe" :dish="recipe" />
+      </template>
     </div>
   </div>
 </template>

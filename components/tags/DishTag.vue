@@ -1,10 +1,11 @@
 <script lang="ts" setup>
+import type { DbRecipeItem } from 'utils/db'
 import { tools } from '~/data/food'
 import type { RecipeItem } from '~/types'
 import { getEmojisFromStuff } from '~/utils'
 
 const props = defineProps<{
-  dish: RecipeItem
+  dish: RecipeItem | DbRecipeItem
 }>()
 
 const gtm = useGtm()

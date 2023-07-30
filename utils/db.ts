@@ -1,7 +1,6 @@
 import type { Table } from 'dexie'
 import Dexie from 'dexie'
 
-import recipeData from '../data/recipe.json'
 import type { RecipeItem } from '~/types'
 
 export interface DbRecipeItem extends RecipeItem {
@@ -21,8 +20,10 @@ export class MySubClassedDexie extends Dexie {
 
 export const db = new MySubClassedDexie()
 
-export function initDb() {
-  db.recipes.bulkPut(
+export async function initDb() {
+  const { default: recipeData } = await import('../data/recipe.json')
+
+  return db.recipes.bulkPut(
     (recipeData as RecipeItem[]).map((item, i) => ({
       id: i,
       ...item,
