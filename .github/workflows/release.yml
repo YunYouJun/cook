@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+
+      # after pnpm
+      - name: Use Node.js 16
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          registry-url: https://registry.npmjs.org/
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - run: npm run generate --if-present
+      - uses: actions/upload-artifact@v3
+        with:
+          name: Dist
+          path: dist
+  
+      - run: npx changelogithub # or changelogithub@0.12 if ensure the stable result
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

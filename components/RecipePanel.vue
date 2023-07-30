@@ -3,7 +3,7 @@ import { storeToRefs } from 'pinia'
 
 const rStore = useRecipeStore()
 
-const { displayedRecipe, selectedStuff, curTool } = storeToRefs(rStore)
+const { selectedStuff, curTool } = storeToRefs(rStore)
 
 const showSearchInput = ref(false)
 
