@@ -7,6 +7,8 @@ Object.assign(process.env, {
 })
 
 export default defineNuxtConfig({
+  ssr: false,
+
   modules: [
     '@vueuse/nuxt',
     '@unocss/nuxt',

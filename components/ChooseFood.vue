@@ -104,8 +104,6 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
     <Transition>
       <BasketButton ref="recipeBtn" :is-visible="isVisible" @click="show" />
     </Transition>
-    <div ref="recipePanelRef">
-      <RecipePanel />
-    </div>
+    <RecipePanel ref="recipePanelRef" />
   </div>
 </template>
