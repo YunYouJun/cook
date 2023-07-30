@@ -30,9 +30,9 @@ jobs:
       - run: npm run generate --if-present
       - uses: actions/upload-artifact@v3
         with:
-          name: Dist
-          path: dist
-  
+          name: Cook Dist
+          path: dist/
+
       - run: npx changelogithub # or changelogithub@0.12 if ensure the stable result
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
