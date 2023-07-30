@@ -3,6 +3,9 @@
     <h1 text-2xl font="bold" my="4">
       帮助
     </h1>
+
+    <InstallPwa />
+
     <FeedbackActions />
 
     <div class="mx-auto max-w-md w-full rounded-2xl bg-white p-2" text-left>

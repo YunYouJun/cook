@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// import { installPrompt } from './utils/pwa'
+import { installPrompt } from './utils/pwa'
 import { appName } from '~/constants'
 
 // https://github.com/vueuse/head
@@ -15,7 +15,9 @@ useHead({
   ],
 })
 
-// installPrompt()
+onMounted(() => {
+  installPrompt()
+})
 </script>
 
 <template>

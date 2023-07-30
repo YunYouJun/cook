@@ -1,7 +1,8 @@
 import { isClient } from '@vueuse/core'
 
 /**
- * https://web.dev/customize-install/#detect-install
+ * - https://web.dev/customize-install/#detect-install
+ * - [Trigger installation from your PWA](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/How_to/Trigger_install_prompt)
  * @returns
  */
 export function installPrompt() {
@@ -12,9 +13,10 @@ export function installPrompt() {
 
   window.addEventListener('beforeinstallprompt', (e) => {
     // Prevent the mini-infobar from appearing on mobile
-    // e.preventDefault()
+    e.preventDefault()
     // Stash the event so it can be triggered later.
     app.deferredPrompt = e
+
     // Update UI notify the user they can install the PWA
     // showInstallPromotion()
     // Optionally, send analytics event that PWA install promo was shown.
