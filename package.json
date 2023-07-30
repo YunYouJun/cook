@@ -1,5 +1,6 @@
 {
   "private": true,
+  "version": "1.1.1",
   "packageManager": "pnpm@8.6.10",
   "engines": {
     "node": ">=14"
@@ -15,6 +16,7 @@
     "lint": "eslint .",
     "postinstall": "nuxi prepare && npm run convert",
     "preview-https": "serve dist",
+    "release": "bumpp --commit --push --tag",
     "test": "vitest",
     "typecheck": "vue-tsc --noEmit"
   },
