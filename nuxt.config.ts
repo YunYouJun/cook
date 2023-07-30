@@ -15,7 +15,6 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     '@nuxtjs/color-mode',
     '@vite-pwa/nuxt',
-    '@nuxt/content',
 
     '@zadigetvoltaire/nuxt-gtm',
 

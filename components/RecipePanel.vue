@@ -34,6 +34,14 @@ const showTooltip = computed(() => !selectedStuff.value.length && !curTool.value
             你要先选食材或工具哦～
           </span>
 
+          <div
+            v-else-if="rStore.isSearching"
+            relative flex items-center justify-center p-6
+            text-xl
+          >
+            <div class="magnifying-glass" i-ri-search-line inline-flex />
+          </div>
+
           <div v-else-if="rStore.displayedRecipe.length">
             <DishTag v-for="item, i in rStore.displayedRecipe" :key="i" :dish="item" />
           </div>
@@ -55,10 +63,22 @@ const showTooltip = computed(() => !selectedStuff.value.length && !curTool.value
           </div>
         </div>
       </Transition>
-
-      <hr m="y-2">
-
-      <RandomRecipe />
     </div>
   </div>
 </template>
+
+<style>
+@keyframes circle-rotate {
+  from {
+    transform: rotate(0turn) translateY(60%) rotate(1turn);
+  }
+  to {
+    transform: rotate(1turn) translateY(60%) rotate(0turn);
+  }
+}
+
+.magnifying-glass {
+  margin: auto;
+  animation: circle-rotate 4s linear infinite;
+}
+</style>

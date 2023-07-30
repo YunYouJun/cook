@@ -3,7 +3,7 @@ const rStore = useRecipeStore()
 </script>
 
 <template>
-  <div pt-4 text-4xl>
+  <div text-4xl>
     <button
       class="cursor-pointer transition active:text-green-800 hover:(text-green-600)"
       title="重置"
@@ -16,5 +16,6 @@ const rStore = useRecipeStore()
   <p text="sm" m="b-4">
     好的，今天我们来做菜！
   </p>
+
   <ChooseFood />
 </template>

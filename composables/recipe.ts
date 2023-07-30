@@ -1,11 +1,20 @@
 import recipeData from '~/data/recipe.json'
 import type { RecipeItem, Recipes } from '~/types'
 
-export function useRandomRecipe() {
-  const randomRecipe = ref<RecipeItem>()
+/**
+ * 随机几道菜
+ * @param total
+ * @returns
+ */
+export function useRandomRecipe(total: Ref<number>) {
+  const randomRecipes = ref<RecipeItem[]>([])
   function random() {
-    randomRecipe.value = generateRandomRecipe(recipeData as Recipes)
+    randomRecipes.value = generateRandomRecipe(recipeData as Recipes, total.value)
   }
+
+  watch(total, () => {
+    random()
+  })
 
   onMounted(() => {
     random()
@@ -14,6 +23,6 @@ export function useRandomRecipe() {
   return {
     random,
 
-    randomRecipe,
+    randomRecipes,
   }
 }

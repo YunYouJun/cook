@@ -33,7 +33,6 @@
     "@iconify-json/mdi": "^1.1.53",
     "@iconify-json/ri": "^1.1.10",
     "@iconify-json/twemoji": "^1.1.11",
-    "@nuxt/content": "^2.7.2",
     "@nuxt/devtools": "^0.7.1",
     "@nuxtjs/color-mode": "^3.3.0",
     "@pinia/nuxt": "^0.4.11",

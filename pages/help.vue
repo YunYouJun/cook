@@ -1,8 +1,8 @@
 <template>
-  <div class="w-full px-2 pt-8">
-    <h1 text-2xl font="bold" my="4">
+  <div class="w-full">
+    <CommonHeader>
       帮助
-    </h1>
+    </CommonHeader>
 
     <InstallPwa />
 
@@ -26,6 +26,9 @@
       <FAQItem title="是否有微信小程序?">
         因不可抗力（小程序因跳转 B 站视频而被判定为导流违规）下架。
         将不再提供小程序版本。
+        <br>
+        <br>
+        搜索微信公众号<b>「云游君」</b>并发送<b>「做菜」</b>，也可以快速找到本网站。
       </FAQItem>
 
       <FAQItem title="是否有 APP?">
@@ -34,6 +37,21 @@
         但我们正在优化 <b>PWA</b> 的体验，以便您可以直接将本站添加到桌面，并享受<b>类似 APP 的体验</b>。
         <br>
         你可以使用浏览器打开，点击上方的<b>「安装到桌面」</b>或在菜单中点击<b>「添加到主屏幕」</b>。
+      </FAQItem>
+
+      <FAQItem title="未来是否会收费？">
+        该项目将以免费开源的形式运营。
+        <br>
+        您可以考虑赞助本项目，以支持我们的开发。
+        我会将其投入在周边的服务器、域名、CDN 等费用上。
+        <ul mt-1>
+          <li>
+            <a href="https://afdian.net/a/yunyoujun" target="_blank">爱发电赞助</a>
+          </li>
+          <li>
+            <a href="https://sponsors.yunyoujun.cn/" target="_blank">我要直接打钱！</a>
+          </li>
+        </ul>
       </FAQItem>
 
       <FAQItem title="页面无法点击、资源加载失败？">
@@ -61,35 +79,6 @@
             </ul>
           </li>
         </ol>
-      </FAQItem>
-
-      <FAQItem title="其他相关链接">
-        <ul>
-          <li>
-            相关链接
-            <ul>
-              <li>
-                <a href="https://docs.qq.com/form/page/DWk9GWW9oTmlXZU9V" target="_blank">居家菜谱投稿</a>
-              </li>
-              <li>
-                <a href="https://support.qq.com/products/507827" target="_blank">反馈建议分享（兔小巢）</a>
-              </li>
-            </ul>
-          </li>
-          <li>
-            网站相关
-            <ul>
-              <li>
-                故障/新功能反馈：
-                <a href="https://github.com/YunYouJun/cook/issues" target="_blank">Issues</a>
-              </li>
-              <li>
-                交流/建议/分享：
-                <a href="https://github.com/YunYouJun/cook/issues" target="_blank">Discussions</a>
-              </li>
-            </ul>
-          </li>
-        </ul>
       </FAQItem>
     </div>
   </div>

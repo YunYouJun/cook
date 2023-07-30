@@ -70,25 +70,26 @@ export const useRecipeStore = defineStore('recipe', () => {
     curStuff.value.add(name)
   }
 
+  const isSearching = ref(false)
   /**
    * 搜索菜谱
    * @returns
    */
   async function searchRecipes() {
-    if (keyword.value) {
-      const result = await db.recipes.filter(item => item.name.includes(keyword.value)).toArray()
-      return result
-    }
+    isSearching.value = true
+    let result: RecipeItem[] = []
+    if (keyword.value)
+      result = await db.recipes.filter(item => item.name.includes(keyword.value)).toArray()
 
     if (curMode.value === 'strict') {
-      return await db.recipes.filter((item) => {
+      result = await db.recipes.filter((item) => {
         const stuffFlag = selectedStuff.value.every(stuff => item.stuff.includes(stuff))
         const toolFlag = item.tools.includes(curTool.value)
         return curTool.value ? (stuffFlag && toolFlag) : stuffFlag
       }).toArray()
     }
     else if (curMode.value === 'loose') {
-      return await db.recipes.filter((item) => {
+      result = await db.recipes.filter((item) => {
         const stuffFlag = selectedStuff.value.some(stuff => item.stuff.includes(stuff))
         const toolFlag = Boolean(item.tools?.includes(curTool.value))
 
@@ -108,12 +109,15 @@ export const useRecipeStore = defineStore('recipe', () => {
     }
     // survival
     else {
-      return await db.recipes.filter((item) => {
+      result = await db.recipes.filter((item) => {
         const stuffFlag = item.stuff.every(stuff => selectedStuff.value.includes(stuff))
         const toolFlag = item.tools?.includes(curTool.value)
         return Boolean(curTool.value ? (stuffFlag && toolFlag) : stuffFlag)
       }).toArray()
     }
+
+    isSearching.value = false
+    return result
   }
 
   // 默认严格模式
@@ -158,6 +162,8 @@ export const useRecipeStore = defineStore('recipe', () => {
     curTool,
     curMode,
     selectedStuff,
+
+    isSearching,
 
     clearKeyWord: () => { keyword.value = '' },
     toggleStuff,
