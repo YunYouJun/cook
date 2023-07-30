@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { isClient } from '@vueuse/core'
+import pkg from '~/package.json'
 
 const displayICP = ref(true)
 
@@ -17,7 +18,7 @@ const buildDate = (new Date(Number.parseInt(now) * 1000)).toLocaleDateString()
   <div p="4 t-2" class="flex flex-col items-center justify-center" text="sm">
     <div v-if="commitSha && buildDate" mb-2>
       <span>
-        当前版本（{{ buildDate }}）:
+        当前版本 v{{ pkg.version }}（{{ buildDate }}）:
       </span>
       <span>
         <a border="b-1 dashed" :href="`https://github.com/YunYouJun/cook/commit/${commitSha}`" target="_blank" alt="Cook | GitHub Commit">

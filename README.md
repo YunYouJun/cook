@@ -9,6 +9,7 @@
 
 - 网站链接：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)
 - 备用：[cook.yyj.moe](https://cook.yyj.moe)
+- 开发版：[cook.yunle.app](https://cook.yunle.app)
 
 ### 小程序版本
 
