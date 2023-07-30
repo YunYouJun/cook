@@ -28,7 +28,7 @@ onMounted(() => {
         p="x4 y2"
         w="full"
         text="center"
-        bg="transparent"
+        bg="white dark:dark-800"
         border="~ rounded gray-200 dark:gray-700"
         class="focus:dark:gray-500"
       >

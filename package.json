@@ -45,6 +45,7 @@
     "@zadigetvoltaire/nuxt-gtm": "^0.0.13",
     "consola": "^3.2.3",
     "cross-env": "^7.0.3",
+    "dexie": "^3.2.4",
     "eslint": "^8.46.0",
     "jsdom": "^22.1.0",
     "nuxt": "^3.6.5",

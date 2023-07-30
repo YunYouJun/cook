@@ -11,3 +11,9 @@
 
 - tags: 标签
   - 杂烩：不会显示所有材料 emoji，而是显示 🍲
+
+## 数据库
+
+使用 Dexie.js 重构数据查询
+
+- [Dexie.js](https://github.com/dexie/Dexie.js): A Minimalistic Wrapper for IndexedDB

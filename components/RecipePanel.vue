@@ -34,8 +34,8 @@ const showTooltip = computed(() => !selectedStuff.value.length && !curTool.value
             你要先选食材或工具哦～
           </span>
 
-          <div v-else-if="displayedRecipe.length">
-            <DishTag v-for="item, i in displayedRecipe" :key="i" :dish="item" />
+          <div v-else-if="rStore.displayedRecipe.length">
+            <DishTag v-for="item, i in rStore.displayedRecipe" :key="i" :dish="item" />
           </div>
 
           <div v-else text="sm">

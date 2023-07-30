@@ -36,7 +36,7 @@ export interface RecipeItem {
   /**
    * 工具
    */
-  tools?: string[]
+  tools: string[]
 }
 
 export type Recipes = RecipeItem[]

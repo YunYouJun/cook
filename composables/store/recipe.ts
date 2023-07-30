@@ -2,13 +2,10 @@ import { acceptHMRUpdate, defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
 import { computed, ref } from 'vue'
 import { useGtm } from '@gtm-support/vue-gtm'
-import recipeData from '../../data/recipe.json'
+import type { RecipeItem } from 'types'
 import type { StuffItem } from '../../data/food'
-import type { Recipes } from '~/types'
 
 const namespace = 'cook'
-
-const recipes = recipeData as Recipes
 
 /**
  * survival: 生存模式
@@ -72,22 +69,27 @@ export const useRecipeStore = defineStore('recipe', () => {
     curStuff.value.add(name)
   }
 
-  // 默认严格模式
-  const displayedRecipe = computed(() => {
-    if (keyword.value)
-      return recipes.filter(item => item.name.includes(keyword.value))
+  /**
+   * 搜索菜谱
+   * @returns
+   */
+  async function searchRecipes() {
+    if (keyword.value) {
+      const result = await db.recipes.filter(item => item.name.includes(keyword.value)).toArray()
+      return result
+    }
 
     if (curMode.value === 'strict') {
-      return recipes.filter((item) => {
+      return await db.recipes.filter((item) => {
         const stuffFlag = selectedStuff.value.every(stuff => item.stuff.includes(stuff))
-        const toolFlag = item.tools?.includes(curTool.value)
+        const toolFlag = item.tools.includes(curTool.value)
         return curTool.value ? (stuffFlag && toolFlag) : stuffFlag
-      })
+      }).toArray()
     }
     else if (curMode.value === 'loose') {
-      return recipes.filter((item) => {
+      return await db.recipes.filter((item) => {
         const stuffFlag = selectedStuff.value.some(stuff => item.stuff.includes(stuff))
-        const toolFlag = item.tools?.includes(curTool.value)
+        const toolFlag = Boolean(item.tools?.includes(curTool.value))
 
         // 同时存在 厨具和材料，则同时判断
         if (curTool.value && selectedStuff.value.length) {
@@ -101,16 +103,22 @@ export const useRecipeStore = defineStore('recipe', () => {
 
           return false
         }
-      })
+      }).toArray()
     }
     // survival
     else {
-      return recipes.filter((item) => {
+      return await db.recipes.filter((item) => {
         const stuffFlag = item.stuff.every(stuff => selectedStuff.value.includes(stuff))
         const toolFlag = item.tools?.includes(curTool.value)
-        return curTool.value ? (stuffFlag && toolFlag) : stuffFlag
-      })
+        return Boolean(curTool.value ? (stuffFlag && toolFlag) : stuffFlag)
+      }).toArray()
     }
+  }
+
+  // 默认严格模式
+  const displayedRecipe = ref<RecipeItem[]>([])
+  watch([keyword, curStuff, curTool, curMode], async () => {
+    displayedRecipe.value = await searchRecipes()
   })
 
   /**
@@ -133,8 +141,17 @@ export const useRecipeStore = defineStore('recipe', () => {
     })
   }
 
+  const recipesLength = ref(0)
+  onMounted(async () => {
+    db.recipes.count().then((count) => {
+      recipesLength.value = count
+    })
+
+    displayedRecipe.value = await searchRecipes()
+  })
+
   return {
-    recipes,
+    recipesLength,
 
     keyword,
     curTool,
