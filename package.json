@@ -49,6 +49,7 @@
     "cross-env": "^7.0.3",
     "dexie": "^3.2.4",
     "eslint": "^8.46.0",
+    "fake-indexeddb": "^4.0.2",
     "jsdom": "^22.1.0",
     "nuxt": "^3.6.5",
     "pinia": "^2.1.6",
