@@ -8,12 +8,12 @@
 
     <FeedbackActions />
 
-    <div class="mx-auto max-w-md w-full rounded-2xl bg-white p-2" text-left>
+    <div class="mx-auto max-w-md w-full rounded-2xl p-2" text-left>
       <FAQItem title="什么是模式？">
         <ul>
-          <li>模糊匹配：展示所有含当前选中任意食材的菜谱</li>
-          <li>精准匹配：展示所有含当前选中所有食材的菜谱</li>
-          <li>生存模式：展示当前选中食材即可制作的所有菜谱</li>
+          <li><b>模糊匹配</b>：展示所有含当前选中任意食材的菜谱</li>
+          <li><b>精准匹配</b>：展示所有含当前选中所有食材的菜谱</li>
+          <li><b>生存模式</b>：展示当前选中食材即可制作的所有菜谱</li>
         </ul>
       </FAQItem>
 
@@ -31,9 +31,9 @@
       <FAQItem title="是否有 APP?">
         <b>暂时没有开发 APP 的计划。</b>
         <br>
-        但我们正在优化 PWA 的体验，以便您可以直接将本站添加到桌面，并享受类似 APP 的体验。
+        但我们正在优化 <b>PWA</b> 的体验，以便您可以直接将本站添加到桌面，并享受<b>类似 APP 的体验</b>。
         <br>
-        你可以使用浏览器打开，点击上方的「安装到桌面」或在菜单中点击「添加到主屏幕」。
+        你可以使用浏览器打开，点击上方的<b>「安装到桌面」</b>或在菜单中点击<b>「添加到主屏幕」</b>。
       </FAQItem>
 
       <FAQItem title="页面无法点击、资源加载失败？">
