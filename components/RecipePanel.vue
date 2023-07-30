@@ -6,13 +6,17 @@ const rStore = useRecipeStore()
 const { displayedRecipe, selectedStuff, curTool } = storeToRefs(rStore)
 
 const showSearchInput = ref(false)
+
+const showTooltip = computed(() => !selectedStuff.value.length && !curTool.value)
 </script>
 
 <template>
-  <div m="x-2 y-4" p="2" class="recipe-panel relative shadow transition hover:shadow-md" bg="gray-400/8">
-    <h2 text="xl" font="bold" p="1">
-      🍲 来看看组合出的菜谱吧！
-    </h2>
+  <div
+    class="recipe-panel relative shadow transition hover:shadow-md"
+    m="x-2 y-4" p="2"
+    bg="gray-400/8"
+  >
+    <RecipePanelTitle />
 
     <ToggleMode />
 
@@ -21,31 +25,34 @@ const showSearchInput = ref(false)
       <div v-else i-ri-search-fill />
     </button>
 
-    <!-- <Switch /> -->
     <div class="cook-recipes" p="2">
       <SearchFoodInput v-if="showSearchInput" />
 
       <Transition mode="out-in">
         <div class="cook-filter-recipes">
-          <span v-if="!selectedStuff.length && !curTool" text="sm" p="2">
+          <span v-if="showTooltip" text="sm" p="2">
             你要先选食材或工具哦～
           </span>
 
-          <span v-else-if="displayedRecipe.length">
+          <div v-else-if="displayedRecipe.length">
             <DishTag v-for="item, i in displayedRecipe" :key="i" :dish="item" />
-          </span>
+          </div>
 
-          <span v-else text="sm">
-            还没有完美匹配的菜谱呢……
+          <div v-else text="sm">
+            <span>还没有完美匹配的菜谱呢……</span>
             <br>
-            大胆尝试一下，或者<a href="#" @click="rStore.reset()">
-              <strong>换个组合</strong></a>？
+            <span>大胆尝试一下，或者</span>
+            <a href="#" @click="rStore.reset()">
+              <strong>换个组合</strong>
+            </a>
+            <span>？</span>
             <br>
-            <span m="t-1">欢迎来
+            <div m="t-1">
+              <span>欢迎来</span>
               <a class="font-bold text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=uykkic" target="_blank">这里</a>
-              反馈新的菜谱！
-            </span>
-          </span>
+              <span>反馈新的菜谱！</span>
+            </div>
+          </div>
         </div>
       </Transition>
 

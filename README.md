@@ -31,9 +31,9 @@
   - [居家菜谱投稿](https://docs.qq.com/form/page/DWk9GWW9oTmlXZU9V)
   - [反馈建议分享-兔小巢](https://support.qq.com/products/507827)
 
-<!-- ### Features -->
+### Features
 
-<!-- 本项目支持 PWA，使用浏览器打开时，可将其添加到主屏幕以获得近原生 APP 的体验。 -->
+本项目支持 PWA，使用浏览器打开时，可将其添加到主屏幕以获得近原生 APP 的体验。
 
 ## 开发
 

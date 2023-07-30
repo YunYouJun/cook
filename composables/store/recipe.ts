@@ -4,18 +4,11 @@ import { computed, ref } from 'vue'
 import { useGtm } from '@gtm-support/vue-gtm'
 import recipeData from '../../data/recipe.json'
 import type { StuffItem } from '../../data/food'
-import type { RecipeItem, Recipes } from '~/types'
+import type { Recipes } from '~/types'
 
 const namespace = 'cook'
 
-/**
- * 生成随机菜谱
- * @param recipes
- * @returns
- */
-function generateRandomRecipe(recipes: Recipes) {
-  return recipes[Math.floor(Math.random() * recipes.length)]
-}
+const recipes = recipeData as Recipes
 
 /**
  * survival: 生存模式
@@ -25,7 +18,6 @@ function generateRandomRecipe(recipes: Recipes) {
 export type SearchMode = 'survival' | 'loose' | 'strict'
 
 export const useRecipeStore = defineStore('recipe', () => {
-  const recipes = recipeData as Recipes
   const gtm = useGtm()
 
   /**
@@ -37,12 +29,11 @@ export const useRecipeStore = defineStore('recipe', () => {
   const curStuff = useStorage(`${namespace}:stuff`, new Set<string>())
   // const curTools = ref(new Set<string>())
   const curTool = useStorage(`${namespace}:tool`, '')
+  const curMode = useStorage<SearchMode>(`${namespace}:mode`, 'loose')
 
   const selectedStuff = computed(() => Array.from(curStuff.value))
   // const selectedTools = computed(() => Array.from(curTools.value))
   // const selectedTools = ref('')
-
-  const curMode = useStorage<SearchMode>(`${namespace}:mode`, 'loose')
 
   function toggleStuff(name: string) {
     if (!curStuff.value)
@@ -80,8 +71,6 @@ export const useRecipeStore = defineStore('recipe', () => {
   function addStuff(name: string) {
     curStuff.value.add(name)
   }
-
-  const randomRecipe = ref<RecipeItem>(generateRandomRecipe(recipes))
 
   // 默认严格模式
   const displayedRecipe = computed(() => {
@@ -151,9 +140,6 @@ export const useRecipeStore = defineStore('recipe', () => {
     curTool,
     curMode,
     selectedStuff,
-
-    randomRecipe,
-    random: () => { randomRecipe.value = generateRandomRecipe(recipes) },
 
     clearKeyWord: () => { keyword.value = '' },
     toggleStuff,
