@@ -1,5 +1,5 @@
 <template>
-  <div px-2>
+  <div>
     <CommonHeader>
       我的
     </CommonHeader>
@@ -7,13 +7,15 @@
     <FeedbackActions />
 
     <div class="mx-auto max-w-md w-full rounded-2xl p-2" text-left>
-      <p my-6 text-left text-base>
-        很高兴能在这里与你相遇，也很希望这个网站可以真的帮助到你。
-      </p>
-
-      <FAQItem title="关于">
+      <FAQItem :default-open="true" title="关于">
         <div text-left>
           <ul>
+            <li>
+              它诞生于 2022 年 4 月，时值疫情风控期间，希望能帮助期间的伙伴根据现有食材寻找到合适的菜谱。故原名「隔离食用手册」。
+            </li>
+            <li>
+              如今那个时期已离我们远去，故去掉「隔离」二字。但也很高兴能在这里继续与你相遇，希望它能继续发光发热，在日常生活中帮助到大家。
+            </li>
             <li>
               <div class="inline-flex items-center justify-center">
                 代码仓库：<a class="inline-flex items-center justify-center" href="https://github.com/YunYouJun/cook" target="_blank">
@@ -74,9 +76,14 @@
       </FAQItem>
 
       <FAQItem title="赞助者们">
-        <a href="https://sponsors.yunyoujun.cn" target="_blank">
-          <img src="https://sponsors.yunyoujun.cn/sponsors.svg">
-        </a>
+        <div>
+          感谢至今以来所有的<a href="https://afdian.net/a/yunyoujun" class="text-purple" target="_blank">赞助者</a>们，你们的支持是我持续维护和开发新项目的动力！
+        </div>
+        <div pt-2>
+          <a href="https://sponsors.yunyoujun.cn" target="_blank">
+            <img src="https://sponsors.yunyoujun.cn/sponsors.svg">
+          </a>
+        </div>
       </FAQItem>
     </div>
 
