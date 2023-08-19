@@ -2,11 +2,23 @@
   --c-primary: #5fc178;
   --c-text: #333;
 
-  --c-bg: #fff;
+  --c-bg: white;
+  --c-bg-alt: #f9fbfd;
 }
 
 .dark {
   --c-text: #fafafa;
 
   --c-bg: #121212;
+  --c-bg-alt: #333;
+}
+
+// ylf
+:root {
+  --ylf-c-bg-alt: var(--c-bg-alt);
+  --ylf-c-border: #eaeaea;
+}
+
+.dark {
+  --ylf-c-border: #666;
 }

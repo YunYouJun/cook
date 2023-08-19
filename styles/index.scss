@@ -8,11 +8,10 @@ body,
   height: 100%;
   margin: 0;
   padding: 0;
+
+  background: var(--c-bg);
 }
 
-html.dark {
-  background: #121212;
-}
 
 input:focus {
   outline: none;

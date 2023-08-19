@@ -17,6 +17,7 @@ export type SearchMode = 'survival' | 'loose' | 'strict'
 
 export const useRecipeStore = defineStore('recipe', () => {
   const gtm = useGtm()
+  const { settings } = useAppStore()
 
   /**
    * 搜索关键字
@@ -24,10 +25,10 @@ export const useRecipeStore = defineStore('recipe', () => {
   const keyword = ref('')
 
   // can not exported
-  const curStuff = useStorage(`${namespace}:stuff`, new Set<string>())
+  const curStuff = settings.keepLocalData ? useStorage(`${namespace}:stuff`, new Set<string>()) : ref(new Set<string>())
   // const curTools = ref(new Set<string>())
-  const curTool = useStorage(`${namespace}:tool`, '')
-  const curMode = useStorage<SearchMode>(`${namespace}:mode`, 'loose')
+  const curTool = settings.keepLocalData ? useStorage(`${namespace}:tool`, '') : ref('')
+  const curMode = settings.keepLocalData ? useStorage<SearchMode>(`${namespace}:mode`, 'loose') : ref<SearchMode>('loose')
 
   const selectedStuff = computed(() => Array.from(curStuff.value))
   // const selectedTools = computed(() => Array.from(curTools.value))
