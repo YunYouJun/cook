@@ -15,7 +15,11 @@ function toggleDark() {
 </script>
 
 <template>
-  <button class="mx-2 icon-btn hover:text-yellow-400 !outline-none" title="切换" @click="toggleDark()">
+  <YlfIconButton
+    class="icon-btn hover:text-yellow-400 !outline-none"
+    text-xl
+    title="切换" @click="toggleDark()"
+  >
     <div i="ri-sun-line dark:ri-moon-line" />
-  </button>
+  </YlfIconButton>
 </template>

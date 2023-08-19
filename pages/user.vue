@@ -1,7 +1,5 @@
 <script lang="ts" setup>
 import { links } from '~/constants'
-
-const app = useAppStore()
 </script>
 
 <template>
@@ -12,6 +10,7 @@ const app = useAppStore()
 
     <div
       class="mx-auto max-w-md w-full"
+      px-2
       text-left
     >
       <YlfForm>
@@ -20,14 +19,16 @@ const app = useAppStore()
       </YlfForm>
 
       <YlfForm>
-        <YlfFormItem label="离开网页后保留选中数据">
-          <YlfSwitch v-model="app.settings.keepLocalData" />
-        </YlfFormItem>
-        <YlfFormItem label="更多设置，敬请期待" />
+        <YlfFormItem icon="i-ri-settings-line" label="设置" to="/settings" />
       </YlfForm>
 
       <YlfForm>
-        <YlfFormItem label="关于" to="/help" />
+        <YlfFormItem icon="i-ri-article-line" label="自定义菜谱" to="/cookbooks/" />
+      </YlfForm>
+
+      <YlfForm>
+        <YlfFormItem icon="i-ri-question-line" label="帮助" to="/help" />
+        <YlfFormItem icon="i-ri-information-line" label="关于" to="/help" />
       </YlfForm>
     </div>
 

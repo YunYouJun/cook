@@ -1,5 +1,5 @@
 <template>
-  <div class="ylf-form" flex="~ col">
+  <div class="ylf-form" flex="~ col" rounded-md>
     <slot />
   </div>
 </template>
@@ -8,13 +8,14 @@
 .ylf-form {
   background-color: var(--ylf-c-bg-alt);
 
-  border-top: 1px solid var(--ylf-c-border);
-  border-bottom: 1px solid var(--ylf-c-border);
+  border: 1px solid var(--ylf-c-border);
 
   margin: 10px 0;
+  overflow: hidden;
 
   .ylf-form-item {
     border-bottom: 1px solid var(--ylf-c-border);
+
     &:last-child {
       border-bottom: none;
     }

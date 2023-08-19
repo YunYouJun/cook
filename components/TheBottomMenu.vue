@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import type { BottomMenuItem } from '@yunlefun/vue'
-import { ref } from 'vue'
 
 const items: BottomMenuItem[] = [
   {
@@ -38,9 +37,7 @@ const items: BottomMenuItem[] = [
 const route = useRoute()
 const router = useRouter()
 
-const active = ref(route.path)
 function onClick(item: BottomMenuItem) {
-  active.value = item.to || ''
   router.push(item.to || '/')
 }
 </script>
@@ -51,7 +48,7 @@ function onClick(item: BottomMenuItem) {
       v-for="item in items"
       :key="item.to"
       :item="item"
-      :active="active === item.to"
+      :active="route.path === item.to"
       @click="onClick"
     />
   </YlfBottomMenu>
