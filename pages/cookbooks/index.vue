@@ -3,9 +3,6 @@ definePageMeta({
   layout: 'child',
   title: '自定义菜谱',
 })
-
-const route = useRoute()
-const id = computed(() => route.query.id)
 </script>
 
 <template>

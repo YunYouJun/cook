@@ -15,7 +15,7 @@ export interface Cookbook {
   /**
    * 菜谱
    */
-  recipes: Recipes[]
+  recipes: Recipes
 
   createdAt: string
   updatedAt: string

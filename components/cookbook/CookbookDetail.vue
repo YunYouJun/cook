@@ -7,7 +7,7 @@ const props = defineProps<{
 
 const recipes = ref<Cookbook['recipes']>(props.cookbook.recipes)
 onMounted(async () => {
-  recipes.value = (await import('../../data/recipe.json')).default
+  recipes.value = ((await import('../../data/recipe.json')).default) as unknown as Cookbook['recipes']
 })
 </script>
 
