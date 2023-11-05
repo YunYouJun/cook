@@ -14,6 +14,6 @@ export default defineConfig({
 
     alias: {
       '~': './',
-    }
+    },
   },
 })

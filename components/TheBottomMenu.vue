@@ -51,7 +51,6 @@ function onClick(item: BottomMenuItem) {
       :item="item"
       :active="route.path === item.to"
       class="pt-3"
-      style="backdrop-filter: blur(10px);"
       @click="onClick"
     />
   </YlfBottomMenu>
