@@ -1,29 +1,4 @@
-export interface StuffItem {
-  /**
-   * 食材名称
-   */
-  name: string
-  /**
-   * 例如：🥔
-   */
-  emoji: string
-  /**
-   * 图片链接
-   */
-  image?: string
-  /**
-   * 别名，譬如：西红柿/番茄
-   */
-  alias?: string
-  /**
-   * 图标名称
-   */
-  icon?: string
-  /**
-   * 显示标签
-   */
-  label?: string
-}
+import type { StuffItem } from '../types'
 
 /**
  * 素菜

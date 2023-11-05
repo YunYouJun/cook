@@ -29,37 +29,35 @@ const showTooltip = computed(() => !selectedStuff.value.length && !curTool.value
       <SearchFoodInput v-if="showSearchInput" />
 
       <Transition mode="out-in">
-        <div class="cook-filter-recipes">
-          <span v-if="showTooltip" text="sm" p="2">
-            你要先选食材或工具哦～
-          </span>
+        <span v-if="showTooltip" text="sm" p="2">
+          你要先选食材或工具哦～
+        </span>
 
-          <div
-            v-else-if="rStore.isSearching"
-            relative flex items-center justify-center p-6
-            text-xl
-          >
-            <div class="magnifying-glass" i-ri-search-line inline-flex />
-          </div>
+        <div
+          v-else-if="rStore.isSearching"
+          relative flex items-center justify-center p-6
+          text-xl
+        >
+          <div class="magnifying-glass" i-ri-search-line inline-flex />
+        </div>
 
-          <div v-else-if="rStore.displayedRecipe.length">
-            <DishTag v-for="item, i in rStore.displayedRecipe" :key="i" :dish="item" />
-          </div>
+        <div v-else-if="rStore.displayedRecipe.length">
+          <DishTag v-for="item, i in rStore.displayedRecipe" :key="i" :dish="item" />
+        </div>
 
-          <div v-else text="sm">
-            <span>还没有完美匹配的菜谱呢……</span>
-            <br>
-            <span>大胆尝试一下，或者</span>
-            <a href="#" @click="rStore.reset()">
-              <strong>换个组合</strong>
-            </a>
-            <span>？</span>
-            <br>
-            <div m="t-1">
-              <span>欢迎来</span>
-              <a class="font-bold text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=uykkic" target="_blank">这里</a>
-              <span>反馈新的菜谱！</span>
-            </div>
+        <div v-else text="sm">
+          <span>还没有完美匹配的菜谱呢……</span>
+          <br>
+          <span>大胆尝试一下，或者</span>
+          <a href="#" @click="rStore.reset()">
+            <strong>换个组合</strong>
+          </a>
+          <span>？</span>
+          <br>
+          <div m="t-1">
+            <span>欢迎来</span>
+            <a class="font-bold text-blue-600 dark:text-blue-400" href="https://docs.qq.com/sheet/DQk1vdkhFV0twQVNS?tab=uykkic" target="_blank">这里</a>
+            <span>反馈新的菜谱！</span>
           </div>
         </div>
       </Transition>

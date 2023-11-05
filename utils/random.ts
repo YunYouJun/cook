@@ -1,7 +1,5 @@
 /**
  * 生成随机数组
- * @param recipes
- * @returns
  */
 export function generateRandomArray(length: number, total = 1) {
   const randomArr: number[] = []

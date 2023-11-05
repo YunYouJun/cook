@@ -2,9 +2,8 @@ import { acceptHMRUpdate, defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useGtm } from '@gtm-support/vue-gtm'
-import type { RecipeItem } from 'types'
-import type { StuffItem } from '../../data/food'
 import { db } from '../../utils/db'
+import type { RecipeItem, StuffItem } from '~/types'
 
 const namespace = 'cook'
 
@@ -74,7 +73,6 @@ export const useRecipeStore = defineStore('recipe', () => {
   const isSearching = ref(false)
   /**
    * 搜索菜谱
-   * @returns
    */
   async function searchRecipes() {
     isSearching.value = true

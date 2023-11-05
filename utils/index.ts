@@ -9,7 +9,6 @@ foodItems.forEach((item) => {
 /**
  * get emojis from stuff name array
  * @param stuff
- * @returns
  */
 export function getEmojisFromStuff(stuff: string[]) {
   const emojis: string[] = stuff.map(name => foodEmojiMap.get(name)).filter(item => !!item)

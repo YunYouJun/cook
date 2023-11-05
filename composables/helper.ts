@@ -4,7 +4,6 @@ import { isClient, useElementBounding } from '@vueuse/core'
 /**
  * trigger show invisible element
  * @param target
- * @returns
  */
 export function useInvisibleElement(target: MaybeComputedElementRef<HTMLElement>) {
   const { top } = useElementBounding(target)

@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { storeToRefs } from 'pinia'
-import type { StuffItem } from '~/data/food'
+import type { StuffItem } from '~/types'
 import { meat, staple, tools, vegetable } from '~/data/food'
 
 import { useEmojiAnimation } from '~/composables/animation'

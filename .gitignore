@@ -1,5 +1,5 @@
 # auto generate
-src/data/recipe.json
+data/recipe.json
 
 .DS_Store
 .vite-ssg-dist
@@ -7,6 +7,7 @@ src/data/recipe.json
 *.local
 
 esbuild-kit
+tsx-*
 
 # nuxt
 node_modules

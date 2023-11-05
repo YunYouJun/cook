@@ -3,7 +3,6 @@ import { isClient } from '@vueuse/core'
 /**
  * - https://web.dev/customize-install/#detect-install
  * - [Trigger installation from your PWA](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/How_to/Trigger_install_prompt)
- * @returns
  */
 export function installPrompt() {
   if (!isClient)

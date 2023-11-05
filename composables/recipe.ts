@@ -1,9 +1,8 @@
-import type { DbRecipeItem } from 'utils/db'
+import type { DbRecipeItem } from '~/utils/db'
 
 /**
  * 随机几道菜
  * @param total
- * @returns
  */
 export function useRandomRecipe(total: Ref<number>) {
   const randomRecipes = ref<(DbRecipeItem | undefined)[]>([])

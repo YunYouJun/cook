@@ -5,7 +5,7 @@ import { describe, it } from 'vitest'
 // import { createTestingPinia } from '@pinia/testing'
 // import ChooseFood from '../src/components/ChooseFood.vue'
 
-describe('ChooseFood.vue', () => {
+describe('chooseFood.vue', () => {
   it('should render', async () => {
     //     const pinia = createTestingPinia({
     //       createSpy: vi.fn,
