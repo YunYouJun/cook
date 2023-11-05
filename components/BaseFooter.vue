@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { isClient } from '@vueuse/core'
-import pkg from '~/package.json'
 
 const displayICP = ref(true)
 
@@ -8,24 +7,11 @@ onBeforeMount(() => {
   if (isClient)
     displayICP.value = ['cook.yunyoujun.cn', 'localhost', '127.0.0.1'].includes(window.location.hostname)
 })
-
-const commitSha = (import.meta.env.VITE_COMMIT_REF || '').slice(0, 7)
-const now = import.meta.env.VITE_APP_BUILD_TIME
-const buildDate = (new Date(Number.parseInt(now) * 1000)).toLocaleDateString()
 </script>
 
 <template>
   <div p="4 t-2" class="flex flex-col items-center justify-center" text="sm">
-    <div v-if="commitSha && buildDate" mb-2>
-      <span>
-        当前版本 v{{ pkg.version }}（{{ buildDate }}）:
-      </span>
-      <span>
-        <a border="b-1 dashed" :href="`https://github.com/YunYouJun/cook/commit/${commitSha}`" target="_blank" alt="Cook | GitHub Commit">
-          {{ commitSha }}
-        </a>
-      </span>
-    </div>
+    <CurrentVersion />
     <a v-if="displayICP" opacity="80" class="flex" href="https://beian.miit.gov.cn/" target="_blank">
       苏ICP备17038157号
     </a>
