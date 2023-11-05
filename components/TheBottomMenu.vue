@@ -53,3 +53,9 @@ function onClick(item: BottomMenuItem) {
     />
   </YlfBottomMenu>
 </template>
+
+<style>
+.ylf-bottom-menu {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+</style>

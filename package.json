@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npm run convert && cross-env VITE_APP_BUILD_TIME=$(date +%s) nuxi build",
     "convert": "tsx scripts/convert.ts",
-    "dev": "cross-env VITE_APP_BUILD_TIME=$(date +%s) nuxi dev",
+    "dev": "cross-env VITE_APP_BUILD_TIME=$(date +%s) nuxi dev --host",
     "dev:pwa": "VITE_PLUGIN_PWA=true nuxi dev",
     "generate": "nuxi generate",
     "start:generate": "npx serve .output/public",
@@ -43,7 +43,7 @@
     "@vite-pwa/nuxt": "^0.1.1",
     "@vue/test-utils": "^2.4.1",
     "@vueuse/nuxt": "^10.5.0",
-    "@yunlefun/vue": "^0.0.7",
+    "@yunlefun/vue": "0.0.8-beta.4",
     "@zadigetvoltaire/nuxt-gtm": "^0.0.13",
     "consola": "^3.2.3",
     "cross-env": "^7.0.3",
