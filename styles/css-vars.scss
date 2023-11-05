@@ -22,3 +22,9 @@
 .dark {
   --ylf-c-border: #666;
 }
+
+// cook custom
+:root {
+  --cook-bottom-menu-padding-bottom: 20px;
+  --cook-bottom-menu-height: calc(64px + var(--cook-bottom-menu-padding-bottom));
+}

@@ -38,24 +38,21 @@ const route = useRoute()
 const router = useRouter()
 
 function onClick(item: BottomMenuItem) {
-  router.push(item.to || '/')
+  // router.push(item.to || '/')
+  router.replace(item.to || '/')
 }
 </script>
 
 <template>
-  <YlfBottomMenu shadow-2xl>
+  <YlfBottomMenu shadow-2xl pb="$cook-bottom-menu-padding-bottom">
     <YlfBottomMenuItem
       v-for="item in items"
       :key="item.to"
       :item="item"
       :active="route.path === item.to"
       @click="onClick"
+      class="pt-3"
+      style="backdrop-filter: blur(10px);"
     />
   </YlfBottomMenu>
 </template>
-
-<style>
-.ylf-bottom-menu {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-</style>
