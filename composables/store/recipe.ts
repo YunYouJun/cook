@@ -4,6 +4,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useGtm } from '@gtm-support/vue-gtm'
 import { db } from '../../utils/db'
 import type { RecipeItem, StuffItem } from '~/types'
+import { useAppStore } from './app'
 
 const namespace = 'cook'
 

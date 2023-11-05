@@ -1,7 +1,7 @@
 <template>
   <div text="center sm" my-3>
     <CurrentVersion />
-    <div flex="~" justify-center items-center gap="2">
+    <div flex="~" items-center justify-center gap="2">
       <a
         href="https://github.com/YunYouJun/cook" target="_blank"
         class="inline-flex items-center justify-center"

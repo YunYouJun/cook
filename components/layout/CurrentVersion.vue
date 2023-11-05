@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { isClient } from '@vueuse/core'
 import pkg from '~/package.json'
 
 const commitSha = (import.meta.env.VITE_COMMIT_REF || '').slice(0, 7)
