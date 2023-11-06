@@ -122,8 +122,9 @@ export const useRecipeStore = defineStore('recipe', () => {
 
   // 默认严格模式
   const displayedRecipe = ref<RecipeItem[]>([])
-  watch([keyword, curStuff, curTool, curMode], async () => {
-    displayedRecipe.value = await searchRecipes()
+  // fix curStuff watch
+  watch(() => [keyword.value, selectedStuff.value, curTool.value, curMode.value], async () => {
+    displayedRecipe.value = [...(await searchRecipes())]
   })
 
   /**
