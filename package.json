@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "npm run convert && cross-env VITE_APP_BUILD_TIME=$(date +%s) nuxi build",
+    "build:static": "npm run convert && cross-env VITE_APP_BUILD_TIME=$(date +%s) nuxi generate",
     "convert": "tsx scripts/convert.ts",
     "dev": "cross-env VITE_APP_BUILD_TIME=$(date +%s) nuxi dev --host",
     "dev:pwa": "VITE_PLUGIN_PWA=true nuxi dev",
