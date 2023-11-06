@@ -61,14 +61,14 @@ const filteredRecipes = computedAsync(async () => {
             leave-to="opacity-0 scale-95"
           >
             <DialogPanel
-              class="h-full max-w-xl w-full transform overflow-hidden bg-white p-4 text-left align-middle shadow-xl transition-all"
+              class="h-full max-w-xl w-full transform overflow-hidden bg-white p-4 text-left align-middle shadow-xl transition-all dark:bg-dark-600"
               md="mt-4 rounded-2xl"
               overflow="auto"
               flex="~ col"
             >
               <DialogTitle
                 as="h3"
-                class="flex items-center justify-center text-lg font-medium leading-6 text-gray-900"
+                class="flex items-center justify-center text-lg font-medium leading-6"
               >
                 <div relative inline-flex flex="grow">
                   <div
@@ -78,9 +78,10 @@ const filteredRecipes = computedAsync(async () => {
                   <input
                     v-model="keyword"
                     type="text"
-                    class="w-full border border-gray-300 rounded-full text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400"
-                    py-2 pl-10 pr-3
+                    class="w-full rounded-full bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400"
+                    border="~ rounded-full gray-300 op-50 focus:border-blue-500"
                     placeholder="搜索菜谱"
+                    autofocus py-2 pl-10 pr-3
                   >
                   <div
                     v-if="keyword" i-ri-close-line

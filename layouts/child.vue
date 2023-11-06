@@ -10,7 +10,7 @@ const route = useRoute()
   <main class="text-center text-gray-700 dark:text-gray-200" p="t-5 b-15">
     <div flex items-center justify-between>
       <BackBtn ml-3 />
-      <h2 flex items-center justify-center text-lg>
+      <h2 flex items-center justify-center text-lg font="bold">
         {{ route.meta.title }}
       </h2>
       <DarkToggle mr-3 />

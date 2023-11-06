@@ -8,6 +8,12 @@ import { links } from '~/constants'
       我的
     </CommonHeader>
 
+    <div mt-4 gap="3" grid="~ cols-3" px-2>
+      <YlfIconItem to="/recipes/history" icon="i-ri-history-line" label="历史记录" />
+      <YlfIconItem to="/recipes/collect" icon="i-ri-star-line" label="我的收藏" />
+      <YlfIconItem to="/cookbooks" icon="i-ri-article-line" label="自定义菜谱" />
+    </div>
+
     <div
       class="mx-auto max-w-md w-full"
       px-2
@@ -22,9 +28,9 @@ import { links } from '~/constants'
         <YlfFormItem icon="i-ri-settings-line" label="设置" to="/settings" />
       </YlfForm>
 
-      <YlfForm>
+      <!-- <YlfForm>
         <YlfFormItem icon="i-ri-article-line" label="自定义菜谱 TODO" to="/cookbooks/" />
-      </YlfForm>
+      </YlfForm> -->
 
       <YlfForm>
         <YlfFormItem icon="i-ri-question-line" label="帮助" to="/help" />

@@ -23,6 +23,7 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "dayjs": "^1.11.10",
     "vue-about-me": "^1.2.7"
   },
   "devDependencies": {
