@@ -23,7 +23,7 @@ import { links } from '~/constants'
       </YlfForm>
 
       <YlfForm>
-        <YlfFormItem icon="i-ri-article-line" label="自定义菜谱" to="/cookbooks/" />
+        <YlfFormItem icon="i-ri-article-line" label="自定义菜谱 TODO" to="/cookbooks/" />
       </YlfForm>
 
       <YlfForm>
