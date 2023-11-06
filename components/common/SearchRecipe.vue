@@ -44,7 +44,7 @@ const filteredRecipes = computedAsync(async () => {
         leave-from="opacity-100"
         leave-to="opacity-0"
       >
-        <div class="fixed inset-0" />
+        <div class="fixed inset-0 bg-black/10" />
       </TransitionChild>
 
       <div class="fixed inset-0 overflow-y-auto">
@@ -62,7 +62,7 @@ const filteredRecipes = computedAsync(async () => {
           >
             <DialogPanel
               class="h-full max-w-xl w-full transform overflow-hidden bg-white p-4 text-left align-middle shadow-xl transition-all dark:bg-dark-600"
-              md="mt-4 rounded-2xl"
+              md="rounded-2xl"
               overflow="auto"
               flex="~ col"
             >
@@ -89,7 +89,7 @@ const filteredRecipes = computedAsync(async () => {
                     @click="keyword = ''"
                   />
                 </div>
-                <div ml-2 inline-flex op="70" text-base @click="closeModal">
+                <div op="70" ml-2 inline-flex cursor-pointer text-base @click="closeModal">
                   取消
                 </div>
               </DialogTitle>
