@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const router = useRouter()
+// const router = useRouter()
 </script>
 
 <template>
@@ -9,9 +9,9 @@ const router = useRouter()
     </div>
     <div>菜谱消失了</div>
     <div>
-      <button text-sm btn m="3 t8" @click="router.back()">
-        返回
-      </button>
+      <NuxtLink text-sm btn m="3 t8" to="/">
+        返回主页
+      </NuxtLink>
     </div>
   </main>
 </template>

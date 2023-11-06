@@ -27,7 +27,6 @@ export default defineNuxtConfig({
     // but missing on offline, disabling extraction it until fixed
     payloadExtraction: false,
     inlineSSRStyles: false,
-    renderJsonPayloads: true,
     typedPages: true,
   },
 
@@ -49,7 +48,7 @@ export default defineNuxtConfig({
     },
     prerender: {
       crawlLinks: false,
-      routes: ['/', '/random', 'help', '/user'],
+      routes: ['/', '/random', '/help', '/user', '/404', '/settings'],
       ignore: ['/hi'],
     },
   },
