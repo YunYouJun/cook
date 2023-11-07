@@ -78,8 +78,6 @@ export const useRecipeStore = defineStore('recipe', () => {
   async function searchRecipes() {
     isSearching.value = true
     let result: RecipeItem[] = []
-    if (keyword.value)
-      result = await db.recipes.filter(item => item.name.includes(keyword.value)).toArray()
 
     if (curMode.value === 'strict') {
       result = await db.recipes.filter((item) => {
@@ -115,6 +113,9 @@ export const useRecipeStore = defineStore('recipe', () => {
         return Boolean(curTool.value ? (stuffFlag && toolFlag) : stuffFlag)
       }).toArray()
     }
+
+    if (keyword.value)
+      result = result.filter(item => item.name.includes(keyword.value))
 
     isSearching.value = false
     return result
