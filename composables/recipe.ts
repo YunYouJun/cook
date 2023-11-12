@@ -1,3 +1,5 @@
+import { useStorage } from '@vueuse/core'
+import { namespace } from '~/constants'
 import type { DbRecipeItem } from '~/utils/db'
 
 /**
@@ -5,7 +7,7 @@ import type { DbRecipeItem } from '~/utils/db'
  * @param total
  */
 export function useRandomRecipe(total: Ref<number>) {
-  const randomRecipes = ref<(DbRecipeItem | undefined)[]>([])
+  const randomRecipes = useStorage<(DbRecipeItem | undefined)[]>(`${namespace}:random:recipes`, [])
   async function random() {
     const length = await db.recipes.count()
     const randomArr = generateRandomArray(length, total.value)
@@ -19,7 +21,9 @@ export function useRandomRecipe(total: Ref<number>) {
   })
 
   onMounted(() => {
-    random()
+    // 如果没有随机菜谱，就生成一次
+    if (randomRecipes.value.length <= 0)
+      random()
   })
 
   return {
