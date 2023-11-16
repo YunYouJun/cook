@@ -42,11 +42,11 @@ const dishLabel = computed(() => {
     bg="blue-300 opacity-20"
     @click="triggerGtm(dish)"
   >
-    <span m="r-1" class="inline-flex items-center justify-center" text="sm blue-700 dark:blue-200">
+    <span m="r-1" text="sm blue-700 dark:blue-200">
       {{ dishLabel }}
     </span>
-    <span v-for="tool, i in tools" :key="i" inline-flex>
-      <div v-if="dish.tools?.includes(tool.name)" :class="tool.icon" />
-    </span>
+    <template v-for="tool, i in tools">
+      <span v-if="dish.tools?.includes(tool.name)" :key="i" :class="tool.icon" />
+    </template>
   </a>
 </template>
