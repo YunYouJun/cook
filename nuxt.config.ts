@@ -7,8 +7,7 @@ Object.assign(process.env, {
 })
 
 // add build time to env
-import.meta.env.VITE_APP_BUILD_TIME = new Date().toISOString()
-
+import.meta.env.VITE_APP_BUILD_TIME = new Date().getTime().toString()
 export default defineNuxtConfig({
   ssr: false,
 

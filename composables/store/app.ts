@@ -1,8 +1,8 @@
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
 import { ref } from 'vue'
-import { defaultSettings } from '~/utils/settings'
-import { namespace } from '~/constants'
+import { defaultSettings } from '../../utils/settings'
+import { namespace } from '../../constants'
 
 export const useAppStore = defineStore('app', () => {
   const deferredPrompt = ref<Event | any>()
