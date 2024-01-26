@@ -6,6 +6,9 @@ Object.assign(process.env, {
   VITE_COMMIT_REF: process.env.CF_PAGES_COMMIT_SHA || '',
 })
 
+// add build time to env
+import.meta.env.VITE_APP_BUILD_TIME = new Date().toISOString()
+
 export default defineNuxtConfig({
   ssr: false,
 
@@ -13,9 +16,10 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@unocss/nuxt',
     '@pinia/nuxt',
+
+    '@nuxt/test-utils/module',
     '@nuxtjs/color-mode',
     '@vite-pwa/nuxt',
-    'nuxt-vitest',
 
     '@zadigetvoltaire/nuxt-gtm',
 
@@ -26,7 +30,8 @@ export default defineNuxtConfig({
     // when using generate, payload js assets included in sw precache manifest
     // but missing on offline, disabling extraction it until fixed
     payloadExtraction: false,
-    inlineSSRStyles: false,
+    // inlineSSRStyles: false,
+    renderJsonPayloads: true,
     typedPages: true,
   },
 

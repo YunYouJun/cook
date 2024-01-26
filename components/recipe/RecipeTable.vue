@@ -40,7 +40,9 @@ defineProps<{
   font-size: 0.8rem;
 }
 
-tr, th, td {
+tr,
+th,
+td {
   border: 1px solid black;
 }
 </style>

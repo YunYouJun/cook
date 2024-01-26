@@ -12,7 +12,6 @@ body,
   background: var(--c-bg);
 }
 
-
 input:focus {
   outline: none;
 }
@@ -22,7 +21,7 @@ input:focus {
 }
 
 #nprogress .bar {
-  background: rgb(13,148,136);
+  background: rgb(13, 148, 136);
   opacity: 0.75;
   position: fixed;
   z-index: 1031;
@@ -37,7 +36,7 @@ html {
   background-color: var(--c-bg);
 
   scroll-behavior: smooth;
-  
+
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
@@ -48,18 +47,19 @@ a {
 
 button {
   outline: none;
-  
+
   &:focus,
   &:active {
     outline: none;
   }
 }
 
-hr {opacity: 0.1;}
+hr {
+  opacity: 0.1;
+}
 
 .tag {
   margin: 4px;
   padding: 2px 4px;
   // border: 1px solid var(--c-text);
 }
-

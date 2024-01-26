@@ -73,8 +73,6 @@ docker stop cook
 感谢以下小伙伴为本项目提供的数据支持和 QA ！
 
 - [Runny](https://weibo.com/runny)
-- 山竹太凉
-- leo
 - 麒麟
 - 晴方啾
 - 课代表阿伟

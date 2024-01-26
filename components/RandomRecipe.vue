@@ -16,7 +16,7 @@ const { random, randomRecipes } = useRandomRecipe(count)
     </button>
   </div>
 
-  <button cursor-pointer class="inline-flex inline-flex items-center justify-center rounded-md border-none bg-blue-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2 focus-visible:outline" @click="random">
+  <button cursor-pointer class="inline-flex inline-flex items-center justify-center rounded-md border-none bg-blue-600 px-3 py-1.5 text-sm text-white font-semibold leading-6 shadow-sm hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2 focus-visible:outline" @click="random">
     <div class="transition" hover="text-blue-500" i-ri-refresh-line mr-1 inline-flex />
     <div>随机一下</div>
   </button>

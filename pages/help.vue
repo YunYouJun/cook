@@ -138,12 +138,6 @@
             <a href="https://weibo.com/runny" target="_blank">Runny</a>
           </li>
           <li>
-            山竹太凉
-          </li>
-          <li>
-            leo
-          </li>
-          <li>
             麒麟
           </li>
           <li>
