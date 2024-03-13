@@ -1,9 +1,11 @@
 // http://localhost:3001/api/recipes/image/generate
 
+import process from 'node:process'
 import { meat, staple, vegetable } from '~/data/food'
 
+// internal temp
 // const sdBaseUrl = 'http://30.30.168.63:7860/'
-const sdBaseUrl = 'https://85db1802ae46e57aab.gradio.live/'
+const sdBaseUrl = process.env.SD_API_BASE_URL
 
 const payload = {
   // denoising_strength: 0,
@@ -57,14 +59,16 @@ export default defineEventHandler(async (e) => {
   })
 
   // TODO: 过滤 prompt 只能是食材
-  payload.prompt = `<lora:TODO:1>,food focus,transparent background,${enFoods.join(',')}`
+  // <lora:TODO:1>,
+  payload.prompt = `food focus,transparent background,${enFoods.join(',')}`
 
-  // console.log(payload.prompt)
+  console.log(payload.prompt)
 
   const data = await $fetch<Txt2ImgResponse>('/sdapi/v1/txt2img', {
     baseURL: sdBaseUrl,
     body: payload,
     method: 'POST',
   })
+  console.log(data)
   return data
 })

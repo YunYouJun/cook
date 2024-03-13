@@ -36,6 +36,7 @@
     "@iconify-json/ic": "^1.1.17",
     "@iconify-json/mdi": "^1.1.64",
     "@iconify-json/ri": "^1.1.19",
+    "@iconify-json/svg-spinners": "^1.1.2",
     "@iconify-json/twemoji": "^1.1.15",
     "@nuxt/devtools": "^1.0.8",
     "@nuxt/test-utils": "^3.10.0",

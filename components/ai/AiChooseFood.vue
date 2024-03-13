@@ -34,11 +34,14 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
 }
 
 // cook recipe
+const cooking = ref(false)
 const recipeImg = ref('')
 async function cook() {
+  cooking.value = true
   const foods = rStore.selectedStuff
   const img = await getRecipeImage(foods)
   recipeImg.value = img
+  cooking.value = false
 }
 </script>
 
@@ -121,10 +124,13 @@ async function cook() {
     </Transition>
 
     <button
+      m-auto
+      flex items-center justify-center
       class="rounded bg-yellow px-4 py-2 text-orange-900 font-black shadow hover:shadow-md active:shadow-inset"
       @click="cook()"
     >
-      做美食 🥘
+      <div v-if="cooking" class="mr-2 inline-flex" i-svg-spinners:clock />
+      <span>做美食 🥘</span>
     </button>
 
     <div
@@ -137,7 +143,11 @@ async function cook() {
       </div>
 
       <div class="cook-recipes text-center" p="2">
-        <img class="m-auto w-25 rounded shadow transition hover:shadow-md" src="https://yunyoujun.cn/images/avatar.jpg" alt="recipes">
+        <img
+          class="m-auto w-25 rounded shadow transition hover:shadow-md"
+          :src="recipeImg"
+          alt="recipes"
+        >
       </div>
     </div>
   </div>
