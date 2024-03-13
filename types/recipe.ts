@@ -66,4 +66,9 @@ export interface StuffItem {
    * 显示标签
    */
   label?: string
+  /**
+   * 英文名称, for ai keyword
+   * @example 'potato'
+   */
+  en?: string
 }

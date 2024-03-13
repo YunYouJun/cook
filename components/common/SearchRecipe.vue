@@ -25,7 +25,7 @@ const filteredRecipes = computedAsync(async () => {
 
 <template>
   <YlfIconButton
-    absolute right-3 top-5
+    absolute right-3 top-4
     class="icon-btn hover:text-yellow-400 !outline-none"
     text-xl
     title="切换" @click="openModal"
