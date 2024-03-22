@@ -3,7 +3,8 @@ import type { StuffItem } from '~/types'
 import { meat, staple, vegetable } from '~/data/food'
 
 import { useEmojiAnimation } from '~/composables/animation'
-import { getRecipeImage } from '~/utils/api'
+import type { AIRecipeInfo } from '~/packages/ai/src'
+import { generateRecipeInfo, getRecipeImage } from '~/utils/api'
 
 const rStore = useRecipeStore()
 const curStuff = computed(() => rStore.selectedStuff)
@@ -36,11 +37,28 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
 // cook recipe
 const cooking = ref(false)
 const recipeImg = ref('')
+
+const aiRecipeInfo = ref<AIRecipeInfo>({
+  名称: '名称',
+  介绍: '介绍',
+})
+
 async function cook() {
   cooking.value = true
   const foods = rStore.selectedStuff
-  const img = await getRecipeImage(foods)
+
+  // reset
+  aiRecipeInfo.value = ({
+    名称: '起名中...',
+    介绍: '正在思考怎么介绍...',
+  })
+  recipeImg.value = ''
+
+  // generate
+  const [info, img] = await Promise.all([generateRecipeInfo(foods), getRecipeImage(foods)])
+  aiRecipeInfo.value = info
   recipeImg.value = img
+
   cooking.value = false
 }
 </script>
@@ -85,7 +103,7 @@ async function cook() {
     </div>
     <div m="y-4">
       <h2 opacity="90" text="base" font="bold" p="1">
-        🍚 主食也要一起下锅吗？（不选也行）
+        🍚 主食
       </h2>
       <div>
         <StapleTag
@@ -130,7 +148,7 @@ async function cook() {
       @click="cook()"
     >
       <div v-if="cooking" class="mr-2 inline-flex" i-svg-spinners:clock />
-      <span>做美食 🥘</span>
+      <span>做黑暗料理 🥘</span>
     </button>
 
     <div
@@ -139,15 +157,21 @@ async function cook() {
       bg="gray-400/8"
     >
       <div text="xl" font="bold" p="1">
-        🍲 来看看制作出的美食吧！
+        「{{ aiRecipeInfo['名称'] }}」
       </div>
 
       <div class="cook-recipes text-center" p="2">
         <img
+          v-if="recipeImg"
           class="m-auto w-25 rounded shadow transition hover:shadow-md"
           :src="recipeImg"
           alt="recipes"
         >
+        <div v-else class="m-auto h-25 w-25 rounded bg-gray shadow transition hover:shadow-md" />
+      </div>
+
+      <div>
+        {{ aiRecipeInfo['介绍'] }}
       </div>
     </div>
   </div>
