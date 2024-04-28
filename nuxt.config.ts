@@ -23,6 +23,10 @@ export default defineNuxtConfig({
     '@zadigetvoltaire/nuxt-gtm',
 
     '@yunlefun/vue/nuxt',
+
+    // fix QQ in iOS
+    // See https://github.com/unjs/ofetch/pull/366
+    'nuxt-fix-ofetch',
   ],
 
   experimental: {
