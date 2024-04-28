@@ -1,5 +1,6 @@
 import { useStorage } from '@vueuse/core'
 import { lastDbUpdated, namespace } from '~/constants'
+import { db, initDb } from '~/utils/db'
 
 export function useIndexedDB() {
   const dbUpdated = useStorage(`${namespace}:lastDbUpdated`, lastDbUpdated)

@@ -1,3 +1,1 @@
-import indexeddb from 'fake-indexeddb'
-
-globalThis.indexedDB = indexeddb
+import 'fake-indexeddb/auto'

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+// @ts-expect-error // Ignore this line
 import VueAboutMe from 'vue-about-me'
 import 'vue-about-me/style.css'
 

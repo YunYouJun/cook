@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { installPrompt } from './utils/pwa'
 import { appName } from '~/constants'
+import { useIndexedDB } from '~/composables/db'
 
 // https://nuxt.com/docs/api/composables/use-head
 useHead({

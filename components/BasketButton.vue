@@ -8,7 +8,10 @@ const props = defineProps({
 const rStore = useRecipeStore()
 const { displayedRecipe } = storeToRefs(rStore)
 
-const showBasketBtn = computed(async () => {
+/**
+ * Show basket button if there are recipes in the basket
+ */
+const showBasketBtn = computed(() => {
   return displayedRecipe.value.length !== rStore.recipesLength && props.isVisible
 })
 </script>
