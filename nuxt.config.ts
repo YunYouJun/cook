@@ -1,6 +1,6 @@
 import process from 'node:process'
-import { pwa } from './config/pwa'
-import { appDescription } from './constants/index'
+import { pwa } from './app/config/pwa'
+import { appDescription } from './app/constants/index'
 
 Object.assign(process.env, {
   VITE_COMMIT_REF: process.env.CF_PAGES_COMMIT_SHA || '',
@@ -33,7 +33,6 @@ export default defineNuxtConfig({
     // when using generate, payload js assets included in sw precache manifest
     // but missing on offline, disabling extraction it until fixed
     payloadExtraction: false,
-    // inlineSSRStyles: false,
     renderJsonPayloads: true,
     typedPages: true,
   },
@@ -72,6 +71,8 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no' },
         { name: 'description', content: appDescription },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+        { name: 'theme-color', media: '(prefers-color-scheme: light)', content: 'white' },
+        { name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#222222' },
       ],
     },
   },
@@ -89,4 +90,21 @@ export default defineNuxtConfig({
   devtools: {
     enabled: true,
   },
+
+  features: {
+    // For UnoCSS
+    inlineStyles: false,
+  },
+
+  eslint: {
+    config: {
+      standalone: false,
+    },
+  },
+
+  future: {
+    compatibilityVersion: 4,
+  },
+
+  compatibilityDate: '2024-08-14',
 })

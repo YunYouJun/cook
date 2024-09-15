@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import pkg from '~/package.json'
+import pkg from '~/../package.json'
 
 const commitSha = (import.meta.env.VITE_COMMIT_REF || '').slice(0, 7)
 const now = import.meta.env.VITE_APP_BUILD_TIME

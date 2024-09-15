@@ -8,7 +8,7 @@ import {
   transformerVariantGroup,
 } from 'unocss'
 
-import { tools } from './data/food'
+import { tools } from './app/data/food'
 
 const safelist: string[] = ['text-left']
 

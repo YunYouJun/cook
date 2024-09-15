@@ -1,16 +1,12 @@
 // convert csv to json
 import fs from 'node:fs'
-import path from 'node:path'
-import url from 'node:url'
 import consola from 'consola'
-import type { RecipeItem, Recipes } from '../types'
+import type { RecipeItem, Recipes } from '../app/types'
 
-const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
-const recipeCsvFile = path.resolve(__dirname, '../data/recipe.csv')
-const recipeJsonFile = path.resolve(__dirname, '../data/recipe.json')
+import { config } from './config'
 
 function run() {
-  const csvData = fs.readFileSync(recipeCsvFile, 'utf-8')
+  const csvData = fs.readFileSync(config.recipeCsvFile, 'utf-8')
   const lines = csvData.split(/\r?\n/)
 
   const headers = 'name,stuff,bv,difficulty,tags,methods,tools,'
@@ -40,8 +36,8 @@ function run() {
     }
   })
 
-  fs.writeFileSync(recipeJsonFile, JSON.stringify(recipeJson))
-  consola.success(`Generate file: ${recipeJsonFile}`)
+  fs.writeFileSync(config.recipeJsonFile, JSON.stringify(recipeJson))
+  consola.success(`Generate file: ${config.recipeJsonFile}`)
 }
 
 run()

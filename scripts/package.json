@@ -1,0 +1,7 @@
+{
+  "name": "@cook/scripts",
+  "version": "0.0.1",
+  "scripts": {
+    "convert": "tsx convert.ts"
+  }
+}
