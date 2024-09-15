@@ -38,6 +38,7 @@
     "@iconify-json/ri": "^1.2.0",
     "@iconify-json/twemoji": "^1.2.0",
     "@nuxt/devtools": "^1.4.2",
+    "@nuxt/eslint": "^0.5.7",
     "@nuxt/test-utils": "^3.14.2",
     "@nuxtjs/color-mode": "^3.5.1",
     "@pinia/nuxt": "^0.5.4",
@@ -66,13 +67,13 @@
     "simple-git-hooks": "^2.11.1",
     "star-markdown-css": "^0.5.1",
     "tsx": "^4.19.1",
-    "typescript": "^5.5.4",
+    "typescript": "5.5.4",
     "unocss": "^0.62.3",
     "vitest": "^2.1.1",
     "vue-tsc": "^2.1.6"
   },
   "resolutions": {
-    "@typescript-eslint/utils": "^8.2.0"
+    "@typescript-eslint/utils": "^8.5.0"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"

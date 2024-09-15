@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useRecipeStore } from '../composables/store'
+import { useRecipeStore } from '../app/composables/store'
 
 describe('recipe interaction', () => {
   beforeEach(() => {

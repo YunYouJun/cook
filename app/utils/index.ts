@@ -1,5 +1,7 @@
 import { meat, staple, vegetable } from '~/data/food'
 
+export * from './cookbook'
+
 const foodItems = [...vegetable, ...meat, ...staple]
 const foodEmojiMap = new Map()
 foodItems.forEach((item) => {

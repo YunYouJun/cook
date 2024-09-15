@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { defaultCookbook } from '~/utils'
+
 definePageMeta({
   layout: 'child',
   title: '自定义菜谱',
