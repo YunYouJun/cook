@@ -1,5 +1,5 @@
-import { isClient } from '@vueuse/core'
 import type { Ref } from 'vue'
+import { isClient } from '@vueuse/core'
 
 export function useEmojiAnimation(recipeBtn: Ref<HTMLButtonElement | undefined>) {
   const { x, y } = usePointer()

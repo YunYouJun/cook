@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import type { DbRecipeItem } from '~/utils/db'
+import { recipeHistories } from '~/composables/store/history'
 import { tools } from '~/data/food'
 import type { RecipeItem } from '~/types'
 import { getEmojisFromStuff } from '~/utils'
-import { recipeHistories } from '~/composables/store/history'
+import type { DbRecipeItem } from '~/utils/db'
 
 const props = defineProps<{
   dish: RecipeItem | DbRecipeItem

@@ -1,7 +1,7 @@
+import type { RecipeItem, Recipes } from '../app/types'
 // convert csv to json
 import fs from 'node:fs'
 import consola from 'consola'
-import type { RecipeItem, Recipes } from '../app/types'
 
 import { config } from './config'
 
