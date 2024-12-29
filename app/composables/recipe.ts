@@ -1,6 +1,6 @@
+import type { DbRecipeItem } from '~/utils/db'
 import { useStorage } from '@vueuse/core'
 import { namespace } from '~/constants'
-import type { DbRecipeItem } from '~/utils/db'
 
 /**
  * 随机几道菜

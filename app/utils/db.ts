@@ -1,7 +1,7 @@
 import type { Table } from 'dexie'
-import Dexie from 'dexie'
-
 import type { RecipeItem } from '~/types'
+
+import Dexie from 'dexie'
 
 export interface DbRecipeItem extends RecipeItem {
   id?: number

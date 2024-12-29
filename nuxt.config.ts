@@ -9,56 +9,33 @@ Object.assign(process.env, {
 // add build time to env
 import.meta.env.VITE_APP_BUILD_TIME = new Date().getTime().toString()
 export default defineNuxtConfig({
-  ssr: false,
 
   modules: [
     '@vueuse/nuxt',
     '@unocss/nuxt',
     '@pinia/nuxt',
 
-    '@nuxt/test-utils/module',
-    '@nuxt/eslint',
     '@nuxtjs/color-mode',
     '@vite-pwa/nuxt',
+    '@nuxt/eslint',
+    '@nuxt/test-utils/module',
 
     '@zadigetvoltaire/nuxt-gtm',
 
     '@yunlefun/vue/nuxt',
 
-    // fix QQ in iOS
+    // fix QQ in iOS, Done
     // See https://github.com/unjs/ofetch/pull/366
-    'nuxt-fix-ofetch',
+    // 'nuxt-fix-ofetch',
+  ],
+  ssr: false,
+
+  components: [
+    { path: '~/components', pathPrefix: false },
   ],
 
-  experimental: {
-    // when using generate, payload js assets included in sw precache manifest
-    // but missing on offline, disabling extraction it until fixed
-    payloadExtraction: false,
-    renderJsonPayloads: true,
-    typedPages: true,
-  },
-
-  css: [
-    '@unocss/reset/tailwind.css',
-    '~/styles/css-vars.scss',
-    '~/styles/index.scss',
-  ],
-
-  colorMode: {
-    classSuffix: '',
-  },
-
-  nitro: {
-    esbuild: {
-      options: {
-        target: 'esnext',
-      },
-    },
-    prerender: {
-      crawlLinks: false,
-      routes: ['/', '/random', '/help', '/user', '/404', '/settings'],
-      ignore: ['/hi'],
-    },
+  devtools: {
+    enabled: true,
   },
 
   app: {
@@ -78,18 +55,18 @@ export default defineNuxtConfig({
     },
   },
 
-  components: [
-    { path: '~/components', pathPrefix: false },
+  css: [
+    '@unocss/reset/tailwind.css',
+    '~/styles/css-vars.scss',
+    '~/styles/index.scss',
   ],
 
-  gtm: {
-    id: 'GTM-5FJSV46',
+  colorMode: {
+    classSuffix: '',
   },
 
-  pwa,
-
-  devtools: {
-    enabled: true,
+  future: {
+    compatibilityVersion: 4,
   },
 
   features: {
@@ -97,15 +74,41 @@ export default defineNuxtConfig({
     inlineStyles: false,
   },
 
-  eslint: {
-    config: {
-      standalone: false,
-    },
-  },
-
-  future: {
-    compatibilityVersion: 4,
+  experimental: {
+    // when using generate, payload js assets included in sw precache manifest
+    // but missing on offline, disabling extraction it until fixed
+    payloadExtraction: false,
+    renderJsonPayloads: true,
+    typedPages: true,
   },
 
   compatibilityDate: '2024-08-14',
+
+  nitro: {
+    esbuild: {
+      options: {
+        target: 'esnext',
+      },
+    },
+    prerender: {
+      crawlLinks: false,
+      routes: ['/', '/random', '/help', '/user', '/404', '/settings'],
+      ignore: ['/hi'],
+    },
+  },
+
+  eslint: {
+    config: {
+      standalone: false,
+      nuxt: {
+        sortConfigKeys: true,
+      },
+    },
+  },
+
+  gtm: {
+    id: 'GTM-5FJSV46',
+  },
+
+  pwa,
 })
