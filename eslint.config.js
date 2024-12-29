@@ -8,5 +8,10 @@ export default nuxt(
       unocss: true,
       formatters: true,
     },
+    {
+      ignores: [
+        'app/data/*.json',
+      ],
+    },
   ),
 )
