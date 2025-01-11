@@ -89,9 +89,9 @@ const filteredRecipes = computedAsync(async () => {
                     @click="keyword = ''"
                   />
                 </div>
-                <div op="70" ml-2 inline-flex cursor-pointer text-base @click="closeModal">
+                <button op="70" ml-2 inline-flex cursor-pointer text-base @click="closeModal">
                   取消
-                </div>
+                </button>
               </DialogTitle>
               <div flex="~ col grow" overflow="auto" class="mt-2" text-xs>
                 <DishTag v-for="item, i in filteredRecipes" :key="i" :dish="item" />
