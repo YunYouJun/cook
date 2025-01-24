@@ -17,10 +17,10 @@ jobs:
         uses: pnpm/action-setup@v2
 
       # after pnpm
-      - name: Use Node.js 16
+      - name: Use Node.js LTS
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: lts/*
           registry-url: https://registry.npmjs.org/
           cache: pnpm
 
