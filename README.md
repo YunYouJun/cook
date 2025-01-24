@@ -9,10 +9,10 @@
 
 ### 网页版本
 
-- 网站链接：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)
-  - 国内加速：[cook.yunle.fun](https://cook.yunle.fun)
-- 备用：[cook.yyj.moe](https://cook.yyj.moe)
-- 开发版：[cook.yunle.app](https://cook.yunle.app)
+- 网站链接（Cloudflare）：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)
+  - 国内加速（腾讯云）：[cook.yunle.fun](https://cook.yunle.fun)
+- 备用（Netlify）：[cook.yyj.moe](https://cook.yyj.moe)
+- 开发版（Vercel）：[cook.yunle.app](https://cook.yunle.app)
 
 ### 小程序版本
 
