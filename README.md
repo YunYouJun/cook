@@ -10,6 +10,7 @@
 ### 网页版本
 
 - 网站链接：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)
+  - 国内加速：[cook.yunle.fun](https://cook.yunle.fun)
 - 备用：[cook.yyj.moe](https://cook.yyj.moe)
 - 开发版：[cook.yunle.app](https://cook.yunle.app)
 
