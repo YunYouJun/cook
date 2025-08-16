@@ -18,6 +18,10 @@ definePageMeta({
       text-left
     >
       <YlfForm>
+        <YlfFormItem label="暗色模式">
+          <YlfSwitch v-model="app.settings.keepLocalData" />
+        </YlfFormItem>
+
         <YlfFormItem label="离开网页后保留选中数据">
           <YlfSwitch v-model="app.settings.keepLocalData" />
         </YlfFormItem>

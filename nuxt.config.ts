@@ -31,7 +31,6 @@ export default defineNuxtConfig({
     // See https://github.com/unjs/ofetch/pull/366
     // 'nuxt-fix-ofetch',
     '@nuxt/scripts',
-    '@nuxt/content',
   ],
   ssr: false,
 
@@ -69,9 +68,11 @@ export default defineNuxtConfig({
   colorMode: {
     classSuffix: '',
   },
-
-  future: {
-    compatibilityVersion: 4,
+  // Avoids error [unhandledRejection] EMFILE: too many open files, watch
+  ignore: ['**/src-tauri/**'],
+  // Enables the development server to be discoverable by other devices when running on iOS physical devices
+  devServer: {
+    host: '0',
   },
 
   features: {
@@ -86,8 +87,7 @@ export default defineNuxtConfig({
     renderJsonPayloads: true,
     typedPages: true,
   },
-
-  compatibilityDate: '2024-08-14',
+  compatibilityDate: '2025-05-15',
 
   nitro: {
     esbuild: {
@@ -99,6 +99,19 @@ export default defineNuxtConfig({
       crawlLinks: false,
       routes: ['/', '/random', '/help', '/user', '/404', '/settings'],
       ignore: ['/hi'],
+    },
+  },
+
+  vite: {
+    // Better support for Tauri CLI output
+    clearScreen: false,
+    // Enable environment variables
+    // Additional environment variables can be found at
+    // https://v2.tauri.app/reference/environment-variables/
+    envPrefix: ['VITE_', 'TAURI_'],
+    server: {
+      // Tauri requires a consistent port
+      strictPort: true,
     },
   },
 

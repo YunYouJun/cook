@@ -7,7 +7,7 @@
     "node": ">=16"
   },
   "scripts": {
-    "build": "npm run convert && nuxt build",
+    "build": "npm run convert && nuxt generate",
     "build:static": "npm run convert && nuxt generate",
     "convert": "pnpm -C scripts run convert",
     "dev": "nuxt dev --host",
@@ -20,11 +20,12 @@
     "preview": "serve dist",
     "preview-https": "serve dist",
     "release": "bumpp",
+    "tauri": "tauri",
+    "ios": "tauri ios dev",
     "test": "vitest",
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "better-sqlite3": "^12.2.0",
     "dayjs": "^1.11.13",
     "vue-about-me": "^1.4.0"
   },
@@ -38,7 +39,6 @@
     "@iconify-json/mdi": "^1.2.3",
     "@iconify-json/ri": "^1.2.5",
     "@iconify-json/twemoji": "^1.2.4",
-    "@nuxt/content": "3.6.3",
     "@nuxt/devtools": "^2.6.2",
     "@nuxt/eslint": "^1.8.0",
     "@nuxt/scripts": "^0.11.10",
@@ -46,6 +46,7 @@
     "@nuxtjs/color-mode": "^3.5.2",
     "@pinia/nuxt": "^0.11.2",
     "@pinia/testing": "^1.0.2",
+    "@tauri-apps/cli": "^2.7.1",
     "@unhead/vue": "^2.0.14",
     "@unocss/eslint-config": "^66.4.2",
     "@unocss/nuxt": "^66.4.2",
