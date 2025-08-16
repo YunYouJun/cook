@@ -12,7 +12,8 @@ const curStuff = computed(() => rStore.selectedStuff)
 const recipeBtnRef = ref<HTMLButtonElement>()
 const { playAnimation } = useEmojiAnimation(recipeBtnRef)
 
-const gtm = useGtm()
+const { proxy } = useScriptGoogleTagManager()
+
 const recipePanelRef = ref()
 const { isVisible, show } = useInvisibleElement(recipePanelRef)
 
@@ -22,13 +23,13 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
   if (curStuff.value.includes(item.name))
     playAnimation(item.emoji)
 
-  gtm?.trackEvent({
+  proxy.dataLayer.push({
     event: 'click',
     category: `${category}_${item.name}`,
     action: 'click_stuff',
     label: '食材',
   })
-  gtm?.trackEvent({
+  proxy.dataLayer.push({
     event: 'click_stuff',
     action: item.name,
   })

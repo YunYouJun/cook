@@ -1,5 +1,4 @@
 import type { RecipeItem, StuffItem } from '~/types'
-import { useGtm } from '@gtm-support/vue-gtm'
 import { useStorage } from '@vueuse/core'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -16,7 +15,7 @@ const namespace = 'cook'
 export type SearchMode = 'survival' | 'loose' | 'strict'
 
 export const useRecipeStore = defineStore('recipe', () => {
-  const gtm = useGtm()
+  const { proxy } = useScriptGoogleTagManager()
   const { settings } = useAppStore()
 
   /**
@@ -136,13 +135,13 @@ export const useRecipeStore = defineStore('recipe', () => {
     const value = item.name
     toggleTools(value)
 
-    gtm?.trackEvent({
+    proxy.dataLayer.push({
       event: 'click',
       category: `tool_${value}`,
       action: 'click_tool',
       label: '工具',
     })
-    gtm?.trackEvent({
+    proxy.dataLayer.push({
       event: 'click_tool',
       action: item.name,
     })

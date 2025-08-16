@@ -20,13 +20,12 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@nuxt/test-utils/module',
 
-    '@zadigetvoltaire/nuxt-gtm',
-
     '@yunlefun/vue/nuxt',
 
     // fix QQ in iOS, Done
     // See https://github.com/unjs/ofetch/pull/366
     // 'nuxt-fix-ofetch',
+    '@nuxt/scripts',
   ],
   ssr: false,
 
@@ -106,9 +105,16 @@ export default defineNuxtConfig({
     },
   },
 
-  gtm: {
-    id: 'GTM-5FJSV46',
-  },
-
   pwa,
+
+  /**
+   * @see https://scripts.nuxt.com/scripts/tracking/google-tag-manager
+   */
+  scripts: {
+    registry: {
+      googleTagManager: {
+        id: 'GTM-5FJSV46',
+      },
+    },
+  },
 })

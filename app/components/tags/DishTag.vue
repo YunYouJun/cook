@@ -9,7 +9,7 @@ const props = defineProps<{
   dish: RecipeItem | DbRecipeItem
 }>()
 
-const gtm = useGtm()
+const { proxy } = useScriptGoogleTagManager()
 
 function triggerGtm(dish: RecipeItem) {
   recipeHistories.value.push({
@@ -17,13 +17,13 @@ function triggerGtm(dish: RecipeItem) {
     time: Date.now(),
   })
 
-  gtm?.trackEvent({
+  proxy.dataLayer.push({
     event: 'click',
     category: `dish_${dish.name}`,
     action: 'click_recipe',
     label: '跳转菜谱',
   })
-  gtm?.trackEvent({
+  proxy.dataLayer.push({
     event: 'click_dish',
     action: dish.name,
   })
@@ -37,7 +37,7 @@ const dishLabel = computed(() => {
 
 <template>
   <a
-    :href="dish.link || `https://www.bilibili.com/video/${dish.bv}`" target="_blank" class="dish-tag rounded tag" p="x-2"
+    :href="dish.link || `https://www.bilibili.com/video/${dish.bv}`" target="_blank" class="dish-tag tag rounded" p="x-2"
     border="~ blue-200 dark:blue-800"
     bg="blue-300 opacity-20"
     @click="triggerGtm(dish)"
