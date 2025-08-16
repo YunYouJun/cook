@@ -146,7 +146,11 @@ importers:
         specifier: ^3.0.5
         version: 3.0.5(typescript@5.9.2)
 
-  scripts: {}
+  scripts:
+    devDependencies:
+      simple-git:
+        specifier: ^3.28.0
+        version: 3.28.0
 
 packages:
 
@@ -8484,7 +8488,7 @@ snapshots:
 
   '@kwsites/file-exists@1.1.1':
     dependencies:
-      debug: 4.4.0
+      debug: 4.4.1
     transitivePeerDependencies:
       - supports-color
 
@@ -14375,7 +14379,7 @@ snapshots:
     dependencies:
       '@kwsites/file-exists': 1.1.1
       '@kwsites/promise-deferred': 1.1.1
-      debug: 4.4.0
+      debug: 4.4.1
     transitivePeerDependencies:
       - supports-color
 

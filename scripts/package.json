@@ -3,5 +3,8 @@
   "version": "0.0.1",
   "scripts": {
     "convert": "tsx convert.ts"
+  },
+  "devDependencies": {
+    "simple-git": "^3.28.0"
   }
 }

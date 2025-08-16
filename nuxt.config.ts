@@ -2,14 +2,22 @@ import process from 'node:process'
 import { pwa } from './app/config/pwa'
 import { appDescription } from './app/constants/index'
 
-Object.assign(process.env, {
-  VITE_COMMIT_REF: process.env.CF_PAGES_COMMIT_SHA || '',
-})
+// for cloudflare
+// Object.assign(process.env, {
+//   VITE_COMMIT_REF: process.env.CF_PAGES_COMMIT_SHA || '',
+// })
 
-// add build time to env
-import.meta.env.VITE_APP_BUILD_TIME = new Date().getTime().toString()
+import { getLatestCommit } from './scripts/git'
+
+const latestCommit = await getLatestCommit()
+/**
+ * CF_PAGES_COMMIT_SHA is Cloudflare Pages env
+ */
+import.meta.env.VITE_COMMIT_REF = process.env.CF_PAGES_COMMIT_SHA || latestCommit?.hash || ''
+// add build date string to env
+import.meta.env.VITE_APP_BUILD_DATE = latestCommit?.date || new Date().toString()
+
 export default defineNuxtConfig({
-
   modules: [
     '@vueuse/nuxt',
     '@unocss/nuxt',
