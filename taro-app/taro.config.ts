@@ -1,0 +1,1 @@
+import { defineConfig } from '@tarojs/cli'\n\nexport default defineConfig({\n  projectName: 'taro-app',\n  date: '2025-08-16',\n  designWidth: 750,\n  deviceRatio: {\n    '640': 2.34 / 2,\n    '750': 1,\n    '828': 1.81 / 2\n  },\n  sourceRoot: 'src',\n  outputRoot: 'dist',\n  framework: 'react',\n  plugins: [],\n  defineConstants: {},\n  alias: {},\n  env: {}\n})

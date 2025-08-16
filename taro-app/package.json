@@ -1,0 +1,1 @@
+{\n  "name": "taro-app",\n  "version": "0.0.1",\n  "private": true,\n  "scripts": {\n    "dev:weapp": "taro build --type weapp --watch",\n    "build:weapp": "taro build --type weapp"\n  },\n  "dependencies": {\n    "@tarojs/taro": "^3.6.0",\n    "@tarojs/components": "^3.6.0",\n    "react": "^17.0.0"\n  },\n  "devDependencies": {\n    "typescript": "^4.0.0"\n  }\n}

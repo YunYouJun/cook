@@ -1,0 +1,1 @@
+[\n  {\n    "id": "sample-1",\n    "name": "Sample Pancake",\n    "description": "A placeholder recipe. Replace this file with app/data/recipe.json from the original repo for full data.",\n    "ingredients": [\n      "1 cup flour",\n      "1 egg",\n      "1 cup milk"\n    ],\n    "steps": [\n      "Mix ingredients",\n      "Fry in pan until golden"\n    ]\n  }\n]

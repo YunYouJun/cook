@@ -1,0 +1,1 @@
+import React from 'react'\nimport { Provider } from 'react-redux' // optional if you use redux\nimport './app.scss'\n\nconst App: React.FC = ({ children }) => {\n  return (\n    <>\n      {children}\n    </>\n  )\n}\n\nexport default App

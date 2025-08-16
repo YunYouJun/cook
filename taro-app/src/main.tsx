@@ -1,0 +1,1 @@
+import React from 'react'\nimport { render } from 'react-dom'\nimport App from './app'\n\nconst root = document.getElementById('app') || document.body\nrender(<App />, root)
