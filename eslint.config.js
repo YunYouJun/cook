@@ -11,6 +11,8 @@ export default nuxt(
     {
       ignores: [
         'app/data/*.json',
+        'src-tauri/gen',
+        'src-tauri/target',
       ],
     },
   ),
