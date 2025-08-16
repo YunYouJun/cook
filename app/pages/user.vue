@@ -25,6 +25,10 @@ import { links } from '~/constants'
       </YlfForm>
 
       <YlfForm>
+        <YlfFormItem icon="i-ri-file-history-line" label="更新日志" to="/changelog" />
+      </YlfForm>
+
+      <YlfForm>
         <YlfFormItem icon="i-ri-settings-line" label="设置" to="/settings" />
       </YlfForm>
 

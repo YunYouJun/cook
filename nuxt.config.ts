@@ -22,18 +22,16 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@unocss/nuxt',
     '@pinia/nuxt',
-
     '@nuxtjs/color-mode',
     '@vite-pwa/nuxt',
     '@nuxt/eslint',
     '@nuxt/test-utils/module',
-
     '@yunlefun/vue/nuxt',
-
     // fix QQ in iOS, Done
     // See https://github.com/unjs/ofetch/pull/366
     // 'nuxt-fix-ofetch',
     '@nuxt/scripts',
+    '@nuxt/content',
   ],
   ssr: false,
 
