@@ -1,5 +1,6 @@
 # auto generate
-data/recipe.json
+app/data/recipe.json
+app/data/incompatible-foods.json
 
 .DS_Store
 .vite-ssg-dist
