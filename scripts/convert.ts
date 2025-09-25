@@ -5,6 +5,13 @@ import consola from 'consola'
 
 import { config } from './config'
 
+// 定义食物相克规则的类型
+interface IncompatibleRule {
+  foodA: string
+  foodB: string  
+  reason: string
+}
+
 function run() {
   const csvData = fs.readFileSync(config.recipeCsvFile, 'utf-8')
   const lines = csvData.split(/\r?\n/)
@@ -48,4 +55,54 @@ function run() {
   consola.success(`Generate file: ${config.recipeJsonFile}`)
 }
 
-run()
+/**
+ * 转换食物相克数据
+ */
+function convertIncompatibleFoods() {
+  consola.info('---')
+  consola.info('Convert Incompatible Foods Data...')
+  
+  try {
+    const csvData = fs.readFileSync(config.incompatibleFoodsCsvFile, 'utf-8')
+    const lines = csvData.split(/\r?\n/)
+    
+    const headers = 'foodA,foodB,reason'
+    if (lines.length < 2) {
+      throw new Error('No data in incompatible foods csv file')
+    }
+
+    if (lines[0]?.trim() !== headers) {
+      consola.warn(`Headers Changed: ${lines[0]}`)
+      return
+    }
+
+    const incompatibleRules: IncompatibleRule[] = []
+
+    lines.slice(1).forEach((line) => {
+      if (line.trim()) {
+        const attrs = line.split(',')
+        if (attrs.length < 3) {
+          consola.warn(`Invalid line: ${line}`)
+          return
+        }
+        incompatibleRules.push({
+          foodA: attrs[0]?.trim() || '',
+          foodB: attrs[1]?.trim() || '',
+          reason: attrs[2]?.trim() || '',
+        })
+      }
+    })
+
+    fs.writeFileSync(config.incompatibleFoodsJsonFile, JSON.stringify(incompatibleRules, null, 2))
+    consola.success(`Generate file: ${config.incompatibleFoodsJsonFile}`)
+  } catch (error) {
+    consola.error('Failed to convert incompatible foods data:', error)
+  }
+}
+
+function main() {
+  run()
+  convertIncompatibleFoods()
+}
+
+main()
