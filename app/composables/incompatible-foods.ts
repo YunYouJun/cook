@@ -1,4 +1,3 @@
-import { ref, computed, onMounted } from 'vue'
 import type { IncompatibleRule } from '~/types'
 import { computed, onMounted, readonly, ref } from 'vue'
 import incompatibleFoodsData from '~/data/incompatible-foods.json'
@@ -21,9 +20,11 @@ export function useIncompatibleFoods() {
     try {
       // 直接使用导入的数据
       incompatibleRules.value = incompatibleFoodsData as IncompatibleRule[]
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Failed to load incompatible foods data:', error)
-    } finally {
+    }
+    finally {
       isLoading.value = false
     }
   })
@@ -56,19 +57,20 @@ export function useIncompatibleFoods() {
     if (foundRules.length > 0) {
       if (foundRules.length === 1) {
         const rule = foundRules[0]!
-        warningMessage.value =
-          `🚨 危险组合！\n`
-          + `【${rule.foodA}】+ 【${rule.foodB}】= 有毒？！\n`
-          + `${rule.reason}\n`
-          + `换个搭配会更安全哦～`
-      } else {
+        warningMessage.value
+          = `🚨 危险组合！\n`
+            + `【${rule.foodA}】+ 【${rule.foodB}】= 有毒？！\n`
+            + `${rule.reason}\n`
+            + `换个搭配会更安全哦～`
+      }
+      else {
         const warnings = foundRules.map(rule =>
-          `【${rule.foodA}】+ 【${rule.foodB}】（${rule.reason}）\n`
+          `【${rule.foodA}】+ 【${rule.foodB}】（${rule.reason}）\n`,
         ).join('')
-        warningMessage.value =
-          `🚨 发现 ${foundRules.length} 个危险组合！\n`
-          + `${warnings}`
-          + `建议调整搭配哦～`
+        warningMessage.value
+          = `🚨 发现 ${foundRules.length} 个危险组合！\n`
+            + `${warnings}`
+            + `建议调整搭配哦～`
       }
     }
   }

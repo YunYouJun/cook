@@ -1,4 +1,4 @@
-import type { RecipeItem, Recipes } from '../app/types'
+import type { IncompatibleRule, RecipeItem, Recipes } from '../app/types'
 // convert csv to json
 import fs from 'node:fs'
 import consola from 'consola'
@@ -54,11 +54,11 @@ function run() {
 function convertIncompatibleFoods() {
   consola.info('---')
   consola.info('Convert Incompatible Foods Data...')
-  
+
   try {
     const csvData = fs.readFileSync(config.incompatibleFoodsCsvFile, 'utf-8')
     const lines = csvData.split(/\r?\n/)
-    
+
     const headers = 'foodA,foodB,reason'
     if (lines.length < 2) {
       throw new Error('No data in incompatible foods csv file')
@@ -98,7 +98,8 @@ function convertIncompatibleFoods() {
 
     fs.writeFileSync(config.incompatibleFoodsJsonFile, JSON.stringify(incompatibleRules, null, 2))
     consola.success(`Generate file: ${config.incompatibleFoodsJsonFile}`)
-  } catch (error) {
+  }
+  catch (error) {
     consola.error('Failed to convert incompatible foods data:', error)
   }
 }

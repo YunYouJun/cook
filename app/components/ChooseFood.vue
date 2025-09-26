@@ -57,13 +57,13 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
     <h2 m="t-4" text="xl" font="bold" p="1">
       🥘 先选一下食材
     </h2>
-    
+
     <!-- 食物相克警告提示 -->
     <Transition name="incompatible-warning">
-      <div 
-        v-if="hasWarning" 
+      <div
+        v-if="hasWarning"
         class="incompatible-warning-box"
-        m="b-4" p="4" 
+        m="b-4" p="4"
         border="~ 2 red-300 dark:red-600 rounded-xl"
         text="red-800 dark:red-200 sm"
         shadow="lg"
@@ -71,15 +71,21 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
         overflow="hidden"
       >
         <div flex="~ items-start gap-3">
-          <div text="2xl" flex="shrink-0" class="animate-pulse">🚨</div>
+          <div text="2xl" flex="shrink-0" class="animate-pulse">
+            🚨
+          </div>
           <div flex="1 col gap-1">
-            <div font="bold" text="base">食物相克警告！</div>
-            <div leading="relaxed" whitespace="pre-line">{{ warningMessage }}</div>
+            <div font="bold" text="base">
+              食物相克警告！
+            </div>
+            <div leading="relaxed" whitespace="pre-line">
+              {{ warningMessage }}
+            </div>
           </div>
         </div>
       </div>
     </Transition>
-    
+
     <div>
       <h2 opacity="90" text="base" font="bold" p="1">
         🥬 菜菜们
