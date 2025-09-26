@@ -43,23 +43,12 @@ export function useIncompatibleFoods() {
 
     const foundRules: IncompatibleRule[] = []
 
-    // 使用嵌套循环检查所有食材对 (O(n^2))
-    // 对于少量食材（<20），性能完全足够
-    for (let i = 0; i < ingredients.length; i++) {
-      for (let j = i + 1; j < ingredients.length; j++) {
-        const food1 = ingredients[i]
-        const food2 = ingredients[j]
+    const ingredientSet = new Set(ingredients)
 
-        // 在规则库中查找匹配的组合
-        const foundRule = incompatibleRules.value.find(rule =>
-          (rule.foodA === food1 && rule.foodB === food2) ||
-          (rule.foodA === food2 && rule.foodB === food1)
-        )
-
-        // 收集所有找到的相克规则
-        if (foundRule) {
-          foundRules.push(foundRule)
-        }
+    for (const rule of incompatibleRules.value) {
+      // 检查规则中的两种食物是否都存在于我们的食材 Set 中
+      if (ingredientSet.has(rule.foodA) && ingredientSet.has(rule.foodB)) {
+        foundRules.push(rule)
       }
     }
 
