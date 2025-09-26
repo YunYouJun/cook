@@ -1,4 +1,4 @@
-import type { RecipeItem, Recipes } from '../app/types'
+import type { IncompatibleRule, RecipeItem, Recipes } from '../app/types'
 // convert csv to json
 import fs from 'node:fs'
 import consola from 'consola'
@@ -48,4 +48,65 @@ function run() {
   consola.success(`Generate file: ${config.recipeJsonFile}`)
 }
 
-run()
+/**
+ * 转换食物相克数据
+ */
+function convertIncompatibleFoods() {
+  consola.info('---')
+  consola.info('Convert Incompatible Foods Data...')
+
+  try {
+    const csvData = fs.readFileSync(config.incompatibleFoodsCsvFile, 'utf-8')
+    const lines = csvData.split(/\r?\n/)
+
+    const headers = 'foodA,foodB,reason'
+    if (lines.length < 2) {
+      throw new Error('No data in incompatible foods csv file')
+    }
+
+    if (lines[0]?.trim() !== headers) {
+      consola.warn(`Headers Changed: ${lines[0]}`)
+      return
+    }
+
+    const incompatibleRules: IncompatibleRule[] = []
+
+    lines.slice(1).forEach((line) => {
+      if (line.trim()) {
+        const attrs = line.split(',')
+        if (attrs.length < 3) {
+          consola.warn(`Invalid line: ${line}`)
+          return
+        }
+
+        const foodA = attrs[0]?.trim()
+        const foodB = attrs[1]?.trim()
+        const reason = attrs[2]?.trim()
+
+        if (!foodA || !foodB || !reason) {
+          consola.warn(`Missing required field(s) in line: ${line}`)
+          return
+        }
+
+        incompatibleRules.push({
+          foodA,
+          foodB,
+          reason,
+        })
+      }
+    })
+
+    fs.writeFileSync(config.incompatibleFoodsJsonFile, JSON.stringify(incompatibleRules, null, 2))
+    consola.success(`Generate file: ${config.incompatibleFoodsJsonFile}`)
+  }
+  catch (error) {
+    consola.error('Failed to convert incompatible foods data:', error)
+  }
+}
+
+function main() {
+  run()
+  convertIncompatibleFoods()
+}
+
+main()

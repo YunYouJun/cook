@@ -2,12 +2,16 @@
 import type { StuffItem } from '~/types'
 import { storeToRefs } from 'pinia'
 import { useEmojiAnimation } from '~/composables/animation'
+import { useIncompatibleFoods } from '~/composables/incompatible-foods'
 
 import { meat, staple, tools, vegetable } from '~/data/food'
 
 const rStore = useRecipeStore()
 const { curTool } = storeToRefs(rStore)
 const curStuff = computed(() => rStore.selectedStuff)
+
+// 食物相克检测
+const { warningMessage, hasWarning, checkIncompatibility } = useIncompatibleFoods()
 
 const recipeBtnRef = ref<HTMLButtonElement>()
 const { playAnimation } = useEmojiAnimation(recipeBtnRef)
@@ -16,6 +20,18 @@ const { proxy } = useScriptGoogleTagManager()
 
 const recipePanelRef = ref()
 const { isVisible, show } = useInvisibleElement(recipePanelRef)
+
+// 监听食材变化，自动检测相克
+watch(curStuff, (newIngredients) => {
+  checkIncompatibility(newIngredients)
+}, { deep: true })
+
+// 页面初始化时也检查一次（处理已有选择的情况）
+onMounted(() => {
+  if (curStuff.value.length > 0) {
+    checkIncompatibility(curStuff.value)
+  }
+})
 
 function toggleStuff(item: StuffItem, category = '', _e?: Event) {
   rStore.toggleStuff(item.name)
@@ -41,6 +57,35 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
     <h2 m="t-4" text="xl" font="bold" p="1">
       🥘 先选一下食材
     </h2>
+
+    <!-- 食物相克警告提示 -->
+    <Transition name="incompatible-warning">
+      <div
+        v-if="hasWarning"
+        class="incompatible-warning-box"
+        m="b-4" p="4"
+        border="~ 2 red-300 dark:red-600 rounded-xl"
+        text="red-800 dark:red-200 sm"
+        shadow="lg"
+        relative="~"
+        overflow="hidden"
+      >
+        <div flex="~ items-start gap-3">
+          <div text="2xl" flex="shrink-0" class="animate-pulse">
+            🚨
+          </div>
+          <div flex="1 col gap-1">
+            <div font="bold" text="base">
+              食物相克警告！
+            </div>
+            <div leading="relaxed" whitespace="pre-line">
+              {{ warningMessage }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
     <div>
       <h2 opacity="90" text="base" font="bold" p="1">
         🥬 菜菜们
