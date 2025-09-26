@@ -5,13 +5,6 @@ import consola from 'consola'
 
 import { config } from './config'
 
-// 定义食物相克规则的类型
-interface IncompatibleRule {
-  foodA: string
-  foodB: string  
-  reason: string
-}
-
 function run() {
   const csvData = fs.readFileSync(config.recipeCsvFile, 'utf-8')
   const lines = csvData.split(/\r?\n/)
