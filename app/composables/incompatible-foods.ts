@@ -1,5 +1,6 @@
 import { ref, computed, onMounted } from 'vue'
 import type { IncompatibleRule } from '~/types'
+import { computed, onMounted, readonly, ref } from 'vue'
 import incompatibleFoodsData from '~/data/incompatible-foods.json'
 
 /**
