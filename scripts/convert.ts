@@ -78,10 +78,20 @@ function convertIncompatibleFoods() {
           consola.warn(`Invalid line: ${line}`)
           return
         }
+
+        const foodA = attrs[0]?.trim()
+        const foodB = attrs[1]?.trim()
+        const reason = attrs[2]?.trim()
+
+        if (!foodA || !foodB || !reason) {
+          consola.warn(`Missing required field(s) in line: ${line}`)
+          return
+        }
+
         incompatibleRules.push({
-          foodA: attrs[0]?.trim() || '',
-          foodB: attrs[1]?.trim() || '',
-          reason: attrs[2]?.trim() || '',
+          foodA,
+          foodB,
+          reason,
         })
       }
     })
