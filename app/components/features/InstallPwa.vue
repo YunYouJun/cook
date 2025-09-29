@@ -22,8 +22,8 @@ function install() {
     <div v-if="app.deferredPrompt" text="center" m="t-2">
       <button
         class="shadow"
-        text="white" bg="green-500" p="x-4 y-2" m="2" inline-flex
-        items-center justify-center rounded-md font-bold
+        text="white" bg="green-500" p="x-4 y-2" m="2"
+        font-bold rounded-md inline-flex items-center justify-center
         @click="install"
       >
         <div i-ri-install-line mr-1 inline-flex />

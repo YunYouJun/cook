@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "287E37F8629B144A0F2FD72F"
-               BuildableName = "&#x98df;&#x7528;&#x624b;&#x518c;.app"
+               BuildableName = "cook.app"
                BlueprintName = "cook_iOS"
                ReferencedContainer = "container:cook.xcodeproj">
             </BuildableReference>
@@ -31,7 +31,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "287E37F8629B144A0F2FD72F"
-            BuildableName = "&#x98df;&#x7528;&#x624b;&#x518c;.app"
+            BuildableName = "cook.app"
             BlueprintName = "cook_iOS"
             ReferencedContainer = "container:cook.xcodeproj">
          </BuildableReference>
@@ -66,7 +66,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "287E37F8629B144A0F2FD72F"
-            BuildableName = "&#x98df;&#x7528;&#x624b;&#x518c;.app"
+            BuildableName = "cook.app"
             BlueprintName = "cook_iOS"
             ReferencedContainer = "container:cook.xcodeproj">
          </BuildableReference>
@@ -95,7 +95,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "287E37F8629B144A0F2FD72F"
-            BuildableName = "&#x98df;&#x7528;&#x624b;&#x518c;.app"
+            BuildableName = "cook.app"
             BlueprintName = "cook_iOS"
             ReferencedContainer = "container:cook.xcodeproj">
          </BuildableReference>

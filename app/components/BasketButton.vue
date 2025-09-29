@@ -19,7 +19,7 @@ const showBasketBtn = computed(() => {
 <template>
   <button
     v-show="showBasketBtn"
-    class="fixed z-9 inline-flex cursor-pointer items-center justify-center rounded rounded-full shadow hover:shadow-md"
+    class="rounded rounded-full inline-flex cursor-pointer shadow items-center justify-center fixed z-9 hover:shadow-md"
     bg="green-50 dark:green-900" w="10" h="10"
     bottom="22"
     right="4"

@@ -2,7 +2,7 @@ name: cook
 options:
   bundleIdPrefix: cn.yunyoujun.cook
   deploymentTarget:
-    iOS: 13.0
+    iOS: 14.0
 fileGroups: [../../src]
 configs:
   debug: debug
@@ -10,9 +10,8 @@ configs:
 settingGroups:
   app:
     base:
-      PRODUCT_NAME: 食用手册
+      PRODUCT_NAME: cook
       PRODUCT_BUNDLE_IDENTIFIER: cn.yunyoujun.cook
-      DEVELOPMENT_TEAM: N3885VFNCL
 targetTemplates:
   app:
     type: application
@@ -53,7 +52,7 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         CFBundleShortVersionString: 0.1.0
-        CFBundleVersion: 0.1.0
+        CFBundleVersion: "0.1.0"
     entitlements:
       path: cook_iOS/cook_iOS.entitlements
     scheme:
@@ -64,7 +63,7 @@ targets:
       base:
         ENABLE_BITCODE: false
         ARCHS: [arm64]
-        VALID_ARCHS: arm64
+        VALID_ARCHS: arm64 
         LIBRARY_SEARCH_PATHS[arch=x86_64]: $(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)
         LIBRARY_SEARCH_PATHS[arch=arm64]: $(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)
         ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: true

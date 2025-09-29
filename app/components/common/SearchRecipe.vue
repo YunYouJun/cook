@@ -25,9 +25,9 @@ const filteredRecipes = computedAsync(async () => {
 
 <template>
   <YlfIconButton
-    absolute right-4 top-4
+
     class="icon-btn hover:text-yellow-400 !outline-none"
-    text-xl
+    text-xl right-4 top-4 absolute
     title="切换" @click="openModal"
   >
     <div i="ri-search-line" />
@@ -44,12 +44,12 @@ const filteredRecipes = computedAsync(async () => {
         leave-from="opacity-100"
         leave-to="opacity-0"
       >
-        <div class="fixed inset-0 bg-black/10" />
+        <div class="bg-black/10 inset-0 fixed" />
       </TransitionChild>
 
-      <div class="fixed inset-0 overflow-y-auto">
+      <div class="inset-0 fixed overflow-y-auto">
         <div
-          class="h-full flex justify-center text-center"
+          class="text-center flex h-full justify-center"
         >
           <TransitionChild
             as="template"
@@ -61,35 +61,35 @@ const filteredRecipes = computedAsync(async () => {
             leave-to="opacity-0 scale-95"
           >
             <DialogPanel
-              class="h-full max-w-xl w-full transform overflow-hidden bg-white p-4 text-left align-middle shadow-xl transition-all dark:bg-dark-600"
+              class="p-4 text-left align-middle bg-white h-full max-w-xl w-full shadow-xl transform transition-all overflow-hidden dark:bg-dark-600"
               md="rounded-2xl"
               overflow="auto"
               flex="~ col"
             >
               <DialogTitle
                 as="h3"
-                class="flex items-center justify-center text-lg font-medium leading-6"
+                class="text-lg leading-6 font-medium flex items-center justify-center"
               >
-                <div relative inline-flex flex="grow">
+                <div inline-flex relative flex="grow">
                   <div
                     i-ri-search-line
-                    class="absolute left-3 top-2 cursor-pointer text-gray-400"
+                    class="text-gray-400 cursor-pointer left-3 top-2 absolute"
                   />
                   <input
                     v-model="keyword"
                     type="text"
-                    class="w-full rounded-full bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400"
+                    class="text-sm rounded-full bg-transparent w-full focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400"
                     border="~ rounded-full gray-300 op-50 focus:border-blue-500"
                     placeholder="搜索菜谱"
                     autofocus py-2 pl-10 pr-3
                   >
                   <div
                     v-if="keyword" i-ri-close-line
-                    class="absolute right-3 top-2 cursor-pointer text-gray-400"
+                    class="text-gray-400 cursor-pointer right-3 top-2 absolute"
                     @click="keyword = ''"
                   />
                 </div>
-                <button op="70" ml-2 inline-flex cursor-pointer text-base @click="closeModal">
+                <button op="70" text-base ml-2 inline-flex cursor-pointer @click="closeModal">
                   取消
                 </button>
               </DialogTitle>

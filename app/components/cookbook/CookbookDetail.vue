@@ -13,7 +13,7 @@ onMounted(async () => {
 
 <template>
   <div class="bg-$c-bg-alt" flex="~ col">
-    <h3 mt-4 font-bold>
+    <h3 font-bold mt-4>
       {{ cookbook.title }}
     </h3>
     <sub op="90" my-3>

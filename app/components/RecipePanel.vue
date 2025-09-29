@@ -12,7 +12,7 @@ const showTooltip = computed(() => !selectedStuff.value.length && !curTool.value
 
 <template>
   <div
-    class="recipe-panel relative shadow transition hover:shadow-md"
+    class="recipe-panel shadow transition relative hover:shadow-md"
     m="x-2 y-4" p="2"
     bg="gray-400/8"
   >
@@ -20,7 +20,7 @@ const showTooltip = computed(() => !selectedStuff.value.length && !curTool.value
 
     <ToggleMode />
 
-    <button absolute right-4 top-4 @click="showSearchInput = !showSearchInput">
+    <button right-4 top-4 absolute @click="showSearchInput = !showSearchInput">
       <div v-if="!showSearchInput" i-ri-search-line />
       <div v-else i-ri-search-fill />
     </button>
@@ -35,8 +35,8 @@ const showTooltip = computed(() => !selectedStuff.value.length && !curTool.value
 
         <div
           v-else-if="rStore.isSearching"
-          relative flex items-center justify-center p-6
-          text-xl
+
+          text-xl p-6 flex items-center justify-center relative
         >
           <div class="magnifying-glass" i-ri-search-line inline-flex />
         </div>

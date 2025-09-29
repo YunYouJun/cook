@@ -54,6 +54,12 @@ pnpm dev
 # http://localhost:3333
 ```
 
+### 开发 APP
+
+```bash
+rustup target add aarch64-apple-ios x86_64-apple-ios aarch64-apple-ios-sim
+```
+
 ## 部署
 
 ### Docker

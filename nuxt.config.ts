@@ -65,6 +65,12 @@ export default defineNuxtConfig({
     '~/styles/index.scss',
   ],
 
+  router: {
+    options: {
+      scrollBehaviorType: 'smooth',
+    },
+  },
+
   colorMode: {
     classSuffix: '',
   },
@@ -72,7 +78,7 @@ export default defineNuxtConfig({
   ignore: ['**/src-tauri/**'],
   // Enables the development server to be discoverable by other devices when running on iOS physical devices
   devServer: {
-    host: '0',
+    host: '0.0.0.0',
   },
 
   features: {
@@ -112,6 +118,14 @@ export default defineNuxtConfig({
     server: {
       // Tauri requires a consistent port
       strictPort: true,
+      hmr: {
+        protocol: 'ws',
+        host: '0.0.0.0',
+        port: 3001,
+      },
+      watch: {
+        ignored: ['**/src-tauri/**'],
+      },
     },
   },
 

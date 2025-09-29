@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -11,6 +11,7 @@
 		10635E1534CA15C21627151B /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C5A53DB1AE6E9D08DAAB2B80 /* Metal.framework */; };
 		1191534ABCA862890F4D4E75 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 914D5EBC8E378D5490F137F3 /* UIKit.framework */; };
 		256638CD965F17CB873A7ED0 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 71C134FF9A2BF507B1FC6B78 /* WebKit.framework */; };
+		3128A33F41B6D3281B16D113 /* libapp.a in Resources */ = {isa = PBXBuildFile; fileRef = 0BA9FA553550EAECF91F80F5 /* libapp.a */; };
 		326891B69EF41A24558A5802 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 69C60670825F1A85B4C8DB86 /* main.mm */; };
 		394B2B6A7AB3A9AE2198BFC2 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = C3F275498A53F333291BF6C0 /* assets */; };
 		48B392C4E8D639B25BF5BEB5 /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DBD36709547A51FF0CBCAE4 /* libapp.a */; };
@@ -23,9 +24,10 @@
 
 /* Begin PBXFileReference section */
 		0B0AAF73A80E585F081311AC /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		0BA9FA553550EAECF91F80F5 /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
 		15B0BAF2A743C5E00E6ADF81 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		4C3D548163B6467665579489 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		5F6B2FB9FE462C0D2C846CDF /* cook_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; name = cook_iOS.app; path = "食用手册.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5F6B2FB9FE462C0D2C846CDF /* cook_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = cook_iOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		69C60670825F1A85B4C8DB86 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		71C134FF9A2BF507B1FC6B78 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		7730ED09C3A5625581131879 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
@@ -33,13 +35,13 @@
 		7DBD36709547A51FF0CBCAE4 /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
 		914D5EBC8E378D5490F137F3 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		92E8D89926B917C02168FA3E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		960D30C1C52C3101FC1DAA05 /* lib.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = lib.rs; sourceTree = "<group>"; };
+		960D30C1C52C3101FC1DAA05 /* lib.rs */ = {isa = PBXFileReference; path = lib.rs; sourceTree = "<group>"; };
 		97B58E21B73B8D1EDB0615EA /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
 		B20C7826353C0CBAE962AB0F /* cook_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = cook_iOS.entitlements; sourceTree = "<group>"; };
 		C3F275498A53F333291BF6C0 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
 		C5A53DB1AE6E9D08DAAB2B80 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		CADAA9A761F103F96E90A3B4 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		CD90EC2E134C8534A851896C /* main.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = main.rs; sourceTree = "<group>"; };
+		CD90EC2E134C8534A851896C /* main.rs */ = {isa = PBXFileReference; path = main.rs; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,6 +71,14 @@
 			path = Sources;
 			sourceTree = "<group>";
 		};
+		45320AC0E8DF3248DAD50178 /* arm64 */ = {
+			isa = PBXGroup;
+			children = (
+				FD5673A7D2A5EA2F243ACC3C /* debug */,
+			);
+			path = arm64;
+			sourceTree = "<group>";
+		};
 		87AFDA716051DF9C2B8CAC56 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -80,6 +90,7 @@
 		883DAB51202A9B4265A34307 /* Externals */ = {
 			isa = PBXGroup;
 			children = (
+				45320AC0E8DF3248DAD50178 /* arm64 */,
 			);
 			path = Externals;
 			sourceTree = "<group>";
@@ -150,6 +161,21 @@
 			path = cook_iOS;
 			sourceTree = "<group>";
 		};
+		FD5673A7D2A5EA2F243ACC3C /* debug */ = {
+			isa = PBXGroup;
+			children = (
+				0BA9FA553550EAECF91F80F5 /* libapp.a */,
+			);
+			path = debug;
+			sourceTree = "<group>";
+		};
+		"TEMP_8CE206D4-C92D-4611-9064-A76C4864CEAA" /* x86_64 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = x86_64;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -181,11 +207,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
-				TargetAttributes = {
-					287E37F8629B144A0F2FD72F = {
-						DevelopmentTeam = N3885VFNCL;
-					};
-				};
 			};
 			buildConfigurationList = 0CB05E2245A460DF6A941BCC /* Build configuration list for PBXProject "cook" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -197,6 +218,7 @@
 			);
 			mainGroup = C56EBA1182248A1D00CADF60;
 			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -213,6 +235,7 @@
 				F47A48720F333ED704EEDF22 /* Assets.xcassets in Resources */,
 				98AD526D27F7530949685058 /* LaunchScreen.storyboard in Resources */,
 				394B2B6A7AB3A9AE2198BFC2 /* assets in Resources */,
+				3128A33F41B6D3281B16D113 /* libapp.a in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -222,7 +245,7 @@
 		3035D796689A61D2CCD5407B /* Build Rust Code */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
-			buildActionMask = 12;
+			buildActionMask = 2147483647;
 			files = (
 			);
 			inputFileListPaths = (
@@ -237,8 +260,8 @@
 				"$(SRCROOT)/Externals/arm64/${CONFIGURATION}/libapp.a",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /opt/homebrew/bin/zsh;
-			shellScript = "pnpm tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}\n";
+			shellPath = /bin/sh;
+			shellScript = "pnpm tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -258,11 +281,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
-				ARCHS = arm64;
+				ARCHS = (
+					arm64,
+				);
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = cook_iOS/cook_iOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "N3885VFNCL";
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -274,25 +298,14 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION)",
-					"$(SDKROOT)/usr/lib/swift",
-					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
-					"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)",
-				);
-				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION)",
-					"$(SDKROOT)/usr/lib/swift",
-					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
-					"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)",
-				);
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				PRODUCT_BUNDLE_IDENTIFIER = cn.yunyoujun.cook;
-				PRODUCT_NAME = "食用手册";
+				PRODUCT_NAME = "cook";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
+				DEVELOPMENT_TEAM = "N3885VFNCL";
 			};
 			name = release;
 		};
@@ -300,11 +313,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
-				ARCHS = arm64;
+				ARCHS = (
+					arm64,
+				);
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = cook_iOS/cook_iOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "N3885VFNCL";
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -316,25 +330,14 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION)",
-					"$(SDKROOT)/usr/lib/swift",
-					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
-					"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)",
-				);
-				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION)",
-					"$(SDKROOT)/usr/lib/swift",
-					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
-					"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)",
-				);
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				PRODUCT_BUNDLE_IDENTIFIER = cn.yunyoujun.cook;
-				PRODUCT_NAME = "食用手册";
+				PRODUCT_NAME = "cook";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
+				DEVELOPMENT_TEAM = "N3885VFNCL";
 			};
 			name = debug;
 		};
@@ -389,7 +392,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -446,7 +449,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

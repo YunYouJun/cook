@@ -9,7 +9,7 @@
 
       <FeedbackActions />
 
-      <div class="mx-auto max-w-md w-full rounded-2xl p-2" text-left>
+      <div class="mx-auto p-2 rounded-2xl max-w-md w-full" text-left>
         <FAQItem title="未来计划？">
           计划增加新功能，如自定义菜谱，与使用其他用户分享的菜谱。
         </FAQItem>
@@ -96,7 +96,7 @@
               小玩具们
             </a>。
 
-            <a inline-flex py-4 href="https://cdn.yunyoujun.cn/img/about/white-qrcode-and-search.jpg" target="_blank">
+            <a py-4 inline-flex href="https://cdn.yunyoujun.cn/img/about/white-qrcode-and-search.jpg" target="_blank">
               <img src="https://cdn.yunyoujun.cn/img/about/white-qrcode-and-search.jpg">
             </a>
           </div>
@@ -108,7 +108,7 @@
             感谢以下小伙伴为本项目提供的数据支持和 QA ！
           </p>
 
-          <ul mt-2 text-left text-sm>
+          <ul text-sm mt-2 text-left>
             <li>
               <a href="https://weibo.com/runny" target="_blank">Runny</a>
             </li>
