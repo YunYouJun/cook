@@ -1,0 +1,7 @@
+{
+  "name": "cook",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue"
+}

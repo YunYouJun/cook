@@ -3,7 +3,7 @@ import {
   presetAttributify,
   presetIcons,
   presetTypography,
-  presetWind4,
+  presetWind3,
   transformerDirectives,
   transformerVariantGroup,
 } from 'unocss'
@@ -24,7 +24,8 @@ export default defineConfig({
     ['btn', 'text-sm px-4 py-1 rounded inline-block bg-blue-600 text-white cursor-pointer hover:bg-blue-700 disabled:cursor-default disabled:bg-gray-600 disabled:opacity-50'],
   ],
   presets: [
-    presetWind4(),
+    // wind4 :host style override bug, so use wind3
+    presetWind3(),
     presetAttributify(),
     presetIcons({
       scale: 1.2,

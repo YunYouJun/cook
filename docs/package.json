@@ -1,0 +1,27 @@
+{
+  "name": "yunyoujun-docs-template",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "pnpm run predocs && pnpm run docs:build",
+    "predocs": "typedoc",
+    "docs:dev": "vitepress dev --host",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "dependencies": {
+    "@yunyoujun/docs": "^0.1.13"
+  },
+  "devDependencies": {
+    "@shikijs/vitepress-twoslash": "^3.13.0",
+    "sass": "^1.93.2",
+    "typedoc": "^0.28.13",
+    "typedoc-plugin-markdown": "^4.9.0",
+    "typedoc-vitepress-theme": "^1.1.2",
+    "unocss": "^66.5.2",
+    "unplugin-vue-components": "^29.1.0",
+    "vite-plugin-vue-devtools": "^8.0.2",
+    "vitepress": "^2.0.0-alpha.12",
+    "vitepress-plugin-group-icons": "^1.6.3"
+  }
+}

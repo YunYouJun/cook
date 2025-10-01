@@ -31,6 +31,7 @@ export default defineNuxtConfig({
     // See https://github.com/unjs/ofetch/pull/366
     // 'nuxt-fix-ofetch',
     '@nuxt/scripts',
+    '@nuxtjs/ionic',
   ],
   ssr: false,
 
@@ -53,6 +54,7 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no' },
         { name: 'description', content: appDescription },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+        { name: 'color-scheme', content: 'light dark' },
         { name: 'theme-color', media: '(prefers-color-scheme: light)', content: 'white' },
         { name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#222222' },
       ],
@@ -63,6 +65,7 @@ export default defineNuxtConfig({
     '@unocss/reset/tailwind.css',
     '~/styles/css-vars.scss',
     '~/styles/index.scss',
+    '~/styles/index.ts',
   ],
 
   router: {
@@ -74,16 +77,9 @@ export default defineNuxtConfig({
   colorMode: {
     classSuffix: '',
   },
-  // Avoids error [unhandledRejection] EMFILE: too many open files, watch
-  ignore: ['**/src-tauri/**'],
-  // Enables the development server to be discoverable by other devices when running on iOS physical devices
-  devServer: {
-    host: '0.0.0.0',
-  },
 
-  features: {
-    // For UnoCSS
-    inlineStyles: false,
+  future: {
+    compatibilityVersion: 4,
   },
 
   experimental: {
@@ -108,33 +104,20 @@ export default defineNuxtConfig({
     },
   },
 
-  vite: {
-    // Better support for Tauri CLI output
-    clearScreen: false,
-    // Enable environment variables
-    // Additional environment variables can be found at
-    // https://v2.tauri.app/reference/environment-variables/
-    envPrefix: ['VITE_', 'TAURI_'],
-    server: {
-      // Tauri requires a consistent port
-      strictPort: true,
-      hmr: {
-        protocol: 'ws',
-        host: '0.0.0.0',
-        port: 3001,
-      },
-      watch: {
-        ignored: ['**/src-tauri/**'],
-      },
-    },
-  },
-
   eslint: {
     config: {
       standalone: false,
       nuxt: {
         sortConfigKeys: true,
       },
+    },
+  },
+
+  ionic: {
+    css: {
+      core: true,
+      basic: true,
+      utilities: true,
     },
   },
 

@@ -24,8 +24,12 @@ onMounted(() => {
 
 <template>
   <VitePwaManifest />
-  <NuxtLayout>
+  <!-- https://ionic.nuxtjs.org/cookbook/customising-app-vue -->
+  <!-- <NuxtLayout>
     <NuxtLoadingIndicator />
     <NuxtPage />
-  </NuxtLayout>
+  </NuxtLayout> -->
+  <ion-app>
+    <ion-router-outlet />
+  </ion-app>
 </template>

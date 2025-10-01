@@ -56,9 +56,7 @@ pnpm dev
 
 ### 开发 APP
 
-```bash
-rustup target add aarch64-apple-ios x86_64-apple-ios aarch64-apple-ios-sim
-```
+> [Local Development](https://ionic.nuxtjs.org/cookbook/local-development)
 
 ## 部署
 

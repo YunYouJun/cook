@@ -11,9 +11,12 @@ export default nuxt(
     {
       ignores: [
         'app/data/*.json',
-        'src-tauri/gen',
-        'src-tauri/target',
       ],
+    },
+    {
+      rules: {
+        'vue/no-deprecated-slot-attribute': 'off',
+      },
     },
   ),
 )

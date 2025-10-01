@@ -7,26 +7,49 @@ definePageMeta({
 </script>
 
 <template>
-  <div>
-    <CommonHeader>
-      设置
-    </CommonHeader>
+  <ion-page>
+    <ion-header class="ion-no-border">
+      <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-back-button default-href="/my" />
+        </ion-buttons>
+        <ion-title>设置</ion-title>
+        <!-- <ion-buttons slot="end">
+          <ion-button color="dark">
+            <ion-icon slot="icon-only" :icon="ioniconsPersonCircleOutline" />
+          </ion-button>
+        </ion-buttons> -->
+      </ion-toolbar>
+    </ion-header>
 
-    <div
-      class="mx-auto max-w-md w-full"
-      px-2
-      text-left
-    >
-      <YlfForm>
-        <YlfFormItem label="暗色模式">
-          <YlfSwitch v-model="app.settings.keepLocalData" />
-        </YlfFormItem>
+    <ion-content>
+      <ion-list-header>外观</ion-list-header>
+      <ion-list :inset="true">
+        <ion-item>
+          <ion-toggle :checked="isDark" justify="space-between" @ion-change="toggleDark">
+            暗色模式
+          </ion-toggle>
+        </ion-item>
+      </ion-list>
 
-        <YlfFormItem label="离开网页后保留选中数据">
-          <YlfSwitch v-model="app.settings.keepLocalData" />
-        </YlfFormItem>
-        <YlfFormItem label="更多设置，敬请期待" />
-      </YlfForm>
-    </div>
-  </div>
+      <ion-list-header>数据</ion-list-header>
+      <ion-list :inset="true">
+        <ion-item>
+          <ion-toggle v-model:checked="app.settings.keepLocalData" justify="space-between">
+            离开网页后保留选中数据
+          </ion-toggle>
+        </ion-item>
+        <ion-item :button="true">
+          更多设置，敬请期待
+        </ion-item>
+      </ion-list>
+    </ion-content>
+  </ion-page>
 </template>
+
+<style>
+/* (Optional) This is added to prevent the flashing that happens when toggling between palettes */
+ion-item {
+  --transition: none;
+}
+</style>
