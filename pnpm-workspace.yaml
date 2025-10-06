@@ -1,3 +1,9 @@
 packages:
   - docs
   - scripts
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - esbuild
+  - simple-git-hooks
+  - unrs-resolver
