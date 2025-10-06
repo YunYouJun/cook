@@ -2,7 +2,7 @@
   "type": "module",
   "version": "1.2.4",
   "private": true,
-  "packageManager": "pnpm@10.17.1",
+  "packageManager": "pnpm@10.18.0",
   "engines": {
     "node": ">=16"
   },
@@ -15,7 +15,9 @@
     "dev:android": "bash ./scripts/android.sh",
     "dev:ios": "bash ./scripts/ios.sh",
     "ios": "cap run ios",
+    "android": "cap run android",
     "open:ios": "cap open ios",
+    "open:android": "cap open android",
     "docs:dev": "pnpm -C docs run docs:dev",
     "generate": "nuxt generate",
     "start:generate": "npx serve .output/public",
@@ -41,6 +43,7 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^5.4.1",
+    "@capacitor/android": "^7.4.3",
     "@capacitor/cli": "7.4.3",
     "@capacitor/dialog": "^7.0.2",
     "@headlessui/vue": "^1.7.23",
@@ -59,7 +62,7 @@
     "@nuxtjs/ionic": "1.0.1",
     "@pinia/nuxt": "^0.11.2",
     "@pinia/testing": "^1.0.2",
-    "@types/node": "^24.6.1",
+    "@types/node": "^24.7.0",
     "@unhead/vue": "^2.0.17",
     "@unocss/eslint-config": "^66.5.2",
     "@unocss/nuxt": "^66.5.2",
@@ -67,10 +70,10 @@
     "@vue/test-utils": "^2.4.6",
     "@vueuse/nuxt": "^13.9.0",
     "@yunlefun/vue": "^0.1.1",
-    "bumpp": "^10.2.3",
+    "bumpp": "^10.3.1",
     "consola": "^3.4.2",
     "dexie": "^4.2.0",
-    "eslint": "^9.36.0",
+    "eslint": "^9.37.0",
     "eslint-plugin-format": "^1.0.2",
     "fake-indexeddb": "^6.2.2",
     "jsdom": "^27.0.0",
@@ -89,7 +92,7 @@
   },
   "resolutions": {
     "unplugin": "^2.3.10",
-    "vite": "^7.1.7"
+    "vite": "^7.1.9"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"

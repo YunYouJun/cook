@@ -75,4 +75,5 @@ jobs:
           cache: pnpm
 
       - run: pnpm install
+      - run: pnpm run convert
       - run: pnpm run test
