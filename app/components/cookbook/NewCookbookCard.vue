@@ -8,7 +8,7 @@ definePageMeta({
 <template>
   <NuxtLink
     class="bg-$c-bg-alt"
-    inline-flex h-36 w-full cursor-pointer shadow items-center justify-center
+    h-36 w-full inline-flex cursor-pointer items-center justify-center shadow
     to="/cookbooks/new"
   >
     <slot>

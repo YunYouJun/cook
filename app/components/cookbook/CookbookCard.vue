@@ -11,7 +11,7 @@ const showDetail = ref(false)
 <template>
   <button
     class="bg-$c-bg-alt"
-    inline-flex h-36 w-full cursor-pointer shadow items-center justify-center
+    h-36 w-full inline-flex cursor-pointer items-center justify-center shadow
     @click="showDetail = true"
   >
     <slot />
@@ -19,12 +19,12 @@ const showDetail = ref(false)
 
   <CookbookDetail
     v-if="showDetail"
-    shadow bottom-17 left-2 right-2 top-2 absolute z-1 overflow-hidden
+    absolute bottom-17 left-2 right-2 top-2 z-1 overflow-hidden shadow
     :cookbook="cookbook"
   >
     <YlfIconButton
       icon="i-ri-close-line"
-      class="right-2 top-2 absolute"
+      class="absolute right-2 top-2"
       @click="showDetail = false"
     />
   </CookbookDetail>

@@ -9,10 +9,10 @@ onMounted(() => {
 
 <template>
   <div m="auto b-2" max-w="500px">
-    <div text-xs relative>
+    <div relative text-xs>
       <div
         v-if="rStore.keyword" cursor="pointer"
-        justify="center" inline-flex items-center right-2 absolute h="full" opacity="70"
+        justify="center" absolute right-2 inline-flex items-center h="full" opacity="70"
         @click="rStore.clearKeyWord()"
       >
         <div i-ri-close-line />

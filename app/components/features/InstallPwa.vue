@@ -23,7 +23,7 @@ function install() {
       <button
         class="shadow"
         text="white" bg="green-500" p="x-4 y-2" m="2"
-        font-bold rounded-md inline-flex items-center justify-center
+        inline-flex items-center justify-center rounded-md font-bold
         @click="install"
       >
         <div i-ri-install-line mr-1 inline-flex />

@@ -17,7 +17,7 @@ defineProps<{
     :to="to"
     class="ylf-form-item"
 
-    p-2 flex w-full cursor-pointer items-center justify-between hover:bg-gray-100 dark:hover:bg-dark-400
+    w-full flex cursor-pointer items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-dark-400
   >
     <div v-if="label" class="text-sm" inline-flex items-center justify-center>
       <div v-if="icon" :class="icon" mr-2 inline-flex />

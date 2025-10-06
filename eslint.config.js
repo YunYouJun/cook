@@ -11,6 +11,13 @@ export default nuxt(
     {
       ignores: [
         'app/data/*.json',
+        'ios/**/*',
+        'android/**/*',
+        'dist/**/*',
+        'public/**/*',
+        'node_modules/**/*',
+        '.nuxt/**/*',
+        '.output/**/*',
       ],
     },
     {
