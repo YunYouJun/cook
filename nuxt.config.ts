@@ -119,6 +119,9 @@ export default defineNuxtConfig({
       basic: true,
       // utilities: true,
     },
+    config: {
+      mode: 'ios',
+    },
   },
 
   pwa,
