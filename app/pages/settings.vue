@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+const { isDark, toggleDark } = useDarkMode()
+
 const app = useAppStore()
 
 definePageMeta({

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const color = useColorMode()
+const { color, toggleDark } = useDarkMode()
 
 useHead({
   meta: [{
@@ -8,10 +8,6 @@ useHead({
     content: () => color.value === 'dark' ? '#222222' : '#ffffff',
   }],
 })
-
-function toggleDark() {
-  color.preference = color.value === 'dark' ? 'light' : 'dark'
-}
 </script>
 
 <template>

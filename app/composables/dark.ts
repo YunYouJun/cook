@@ -1,9 +1,15 @@
-export const color = useColorMode()
-export const isDark = computed(() => color.value === 'dark')
+import { ionDarkClass } from '~/constants'
 
-export const ionDarkClass = 'ion-palette-dark'
+export const useDarkMode = createSharedComposable(() => {
+  const color = useColorMode()
+  const isDark = computed(() => color.value === 'dark')
 
-export function toggleDark() {
-  color.preference = color.value === 'dark' ? 'light' : 'dark'
-  document.documentElement.classList.toggle(ionDarkClass, !isDark.value)
-}
+  return {
+    color,
+    isDark,
+    toggleDark() {
+      color.preference = color.value === 'dark' ? 'light' : 'dark'
+      document.documentElement.classList.toggle(ionDarkClass, !isDark.value)
+    },
+  }
+})
