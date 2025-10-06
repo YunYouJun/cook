@@ -33,3 +33,8 @@
 .ion-palette-dark.md {
   --ion-item-background: #1c1c1d;
 }
+
+/* custom */
+html {
+  /* --ion-safe-area-top: 0px; */
+}

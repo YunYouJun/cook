@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { RecipeItem } from '~/types'
 import { Dialog } from '@capacitor/dialog'
 import dayjs from 'dayjs'
 import { recipeHistories } from '~/composables/store/history'
@@ -26,6 +27,11 @@ async function clearAllHistory() {
 function clearOneHistory(history: typeof recipeHistories.value[0]) {
   recipeHistories.value = recipeHistories.value.filter(h => h !== history)
 }
+
+function openDishLink(dish: RecipeItem) {
+  const href = dish.link || `https://www.bilibili.com/video/${dish.bv}`
+  window.open(href, '_blank')
+}
 </script>
 
 <template>
@@ -49,7 +55,7 @@ function clearOneHistory(history: typeof recipeHistories.value[0]) {
       <ion-list>
         <template v-for="history in recipeHistories" :key="history.recipe.name">
           <ion-item-sliding>
-            <ion-item>
+            <ion-item @click="openDishLink(history.recipe)">
               <ion-label class="truncate">
                 <DishLabel class="text-sm" :dish="history.recipe" />
               </ion-label>
