@@ -42,6 +42,7 @@
   "devDependencies": {
     "@antfu/eslint-config": "^5.4.1",
     "@capacitor/cli": "7.4.3",
+    "@capacitor/dialog": "^7.0.2",
     "@headlessui/vue": "^1.7.23",
     "@iconify-json/carbon": "^1.2.13",
     "@iconify-json/fe": "^1.2.4",

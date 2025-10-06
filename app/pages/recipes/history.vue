@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { Dialog } from '@capacitor/dialog'
 import dayjs from 'dayjs'
 import { recipeHistories } from '~/composables/store/history'
 
@@ -9,30 +10,66 @@ definePageMeta({
 
 // todo
 // clear one history
-function clearAllHistory() {
-  recipeHistories.value = []
+async function clearAllHistory() {
+  await Dialog.confirm({
+    title: '清空历史记录',
+    message: '确定要清空所有历史记录吗？此操作不可撤销。',
+    okButtonTitle: '确认',
+    cancelButtonTitle: '取消',
+  }).then((result) => {
+    if (result.value) {
+      recipeHistories.value = []
+    }
+  })
+}
+
+function clearOneHistory(history: typeof recipeHistories.value[0]) {
+  recipeHistories.value = recipeHistories.value.filter(h => h !== history)
 }
 </script>
 
 <template>
-  <div pt-2>
-    <button
-      text="blue-900 dark:blue-200"
-      bg="blue-300 op-20 hover:(blue-800 op-20) dark:hover:(blue-200 op-20)"
-      class="text-sm font-medium px-4 py-2 border border-transparent rounded-md inline-flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-      @click="clearAllHistory"
-    >
-      <span i-ri-eraser-line />
-      <span class="ml-1">清空记录</span>
-    </button>
+  <ion-page>
+    <ion-header>
+      <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-back-button default-href="/my" />
+        </ion-buttons>
+        <ion-title>历史记录</ion-title>
 
-    <div flex="~ col">
-      <div v-for="history in recipeHistories" :key="history.recipe.name" mt-2>
-        <DateTag>
-          {{ dayjs(history.time).format('YYYY-MM-DD HH:mm:ss') }}
-        </DateTag>
-        <DishTag :dish="history.recipe" />
-      </div>
-    </div>
-  </div>
+        <ion-buttons slot="end">
+          <ion-button title="清空记录" @click="clearAllHistory">
+            <ion-icon slot="icon-only" :icon="ioniconsTrashOutline" />
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content>
+      <ion-list>
+        <template v-for="history in recipeHistories" :key="history.recipe.name">
+          <ion-item-sliding>
+            <ion-item>
+              <ion-label class="truncate">
+                <DishLabel class="text-sm" :dish="history.recipe" />
+              </ion-label>
+              <ion-text class="text-xs">
+                {{ dayjs(history.time).format('YYYY-MM-DD HH:mm:ss') }}
+              </ion-text>
+            </ion-item>
+
+            <ion-item-options>
+              <!-- TODO -->
+              <!-- <ion-item-option>
+                收藏
+              </ion-item-option> -->
+              <ion-item-option color="danger" @click="clearOneHistory(history)">
+                删除
+              </ion-item-option>
+            </ion-item-options>
+          </ion-item-sliding>
+        </template>
+      </ion-list>
+    </ion-content>
+  </ion-page>
 </template>

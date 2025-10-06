@@ -140,7 +140,6 @@
           </div>
         </FAQItem>
       </div>
-      <BaseFooter mt-4 />
     </ion-content>
   </ion-page>
 </template>

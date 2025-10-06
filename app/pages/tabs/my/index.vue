@@ -16,20 +16,20 @@ definePageMeta({
 
     <ion-content>
       <!-- TODO -->
-      <!-- <ion-list :inset="true">
+      <ion-list :inset="true">
         <ion-item router-link="/recipes/history">
           <ion-icon slot="start" :icon="ioniconsTimeOutline" />
           <ion-label>历史记录</ion-label>
         </ion-item>
-        <ion-item router-link="/recipes/collect">
+        <!-- <ion-item router-link="/recipes/collect">
           <ion-icon slot="start" :icon="ioniconsStarOutline" />
           <ion-label>我的收藏</ion-label>
         </ion-item>
         <ion-item router-link="/cookbooks">
           <ion-icon slot="start" :icon="ioniconsBookOutline" />
           <ion-label>自定义菜谱</ion-label>
-        </ion-item>
-      </ion-list> -->
+        </ion-item> -->
+      </ion-list>
 
       <ion-list :inset="true">
         <ion-item :href="links.githubIssue" target="_blank">

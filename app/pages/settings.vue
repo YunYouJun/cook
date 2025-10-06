@@ -39,9 +39,6 @@ definePageMeta({
             离开网页后保留选中数据
           </ion-toggle>
         </ion-item>
-        <ion-item :button="true">
-          更多设置，敬请期待
-        </ion-item>
       </ion-list>
     </ion-content>
   </ion-page>
