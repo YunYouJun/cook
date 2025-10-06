@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useIndexedDB } from '~/composables/db'
 import { appName } from '~/constants'
-import { installPrompt } from './utils/pwa'
+import { ionDarkClass } from './composables/dark'
+// import { installPrompt } from './utils/pwa'
 
 // https://nuxt.com/docs/api/composables/use-head
 useHead({
@@ -17,7 +18,15 @@ useHead({
 const indexedDB = useIndexedDB()
 
 onMounted(() => {
-  installPrompt()
+  // init dark mode
+  if (isDark.value) {
+    document.documentElement.classList.add(ionDarkClass)
+  }
+  else {
+    document.documentElement.classList.remove(ionDarkClass)
+  }
+
+  // installPrompt()
   indexedDB.init()
 })
 </script>
