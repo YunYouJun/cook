@@ -1,4 +1,6 @@
 export const links = {
+  cook: 'https://cook.yunyoujun.cn',
+
   /**
    * 菜谱投稿链接
    */

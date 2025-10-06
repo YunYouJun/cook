@@ -17,6 +17,14 @@ import { links } from '~/constants'
       <TheAboutList />
 
       <ion-list :inset="true">
+        <ion-item :href="links.cook" target="_blank">
+          <ion-label>网页版本</ion-label>
+          <ion-text class="inline-flex items-center justify-center">
+            <div class="inline-flex" i-ri-global-line />
+            <span m="l-1" class="inline-flex">cook.yunyoujun.cn</span>
+          </ion-text>
+        </ion-item>
+
         <ion-item :href="links.yyj.bilibiliOpus" target="_blank">
           <ion-label>旅程的起点</ion-label>
           <ion-text class="inline-flex items-center justify-center">
