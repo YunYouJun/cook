@@ -4,6 +4,8 @@ import { isClient, useElementBounding } from '@vueuse/core'
 /**
  * trigger show invisible element
  * @param target
+ *
+ * @deprecated use scrollIntoView instead
  */
 export function useInvisibleElement(target: MaybeComputedElementRef<HTMLElement>) {
   const { top } = useElementBounding(target)

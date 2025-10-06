@@ -1,15 +1,20 @@
+<script setup lang="ts">
+// help
+</script>
+
 <template>
-  <div>
-    <div class="w-full">
-      <CommonHeader>
-        帮助
-      </CommonHeader>
+  <ion-page>
+    <ion-header>
+      <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-back-button default-href="/my" />
+        </ion-buttons>
+        <ion-title>帮助</ion-title>
+      </ion-toolbar>
+    </ion-header>
 
-      <InstallPwa />
-
-      <FeedbackActions />
-
-      <div class="mx-auto p-2 rounded-2xl max-w-md w-full" text-left>
+    <ion-content class="w-full">
+      <div class="mx-auto max-w-md w-full rounded-2xl p-2" text-left>
         <FAQItem title="未来计划？">
           计划增加新功能，如自定义菜谱，与使用其他用户分享的菜谱。
         </FAQItem>
@@ -96,7 +101,7 @@
               小玩具们
             </a>。
 
-            <a py-4 inline-flex href="https://cdn.yunyoujun.cn/img/about/white-qrcode-and-search.jpg" target="_blank">
+            <a inline-flex py-4 href="https://cdn.yunyoujun.cn/img/about/white-qrcode-and-search.jpg" target="_blank">
               <img src="https://cdn.yunyoujun.cn/img/about/white-qrcode-and-search.jpg">
             </a>
           </div>
@@ -108,7 +113,7 @@
             感谢以下小伙伴为本项目提供的数据支持和 QA ！
           </p>
 
-          <ul text-sm mt-2 text-left>
+          <ul mt-2 text-left text-sm>
             <li>
               <a href="https://weibo.com/runny" target="_blank">Runny</a>
             </li>
@@ -135,7 +140,7 @@
           </div>
         </FAQItem>
       </div>
-    </div>
-    <BaseFooter mt-4 />
-  </div>
+      <BaseFooter mt-4 />
+    </ion-content>
+  </ion-page>
 </template>

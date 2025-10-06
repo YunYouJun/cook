@@ -19,7 +19,6 @@ const { playAnimation } = useEmojiAnimation(recipeBtnRef)
 const { proxy } = useScriptGoogleTagManager()
 
 const recipePanelRef = ref()
-const { isVisible, show } = useInvisibleElement(recipePanelRef)
 
 // 监听食材变化，自动检测相克
 watch(curStuff, (newIngredients) => {
@@ -59,7 +58,14 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
     </h2>
 
     <!-- 食物相克警告提示 -->
-    <Transition name="incompatible-warning">
+    <ion-toast
+      class="incompatible-warning-toast"
+      :message="warningMessage"
+      :is-open="hasWarning"
+      position="top"
+      :icon="ioniconsWarningOutline"
+      animated
+    >
       <div
         v-if="hasWarning"
         class="incompatible-warning-box"
@@ -84,7 +90,7 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
           </div>
         </div>
       </div>
-    </Transition>
+    </ion-toast>
 
     <div>
       <h2 opacity="90" text="base" font="bold" p="1">
@@ -155,9 +161,20 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
       </div>
     </div>
 
-    <Transition>
-      <BasketButton ref="recipeBtnRef" :is-visible="isVisible" @click="show" />
-    </Transition>
     <RecipePanel ref="recipePanelRef" />
   </div>
+
+  <Transition>
+    <BasketButton ref="recipeBtnRef" />
+  </Transition>
 </template>
+
+<style>
+ion-toast.incompatible-warning-toast {
+  /* --background: #f4f4fa; */
+  --box-shadow: 3px 3px 10px 0 rgba(0, 0, 0, 0.2);
+  /* --color: #4b4a50; */
+  --background: rgba(254, 202, 202, 0.95);
+  --color: #7f1d1d;
+}
+</style>

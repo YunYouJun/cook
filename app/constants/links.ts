@@ -7,6 +7,8 @@ export const links = {
    * 兔小巢反馈
    */
   feedback: 'https://support.qq.com/product/507827',
+  githubIssue: 'https://github.com/YunYouJun/cook/issues',
+  githubDiscussions: 'https://github.com/YunYouJun/cook/discussions',
 
   /**
    * changelog

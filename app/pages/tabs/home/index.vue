@@ -7,6 +7,8 @@ useHead({
   title: '食用手册',
 })
 
+const ionContentRef = ref<HTMLElement>()
+
 const rStore = useRecipeStore()
 </script>
 
@@ -30,7 +32,7 @@ const rStore = useRecipeStore()
         </ion-title>
       </ion-toolbar>
     </ion-header>
-    <ion-content class="text-center">
+    <ion-content ref="ionContentRef" class="text-center">
       <ChooseFood />
       <SimpleCopyright />
     </ion-content>

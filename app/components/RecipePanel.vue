@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { storeToRefs } from 'pinia'
+import { recipePanelRef } from '~/composables/global'
 
 const rStore = useRecipeStore()
 
@@ -12,15 +13,16 @@ const showTooltip = computed(() => !selectedStuff.value.length && !curTool.value
 
 <template>
   <div
-    class="recipe-panel shadow transition relative hover:shadow-md"
-    m="x-2 y-4" p="2"
+    ref="recipePanelRef"
+    class="recipe-panel relative shadow transition hover:shadow-md" m="x-2 y-4"
+    p="2"
     bg="gray-400/8"
   >
     <RecipePanelTitle />
 
     <ToggleMode />
 
-    <button right-4 top-4 absolute @click="showSearchInput = !showSearchInput">
+    <button absolute right-4 top-4 @click="showSearchInput = !showSearchInput">
       <div v-if="!showSearchInput" i-ri-search-line />
       <div v-else i-ri-search-fill />
     </button>
@@ -36,7 +38,7 @@ const showTooltip = computed(() => !selectedStuff.value.length && !curTool.value
         <div
           v-else-if="rStore.isSearching"
 
-          text-xl p-6 flex items-center justify-center relative
+          relative flex items-center justify-center p-6 text-xl
         >
           <div class="magnifying-glass" i-ri-search-line inline-flex />
         </div>

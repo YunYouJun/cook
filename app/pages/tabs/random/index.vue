@@ -17,8 +17,10 @@ useHead({
         </ion-title>
       </ion-toolbar>
     </ion-header>
-    <ion-content flex flex-grow flex-col items-center justify-center>
-      <RandomRecipe />
+    <ion-content>
+      <div class="flex flex-grow flex-col items-center justify-center">
+        <RandomRecipe />
+      </div>
     </ion-content>
   </ion-page>
 </template>
