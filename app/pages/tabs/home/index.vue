@@ -34,7 +34,6 @@ const rStore = useRecipeStore()
     </ion-header>
     <ion-content ref="ionContentRef" class="text-center">
       <ChooseFood />
-      <SimpleCopyright />
     </ion-content>
   </ion-page>
 </template>

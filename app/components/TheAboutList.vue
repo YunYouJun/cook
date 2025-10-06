@@ -55,7 +55,7 @@ onBeforeMount(() => {
       </ion-text>
     </ion-item>
 
-    <ion-item href="https://www.yunyoujun.cn" target="_blank">
+    <ion-item router-link="/about/me">
       <ion-label>项目作者</ion-label>
       <ion-text class="inline-flex items-center justify-center">
         云游君
