@@ -1,5 +1,5 @@
 import process from 'node:process'
-import { pwa } from './app/config/pwa'
+// import { pwa } from './app/config/pwa'
 import { appDescription } from './app/constants/index'
 
 // for cloudflare
@@ -23,7 +23,7 @@ export default defineNuxtConfig({
     '@unocss/nuxt',
     '@pinia/nuxt',
     '@nuxtjs/color-mode',
-    '@vite-pwa/nuxt',
+    // '@vite-pwa/nuxt',
     '@nuxt/eslint',
     '@nuxt/test-utils/module',
     '@yunlefun/vue/nuxt',
@@ -121,10 +121,11 @@ export default defineNuxtConfig({
     },
     config: {
       mode: 'ios',
+      backButtonText: '返回',
     },
   },
 
-  pwa,
+  // pwa,
 
   /**
    * @see https://scripts.nuxt.com/scripts/tracking/google-tag-manager
