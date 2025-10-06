@@ -27,7 +27,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - run: npm run generate --if-present
+      - name: Build
+        run: pnpm build
 
       - name: Release
         uses: softprops/action-gh-release@v1
