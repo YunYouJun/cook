@@ -3,9 +3,9 @@ import { defineConfig } from 'bumpp'
 export default defineConfig({
   release: 'prompt',
   all: true,
-  commit: false,
-  tag: false,
-  push: false,
+  commit: true,
+  tag: true,
+  push: true,
   files: [
     'package.json',
   ],
