@@ -43,3 +43,10 @@ jobs:
       - run: npx changelogithub # or changelogithub@0.12 if ensure the stable result
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+      # deploy to edgeone
+      # see https://edgeone.ai/zh/document/180255338996572160?product=edgedeveloperplatform
+      - name: Deploy to EdgeOne Pages
+        run: npx edgeone pages deploy .output/public -n cook-yunle-fun
+        env:
+          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
