@@ -1,6 +1,6 @@
 {
   "installCommand": "corepack enable && pnpm install",
   "buildCommand": "pnpm build",
-  "outputDirectory": ".output/public",
+  "outputDirectory": "dist",
   "nodeVersion": "22.20.0"
 }

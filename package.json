@@ -23,7 +23,7 @@
     "open:android": "cap open android",
     "docs:dev": "pnpm -C docs run docs:dev",
     "generate": "nuxt generate",
-    "start:generate": "npx serve .output/public",
+    "start:generate": "npx serve dist",
     "start": "node .output/server/index.mjs",
     "lint": "eslint .",
     "postinstall": "nuxt prepare",

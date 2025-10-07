@@ -8,18 +8,26 @@ const props = defineProps<{
   dish: RecipeItem | DbRecipeItem
 }>()
 
-const dishLabel = computed(() => {
-  const emojis = getEmojisFromStuff(props.dish.stuff)
-  return `${props.dish.tags?.includes('杂烩') ? '🍲' : emojis.join(' ')} ${props.dish.name}`
+const dishEmojis = computed(() => {
+  return getEmojisFromStuff(props.dish.stuff)
 })
 </script>
 
 <template>
-  <span>
-    {{ dishLabel }}
+  <span class="inline-flex items-center gap-1">
+    <ion-label>
+      {{ dish.tags?.includes('杂烩') ? '🍲' : dishEmojis.join(' ') }}
+    </ion-label>
+
+    <ion-label>
+      {{ dish.name }}
+    </ion-label>
 
     <template v-for="tool, i in tools">
-      <span v-if="dish.tools?.includes(tool.name)" :key="i" :class="tool.icon" />
+      <span
+        v-if="dish.tools?.includes(tool.name)"
+        :key="i" class="inline-block" :class="tool.icon"
+      />
     </template>
   </span>
 </template>

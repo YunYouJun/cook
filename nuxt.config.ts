@@ -125,7 +125,7 @@ export default defineNuxtConfig({
     css: {
       core: true,
       basic: true,
-      // utilities: true,
+      utilities: true,
     },
     config: {
       mode: 'ios',

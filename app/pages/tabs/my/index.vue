@@ -21,11 +21,11 @@ definePageMeta({
           <ion-icon slot="start" :icon="ioniconsTimeOutline" />
           <ion-label>历史记录</ion-label>
         </ion-item>
-        <!-- <ion-item router-link="/recipes/collect">
+        <ion-item router-link="/recipes/favorites">
           <ion-icon slot="start" :icon="ioniconsStarOutline" />
           <ion-label>我的收藏</ion-label>
         </ion-item>
-        <ion-item router-link="/cookbooks">
+        <!-- <ion-item router-link="/cookbooks">
           <ion-icon slot="start" :icon="ioniconsBookOutline" />
           <ion-label>自定义菜谱</ion-label>
         </ion-item> -->
@@ -47,7 +47,7 @@ definePageMeta({
       </ion-list>
 
       <ion-list :inset="true">
-        <ion-item :href="links.changelog" target="_blank">
+        <ion-item router-link="/changelog">
           <ion-icon slot="start" :icon="ioniconsDocumentTextOutline" />
           <ion-label>更新日志</ion-label>
         </ion-item>
