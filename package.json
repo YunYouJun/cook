@@ -31,7 +31,7 @@
     "release": "bumpp",
     "sync": "cap sync",
     "test": "vitest",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "nuxt typecheck"
   },
   "dependencies": {
     "@capacitor/app": "7.1.0",
@@ -65,7 +65,7 @@
     "@pinia/nuxt": "^0.11.2",
     "@pinia/testing": "^1.0.2",
     "@types/node": "^24.7.0",
-    "@unhead/vue": "^2.0.17",
+    "@unhead/vue": "^2.0.18",
     "@unocss/eslint-config": "^66.5.2",
     "@unocss/nuxt": "^66.5.2",
     "@vite-pwa/nuxt": "^1.0.4",
@@ -90,7 +90,7 @@
     "typescript": "^5.9.3",
     "unocss": "^66.5.2",
     "vitest": "^3.2.4",
-    "vue-tsc": "^3.1.0"
+    "vue-tsc": "^3.1.1"
   },
   "resolutions": {
     "unplugin": "^2.3.10",
