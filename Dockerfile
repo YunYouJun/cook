@@ -6,7 +6,7 @@ RUN npm install -g pnpm
 WORKDIR /app
 COPY . .
 
-RUN pnpm install && pnpm run generate
+RUN pnpm install && pnpm run build
 
 FROM nginx:stable-alpine
 COPY --from=builder /app/.output/public /usr/share/nginx/html

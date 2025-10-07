@@ -30,24 +30,24 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # deploy to edgeone
+      # see https://edgeone.ai/zh/document/180255338996572160?product=edgedeveloperplatform
+      - name: Deploy to EdgeOne Pages
+        run: npx edgeone pages deploy dist -n cook-yunyoujun-cn -t ${{ secrets.EDGEONE_API_TOKEN }}
+        env:
+          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
+
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: .output/public/
+          files: dist
 
       - uses: actions/upload-artifact@v4
         with:
           name: Cook Dist
-          path: .output/public/
+          path: dist
 
       - run: npx changelogithub # or changelogithub@0.12 if ensure the stable result
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-
-      # deploy to edgeone
-      # see https://edgeone.ai/zh/document/180255338996572160?product=edgedeveloperplatform
-      - name: Deploy to EdgeOne Pages
-        run: npx edgeone pages deploy .output/public -n cook-yunyoujun-cn -t ${{ secrets.EDGEONE_API_TOKEN }}
-        env:
-          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}

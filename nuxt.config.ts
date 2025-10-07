@@ -9,9 +9,8 @@ import { appDescription } from './app/constants/index'
 //   VITE_COMMIT_REF: process.env.CF_PAGES_COMMIT_SHA || '',
 // })
 
-import { getLatestCommit } from './scripts/git'
-
 try {
+  const { getLatestCommit } = await import('./scripts/git')
   const latestCommit = await getLatestCommit()
   /**
    * CF_PAGES_COMMIT_SHA is Cloudflare Pages env
