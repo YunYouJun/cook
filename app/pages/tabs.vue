@@ -47,9 +47,9 @@ onMounted(() => {
             <ion-label>菜谱</ion-label>
           </IonTabButton>
 
-          <IonTabButton tab="random" href="/random">
+          <IonTabButton tab="apps" href="/apps">
             <ion-icon :icon="ioniconsRestaurantOutline" />
-            <ion-label>吃什么</ion-label>
+            <ion-label>发现</ion-label>
           </IonTabButton>
 
           <!-- <IonTabButton tab="tab3" href="/tabs/tab3">

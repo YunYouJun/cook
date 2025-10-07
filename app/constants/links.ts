@@ -16,6 +16,7 @@ export const links = {
    * changelog
    */
   changelog: 'https://docs.yunyoujun.cn/projects/cook/changelog',
+  releaseNotes: 'https://github.com/YunYouJun/cook/releases',
 
   /**
    * author

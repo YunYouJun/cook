@@ -30,12 +30,6 @@ const rStore = useRecipeStore()
             </span>
           </button>
         </ion-title>
-
-        <ion-buttons slot="end">
-          <ion-button router-link="/library" title="菜谱库">
-            <ion-icon slot="icon-only" :icon="ioniconsSearchOutline" />
-          </ion-button>
-        </ion-buttons>
       </ion-toolbar>
     </ion-header>
     <ion-content ref="ionContentRef" class="text-center">

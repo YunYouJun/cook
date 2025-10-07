@@ -90,6 +90,12 @@ function onToggleFavorite(item: DbRecipeItem) {
     <ion-header>
       <ion-toolbar>
         <ion-title>菜谱列表</ion-title>
+
+        <ion-buttons slot="end">
+          <ion-button title="添加菜谱" router-link="/recipes/new">
+            <ion-icon slot="icon-only" :icon="ioniconsAddCircleOutline" />
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
 
       <ion-toolbar>
