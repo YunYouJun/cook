@@ -1,6 +1,32 @@
 <script lang="ts" setup>
+import { App } from '@capacitor/app'
+import { Capacitor } from '@capacitor/core'
+import { useBackButton } from '@ionic/vue'
+
 useHead({
   title: 'Cook Tabs',
+})
+
+const router = useRouter()
+const ionRouter = useIonRouter()
+
+function isTabRootPath(path: string) {
+  // Tabs are set up with aliases: '/', '/home', '/random', '/my'
+  // Treat '/tabs' as root too for safety
+  return ['/', '/home', '/random', '/my', '/tabs'].includes(path)
+}
+
+onMounted(() => {
+  if (Capacitor.getPlatform() === 'android') {
+    useBackButton(10, () => {
+      if (isTabRootPath(router.currentRoute.value.path)) {
+        App.minimizeApp()
+      }
+      else {
+        ionRouter.back()
+      }
+    })
+  }
 })
 </script>
 

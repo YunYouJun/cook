@@ -11,13 +11,20 @@ import { appDescription } from './app/constants/index'
 
 import { getLatestCommit } from './scripts/git'
 
-const latestCommit = await getLatestCommit()
-/**
- * CF_PAGES_COMMIT_SHA is Cloudflare Pages env
- */
-import.meta.env.VITE_COMMIT_REF = process.env.CF_PAGES_COMMIT_SHA || latestCommit?.hash || ''
-// add build date string to env
-import.meta.env.VITE_APP_BUILD_DATE = latestCommit?.date || new Date().toString()
+try {
+  const latestCommit = await getLatestCommit()
+  /**
+   * CF_PAGES_COMMIT_SHA is Cloudflare Pages env
+   */
+  import.meta.env.VITE_COMMIT_REF = process.env.CF_PAGES_COMMIT_SHA || latestCommit?.hash || ''
+  // add build date string to env
+  import.meta.env.VITE_APP_BUILD_DATE = latestCommit?.date || new Date().toString()
+}
+catch (e) {
+  console.error('Not in git repo, get latest commit failed:', e)
+  import.meta.env.VITE_APP_BUILD_DATE = new Date().toString()
+  import.meta.env.VITE_COMMIT_REF = ''
+}
 
 export default defineNuxtConfig({
   modules: [
