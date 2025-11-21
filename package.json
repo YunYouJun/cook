@@ -1,7 +1,7 @@
 {
   "name": "cook",
   "type": "module",
-  "version": "2.0.0-beta.11",
+  "version": "2.0.0-beta.12",
   "private": true,
   "packageManager": "pnpm@10.23.0",
   "engines": {
