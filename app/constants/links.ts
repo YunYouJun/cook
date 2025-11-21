@@ -19,6 +19,11 @@ export const links = {
   releaseNotes: 'https://github.com/YunYouJun/cook/releases',
 
   /**
+   * 企业微信 云乐坊 kf
+   */
+  wecomKf: 'https://work.weixin.qq.com/kfid/kfc9d4dcc4b6bd1c69e',
+
+  /**
    * author
    */
   yyj: {

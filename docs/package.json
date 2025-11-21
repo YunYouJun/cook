@@ -1,5 +1,5 @@
 {
-  "name": "yunyoujun-docs-template",
+  "name": "@cook/docs",
   "type": "module",
   "private": true,
   "scripts": {
@@ -13,15 +13,15 @@
     "@yunyoujun/docs": "^0.1.13"
   },
   "devDependencies": {
-    "@shikijs/vitepress-twoslash": "^3.13.0",
-    "sass": "^1.93.2",
-    "typedoc": "^0.28.13",
+    "@shikijs/vitepress-twoslash": "^3.15.0",
+    "sass": "^1.94.2",
+    "typedoc": "^0.28.14",
     "typedoc-plugin-markdown": "^4.9.0",
     "typedoc-vitepress-theme": "^1.1.2",
-    "unocss": "^66.5.2",
-    "unplugin-vue-components": "^29.1.0",
-    "vite-plugin-vue-devtools": "^8.0.2",
-    "vitepress": "^2.0.0-alpha.12",
-    "vitepress-plugin-group-icons": "^1.6.3"
+    "unocss": "^66.5.9",
+    "unplugin-vue-components": "^30.0.0",
+    "vite-plugin-vue-devtools": "^8.0.5",
+    "vitepress": "^2.0.0-alpha.14",
+    "vitepress-plugin-group-icons": "^1.6.5"
   }
 }

@@ -2,6 +2,7 @@
 import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { useBackButton } from '@ionic/vue'
+import { tabRootPaths } from '../config'
 
 useHead({
   title: 'Cook Tabs',
@@ -11,9 +12,7 @@ const router = useRouter()
 const ionRouter = useIonRouter()
 
 function isTabRootPath(path: string) {
-  // Tabs are set up with aliases: '/', '/home', '/random', '/my'
-  // Treat '/tabs' as root too for safety
-  return ['/', '/home', '/random', '/my', '/tabs'].includes(path)
+  return tabRootPaths.includes(path)
 }
 
 onMounted(() => {
