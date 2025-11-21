@@ -61,5 +61,9 @@ onBeforeMount(() => {
         云游君
       </ion-text>
     </ion-item>
+
+    <ion-item router-link="/about/acknowledgements">
+      <ion-label>致谢名单</ion-label>
+    </ion-item>
   </ion-list>
 </template>
