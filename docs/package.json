@@ -10,18 +10,18 @@
     "docs:preview": "vitepress preview"
   },
   "dependencies": {
-    "@yunyoujun/docs": "^0.1.13"
+    "@yunyoujun/docs": "^0.1.14"
   },
   "devDependencies": {
-    "@shikijs/vitepress-twoslash": "^3.15.0",
-    "sass": "^1.94.2",
-    "typedoc": "^0.28.14",
-    "typedoc-plugin-markdown": "^4.9.0",
+    "@shikijs/vitepress-twoslash": "^3.23.0",
+    "sass": "^1.97.3",
+    "typedoc": "^0.28.17",
+    "typedoc-plugin-markdown": "^4.10.0",
     "typedoc-vitepress-theme": "^1.1.2",
-    "unocss": "^66.5.9",
-    "unplugin-vue-components": "^30.0.0",
-    "vite-plugin-vue-devtools": "^8.0.5",
-    "vitepress": "^2.0.0-alpha.14",
-    "vitepress-plugin-group-icons": "^1.6.5"
+    "unocss": "^66.6.4",
+    "unplugin-vue-components": "^31.0.0",
+    "vite-plugin-vue-devtools": "^8.0.7",
+    "vitepress": "^2.0.0-alpha.16",
+    "vitepress-plugin-group-icons": "^1.7.1"
   }
 }
