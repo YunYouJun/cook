@@ -19,3 +19,7 @@ dist
 .env
 .idea/
 .vercel
+
+# CodeBuddy
+.codebuddy/memory
+.codebuddy/plans

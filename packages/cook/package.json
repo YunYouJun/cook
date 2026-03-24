@@ -1,0 +1,27 @@
+{
+  "name": "@cook/cli",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "bin": {
+    "cook": "./src/index.ts"
+  },
+  "scripts": {
+    "cook": "tsx src/index.ts",
+    "fetch": "tsx src/index.ts fetch",
+    "convert": "tsx src/index.ts convert"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.1.0",
+    "@cook/types": "workspace:*",
+    "@larksuiteoapi/node-sdk": "^1.59.0",
+    "cac": "^7.0.0",
+    "consola": "^3.4.2",
+    "papaparse": "^5.5.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/papaparse": "^5.5.2",
+    "tsx": "^4.21.0"
+  }
+}

@@ -1,5 +1,6 @@
 import process from 'node:process'
 import { defineNuxtConfig } from 'nuxt/config'
+import { simpleGit } from 'simple-git'
 
 // import { pwa } from './app/config/pwa'
 import { appDescription } from './app/constants/index'
@@ -9,20 +10,34 @@ import { appDescription } from './app/constants/index'
 //   VITE_COMMIT_REF: process.env.CF_PAGES_COMMIT_SHA || '',
 // })
 
+/**
+ * Get git repo latest commit
+ */
+async function getLatestCommit() {
+  const git = simpleGit()
+  try {
+    const log = await git.log({ maxCount: 1 })
+    return log.latest
+  }
+  catch (error) {
+    console.error('Error fetching latest commit:', error)
+    return null
+  }
+}
+
 try {
-  const { getLatestCommit } = await import('./scripts/git')
   const latestCommit = await getLatestCommit()
   /**
    * CF_PAGES_COMMIT_SHA is Cloudflare Pages env
    */
-  import.meta.env.VITE_COMMIT_REF = process.env.CF_PAGES_COMMIT_SHA || latestCommit?.hash || ''
+  process.env.VITE_COMMIT_REF = process.env.CF_PAGES_COMMIT_SHA || latestCommit?.hash || ''
   // add build date string to env
-  import.meta.env.VITE_APP_BUILD_DATE = latestCommit?.date || new Date().toString()
+  process.env.VITE_APP_BUILD_DATE = latestCommit?.date || new Date().toString()
 }
 catch (e) {
   console.error('Not in git repo, get latest commit failed:', e)
-  import.meta.env.VITE_APP_BUILD_DATE = new Date().toString()
-  import.meta.env.VITE_COMMIT_REF = ''
+  process.env.VITE_APP_BUILD_DATE = new Date().toString()
+  process.env.VITE_COMMIT_REF = ''
 }
 
 export default defineNuxtConfig({
@@ -84,6 +99,10 @@ export default defineNuxtConfig({
 
   colorMode: {
     classSuffix: '',
+  },
+
+  alias: {
+    '@cook/types': './packages/types/src',
   },
 
   future: {

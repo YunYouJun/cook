@@ -32,6 +32,7 @@
 欢迎反馈更多菜谱数据：
 
 - 相关链接
+  - [菜谱数据表格（飞书）](https://yunlefun.feishu.cn/wiki/KgxowvnB9iM91AkZEJHcNGoQnPg?sheet=X4j9Bn)
   - [居家菜谱投稿](https://docs.qq.com/form/page/DWk9GWW9oTmlXZU9V)
   - [反馈建议分享-兔小巢](https://support.qq.com/products/507827)
 
@@ -43,18 +44,51 @@
 
 ## 开发
 
+### 环境配置
+
+如需从飞书拉取菜谱数据,请先配置环境变量:
+
 ```bash
-# install dependencies
+# 复制环境变量模板
+cp .env.example .env
+
+# 编辑 .env 文件,填入飞书应用凭证
+# FEISHU_APP_ID=cli_xxxxxxxxxxxxxxxx
+# FEISHU_APP_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+获取飞书凭证请访问 [飞书开放平台](https://open.feishu.cn/app)。
+
+详细配置说明请查看 [文档](https://cook.yunyoujun.cn/docs/)。
+
+### 启动项目
+
+```bash
+# 安装依赖
 pnpm install
 
-# convert csv to json
-# automatically executed when postinstall
+# 从飞书拉取最新数据(可选)
+pnpm fetch
+
+# 或将本地 CSV 转换为 JSON
 pnpm convert
 
-# start
+# 启动开发服务器
 pnpm dev
 # http://localhost:3333
 ```
+
+### CLI 命令
+
+```bash
+# 从飞书拉取菜谱数据
+pnpm fetch
+
+# 将 CSV 转换为 JSON
+pnpm convert
+```
+
+更多 CLI 使用说明请查看 [Cook CLI 文档](https://cook.yunyoujun.cn/docs/dev/cli)。
 
 ### 开发 APP
 
