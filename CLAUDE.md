@@ -85,5 +85,4 @@ See `.env.example`:
 
 ## Node/Package Manager
 
-- Node: v22.20.0 (see `.nvmrc`)
 - pnpm: 10.32.1 (enforced via `packageManager` field)
