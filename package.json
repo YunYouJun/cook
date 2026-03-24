@@ -24,6 +24,7 @@
     "open:ios": "cap open ios",
     "open:android": "cap open android",
     "docs:dev": "pnpm -C docs run docs:dev",
+    "docs:build": "pnpm -C docs run docs:build",
     "generate": "nuxt generate",
     "start:generate": "npx serve dist",
     "start": "node .output/server/index.mjs",
