@@ -2,7 +2,7 @@ export const appName = '食用手册'
 export const appDescription = '好的，今天我们来做菜！'
 
 export const namespace = 'cook'
-export const lastDbUpdated = '2026-3-25 02:07:07'
+export const lastDbUpdated = '2026-3-25 02:52:00'
 
 export const icp = '苏ICP备17038157号'
 
