@@ -44,22 +44,9 @@
 
 ## 开发
 
-### 环境配置
+**开发文档**：<https://cook-docs.pages.dev/>
 
-如需从飞书拉取菜谱数据,请先配置环境变量:
-
-```bash
-# 复制环境变量模板
-cp .env.example .env
-
-# 编辑 .env 文件,填入飞书应用凭证
-# FEISHU_APP_ID=cli_xxxxxxxxxxxxxxxx
-# FEISHU_APP_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
-```
-
-获取飞书凭证请访问 [飞书开放平台](https://open.feishu.cn/app)。
-
-详细配置说明请查看 [文档](https://cook.yunyoujun.cn/docs/)。
+详细的环境配置、飞书数据拉取等说明请查看开发文档。
 
 ### 启动项目
 
