@@ -15,8 +15,13 @@ export const envFile = path.resolve(root, '.env')
 // Data 文件路径
 export const recipeCsvFile = path.resolve(root, 'app/data/recipe.csv')
 export const recipeJsonFile = path.resolve(root, 'app/data/recipe.json')
+export const recipeMetaJsonFile = path.resolve(root, 'app/data/recipe-meta.json')
 export const incompatibleFoodsCsvFile = path.resolve(root, 'app/data/incompatible-foods.csv')
 export const incompatibleFoodsJsonFile = path.resolve(root, 'app/data/incompatible-foods.json')
+
+// 分片配置
+export const CHUNK_SIZE = 200 // 每片菜谱数
+export const CHUNK_THRESHOLD = 1000 // 超过此数量启用分片
 
 // CSV Headers
 export const RECIPE_CSV_HEADERS = 'name,stuff,bv,difficulty,tags,methods,tools,'

@@ -14,7 +14,7 @@
   "dependencies": {
     "@clack/prompts": "^1.1.0",
     "@cook/types": "workspace:*",
-    "@larksuiteoapi/node-sdk": "^1.59.0",
+    "@larksuiteoapi/node-sdk": "^1.60.0",
     "cac": "^7.0.0",
     "consola": "^3.4.2",
     "papaparse": "^5.5.3"

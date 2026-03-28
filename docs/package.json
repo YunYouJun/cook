@@ -22,6 +22,6 @@
     "unplugin-vue-components": "^32.0.0",
     "vite-plugin-vue-devtools": "^8.1.1",
     "vitepress": "^2.0.0-alpha.17",
-    "vitepress-plugin-group-icons": "^1.7.1"
+    "vitepress-plugin-group-icons": "^1.7.3"
   }
 }

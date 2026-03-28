@@ -1,5 +1,7 @@
 # auto generate
 app/data/recipe.json
+app/data/recipe-meta.json
+app/data/recipe-chunk-*.json
 app/data/incompatible-foods.json
 
 .DS_Store
