@@ -23,3 +23,6 @@ dist
 # CodeBuddy
 .codebuddy/memory
 .codebuddy/plans
+
+# Understand Anything
+.understand-anything/
