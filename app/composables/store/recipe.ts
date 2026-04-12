@@ -1,7 +1,8 @@
+import type { Ref } from 'vue'
 import type { RecipeItem, StuffItem } from '~/types'
-import { useStorage } from '@vueuse/core'
+import { StorageSerializers, useStorage } from '@vueuse/core'
 import { acceptHMRUpdate, defineStore } from 'pinia'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, triggerRef, watch } from 'vue'
 import { db } from '../../utils/db'
 import { useAppStore } from './app'
 
@@ -24,7 +25,9 @@ export const useRecipeStore = defineStore('recipe', () => {
   const keyword = ref('')
 
   // can not exported
-  const curStuff = settings.keepLocalData ? useStorage(`${namespace}:stuff`, new Set<string>()) : ref(new Set<string>())
+  const curStuff: Ref<Set<string>> = settings.keepLocalData
+    ? useStorage(`${namespace}:stuff`, new Set<string>(), undefined, { serializer: StorageSerializers.set })
+    : ref(new Set<string>())
   // const curTools = ref(new Set<string>())
   const curTool = settings.keepLocalData ? useStorage(`${namespace}:tool`, '') : ref('')
   const curMode = settings.keepLocalData ? useStorage<SearchMode>(`${namespace}:mode`, 'loose') : ref<SearchMode>('loose')
@@ -40,6 +43,7 @@ export const useRecipeStore = defineStore('recipe', () => {
       curStuff.value.delete(name)
     else
       curStuff.value.add(name)
+    triggerRef(curStuff as Ref)
   }
 
   function toggleTools(name: string) {
@@ -47,10 +51,6 @@ export const useRecipeStore = defineStore('recipe', () => {
       curTool.value = ''
     else
       curTool.value = name
-    // if (curTools.value.has(name))
-    //   curTools.value.delete(name)
-    // else
-    //   curTools.value.add(name)
   }
 
   function setMode(mode: SearchMode) {
@@ -62,12 +62,13 @@ export const useRecipeStore = defineStore('recipe', () => {
    */
   function reset() {
     curStuff.value.clear()
-    // curTools.value.clear()
+    triggerRef(curStuff as Ref)
     curTool.value = ''
   }
 
   function addStuff(name: string) {
     curStuff.value.add(name)
+    triggerRef(curStuff as Ref)
   }
 
   const isSearching = ref(false)
