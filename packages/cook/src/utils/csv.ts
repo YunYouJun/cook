@@ -1,4 +1,4 @@
-import type { IncompatibleRule, RecipeItem } from '../../types.js'
+import type { IncompatibleRule, RecipeItem } from '../types/index.js'
 import consola from 'consola'
 import Papa from 'papaparse'
 import {

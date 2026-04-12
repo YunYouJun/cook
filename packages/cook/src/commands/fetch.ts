@@ -1,4 +1,4 @@
-import type { RecipeItem } from '../../types.js'
+import type { RecipeItem } from '../types/index.js'
 import fs from 'node:fs'
 import consola from 'consola'
 import {

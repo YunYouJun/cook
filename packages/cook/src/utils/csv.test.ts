@@ -1,4 +1,4 @@
-import type { RecipeItem } from '../../types.js'
+import type { RecipeItem } from '../types/index.js'
 import { describe, expect, it } from 'vitest'
 import { RECIPE_CSV_HEADERS } from './config.js'
 import { cleanBv, parseRecipeCsv, recipesToCsv } from './csv.js'

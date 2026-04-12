@@ -1,1 +1,1 @@
-export type { Cookbook } from '@cook/types/cookbook'
+export type { Cookbook } from '@yunyoujun/cook'

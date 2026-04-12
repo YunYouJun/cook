@@ -1,1 +1,1 @@
-export type { IncompatibleRule } from '@cook/types/incompatible'
+export type { IncompatibleRule } from '@yunyoujun/cook'

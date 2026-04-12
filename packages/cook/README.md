@@ -1,15 +1,40 @@
-# @cook/cli
+# @yunyoujun/cook
 
-Cook CLI 工具 - 用于管理菜谱数据的命令行工具。
+Cook CLI 工具 - 用于管理菜谱数据和检索菜谱的命令行工具。
 
 ## 功能
 
+- 🔍 按食材/厨具/难度/标签/做法检索菜谱（支持食材别名）
 - 🚀 从飞书 Wiki 拉取菜谱数据
 - 📝 CSV ↔ JSON 双向转换
 - ✅ 完整的单元测试覆盖
 - 🔄 数据格式一致性保证
 
 ## 命令
+
+### search
+
+检索菜谱（支持 AI Skill 调用）：
+
+```bash
+# 按食材搜索
+pnpm search --stuff "鸡蛋,番茄"
+
+# 组合筛选
+pnpm search --stuff "鸡蛋,番茄" --tool "电饭煲" --difficulty "简单"
+
+# 支持别名（西红柿 → 番茄）
+pnpm search --stuff "鸡蛋,西红柿"
+```
+
+参数：
+
+- `--stuff <items>`: 食材，逗号/顿号分隔
+- `--tool <tool>`: 厨具（电饭煲/烤箱/空气炸锅/微波炉/一口大锅）
+- `--difficulty <level>`: 难度（简单/普通/困难）
+- `--tag <tag>`: 标签（懒人/下饭/减脂 等）
+- `--method <method>`: 做法（炒/煎/蒸/煮/烤/炸 等）
+- `--limit <n>`: 最大返回数（默认 10）
 
 ### fetch
 
@@ -113,12 +138,15 @@ packages/cook/
 ├── src/
 │   ├── commands/
 │   │   ├── fetch.ts       # 飞书数据拉取
-│   │   └── convert.ts     # CSV 转 JSON
+│   │   ├── convert.ts     # CSV 转 JSON
+│   │   └── search.ts      # 菜谱检索
 │   ├── utils/
+│   │   ├── alias.ts       # 食材别名映射
 │   │   ├── config.ts      # 配置和常量
 │   │   ├── csv.ts         # CSV 处理工具
 │   │   ├── csv.test.ts    # CSV 测试
-│   │   └── feishu.ts      # 飞书 API 封装
+│   │   ├── feishu.ts      # 飞书 API 封装
+│   │   └── search.ts      # 检索核心逻辑
 │   └── index.ts           # CLI 入口
 ├── types.ts               # 类型定义
 ├── package.json

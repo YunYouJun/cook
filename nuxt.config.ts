@@ -102,7 +102,7 @@ export default defineNuxtConfig({
   },
 
   alias: {
-    '@cook/types': './packages/types/src',
+    '@cook/types': './packages/cook/src/types',
   },
 
   future: {

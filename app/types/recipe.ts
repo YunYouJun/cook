@@ -1,1 +1,1 @@
-export type { Difficulty, RecipeItem, Recipes, StuffItem } from '@cook/types/recipe'
+export type { Difficulty, RecipeItem, Recipes, StuffItem } from '@yunyoujun/cook'
