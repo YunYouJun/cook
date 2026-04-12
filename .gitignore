@@ -25,3 +25,6 @@ dist
 # CodeBuddy
 .codebuddy/memory
 .codebuddy/plans
+
+# Skill packed zip
+skills/**/*.zip
