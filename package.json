@@ -35,7 +35,8 @@
     "sync": "cap sync",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "pack:skill": "tsx scripts/pack-skill.ts"
   },
   "dependencies": {
     "@capacitor/app": "7.1.0",
