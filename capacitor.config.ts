@@ -4,7 +4,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'cn.yunyoujun.cook',
-  appName: 'cook',
+  appName: '食用手册',
   webDir: 'dist',
 
   server: {
