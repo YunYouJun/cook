@@ -5,7 +5,8 @@
   "private": true,
   "packageManager": "pnpm@11.21.0",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.0.0",
+    "pnpm": "11.21.0"
   },
   "scripts": {
     "build": "npm run convert && npm run generate",
