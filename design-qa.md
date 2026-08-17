@@ -10,6 +10,9 @@
 - Flattened incidental raster shading into five stable brand colors without changing the silhouette or hierarchy.
 - Produced a transparent `cook-mark` and a full-square `cook-app-icon` from the same selected artwork.
 - Shifted the foreground down 16 units on the 1254-unit canvas so its measured vertical bounds are centered at 626.5.
+- Enlarged and regularized both handle openings so they stay legible at launcher sizes.
+- Replaced the traced inner rim with a cleaner 30-unit circular stroke.
+- Consolidated the two white highlights into one stronger four-point tomato highlight.
 
 ## Platform checks
 
