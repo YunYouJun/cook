@@ -1,4 +1,5 @@
 import type {
+  AcquisitionContext,
   SsoAuthorizationResult,
 } from '@yunlefun/sso'
 import type {
@@ -17,12 +18,14 @@ import { Preferences } from '@capacitor/preferences'
 import {
   adoptSsoCode,
   consumeSsoRedirect,
+  sanitizeAcquisitionContext,
   startSsoRedirect,
 } from '@yunlefun/sso'
 import {
   requestHostSsoAuthorization,
   SsoIdentityAdoptionError,
 } from '@yunlefun/sso/browser'
+import { readCookAcquisition } from '~/utils/acquisition'
 import {
   consumeNativeSsoCallback,
   isNativeSsoCallbackUrl,
@@ -95,6 +98,7 @@ export interface CloudbaseIdentityDependencies {
 export interface WebYunlefunAuthorizationDependencies {
   requestHostAuthorization?: typeof requestHostSsoAuthorization
   startRedirect?: typeof startSsoRedirect
+  readAcquisition?: () => AcquisitionContext | null
 }
 
 let cachedCloudbaseEnv = ''
@@ -111,9 +115,11 @@ export function createWebYunlefunAuthorizationAdapter(
   return {
     consumeInitial: async () => consumeSsoRedirect(),
     start: async () => {
+      const acquisition = (dependencies.readAcquisition ?? readCookAcquisition)()
+      const redirect = { ...config.redirect, ...(acquisition ? { acquisition } : {}) }
       try {
         const authorization = await requestHostAuthorization({
-          ...config.redirect,
+          ...redirect,
           prompt: 'consent',
         })
         if (authorization)
@@ -130,7 +136,7 @@ export function createWebYunlefunAuthorizationAdapter(
         throw error
       }
 
-      await startRedirect(config.redirect)
+      await startRedirect(redirect)
       return null
     },
   }
@@ -139,6 +145,7 @@ export function createWebYunlefunAuthorizationAdapter(
 export function createNativeYunlefunAuthorizationAdapter(
   config: YunlefunSsoConfig,
   initialUrl: () => Promise<string | null>,
+  readAcquisition: () => AcquisitionContext | null = readCookAcquisition,
 ): NativeYunlefunAuthorizationAdapter {
   const store = createNativeTransactionStore()
 
@@ -159,9 +166,11 @@ export function createNativeYunlefunAuthorizationAdapter(
     },
     consumeUrl,
     start: async () => {
+      const acquisition = readAcquisition()
       await openNativeSsoRedirect({
         ...config.redirect,
         prompt: 'consent',
+        ...(acquisition ? { acquisition } : {}),
       }, store, async (url) => {
         await Browser.open({ url })
       })
@@ -308,6 +317,7 @@ function readNativeTransaction(value: unknown): NativeSsoTransaction | null {
     return null
   }
 
+  const acquisition = sanitizeAcquisitionContext(value.acquisition)
   return {
     clientId: value.clientId,
     codeVerifier: value.codeVerifier,
@@ -316,6 +326,7 @@ function readNativeTransaction(value: unknown): NativeSsoTransaction | null {
     nonce: value.nonce,
     redirectUri: value.redirectUri,
     scope: value.scope,
+    ...(acquisition ? { acquisition } : {}),
   }
 }
 

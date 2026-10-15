@@ -1,4 +1,4 @@
-import type { SsoAuthorizationResult } from '@yunlefun/sso'
+import type { AcquisitionContext, SsoAuthorizationResult } from '@yunlefun/sso'
 import type { YunlefunSsoConfig } from '../app/utils/yunlefunSsoConfig'
 import { Browser } from '@capacitor/browser'
 import { Preferences } from '@capacitor/preferences'
@@ -49,7 +49,31 @@ const hostAuthorization: SsoAuthorizationResult = {
   scope: ['identity:bootstrap'],
 }
 
+const touch = {
+  capturedAt: 1000,
+  landingHost: 'cook.yunle.fun',
+  landingPath: '/random',
+  referrerHost: 'www.baidu.com',
+  utmSource: 'baidu',
+  utmMedium: 'organic',
+  utmCampaign: '',
+}
+const acquisition: AcquisitionContext = { version: 1, firstTouch: touch, registerTouch: touch }
+
 describe('web authorization adapter', () => {
+  it('passes the same captured context to host authorization and redirect fallback', async () => {
+    const requestHostAuthorization = vi.fn(async () => null)
+    const startRedirect = vi.fn()
+    const adapter = createWebYunlefunAuthorizationAdapter(config, {
+      readAcquisition: () => acquisition,
+      requestHostAuthorization,
+      startRedirect,
+    })
+    await adapter.start()
+    expect(requestHostAuthorization).toHaveBeenCalledWith({ ...config.redirect, prompt: 'consent', acquisition })
+    expect(startRedirect).toHaveBeenCalledWith({ ...config.redirect, acquisition })
+  })
+
   it('uses the YunLeFun host consent sheet without starting a redirect', async () => {
     const requestHostAuthorization = vi.fn(async () => hostAuthorization)
     const startRedirect = vi.fn()
@@ -136,5 +160,16 @@ describe('native authorization adapter', () => {
     expect(Preferences.remove).toHaveBeenCalledWith({
       key: 'cook:sso:v3:native-transaction',
     })
+  })
+
+  it('serializes acquisition into the actual native browser SSO URL', async () => {
+    const adapter = createNativeYunlefunAuthorizationAdapter(config, async () => null, () => acquisition)
+    await adapter.start()
+    const url = new URL(vi.mocked(Browser.open).mock.calls[0]![0].url)
+    expect(JSON.parse(url.searchParams.get('acquisition')!)).toEqual(acquisition)
+    expect(url.searchParams.get('client_id')).toBe('cook-web')
+    expect(url.searchParams.get('code_challenge_method')).toBe('S256')
+    const transaction = JSON.parse(vi.mocked(Preferences.set).mock.calls[0]![0].value)
+    expect(transaction.acquisition).toEqual(acquisition)
   })
 })

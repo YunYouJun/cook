@@ -50,7 +50,7 @@
     "@capacitor/preferences": "8.0.1",
     "@capacitor/status-bar": "8.0.3",
     "@cloudbase/js-sdk": "3.7.1",
-    "@yunlefun/sso": "0.6.2",
+    "@yunlefun/sso": "0.7.0",
     "@yunyoujun/cook": "workspace:*",
     "dayjs": "^1.11.21",
     "vue-about-me": "^1.4.0"

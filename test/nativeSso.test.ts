@@ -35,6 +35,31 @@ const options = {
 } as const
 
 describe('native SSO redirect', () => {
+  it('retains only valid optional acquisition through the native PKCE callback', async () => {
+    const touch = {
+      capturedAt: 1000,
+      landingHost: 'cook.yunle.fun',
+      landingPath: '/random',
+      referrerHost: 'www.baidu.com',
+      utmSource: '',
+      utmMedium: '',
+      utmCampaign: '',
+    }
+    const acquisition = { version: 1 as const, firstTouch: touch, registerTouch: touch }
+    const store = new MemoryTransactionStore()
+    const url = await beginNativeSsoRedirect({ ...options, acquisition }, store, {
+      now: () => 1000,
+      randomBase64Url: sequence('n'.repeat(43), 'v'.repeat(43)),
+    })
+    expect(JSON.parse(new URL(url).searchParams.get('acquisition')!)).toEqual(acquisition)
+    const result = await consumeNativeSsoCallback(callbackUrl({
+      code: 'c'.repeat(43),
+      issuer: 'https://www.yunle.fun',
+      nonce: 'n'.repeat(43),
+    }), store, { now: () => 2000 })
+    expect(result).toMatchObject({ ok: true, acquisition })
+  })
+
   it('accepts a matching claimed HTTPS callback exactly once', async () => {
     const store = new MemoryTransactionStore()
     const authorizationUrl = await beginNativeSsoRedirect(options, store, {
