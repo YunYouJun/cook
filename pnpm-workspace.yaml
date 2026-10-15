@@ -3,6 +3,9 @@ autoInstallPeers: false
 ignoreWorkspaceRootCheck: true
 strictDepBuilds: true
 minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  # First-party release reviewed and matched to the published tarball before rollout.
+  - '@yunlefun/sso@0.7.0'
 shamefullyHoist: true
 shellEmulator: true
 blockExoticSubdeps: true

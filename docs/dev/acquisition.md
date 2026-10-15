@@ -10,7 +10,7 @@ Cook 在文档初次进入时记录来源。`firstTouch` 保存在当前域名�
 
 ## 本地联调
 
-新协议在 `@yunlefun/sso@0.7.0`。发布前，用本地 `YunLeFun/ylf` checkout 的实际构建/打包产物验证：
+新协议在 `@yunlefun/sso@0.7.0`，正式依赖使用 npm registry 的锁定版本。需要联调尚未发布的改动时，可用本地 `YunLeFun/ylf` checkout 的实际构建/打包产物验证：
 
 ```sh
 node scripts/qa/verify-acquisition-sdk.mjs --sdk-root=/path/to/ylf
@@ -27,6 +27,8 @@ node scripts/qa/verify-acquisition-sdk.mjs --sdk-root=/path/to/ylf --build --typ
 3. 在 Cook 解析并更新 0.7.0 的 lockfile，复核保留当前其他依赖改动，再执行 frozen install、typecheck 和构建并发布。
 4. 发布 Apps 的来源透传代码；原生“使用其他账号”分支还需要新的 iOS/Android 容器版本。
 
-本改动只准备代码和本地验证，未发布 npm 或部署应用。Cook 原锁文件的 `@yunlefun/sso@0.6.2` 记录刻意保留：0.7.0 发布前不能生成其可信 registry integrity，当前 manifest/lockfile 尚不能执行 frozen install。不要伪造 integrity、改写本地路径或提交临时 override。
+`@yunlefun/sso@0.7.0` 已由公开的 `YunLeFun/ylf` 仓库通过 OIDC 发布，附带 GitHub Actions provenance。Cook 的 lockfile 使用实际 registry integrity，安装与发布不依赖临时本地路径或 override。`minimumReleaseAgeExclude` 只为已核验的自有版本 `@yunlefun/sso@0.7.0` 提供精确例外，其余依赖继续遵循 24 小时等待和供应链策略。
+
+Cook 主域名 `cook.yunyoujun.cn` 对应 EdgeOne Upload 项目 `yunyoujun-cook`，发布时使用该项目名；`cook.yunle.fun` 是另一个 Git 集成项目。原生容器与应用商店发布仍按各自流程验收。
 
 历史用户最多保留来自 SSO 时间关联的应用入口推断；不能把 GA 总体流量比例回填为某个 UID 的外部渠道。各域名、不同浏览器和被清除的存储也无法恢复此前未采集的触达。
