@@ -1,4 +1,5 @@
 import type {
+  AcquisitionContext,
   RedirectSsoOptions,
   SsoAuthorizationResult,
   SsoRedirectResult,
@@ -11,6 +12,7 @@ import {
   readSsoClientId,
   readSsoRedirectUri,
   readSsoScope,
+  sanitizeAcquisitionContext,
   YLF_DEFAULT_SSO_ORIGIN,
 } from '@yunlefun/sso'
 
@@ -26,6 +28,7 @@ export interface NativeSsoTransaction {
   nonce: string
   redirectUri: string
   scope: string[]
+  acquisition?: AcquisitionContext
 }
 
 export interface NativeSsoTransactionStore {
@@ -49,6 +52,7 @@ export async function beginNativeSsoRedirect(
   const nonce = random()
   const codeVerifier = random()
   const codeChallenge = await deriveSsoPkceChallenge(codeVerifier)
+  const acquisition = sanitizeAcquisitionContext(options.acquisition)
   const authorizationUrl = buildSsoRequestUrl({
     clientId: options.clientId,
     codeChallenge,
@@ -57,6 +61,7 @@ export async function beginNativeSsoRedirect(
     scope: options.scope,
     ssoOrigin: issuer,
     ...(options.prompt ? { prompt: options.prompt } : {}),
+    ...(acquisition ? { acquisition } : {}),
   })
 
   await store.save({
@@ -67,6 +72,7 @@ export async function beginNativeSsoRedirect(
     nonce,
     redirectUri: options.redirectUri,
     scope: [...options.scope],
+    ...(acquisition ? { acquisition } : {}),
   })
 
   return authorizationUrl
@@ -118,6 +124,7 @@ export async function consumeNativeSsoCallback(
     codeVerifier: transaction.codeVerifier,
     redirectUri: transaction.redirectUri,
     scope: Object.freeze([...transaction.scope]),
+    ...(transaction.acquisition ? { acquisition: transaction.acquisition } : {}),
   })
 }
 
@@ -178,6 +185,7 @@ function normalizeTransaction(value: NativeSsoTransaction | null): NativeSsoTran
     return null
   }
 
+  const acquisition = sanitizeAcquisitionContext(value.acquisition)
   return {
     clientId,
     codeVerifier: value.codeVerifier,
@@ -186,6 +194,7 @@ function normalizeTransaction(value: NativeSsoTransaction | null): NativeSsoTran
     nonce: value.nonce,
     redirectUri,
     scope,
+    ...(acquisition ? { acquisition } : {}),
   }
 }
 

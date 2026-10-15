@@ -46,8 +46,8 @@ importers:
         specifier: 3.7.1
         version: 3.7.1
       '@yunlefun/sso':
-        specifier: 0.6.2
-        version: 0.6.2
+        specifier: 0.7.0
+        version: 0.7.0
       '@yunyoujun/cook':
         specifier: workspace:*
         version: link:packages/cook
@@ -3613,9 +3613,10 @@ packages:
   '@xmldom/xmldom@0.9.10':
     resolution: {integrity: sha512-A9gOqLdi6cV4ibazAjcQufGj0B1y/vDqYrcuP6d/6x8P27gRS8643Dj9o1dEKtB6O7fwxb2FgBmJS2mX7gpvdw==}
     engines: {node: '>=14.6'}
+    deprecated: this version has critical issues, please update to the latest version
 
-  '@yunlefun/sso@0.6.2':
-    resolution: {integrity: sha512-53XQA8uGpotYEo3ewgiP+osF/aZFfV24aNGK2vXXn4GYRnHdSS7/7M6WaGXiwO2VqBVJvRrHHbWIxgtuTctfiQ==}
+  '@yunlefun/sso@0.7.0':
+    resolution: {integrity: sha512-8Omjc/4ASVJLJDiPiUtP11PI6fygTnUdLPtuv7txNzV6jtbjBnorF/eFJ7cB4ivh2m2O3GbLVqX/q1teK9OH+Q==}
 
   '@yunlefun/vue@0.1.1':
     resolution: {integrity: sha512-ZnHQYYdiLOxljkm4Vs4KW8qPdVI7+weQ8Hg/N8dEMdZbZuWjDxu+t0czwpgPadbYArEEs3MMfnoUfMXcysfNSg==}
@@ -12662,7 +12663,7 @@ snapshots:
 
   '@xmldom/xmldom@0.9.10': {}
 
-  '@yunlefun/sso@0.6.2':
+  '@yunlefun/sso@0.7.0':
     dependencies:
       jose: 6.2.8
 
