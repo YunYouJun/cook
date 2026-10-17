@@ -1,5 +1,4 @@
 import process from 'node:process'
-import { pwa } from './app/config/pwa'
 import { appDescription } from './app/constants/index'
 
 Object.assign(process.env, {
@@ -16,7 +15,6 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
 
     '@nuxtjs/color-mode',
-    '@vite-pwa/nuxt',
     '@nuxt/eslint',
     '@nuxt/test-utils/module',
 
@@ -44,10 +42,13 @@ export default defineNuxtConfig({
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+        // archived classic version, point search engines to the new site
+        { rel: 'canonical', href: 'https://cook.yunyoujun.cn/' },
       ],
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no' },
         { name: 'description', content: appDescription },
+        { name: 'robots', content: 'noindex' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
         { name: 'theme-color', media: '(prefers-color-scheme: light)', content: 'white' },
         { name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#222222' },
@@ -92,7 +93,21 @@ export default defineNuxtConfig({
     },
     prerender: {
       crawlLinks: false,
-      routes: ['/', '/random', '/help', '/user', '/404', '/settings'],
+      routes: [
+        '/',
+        '/random',
+        '/help',
+        '/user',
+        '/404',
+        '/settings',
+        '/about',
+        '/recipes',
+        '/recipes/collect',
+        '/recipes/history',
+        '/recipes/new',
+        '/cookbooks',
+        '/cookbooks/new',
+      ],
       ignore: ['/hi'],
     },
   },
@@ -106,9 +121,10 @@ export default defineNuxtConfig({
     },
   },
 
+  // archived classic version: keep useGtm() calls working but load no analytics
   gtm: {
     id: 'GTM-5FJSV46',
+    enabled: false,
+    loadScript: false,
   },
-
-  pwa,
 })

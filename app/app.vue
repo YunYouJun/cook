@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useIndexedDB } from '~/composables/db'
 import { appName } from '~/constants'
-import { installPrompt } from './utils/pwa'
 
 // https://nuxt.com/docs/api/composables/use-head
 useHead({
@@ -17,15 +16,16 @@ useHead({
 const indexedDB = useIndexedDB()
 
 onMounted(() => {
-  installPrompt()
   indexedDB.init()
 })
 </script>
 
 <template>
-  <VitePwaManifest />
-  <NuxtLayout>
-    <NuxtLoadingIndicator />
-    <NuxtPage />
-  </NuxtLayout>
+  <ArchiveBanner />
+  <div class="relative">
+    <NuxtLayout>
+      <NuxtLoadingIndicator />
+      <NuxtPage />
+    </NuxtLayout>
+  </div>
 </template>

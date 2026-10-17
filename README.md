@@ -3,6 +3,14 @@
 > 好的，今天我们来做菜 🥬
 > Note: This is primarily a Chinese project and we do not intend to translate to English due to the fact that all the ingredients we are familiar with are in Chinese.
 
+## 经典版存档（archive/v1）
+
+本分支是 v1.2.4 经典网页版的存档，部署于 [v1.cook.yunyoujun.cn](https://v1.cook.yunyoujun.cn)，不再更新。新版请访问 [cook.yunyoujun.cn](https://cook.yunyoujun.cn)。
+
+- 存档站与新版是不同域名（不同 origin），浏览器本地保存的收藏、历史、已选食材等数据**不会**迁移到新版。
+- 已移除 GTM 统计、PWA/Service Worker 与 `server/` 接口；页面带 `noindex` 与指向新版的 canonical。
+- 构建（纯静态）：`pnpm install && pnpm build:static`（pnpm 9.15.4，Node 20+，本地以 Node 24 验证），产物目录 `.output/public`。
+
 ## 版本
 
 [![Release](https://github.com/YunYouJun/cook/actions/workflows/release.yml/badge.svg)](https://github.com/YunYouJun/cook/actions/workflows/release.yml)
