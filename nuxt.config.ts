@@ -41,6 +41,12 @@ catch (e) {
   process.env.VITE_COMMIT_REF = ''
 }
 
+/**
+ * @ionic/core 没有声明 sideEffects，@ionic/vue 引用的每个组件模块即使没用到也会被打进首屏 chunk。
+ * 组件模块只在调用 defineCustomElement 时才注册元素，标记为无副作用后，未使用的组件可以被摇树移除。
+ */
+const IONIC_COMPONENT_MODULE_RE = /[\\/]@ionic[\\/]core[\\/]components[\\/]ion-[\w-]+\.js$/
+
 export default defineNuxtConfig({
   modules: [
     '@vueuse/nuxt',
@@ -78,8 +84,13 @@ export default defineNuxtConfig({
         { name: 'description', content: appDescription },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
         { name: 'color-scheme', content: 'light dark' },
-        { name: 'theme-color', media: '(prefers-color-scheme: light)', content: 'white' },
-        { name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#222222' },
+        // 与 iOS 模式的页面 / 导航栏背景一致
+        { name: 'theme-color', media: '(prefers-color-scheme: light)', content: '#f2f2f6' },
+        { name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#000000' },
+      ],
+      script: [
+        // 系统开启「减弱动态效果」时关闭 Ionic 的转场动画；需要在 Ionic 初始化前写入 window.Ionic.config
+        { innerHTML: 'try{if(matchMedia("(prefers-reduced-motion: reduce)").matches)window.Ionic={config:{animated:false}}}catch(e){}' },
       ],
     },
   },
@@ -148,6 +159,18 @@ export default defineNuxtConfig({
       routes: ['/', '/random', '/help', '/user', '/404', '/settings', '/auth/callback'],
       ignore: ['/hi'],
     },
+  },
+
+  vite: {
+    plugins: [
+      {
+        name: 'cook:ionic-components-tree-shaking',
+        transform(_code, id) {
+          if (IONIC_COMPONENT_MODULE_RE.test(id))
+            return { moduleSideEffects: false }
+        },
+      },
+    ],
   },
 
   eslint: {

@@ -54,19 +54,27 @@ async function handleSignOut(): Promise<void> {
 
 <template>
   <ion-page>
-    <ion-header>
+    <ion-header :translucent="true">
       <ion-toolbar>
         <ion-title>我的</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content :fullscreen="true">
+      <ion-header collapse="condense">
+        <ion-toolbar>
+          <ion-title size="large">
+            我的
+          </ion-title>
+        </ion-toolbar>
+      </ion-header>
+
       <ion-list :inset="true">
-        <ion-item v-if="isAuthenticated && account">
+        <ion-item v-if="isAuthenticated && account" class="my-account" lines="full">
           <ion-avatar v-if="account.avatarUrl" slot="start">
             <img :alt="account.displayName" :src="account.avatarUrl">
           </ion-avatar>
-          <ion-icon v-else slot="start" :icon="ioniconsPersonCircleOutline" />
+          <ion-icon v-else slot="start" class="my-account-placeholder" :icon="ioniconsPersonCircle" />
           <ion-label>
             <h2>{{ account.displayName }}</h2>
             <p>云乐坊账号</p>
@@ -75,14 +83,17 @@ async function handleSignOut(): Promise<void> {
         <ion-item
           v-if="isAuthenticated"
           :button="syncStatus === 'error'"
+          :detail="false"
           @click="handleSyncClick"
         >
-          <ion-spinner v-if="syncStatus === 'syncing'" slot="start" name="crescent" />
-          <ion-icon
+          <span v-if="syncStatus === 'syncing'" slot="start" class="my-sync-spinner">
+            <ion-spinner name="crescent" />
+          </span>
+          <CookListIcon
             v-else
             slot="start"
-            :color="syncStatus === 'error' ? 'danger' : undefined"
             :icon="syncStatus === 'error' ? ioniconsCloudOfflineOutline : ioniconsCloudDoneOutline"
+            :color="syncStatus === 'error' ? '#ff3b30' : '#34c759'"
           />
           <ion-label>
             <h2>收藏和历史云同步</h2>
@@ -90,22 +101,15 @@ async function handleSignOut(): Promise<void> {
           </ion-label>
         </ion-item>
         <ion-item
-          v-if="isAuthenticated"
-          :button="true"
-          :disabled="authBusy"
-          @click="handleSignOut"
-        >
-          <ion-icon slot="start" :icon="ioniconsLogOutOutline" />
-          <ion-label>退出登录</ion-label>
-        </ion-item>
-        <ion-item
-          v-else
+          v-if="!isAuthenticated"
           :button="true"
           :disabled="authBusy || Boolean(configurationMessage)"
           @click="handleSignIn"
         >
-          <ion-spinner v-if="authBusy" slot="start" name="crescent" />
-          <ion-icon v-else slot="start" :icon="ioniconsLogInOutline" />
+          <span v-if="authBusy" slot="start" class="my-sync-spinner">
+            <ion-spinner name="crescent" />
+          </span>
+          <CookListIcon v-else slot="start" :icon="ioniconsLogInOutline" color="#007aff" />
           <ion-label>
             <h2>{{ authBusy ? '正在检查登录状态' : '使用云乐坊账号登录' }}</h2>
             <p>安全授权，无需在 Cook 输入密码</p>
@@ -121,62 +125,86 @@ async function handleSignOut(): Promise<void> {
 
       <ion-list :inset="true">
         <ion-item router-link="/recipes/history">
-          <ion-icon slot="start" :icon="ioniconsTimeOutline" />
+          <CookListIcon slot="start" :icon="ioniconsTimeOutline" color="#5856d6" />
           <ion-label>历史记录</ion-label>
         </ion-item>
         <ion-item router-link="/recipes/favorites">
-          <ion-icon slot="start" :icon="ioniconsStarOutline" />
+          <CookListIcon slot="start" :icon="ioniconsStarOutline" color="#ff9500" />
           <ion-label>我的收藏</ion-label>
         </ion-item>
-        <!-- <ion-item router-link="/cookbooks">
-          <ion-icon slot="start" :icon="ioniconsBookOutline" />
-          <ion-label>自定义菜谱</ion-label>
-        </ion-item> -->
       </ion-list>
 
       <ion-list :inset="true">
-        <ion-item :href="links.githubIssue" target="_blank">
-          <ion-icon slot="start" :icon="ioniconsChatbubbleEllipsesOutline" />
+        <ion-item :href="links.githubIssue" target="_blank" :detail-icon="ioniconsOpenOutline">
+          <CookListIcon slot="start" :icon="ioniconsChatbubbleEllipsesOutline" color="#34c759" />
           <ion-label>问题反馈</ion-label>
         </ion-item>
-        <ion-item :href="links.githubDiscussions" target="_blank">
-          <ion-icon slot="start" :icon="ioniconsChatbubblesOutline" />
+        <ion-item :href="links.githubDiscussions" target="_blank" :detail-icon="ioniconsOpenOutline">
+          <CookListIcon slot="start" :icon="ioniconsChatbubblesOutline" color="#30b0c7" />
           <ion-label>参与讨论</ion-label>
         </ion-item>
-        <ion-item :href="links.contribute" target="_blank">
-          <ion-icon slot="start" :icon="ioniconsMailOutline" />
+        <ion-item :href="links.contribute" target="_blank" :detail-icon="ioniconsOpenOutline">
+          <CookListIcon slot="start" :icon="ioniconsMailOutline" color="#ff2d55" />
           <ion-label>菜谱投稿</ion-label>
         </ion-item>
       </ion-list>
 
       <ion-list :inset="true">
-        <ion-item router-link="/changelog">
-          <ion-icon slot="start" :icon="ioniconsDocumentTextOutline" />
-          <ion-label>更新日志</ion-label>
-        </ion-item>
-      </ion-list>
-
-      <ion-list :inset="true">
         <ion-item router-link="/settings">
-          <ion-icon slot="start" :icon="ioniconsSettingsOutline" />
+          <CookListIcon slot="start" :icon="ioniconsSettingsOutline" color="#8e8e93" />
           <ion-label>设置</ion-label>
         </ion-item>
       </ion-list>
 
       <ion-list :inset="true">
+        <ion-item router-link="/changelog">
+          <CookListIcon slot="start" :icon="ioniconsDocumentTextOutline" color="#af52de" />
+          <ion-label>更新日志</ion-label>
+        </ion-item>
         <ion-item router-link="/help">
-          <ion-icon slot="start" :icon="ioniconsHelpCircleOutline" />
+          <CookListIcon slot="start" :icon="ioniconsHelpCircleOutline" color="#007aff" />
           <ion-label>帮助</ion-label>
         </ion-item>
         <ion-item router-link="/about">
-          <ion-icon slot="start" :icon="ioniconsInformationCircleOutline" />
+          <CookListIcon slot="start" :icon="ioniconsInformationCircleOutline" color="#5ac8fa" />
           <ion-label>关于</ion-label>
         </ion-item>
       </ion-list>
 
-      <!-- <YlfForm>
-        <YlfFormItem icon="i-ri-article-line" label="自定义菜谱 TODO" to="/cookbooks/" />
-      </YlfForm> -->
+      <ion-list v-if="isAuthenticated" :inset="true">
+        <ion-item :button="true" :detail="false" :disabled="authBusy" @click="handleSignOut">
+          <ion-label class="ion-text-center" color="danger">
+            退出登录
+          </ion-label>
+        </ion-item>
+      </ion-list>
     </ion-content>
   </ion-page>
 </template>
+
+<style scoped>
+.my-account {
+  --padding-top: 6px;
+  --padding-bottom: 6px;
+}
+.my-account ion-avatar {
+  width: 56px;
+  height: 56px;
+  margin-inline-end: 14px;
+}
+.my-account-placeholder {
+  font-size: 56px;
+  margin-inline-end: 14px;
+  color: var(--ion-color-medium);
+}
+.my-account h2 {
+  font-size: 20px;
+  font-weight: 600;
+}
+.my-sync-spinner {
+  display: inline-flex;
+  justify-content: center;
+  width: 29px;
+  margin-inline-end: 14px;
+}
+</style>

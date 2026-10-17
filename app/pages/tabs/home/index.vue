@@ -19,7 +19,7 @@ watch(() => app.recipeView, () => {
 
 <template>
   <ion-page>
-    <ion-header>
+    <ion-header :translucent="true">
       <ion-toolbar>
         <ion-title class="home-title">
           <button
@@ -40,7 +40,7 @@ watch(() => app.recipeView, () => {
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
-    <ion-content ref="ionContentRef" class="text-center" :class="{ 'cook-match-scope': app.recipeView === 'recommendation' }">
+    <ion-content ref="ionContentRef" :fullscreen="true" class="text-center" :class="{ 'cook-match-scope': app.recipeView === 'recommendation' }">
       <ChooseFood />
     </ion-content>
   </ion-page>

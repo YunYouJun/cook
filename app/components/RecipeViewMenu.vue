@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import type { RecipeView } from '~/utils/settings'
 import { resolveRecipeView } from '~/utils/settings'
+import { yunleHaptic } from '~/utils/yunleHost'
 
 const model = defineModel<RecipeView>({ required: true })
 const menuOptions = {
   cssClass: 'recipe-view-popover',
   header: '做菜视图',
   message: '匹配视图可查看缺料，选择会自动记住。',
+}
+
+function onChange(value: unknown) {
+  const view = resolveRecipeView(value)
+  if (view !== model.value)
+    void yunleHaptic('light')
+  model.value = view
 }
 </script>
 
@@ -17,7 +25,7 @@ const menuOptions = {
     interface="popover"
     :interface-options="menuOptions"
     :value="model"
-    @ion-change="model = resolveRecipeView($event.detail.value)"
+    @ion-change="onChange($event.detail.value)"
   >
     <ion-select-option value="classic">
       经典视图

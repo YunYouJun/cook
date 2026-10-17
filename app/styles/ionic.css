@@ -43,3 +43,44 @@ html {
 .in-yunle-app ion-header ion-toolbar {
   --padding-end: max(var(--cook-host-capsule-inset, 0px), 4px);
 }
+
+/* 品牌主色：标签栏选中、链接按钮、开关等 iOS tint 统一用 Cook 绿，和匹配视图一致 */
+:root {
+  --ion-color-primary: #1d7a45;
+  --ion-color-primary-rgb: 29, 122, 69;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #1a6b3d;
+  --ion-color-primary-tint: #348758;
+}
+
+.ion-palette-dark {
+  --ion-color-primary: #91d8a7;
+  --ion-color-primary-rgb: 145, 216, 167;
+  --ion-color-primary-contrast: #102c1b;
+  --ion-color-primary-contrast-rgb: 16, 44, 27;
+  --ion-color-primary-shade: #80be93;
+  --ion-color-primary-tint: #9cdcb0;
+}
+
+/* iOS 分组列表的组标题和组脚注 */
+.cook-group-header {
+  margin: 24px 0 0;
+  padding: 0 calc(16px + 20px) 6px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
+  color: var(--ion-color-step-600, #6d6d72);
+}
+
+.cook-group-header + ion-list.list-inset {
+  margin-top: 0;
+}
+
+.cook-group-footer {
+  margin: -8px 0 0;
+  padding: 0 calc(16px + 20px);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ion-color-step-600, #6d6d72);
+}
