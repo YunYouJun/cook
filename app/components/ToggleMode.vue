@@ -22,6 +22,7 @@ const searchModes: {
   <div>
     <button
       v-for="mode in searchModes" :key="mode.id" class="tag rounded px-2"
+      :aria-pressed="mode.id === rStore.curMode"
       :bg="mode.id === rStore.curMode ? 'orange-500 dark:orange-600 opacity-100' : 'orange-300 opacity-20'"
       :text="mode.id === rStore.curMode ? 'orange-100' : 'orange-800 dark:orange-200'"
       @click="rStore.setMode(mode.id)"

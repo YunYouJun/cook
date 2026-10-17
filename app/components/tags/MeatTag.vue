@@ -6,6 +6,7 @@ defineProps<{
 
 <template>
   <button
+    :aria-pressed="active"
     class="meat-tag tag rounded" p="x-2"
     border="~ red-200 dark:red-800"
     :bg="active ? 'red-500 opacity-90' : 'red-300 opacity-20'"

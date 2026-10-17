@@ -1,0 +1,108 @@
+@use 'sass:meta';
+
+// Keep the package's :root / .dark tokens inside the matching view. The local
+// .ylf-theme-light boundary supplies the base tokens, with .ylf-theme-dark on top.
+.cook-match-scope {
+  @include meta.load-css('@yunlefun/ui/styles');
+}
+
+.cook-match-scope .cook-match-theme {
+  // Cook's green theme overrides the public design contract as a complete group.
+  --ylf-c-brand: #17673b;
+  --ylf-c-brand-hover: #12552f;
+  --ylf-c-brand-active: #104a2a;
+  --ylf-c-brand-soft: #edf7f0;
+  --ylf-c-text-on-accent: #fff;
+  --ylf-c-surface: var(--c-bg-alt);
+  --ylf-c-border: #d9e2da;
+
+  --cook-match-accent: var(--ylf-c-brand);
+  --cook-match-soft: var(--ylf-c-brand-soft);
+  --cook-match-muted: var(--ylf-c-text-2);
+  --cook-match-border: var(--ylf-c-border);
+  --cook-match-missing: var(--ylf-status-warning-text);
+  --cook-match-surface: var(--ylf-c-surface);
+  --cook-match-input: var(--c-bg);
+  --cook-match-text: var(--ylf-c-text);
+  // Compact reading hierarchy; inputs and touch targets retain their size.
+  --cook-match-font-primary: var(--ylf-text-sm);
+  --cook-match-font-secondary: var(--ylf-text-xs);
+  --cook-match-font-title: var(--ylf-text-base);
+  --cook-match-font-input: var(--ylf-text-base);
+  --cook-match-control-height: var(--ylf-touch-target, 44px);
+  --cook-match-content-width: 760px;
+  --cook-match-bottom-space: 92px;
+
+  color: var(--cook-match-text);
+  font-family: var(--ylf-font-body);
+  font-size: var(--cook-match-font-primary);
+  line-height: 1.5;
+
+  &.ylf-theme-dark {
+    --ylf-c-brand: #91d8a7;
+    --ylf-c-brand-hover: #afe6bf;
+    --ylf-c-brand-active: #7cc995;
+    --ylf-c-brand-soft: #22392a;
+    --ylf-c-text-on-accent: #102c1b;
+    --ylf-c-border: #435447;
+  }
+
+  // Mobile density is owned by Cook; component states and variants stay in design.
+  .ylf-button {
+    min-height: var(--cook-match-control-height);
+    padding-inline: var(--ylf-space-3);
+    font-size: var(--cook-match-font-primary);
+    line-height: 1.5;
+    white-space: normal;
+  }
+
+  .vegetable-tag {
+    --cook-choice-fill: var(--ylf-accent-green);
+    --cook-choice-soft: var(--ylf-accent-green-soft);
+    --cook-choice-text: var(--ylf-accent-green-text);
+    --cook-choice-on: var(--ylf-accent-green-on);
+  }
+
+  .meat-tag {
+    --cook-choice-fill: var(--ylf-accent-pink);
+    --cook-choice-soft: var(--ylf-accent-pink-soft);
+    --cook-choice-text: var(--ylf-accent-pink-text);
+    --cook-choice-on: var(--ylf-accent-pink-on);
+  }
+
+  .staple-tag {
+    --cook-choice-fill: var(--ylf-accent-sun);
+    --cook-choice-soft: var(--ylf-accent-sun-soft);
+    --cook-choice-text: var(--ylf-accent-sun-text);
+    --cook-choice-on: var(--ylf-accent-sun-on);
+  }
+
+  .tool-tag {
+    --cook-choice-fill: var(--ylf-c-brand);
+    --cook-choice-soft: var(--ylf-c-surface);
+    --cook-choice-text: var(--ylf-c-text-2);
+    --cook-choice-on: var(--ylf-c-text-on-accent);
+  }
+
+  .tag:not(.dish-tag) {
+    min-height: var(--cook-match-control-height);
+    padding: var(--ylf-space-2) var(--ylf-space-3);
+    border-radius: var(--ylf-radius-sm);
+    border-color: var(--cook-match-border);
+    background: var(--cook-choice-soft);
+    color: var(--cook-choice-text);
+    font-size: var(--cook-match-font-primary);
+    box-shadow: var(--ylf-shadow-control);
+
+    &[aria-pressed='true'] {
+      background: var(--cook-choice-fill);
+      color: var(--cook-choice-on);
+      border-color: var(--cook-choice-text);
+    }
+  }
+
+  :is(button, input, summary, select, a):focus-visible {
+    outline: 2px solid var(--cook-match-accent);
+    outline-offset: 3px;
+  }
+}

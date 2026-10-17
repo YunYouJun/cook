@@ -7,6 +7,9 @@ import { useIncompatibleFoods } from '~/composables/incompatible-foods'
 import { meat, staple, tools, vegetable } from '~/data/food'
 
 const rStore = useRecipeStore()
+const app = useAppStore()
+const { isDark } = useDarkMode()
+const isRecommendation = computed(() => app.recipeView === 'recommendation')
 const { curTool } = storeToRefs(rStore)
 const curStuff = computed(() => rStore.selectedStuff)
 
@@ -17,8 +20,6 @@ const recipeBtnRef = ref<HTMLButtonElement>()
 const { playAnimation } = useEmojiAnimation(recipeBtnRef)
 
 const { proxy } = useScriptGoogleTagManager()
-
-const recipePanelRef = ref()
 
 // 监听食材变化，自动检测相克
 watch(curStuff, (newIngredients) => {
@@ -52,7 +53,8 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
 </script>
 
 <template>
-  <div>
+  <div class="choose-food" :class="{ 'choose-food--recommendation cook-match-theme ylf-theme-light': isRecommendation, 'ylf-theme-dark': isRecommendation && isDark }">
+    <IngredientBasket v-if="isRecommendation" :selected="curStuff" @add="rStore.addStuff" @remove="rStore.toggleStuff" @clear="rStore.reset" />
     <h2 m="t-4" text="xl" font="bold" p="1">
       🥘 先选一下食材
     </h2>
@@ -140,9 +142,11 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
         </StapleTag>
       </div>
     </div>
+    <PantrySettings v-if="isRecommendation" :selected="rStore.selectedPantry" @toggle="rStore.togglePantry" @clear="rStore.clearPantry" @reset="rStore.resetPantry" />
+
     <div m="t-4">
       <h2 text="xl" font="bold" p="1">
-        🍳 再选一下厨具
+        {{ isRecommendation ? '🍳 厨具（可选）' : '🍳 再选一下厨具' }}
       </h2>
       <div>
         <ToolTag
@@ -161,15 +165,30 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
       </div>
     </div>
 
-    <RecipePanel ref="recipePanelRef" />
+    <RecipePanel v-if="isRecommendation" />
+    <ClassicRecipePanel v-else />
   </div>
 
   <Transition>
-    <BasketButton ref="recipeBtnRef" />
+    <BasketButton v-if="isRecommendation" ref="recipeBtnRef" />
+    <ClassicBasketButton v-else ref="recipeBtnRef" />
   </Transition>
 </template>
 
 <style>
+.choose-food--recommendation {
+  max-width: var(--cook-match-content-width);
+  margin: 0 auto;
+  padding-bottom: var(--cook-match-bottom-space);
+}
+.choose-food:not(.choose-food--recommendation) :is(button, input, summary, select, a):focus-visible {
+  outline: 2px solid #17673b;
+  outline-offset: 3px;
+}
+.dark .choose-food:not(.choose-food--recommendation) :is(button, input, summary, select, a):focus-visible {
+  outline-color: #91d8a7;
+}
+
 ion-toast.incompatible-warning-toast {
   /* --background: #f4f4fa; */
   --box-shadow: 3px 3px 10px 0 rgba(0, 0, 0, 0.2);

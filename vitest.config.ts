@@ -15,6 +15,7 @@ export default defineConfig({
 
     alias: {
       '~': fileURLToPath(new URL('./app', import.meta.url)),
+      '@yunyoujun/cook/recommend': fileURLToPath(new URL('./packages/cook/src/utils/recommend.ts', import.meta.url)),
     },
 
     coverage: {

@@ -1,181 +1,152 @@
-import type { Ref } from 'vue'
+import type { RecommendationMode } from '@yunyoujun/cook'
 import type { RecipeItem, StuffItem } from '~/types'
 import { StorageSerializers, useStorage } from '@vueuse/core'
+import { recommendRecipes, uniqueStuff } from '@yunyoujun/cook/recommend'
 import { acceptHMRUpdate, defineStore } from 'pinia'
-import { computed, onMounted, ref, triggerRef, watch } from 'vue'
+import { computed, onMounted, ref, shallowRef } from 'vue'
+import { useIndexedDB } from '~/composables/db'
+import { defaultPantry, pantryOptions } from '~/data/pantry'
+import { filterClassicRecipes } from '~/utils/classicRecipes'
 import { db } from '../../utils/db'
 import { useAppStore } from './app'
 
 const namespace = 'cook'
-
-/**
- * survival: 生存模式
- * strict: 严格
- * loose: 模糊
- */
-export type SearchMode = 'survival' | 'loose' | 'strict'
+export type SearchMode = RecommendationMode
 
 export const useRecipeStore = defineStore('recipe', () => {
   const { proxy } = useScriptGoogleTagManager()
-  const { settings } = useAppStore()
-
-  /**
-   * 搜索关键字
-   */
-  const keyword = ref('')
-
-  // can not exported
-  const curStuff: Ref<Set<string>> = settings.keepLocalData
+  const app = useAppStore()
+  const { settings } = app
+  const indexedDB = useIndexedDB()
+  const keyword = shallowRef('')
+  const curStuff = settings.keepLocalData
     ? useStorage(`${namespace}:stuff`, new Set<string>(), undefined, { serializer: StorageSerializers.set })
     : ref(new Set<string>())
-  // const curTools = ref(new Set<string>())
-  const curTool = settings.keepLocalData ? useStorage(`${namespace}:tool`, '') : ref('')
-  const curMode = settings.keepLocalData ? useStorage<SearchMode>(`${namespace}:mode`, 'loose') : ref<SearchMode>('loose')
+  const curTool = settings.keepLocalData ? useStorage(`${namespace}:tool`, '') : shallowRef('')
+  const curMode = settings.keepLocalData ? useStorage<SearchMode>(`${namespace}:mode`, 'loose') : shallowRef<SearchMode>('loose')
+  const pantry = settings.keepLocalData ? useStorage<string[]>(`${namespace}:pantry`, [...defaultPantry]) : ref([...defaultPantry])
 
-  const selectedStuff = computed(() => Array.from(curStuff.value))
-  // const selectedTools = computed(() => Array.from(curTools.value))
-  // const selectedTools = ref('')
+  const selectedStuff = computed(() => uniqueStuff([...curStuff.value]))
+  const selectedPantry = computed(() => uniqueStuff(pantry.value).filter(item => pantryOptions.includes(item)))
 
   function toggleStuff(name: string) {
-    if (!curStuff.value)
+    const names = uniqueStuff([name])
+    const next = new Set(selectedStuff.value)
+    for (const item of names) {
+      if (next.has(item))
+        next.delete(item)
+      else
+        next.add(item)
+    }
+    curStuff.value = next
+  }
+
+  function addStuff(name: string) {
+    curStuff.value = new Set(uniqueStuff([...selectedStuff.value, name]))
+  }
+
+  function togglePantry(name: string) {
+    if (!pantryOptions.includes(name))
       return
-    if (curStuff.value.has(name))
-      curStuff.value.delete(name)
-    else
-      curStuff.value.add(name)
-    triggerRef(curStuff as Ref)
+    pantry.value = selectedPantry.value.includes(name)
+      ? selectedPantry.value.filter(item => item !== name)
+      : [...selectedPantry.value, name]
+  }
+
+  function clearFilters() {
+    keyword.value = ''
+    curTool.value = ''
+    curMode.value = 'loose'
+  }
+
+  function reset() {
+    curStuff.value = new Set()
+    curTool.value = ''
+    if (app.recipeView === 'recommendation')
+      clearFilters()
   }
 
   function toggleTools(name: string) {
-    if (curTool.value === name)
-      curTool.value = ''
-    else
-      curTool.value = name
+    curTool.value = curTool.value === name ? '' : name
   }
 
   function setMode(mode: SearchMode) {
     curMode.value = mode
   }
 
-  /**
-   * 重置
-   */
-  function reset() {
-    curStuff.value.clear()
-    triggerRef(curStuff as Ref)
-    curTool.value = ''
-  }
-
-  function addStuff(name: string) {
-    curStuff.value.add(name)
-    triggerRef(curStuff as Ref)
-  }
-
-  const isSearching = ref(false)
-  /**
-   * 搜索菜谱
-   */
-  async function searchRecipes() {
+  const recipes = shallowRef<RecipeItem[]>([])
+  const isSearching = shallowRef(true)
+  const loadError = shallowRef('')
+  let loading: Promise<void> | undefined
+  function loadRecipes() {
+    if (loading)
+      return loading
     isSearching.value = true
-    let result: RecipeItem[] = []
-
-    if (curMode.value === 'strict') {
-      result = await db.recipes.filter((item) => {
-        const stuffFlag = selectedStuff.value.every(stuff => item.stuff.includes(stuff))
-        const toolFlag = item.tools.includes(curTool.value)
-        return curTool.value ? (stuffFlag && toolFlag) : stuffFlag
-      }).toArray()
-    }
-    else if (curMode.value === 'loose') {
-      result = await db.recipes.filter((item) => {
-        const stuffFlag = selectedStuff.value.some(stuff => item.stuff.includes(stuff))
-        const toolFlag = Boolean(item.tools?.includes(curTool.value))
-
-        // 同时存在 厨具和材料，则同时判断
-        if (curTool.value && selectedStuff.value.length) {
-          return stuffFlag && toolFlag
-        }
-        else {
-          if (selectedStuff.value.length)
-            return stuffFlag
-          else if (curTool.value)
-            return toolFlag
-
-          return false
-        }
-      }).toArray()
-    }
-    // survival
-    else {
-      result = await db.recipes.filter((item) => {
-        const stuffFlag = item.stuff.every(stuff => selectedStuff.value.includes(stuff))
-        const toolFlag = item.tools?.includes(curTool.value)
-        return Boolean(curTool.value ? (stuffFlag && toolFlag) : stuffFlag)
-      }).toArray()
-    }
-
-    if (keyword.value)
-      result = result.filter(item => item.name.includes(keyword.value))
-
-    isSearching.value = false
-    return result
+    loadError.value = ''
+    loading = (async () => {
+      try {
+        // Await initialization so first visits and saved selections cannot read an empty DB.
+        await indexedDB.init()
+        recipes.value = await db.recipes.toArray()
+      }
+      catch {
+        loadError.value = '菜谱暂时没有加载成功，请重试。'
+      }
+      finally {
+        isSearching.value = false
+        loading = undefined
+      }
+    })()
+    return loading
   }
 
-  // 默认严格模式
-  const displayedRecipe = ref<RecipeItem[]>([])
-  // fix curStuff watch
-  watch(() => [keyword.value, selectedStuff.value, curTool.value, curMode.value], async () => {
-    displayedRecipe.value = [...(await searchRecipes())]
-  })
+  const recipeMatches = computed(() => recommendRecipes(recipes.value, {
+    stuff: selectedStuff.value,
+    pantry: selectedPantry.value,
+    tool: curTool.value,
+    keyword: keyword.value,
+    mode: curMode.value,
+  }))
+  const classicRecipes = computed(() => filterClassicRecipes(recipes.value, {
+    stuff: selectedStuff.value,
+    tool: curTool.value,
+    keyword: keyword.value,
+    mode: curMode.value,
+  }))
+  const displayedRecipe = computed(() => app.recipeView === 'classic'
+    ? classicRecipes.value
+    : recipeMatches.value.map(match => match.recipe))
+  const recipesLength = computed(() => recipes.value.length)
 
-  /**
-   * toggle tool
-   * @param item
-   */
-  const clickTool = (item: StuffItem) => {
-    const value = item.name
-    toggleTools(value)
-
-    proxy.dataLayer.push({
-      event: 'click',
-      category: `tool_${value}`,
-      action: 'click_tool',
-      label: '工具',
-    })
-    proxy.dataLayer.push({
-      event: 'click_tool',
-      action: item.name,
-    })
+  function clickTool(item: StuffItem) {
+    toggleTools(item.name)
+    proxy.dataLayer.push({ event: 'click', category: `tool_${item.name}`, action: 'click_tool', label: '工具' })
+    proxy.dataLayer.push({ event: 'click_tool', action: item.name })
   }
 
-  const recipesLength = ref(0)
-  onMounted(async () => {
-    db.recipes.count().then((count) => {
-      recipesLength.value = count
-    })
-
-    displayedRecipe.value = await searchRecipes()
-  })
+  onMounted(loadRecipes)
 
   return {
     recipesLength,
-
     keyword,
     curTool,
     curMode,
     selectedStuff,
-
+    selectedPantry,
     isSearching,
-
+    loadError,
+    loadRecipes,
     clearKeyWord: () => { keyword.value = '' },
+    clearFilters,
     toggleStuff,
+    togglePantry,
+    clearPantry: () => { pantry.value = [] },
+    resetPantry: () => { pantry.value = [...defaultPantry] },
     toggleTools,
     reset,
     setMode,
-
     addStuff,
-
-    // useRecipe
+    recipeMatches,
     displayedRecipe,
     clickTool,
   }

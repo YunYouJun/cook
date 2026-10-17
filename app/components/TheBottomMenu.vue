@@ -1,5 +1,7 @@
 <script lang="ts" setup>
 import type { BottomMenuItem } from '@yunlefun/vue'
+import YlfBottomMenu from '@yunlefun/vue/components/YlfBottomMenu.vue'
+import YlfBottomMenuItem from '@yunlefun/vue/components/YlfBottomMenuItem.vue'
 
 const items: BottomMenuItem[] = [
   {

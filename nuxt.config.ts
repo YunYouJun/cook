@@ -1,4 +1,5 @@
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import { defineNuxtConfig } from 'nuxt/config'
 import { simpleGit } from 'simple-git'
 
@@ -49,7 +50,6 @@ export default defineNuxtConfig({
     // '@vite-pwa/nuxt',
     '@nuxt/eslint',
     '@nuxt/test-utils/module',
-    '@yunlefun/vue/nuxt',
     // fix QQ in iOS, Done
     // See https://github.com/unjs/ofetch/pull/366
     // 'nuxt-fix-ofetch',
@@ -87,6 +87,7 @@ export default defineNuxtConfig({
   css: [
     '@unocss/reset/tailwind.css',
     '~/styles/css-vars.scss',
+    '~/styles/recommendation.scss',
     '~/styles/index.scss',
     '~/styles/index.ts',
   ],
@@ -119,6 +120,8 @@ export default defineNuxtConfig({
 
   alias: {
     '@cook/types': './packages/cook/src/types',
+    // Use browser-safe source in the workspace, without requiring a package build first.
+    '@yunyoujun/cook/recommend': fileURLToPath(new URL('./packages/cook/src/utils/recommend.ts', import.meta.url)),
   },
 
   future: {

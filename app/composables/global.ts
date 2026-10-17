@@ -1,1 +1,1 @@
-export const recipePanelRef = ref()
+export const recipePanelRef = ref<HTMLElement>()

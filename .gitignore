@@ -39,3 +39,6 @@ AuthKey_*.p8
 
 # Skill packed zip
 skills/**/*.zip
+
+# Python cache
+__pycache__/

@@ -6,6 +6,7 @@ defineProps<{
 
 <template>
   <button
+    :aria-pressed="active"
     class="vegetable-tag tag rounded" p="x-2"
     border="~ green-200 dark:green-800"
     :bg="active ? 'green-600 opacity-90' : 'green-300 opacity-20'"

@@ -20,6 +20,10 @@
     "食谱"
   ],
   "exports": {
+    "./recommend": {
+      "types": "./dist/utils/recommend.d.mts",
+      "import": "./dist/utils/recommend.mjs"
+    },
     ".": {
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"

@@ -43,7 +43,7 @@ const dishLabel = computed(() => {
     @click="triggerGtm(dish)"
   >
     <span m="r-1" text="sm blue-700 dark:blue-200">
-      {{ dishLabel }}
+      <slot>{{ dishLabel }}</slot>
     </span>
     <template v-for="tool, i in tools">
       <span v-if="dish.tools?.includes(tool.name)" :key="i" :class="tool.icon" />

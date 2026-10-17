@@ -34,6 +34,20 @@ definePageMeta({
         </ion-item>
       </ion-list>
 
+      <ion-list-header>做菜视图</ion-list-header>
+      <ion-list :inset="true">
+        <ion-item>
+          <div class="view-settings">
+            <RecipeViewSwitch v-model="app.recipeView" />
+            <p>经典视图保留紧凑标签和原有筛选；匹配视图展示食材齐全、还差一种、还差两种。</p>
+            <p>自动记住上次选择，下次打开继续使用。也可以在做菜页直接切换。</p>
+            <p class="view-settings-note">
+              视图偏好独立保存，不受下方食材数据开关影响。
+            </p>
+          </div>
+        </ion-item>
+      </ion-list>
+
       <ion-list-header>数据</ion-list-header>
       <ion-list :inset="true">
         <ion-item>
@@ -45,6 +59,22 @@ definePageMeta({
     </ion-content>
   </ion-page>
 </template>
+
+<style scoped>
+.view-settings {
+  width: 100%;
+  padding-bottom: 16px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.view-settings p + p {
+  margin-top: 8px;
+}
+.view-settings-note {
+  font-size: 12px;
+  color: var(--ion-color-medium-shade);
+}
+</style>
 
 <style>
 /* (Optional) This is added to prevent the flashing that happens when toggling between palettes */
