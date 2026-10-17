@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { yunleHaptic } from '~/utils/yunleHost'
+
 definePageMeta({
   alias: ['/', '/home', '/tabs'],
 })
@@ -7,59 +9,45 @@ useHead({
   title: '食用手册',
 })
 
-const ionContentRef = ref<{ $el: { scrollToTop: () => Promise<void> } }>()
-
 const rStore = useRecipeStore()
-const app = useAppStore()
+const resultsBarRef = ref<{ $el: HTMLElement }>()
+const flightTarget = computed(() => resultsBarRef.value?.$el)
+const resultsOpen = ref(false)
 
-watch(() => app.recipeView, () => {
-  void ionContentRef.value?.$el.scrollToTop()
-}, { flush: 'post' })
+const hasSelection = computed(() => rStore.selectedStuff.length > 0 || Boolean(rStore.curTool))
+
+function reset() {
+  rStore.reset()
+  void yunleHaptic('medium')
+}
 </script>
 
 <template>
   <ion-page>
     <ion-header :translucent="true">
       <ion-toolbar>
-        <ion-title class="home-title">
-          <button
-            class="home-reset flex cursor-pointer items-center gap-2 transition active:text-green-800 hover:(text-green-600)"
-            title="重置"
-            @click="rStore.reset"
-          >
-            <div v-if="rStore.selectedStuff.length" class="cook-pot-wobble" i-mdi-pot-steam-outline />
-            <div v-else class="cook-pot-wobble" i-mdi-pot-mix-outline />
-
-            <span>
-              <span class="home-greeting">好的，</span>今天我们来做菜！
-            </span>
-          </button>
-        </ion-title>
+        <ion-title>做菜</ion-title>
         <ion-buttons slot="end">
-          <RecipeViewMenu v-model="app.recipeView" />
+          <ion-button :disabled="!hasSelection" @click="reset">
+            清空
+          </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
-    <ion-content ref="ionContentRef" :fullscreen="true" class="text-center" :class="{ 'cook-match-scope': app.recipeView === 'recommendation' }">
-      <ChooseFood />
+
+    <ion-content :fullscreen="true">
+      <ion-header collapse="condense">
+        <ion-toolbar>
+          <ion-title size="large">
+            做菜
+          </ion-title>
+        </ion-toolbar>
+      </ion-header>
+
+      <ChooseFood :flight-target="flightTarget" />
     </ion-content>
+
+    <ResultsBar ref="resultsBarRef" @open="resultsOpen = true" />
+    <ResultsSheet v-model:open="resultsOpen" />
   </ion-page>
 </template>
-
-<style scoped>
-.home-title {
-  position: static;
-  width: auto;
-  padding-inline: 16px 0;
-  font-size: 17px;
-  text-align: start;
-}
-.home-reset {
-  min-height: 44px;
-}
-@media (max-width: 380px) {
-  .home-greeting {
-    display: none;
-  }
-}
-</style>

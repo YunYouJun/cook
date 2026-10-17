@@ -98,7 +98,6 @@ export default defineNuxtConfig({
   css: [
     '@unocss/reset/tailwind.css',
     '~/styles/css-vars.scss',
-    '~/styles/recommendation.scss',
     '~/styles/index.scss',
     '~/styles/index.ts',
   ],

@@ -6,7 +6,6 @@ import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { useIndexedDB } from '~/composables/db'
 import { defaultPantry, pantryOptions } from '~/data/pantry'
-import { filterClassicRecipes } from '~/utils/classicRecipes'
 import { db } from '../../utils/db'
 import { useAppStore } from './app'
 
@@ -15,8 +14,7 @@ export type SearchMode = RecommendationMode
 
 export const useRecipeStore = defineStore('recipe', () => {
   const { proxy } = useScriptGoogleTagManager()
-  const app = useAppStore()
-  const { settings } = app
+  const { settings } = useAppStore()
   const indexedDB = useIndexedDB()
   const keyword = shallowRef('')
   const curStuff = settings.keepLocalData
@@ -61,9 +59,7 @@ export const useRecipeStore = defineStore('recipe', () => {
 
   function reset() {
     curStuff.value = new Set()
-    curTool.value = ''
-    if (app.recipeView === 'recommendation')
-      clearFilters()
+    clearFilters()
   }
 
   function toggleTools(name: string) {
@@ -107,15 +103,14 @@ export const useRecipeStore = defineStore('recipe', () => {
     keyword: keyword.value,
     mode: curMode.value,
   }))
-  const classicRecipes = computed(() => filterClassicRecipes(recipes.value, {
-    stuff: selectedStuff.value,
-    tool: curTool.value,
-    keyword: keyword.value,
-    mode: curMode.value,
-  }))
-  const displayedRecipe = computed(() => app.recipeView === 'classic'
-    ? classicRecipes.value
-    : recipeMatches.value.map(match => match.recipe))
+  /** 只选了厨具、还没选食材时，列出用这个厨具能做的菜（保留原来经典视图的用法） */
+  const toolRecipes = computed(() => {
+    if (selectedStuff.value.length || !curTool.value)
+      return []
+    const text = keyword.value.trim()
+    return recipes.value.filter(recipe => recipe.tools?.includes(curTool.value) && (!text || recipe.name.includes(text)))
+  })
+  const resultCount = computed(() => selectedStuff.value.length ? recipeMatches.value.length : toolRecipes.value.length)
   const recipesLength = computed(() => recipes.value.length)
 
   function clickTool(item: StuffItem) {
@@ -147,7 +142,8 @@ export const useRecipeStore = defineStore('recipe', () => {
     setMode,
     addStuff,
     recipeMatches,
-    displayedRecipe,
+    toolRecipes,
+    resultCount,
     clickTool,
   }
 })

@@ -84,3 +84,14 @@ html {
   line-height: 18px;
   color: var(--ion-color-step-600, #6d6d72);
 }
+
+/* 系统填充色（按钮底色）和提示用的橙色 */
+:root {
+  --cook-fill: rgba(118, 118, 128, 0.12);
+  --cook-orange: #c35c00;
+}
+
+.ion-palette-dark {
+  --cook-fill: rgba(118, 118, 128, 0.24);
+  --cook-orange: #ffb340;
+}

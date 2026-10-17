@@ -91,20 +91,6 @@ async function importFromPaste(): Promise<void> {
       </ion-list>
 
       <h2 class="cook-group-header">
-        做菜视图
-      </h2>
-      <ion-list :inset="true">
-        <ion-item>
-          <div class="view-settings">
-            <RecipeViewSwitch v-model="app.recipeView" />
-          </div>
-        </ion-item>
-      </ion-list>
-      <p class="cook-group-footer">
-        经典视图保留紧凑标签和原有筛选；匹配视图展示食材齐全、还差一种、还差两种。会自动记住上次选择，也可以在做菜页直接切换。
-      </p>
-
-      <h2 class="cook-group-header">
         数据
       </h2>
       <ion-list :inset="true">
@@ -115,7 +101,7 @@ async function importFromPaste(): Promise<void> {
         </ion-item>
       </ion-list>
       <p class="cook-group-footer">
-        视图偏好独立保存，不受这个开关影响。
+        关闭后，选中的食材、厨具和调料只在这次打开时有效。
       </p>
 
       <h2 class="cook-group-header">
@@ -152,13 +138,6 @@ async function importFromPaste(): Promise<void> {
     </ion-content>
   </ion-page>
 </template>
-
-<style scoped>
-.view-settings {
-  width: 100%;
-  padding-block: 8px;
-}
-</style>
 
 <style>
 /* (Optional) This is added to prevent the flashing that happens when toggling between palettes */

@@ -1,7 +1,6 @@
 import type { RecipeItem } from '../app/types'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useAppStore } from '../app/composables/store/app'
 import { useRecipeStore } from '../app/composables/store/recipe'
 import { db } from '../app/utils/db'
 
@@ -14,33 +13,42 @@ const fixtures: RecipeItem[] = [
 
 beforeEach(async () => {
   setActivePinia(createPinia())
-  useAppStore().recipeView = 'recommendation'
   await db.recipes.clear()
   await db.recipes.bulkAdd(fixtures)
 })
 
 describe('recipe interaction', () => {
-  it('switches between original and recommended results without clearing selection', async () => {
-    const app = useAppStore()
+  it('lists recipes for a tool before any ingredient is chosen, then switches to matches', async () => {
     const store = useRecipeStore()
     await db.recipes.add({ name: '缺三种的土豆杂烩', stuff: ['土豆', '米', '鸡蛋', '牛肉'], tools: ['电饭煲'] })
     await store.loadRecipes()
-    store.addStuff('土豆')
-    expect(store.displayedRecipe.map(r => r.name)).toEqual(['土豆', '土豆腊肠饭'])
-    app.recipeView = 'classic'
-    expect(store.displayedRecipe.map(r => r.name)).toEqual(['土豆', '土豆腊肠饭', '缺三种的土豆杂烩'])
-    app.recipeView = 'recommendation'
-    expect(store.selectedStuff).toEqual(['土豆'])
-    expect(store.displayedRecipe).toHaveLength(2)
-    app.recipeView = 'classic'
-    store.toggleStuff('土豆')
+    expect(store.resultCount).toBe(0)
+
     store.curTool = '电饭煲'
-    expect(store.displayedRecipe).toHaveLength(3)
+    expect(store.toolRecipes.map(r => r.name)).toEqual(['腊肠饭', '土豆腊肠饭', '缺三种的土豆杂烩'])
+    expect(store.resultCount).toBe(3)
+    store.keyword = '土豆'
+    expect(store.toolRecipes.map(r => r.name)).toEqual(['土豆腊肠饭', '缺三种的土豆杂烩'])
+
+    store.keyword = ''
+    store.addStuff('土豆')
+    expect(store.toolRecipes).toEqual([])
+    // Recipes missing more than two ingredients are never recommended.
+    expect(store.recipeMatches.map(m => m.recipe.name)).toEqual(['土豆腊肠饭'])
+    expect(store.resultCount).toBe(1)
+  })
+
+  it('clears ingredients, tool and filters together on reset', () => {
+    const store = useRecipeStore()
+    store.addStuff('土豆')
+    store.curTool = '电饭煲'
     store.curMode = 'strict'
     store.keyword = '腊肠'
     store.reset()
-    expect(store.curMode).toBe('strict')
-    expect(store.keyword).toBe('腊肠')
+    expect(store.selectedStuff).toEqual([])
+    expect(store.curTool).toBe('')
+    expect(store.curMode).toBe('loose')
+    expect(store.keyword).toBe('')
   })
 
   it('normalizes selection, ignores duplicates and toggles canonical names', () => {
@@ -62,20 +70,20 @@ describe('recipe interaction', () => {
     store.addStuff('土豆')
     store.addStuff('腊肠')
     await store.loadRecipes()
-    expect(store.displayedRecipe.map(r => r.name)).toEqual(['土豆', '土豆腊肠饭', '腊肠饭'])
+    expect(store.recipeMatches.map(m => m.recipe.name)).toEqual(['土豆', '土豆腊肠饭', '腊肠饭'])
     store.curTool = '电饭煲'
-    expect(store.displayedRecipe.map(r => r.name)).toEqual(['土豆腊肠饭', '腊肠饭'])
+    expect(store.recipeMatches.map(m => m.recipe.name)).toEqual(['土豆腊肠饭', '腊肠饭'])
     store.setMode('strict')
-    expect(store.displayedRecipe.map(r => r.name)).toEqual(['土豆腊肠饭'])
+    expect(store.recipeMatches.map(m => m.recipe.name)).toEqual(['土豆腊肠饭'])
     store.setMode('survival')
-    expect(store.displayedRecipe).toEqual([])
+    expect(store.recipeMatches).toEqual([])
     store.addStuff('米')
-    expect(store.displayedRecipe).toHaveLength(2)
+    expect(store.recipeMatches).toHaveLength(2)
     store.keyword = '没有这道菜'
-    expect(store.displayedRecipe).toEqual([])
+    expect(store.recipeMatches).toEqual([])
     store.clearFilters()
     expect(store.selectedStuff).toEqual(['土豆', '腊肠', '米'])
-    expect(store.displayedRecipe).toHaveLength(3)
+    expect(store.recipeMatches).toHaveLength(3)
   })
 
   it('updates missing ingredients when pantry changes and preserves pantry on basket reset', async () => {
@@ -104,7 +112,7 @@ describe('recipe interaction', () => {
     store.addStuff('土豆')
     await store.loadRecipes()
     expect(store.loadError).toBe('')
-    expect(store.displayedRecipe).toHaveLength(2)
+    expect(store.recipeMatches).toHaveLength(2)
     read.mockRestore()
   })
 })

@@ -35,8 +35,8 @@ export function useEmojiAnimation(basket: MaybeElementRef) {
       return
 
     const basketEl = unrefElement(basket)
-    // 落点用真正的按钮，而不是包裹它的 ion-fab
-    const target = basketEl?.querySelector('ion-fab-button, button') ?? basketEl
+    // 落点优先用标记了 data-flight-target 的元素，其次是容器里真正的按钮
+    const target = basketEl?.querySelector('[data-flight-target], ion-fab-button, button') ?? basketEl
     if (!target?.isConnected)
       return
 
@@ -95,25 +95,5 @@ export function useEmojiAnimation(basket: MaybeElementRef) {
 
   return {
     playAnimation,
-  }
-}
-
-/**
- * 列表过渡的依次浮现：按同一批新元素在页面中的先后编号，而不是元素在列表中的位置
- * 配合 `.recipe-list-enter-active` 使用 `--i`
- */
-export function useStaggerEnter() {
-  let batch: HTMLElement[] = []
-  return function onBeforeEnter(el: Element) {
-    if (!batch.length) {
-      // Vue 插入 keyed 节点的顺序是从后往前，等这一批都进入 DOM 后再按文档顺序编号
-      queueMicrotask(() => {
-        batch
-          .sort((a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1)
-          .forEach((item, i) => item.style.setProperty('--i', String(i)))
-        batch = []
-      })
-    }
-    batch.push(el as HTMLElement)
   }
 }
