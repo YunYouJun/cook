@@ -1,0 +1,11 @@
+// Classic v1 archive → https://v1.cook.yunyoujun.cn
+// Deploy: pnpm build:static && npx wrangler deploy
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cook-v1",
+  "compatibility_date": "2026-10-12",
+  "assets": {
+    "directory": "./.output/public",
+    "not_found_handling": "404-page"
+  }
+}

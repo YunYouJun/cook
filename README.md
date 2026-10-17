@@ -9,7 +9,7 @@
 
 - 存档站与新版是不同域名（不同 origin），浏览器本地保存的收藏、历史、已选食材等数据**不会**迁移到新版。
 - 已移除 GTM 统计、PWA/Service Worker 与 `server/` 接口；页面带 `noindex` 与指向新版的 canonical。
-- 构建（纯静态）：`pnpm install && pnpm build:static`（pnpm 9.15.4，Node 20+，本地以 Node 24 验证），产物目录 `.output/public`。
+- 构建（纯静态）：`pnpm install && pnpm build:static`（pnpm 9.15.4，Node 20+，本地以 Node 24 验证），产物目录 `.output/public`；部署到 Cloudflare（Worker `cook-v1`）：`npx wrangler deploy`。
 
 ## 版本
 
