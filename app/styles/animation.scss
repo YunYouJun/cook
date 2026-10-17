@@ -9,6 +9,90 @@
   opacity: 0;
 }
 
+$ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+$ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+// 食材 / 厨具标签：按下收缩，选中时弹一下
+button.tag:active {
+  transform: scale(0.94);
+}
+
+button.tag[aria-pressed='true'] {
+  animation: cook-tag-pop 0.36s $ease-spring;
+}
+
+@keyframes cook-tag-pop {
+  0% {
+    transform: scale(0.9);
+  }
+  60% {
+    transform: scale(1.07);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (hover: hover) {
+  a.dish-tag:hover {
+    transform: translateY(-1px);
+  }
+}
+
+// 菜谱结果依次浮现；离开不做过渡，避免内联标签重排时闪动
+.recipe-list-enter-active {
+  transition:
+    opacity 0.28s ease,
+    transform 0.36s $ease-out;
+  transition-delay: calc(min(var(--i, 0), 12) * 24ms);
+}
+
+.recipe-list-enter-from {
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+}
+
+// 标题锅：切换图标时晃一下
+.cook-pot-wobble {
+  animation: cook-pot-wobble 0.6s $ease-out;
+  transform-origin: 50% 80%;
+}
+
+@keyframes cook-pot-wobble {
+  0% {
+    transform: rotate(0) scale(0.8);
+  }
+  30% {
+    transform: rotate(-12deg) scale(1.1);
+  }
+  60% {
+    transform: rotate(8deg);
+  }
+  100% {
+    transform: rotate(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.tag:active,
+  a.dish-tag:hover {
+    transform: none;
+  }
+
+  button.tag[aria-pressed='true'],
+  .cook-pot-wobble {
+    animation: none;
+  }
+
+  .recipe-list-enter-active {
+    transition: opacity 0.15s ease;
+  }
+
+  .recipe-list-enter-from {
+    transform: none;
+  }
+}
+
 // scrollbar
 ::-webkit-scrollbar {
   width: 8px;

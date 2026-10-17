@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { ComponentPublicInstance } from 'vue'
 import type { StuffItem } from '~/types'
 import { storeToRefs } from 'pinia'
 import { useEmojiAnimation } from '~/composables/animation'
@@ -16,7 +17,7 @@ const curStuff = computed(() => rStore.selectedStuff)
 // 食物相克检测
 const { warningMessage, hasWarning, checkIncompatibility } = useIncompatibleFoods()
 
-const recipeBtnRef = ref<HTMLButtonElement>()
+const recipeBtnRef = ref<ComponentPublicInstance>()
 const { playAnimation } = useEmojiAnimation(recipeBtnRef)
 
 const { proxy } = useScriptGoogleTagManager()
@@ -33,11 +34,11 @@ onMounted(() => {
   }
 })
 
-function toggleStuff(item: StuffItem, category = '', _e?: Event) {
+function toggleStuff(item: StuffItem, category = '', e?: Event) {
   rStore.toggleStuff(item.name)
 
   if (curStuff.value.includes(item.name))
-    playAnimation(item.emoji)
+    playAnimation(item.emoji, e?.currentTarget as Element | null)
 
   proxy.dataLayer.push({
     event: 'click',
@@ -102,7 +103,7 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
         <VegetableTag
           v-for="item, i in vegetable" :key="i"
           :active="curStuff.includes(item.name)"
-          @click="toggleStuff(item, 'vegetable')"
+          @click="toggleStuff(item, 'vegetable', $event)"
         >
           <span v-if="item.emoji" class="inline-flex">{{ item.emoji }}</span>
           <span v-else-if="item.image" class="inline-flex">
@@ -120,7 +121,7 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
         <MeatTag
           v-for="item, i in meat" :key="i"
           :active="curStuff.includes(item.name)"
-          @click="toggleStuff(item, 'meat')"
+          @click="toggleStuff(item, 'meat', $event)"
         >
           <span>{{ item.emoji }}</span>
           <span m="l-1">{{ item.name }}</span>
@@ -135,7 +136,7 @@ function toggleStuff(item: StuffItem, category = '', _e?: Event) {
         <StapleTag
           v-for="item, i in staple" :key="i"
           :active="curStuff.includes(item.name)"
-          @click="toggleStuff(item, 'staple')"
+          @click="toggleStuff(item, 'staple', $event)"
         >
           <span>{{ item.emoji }}</span>
           <span m="l-1">{{ item.name }}</span>

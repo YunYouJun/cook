@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { RecipeMatch } from '@yunyoujun/cook'
 import YlfButton from '@yunlefun/vue/components/YlfButton.vue'
+import { useStaggerEnter } from '~/composables/animation'
 
 const props = defineProps<{ matches: RecipeMatch[] }>()
 const labels = ['食材齐全', '还差一种', '还差两种']
@@ -9,6 +10,7 @@ const limit = shallowRef(6)
 const groups = computed(() => labels.map((label, count) => ({ label, items: props.matches.filter(item => item.missingStuff.length === count) })))
 const current = computed(() => groups.value[active.value]!)
 const visible = computed(() => current.value.items.slice(0, limit.value))
+const onBeforeEnter = useStaggerEnter()
 
 watch(() => props.matches, () => {
   active.value = Math.max(0, groups.value.findIndex(group => group.items.length))
@@ -36,7 +38,9 @@ function select(index: number) {
       <p v-if="!current.items.length" class="group-empty">
         这个分组暂时没有菜谱，试试其他分组或调整食材。
       </p>
-      <RecipeMatchCard v-for="match in visible" :key="match.sourceIndex" :match="match" />
+      <TransitionGroup tag="div" name="recipe-list" appear @before-enter="onBeforeEnter">
+        <RecipeMatchCard v-for="match in visible" :key="match.sourceIndex" :match="match" />
+      </TransitionGroup>
       <YlfButton v-if="current.items.length > limit" type="button" variant="secondary" :round="false" block class="show-more" @click="limit += 6">
         再看 6 道（还有 {{ current.items.length - limit }} 道）
       </YlfButton>

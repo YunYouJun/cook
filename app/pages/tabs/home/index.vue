@@ -27,8 +27,8 @@ watch(() => app.recipeView, () => {
             title="重置"
             @click="rStore.reset"
           >
-            <div v-if="rStore.selectedStuff.length" i-mdi-pot-steam-outline />
-            <div v-else i-mdi-pot-mix-outline />
+            <div v-if="rStore.selectedStuff.length" class="cook-pot-wobble" i-mdi-pot-steam-outline />
+            <div v-else class="cook-pot-wobble" i-mdi-pot-mix-outline />
 
             <span>
               <span class="home-greeting">好的，</span>今天我们来做菜！
