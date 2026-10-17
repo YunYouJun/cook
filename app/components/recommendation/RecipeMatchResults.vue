@@ -25,11 +25,12 @@ function select(index: number) {
 
 <template>
   <div>
-    <div class="match-groups" role="group" aria-label="按缺少食材筛选">
+    <div class="match-groups" role="group" aria-label="按缺少食材筛选" :style="{ '--active': active }">
       <button v-for="group, index in groups" :key="group.label" class="match-group" :aria-pressed="active === index" aria-controls="match-results" @click="select(index)">
         <span>{{ group.label }}</span>
         <strong>{{ group.items.length }}<span class="group-unit"> 道</span></strong>
       </button>
+      <span class="match-group-indicator" aria-hidden="true" />
     </div>
     <section id="match-results" :aria-label="current.label">
       <h3 class="results-heading" role="status">
@@ -50,6 +51,7 @@ function select(index: number) {
 
 <style scoped>
 .match-groups {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--ylf-space-1);
@@ -65,6 +67,21 @@ function select(index: number) {
   border-bottom: 3px solid transparent;
   font-size: var(--cook-match-font-primary);
   color: var(--cook-match-muted);
+  transition:
+    color var(--ylf-duration-fast, 160ms) ease,
+    background-color var(--ylf-duration-fast, 160ms) ease;
+}
+/* 三个分组共用一条指示线，切换时滑过去 */
+.match-group-indicator {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: calc((100% - 2 * var(--ylf-space-1)) / 3);
+  height: 3px;
+  background: var(--cook-match-accent);
+  transform: translateX(calc(var(--active) * (100% + var(--ylf-space-1))));
+  transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
 }
 .match-group strong {
   font-size: var(--cook-match-font-secondary);
@@ -76,7 +93,6 @@ function select(index: number) {
   font-weight: 400;
 }
 .match-group[aria-pressed='true'] {
-  border-color: var(--cook-match-accent);
   color: var(--cook-match-accent);
   background: var(--cook-match-soft);
 }
@@ -97,5 +113,11 @@ function select(index: number) {
   margin-top: var(--ylf-space-2);
   border: 1px solid var(--cook-match-border);
   border-radius: var(--ylf-radius-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  .match-group,
+  .match-group-indicator {
+    transition: none;
+  }
 }
 </style>

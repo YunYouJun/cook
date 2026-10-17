@@ -33,22 +33,26 @@ const detailsId = useId()
     <p class="match-evidence">
       用上 {{ match.matchedStuff.length }} 种
     </p>
-    <div v-show="expanded" :id="detailsId" class="match-details-body">
-      <p class="match-tools">
-        {{ match.recipe.tools.join(' / ') || '厨具未记录' }}
-        <span v-if="match.recipe.difficulty"> · {{ match.recipe.difficulty }}</span>
-      </p>
-      <p class="match-basis-description">
-        用上 {{ match.matchedStuff.length }} 种已选食材，共记录 {{ match.requiredStuff.length }} 种
-      </p>
-      <dl class="match-ingredients">
-        <div class="ingredient-line">
-          <dt>已有</dt><dd>{{ match.matchedStuff.join('、') }}</dd>
+    <div :id="detailsId" class="match-details" :class="{ 'is-open': expanded }">
+      <div class="match-details-clip">
+        <div class="match-details-body">
+          <p class="match-tools">
+            {{ match.recipe.tools.join(' / ') || '厨具未记录' }}
+            <span v-if="match.recipe.difficulty"> · {{ match.recipe.difficulty }}</span>
+          </p>
+          <p class="match-basis-description">
+            用上 {{ match.matchedStuff.length }} 种已选食材，共记录 {{ match.requiredStuff.length }} 种
+          </p>
+          <dl class="match-ingredients">
+            <div class="ingredient-line">
+              <dt>已有</dt><dd>{{ match.matchedStuff.join('、') }}</dd>
+            </div>
+            <div v-if="match.pantryStuff.length" class="ingredient-line">
+              <dt>常备</dt><dd>{{ match.pantryStuff.join('、') }}</dd>
+            </div>
+          </dl>
         </div>
-        <div v-if="match.pantryStuff.length" class="ingredient-line">
-          <dt>常备</dt><dd>{{ match.pantryStuff.join('、') }}</dd>
-        </div>
-      </dl>
+      </div>
     </div>
   </article>
 </template>
@@ -144,8 +148,26 @@ const detailsId = useId()
 .match-details-toggle[aria-expanded='true'] .match-details-chevron {
   transform: rotate(180deg);
 }
-.match-details-body {
+/* 用 grid 行高从 0fr 过渡到 1fr，展开收起都有高度动画；收起后 visibility 让内容退出焦点与读屏 */
+.match-details {
   grid-column: 1 / -1;
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition:
+    grid-template-rows 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    visibility 0s linear 0.26s;
+}
+.match-details.is-open {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition-delay: 0s;
+}
+.match-details-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+.match-details-body {
   margin-top: var(--ylf-space-1);
   padding: var(--ylf-space-2) var(--ylf-space-3);
   border-radius: var(--ylf-radius-sm);
@@ -180,7 +202,8 @@ const detailsId = useId()
   color: var(--cook-match-accent);
 }
 @media (prefers-reduced-motion: reduce) {
-  .match-details-chevron {
+  .match-details-chevron,
+  .match-details {
     transition: none;
   }
 }
