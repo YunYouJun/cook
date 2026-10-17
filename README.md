@@ -3,9 +3,9 @@
 > 好的，今天我们来做菜 🥬
 > Note: This is primarily a Chinese project and we do not intend to translate to English due to the fact that all the ingredients we are familiar with are in Chinese.
 
-## 经典版存档（archive/v1）
+## 经典版存档（v1.2.4-archive）
 
-本分支是 v1.2.4 经典网页版的存档，部署于 [v1.cook.yunyoujun.cn](https://v1.cook.yunyoujun.cn)，不再更新。新版请访问 [cook.yunyoujun.cn](https://cook.yunyoujun.cn)。
+本 tag（`v1.2.4-archive`）是 v1.2.4 经典网页版的存档，部署于 [v1.cook.yunyoujun.cn](https://v1.cook.yunyoujun.cn)，不再更新。新版请访问 [cook.yunyoujun.cn](https://cook.yunyoujun.cn)。
 
 - 存档站与新版是不同域名（不同 origin），浏览器本地保存的收藏、历史、已选食材等数据**不会**迁移到新版。
 - 已移除 GTM 统计、PWA/Service Worker 与 `server/` 接口；页面带 `noindex` 与指向新版的 canonical。
@@ -27,6 +27,12 @@
 ```bash
 pnpm install && pnpm build:static
 npx wrangler deploy
+```
+
+需要修改存档时，从 tag 拉出临时分支改完、部署，再打新 tag 即可（不保留长期分支）：
+
+```bash
+git switch -c archive/v1 v1.2.4-archive
 ```
 
 > 注意：在 `.claude/worktrees/*` 这类嵌在其他 Nuxt 4 仓库内部的目录里构建会失败（Nuxt 3.15 会解析到上层目录的 `nuxt`），请在独立的 clone 中构建。
