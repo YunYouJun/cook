@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { links } from '~/constants'
 
 definePageMeta({
@@ -16,6 +17,31 @@ const {
 } = useYunlefunAuth()
 
 const authBusy = computed(() => status.value === 'checking' || status.value === 'signing-in')
+
+const {
+  errorMessage: syncErrorMessage,
+  lastSyncedAt,
+  status: syncStatus,
+  syncNow,
+} = useUserDataSync()
+
+const syncText = computed(() => {
+  switch (syncStatus.value) {
+    case 'syncing':
+      return '正在同步…'
+    case 'synced':
+      return `已同步 ${dayjs(lastSyncedAt.value).format('HH:mm')}`
+    case 'error':
+      return `${syncErrorMessage.value}，点击重试`
+    default:
+      return '等待同步'
+  }
+})
+
+function handleSyncClick(): void {
+  if (syncStatus.value === 'error')
+    syncNow()
+}
 
 async function handleSignIn(): Promise<void> {
   await signIn()
@@ -44,6 +70,23 @@ async function handleSignOut(): Promise<void> {
           <ion-label>
             <h2>{{ account.displayName }}</h2>
             <p>云乐坊账号</p>
+          </ion-label>
+        </ion-item>
+        <ion-item
+          v-if="isAuthenticated"
+          :button="syncStatus === 'error'"
+          @click="handleSyncClick"
+        >
+          <ion-spinner v-if="syncStatus === 'syncing'" slot="start" name="crescent" />
+          <ion-icon
+            v-else
+            slot="start"
+            :color="syncStatus === 'error' ? 'danger' : undefined"
+            :icon="syncStatus === 'error' ? ioniconsCloudOfflineOutline : ioniconsCloudDoneOutline"
+          />
+          <ion-label>
+            <h2>收藏和历史云同步</h2>
+            <p>{{ syncText }}</p>
           </ion-label>
         </ion-item>
         <ion-item

@@ -1,4 +1,4 @@
-import type { NativeYunlefunAuthorizationAdapter } from '~/adapters/yunlefunAuth'
+import type { CloudbaseDatabase, NativeYunlefunAuthorizationAdapter } from '~/adapters/yunlefunAuth'
 import type {
   YunlefunAuthController,
   YunlefunAuthSnapshot,
@@ -10,6 +10,7 @@ import {
   createCloudbaseIdentityAdapter,
   createNativeYunlefunAuthorizationAdapter,
   createWebYunlefunAuthorizationAdapter,
+  getCloudbaseDatabase,
 } from '~/adapters/yunlefunAuth'
 import { stripNativeSsoCallbackHash } from '~/utils/nativeSso'
 import { createYunlefunAuthController } from '~/utils/yunlefunAuth'
@@ -30,6 +31,7 @@ interface YunlefunRuntimeConfig {
 }
 
 let controller: YunlefunAuthController | undefined
+let cloudbaseEnv = ''
 let nativeAdapter: NativeYunlefunAuthorizationAdapter | undefined
 let initialization: Promise<void> | undefined
 let nativeUrlListenerInstalled = false
@@ -67,10 +69,18 @@ export function useYunlefunAuth() {
     publishSnapshot(snapshot)
   }
 
+  /** The CloudBase database bound to the signed-in session. */
+  async function getDatabase(): Promise<CloudbaseDatabase> {
+    if (!cloudbaseEnv)
+      throw new Error('CloudBase is not configured')
+    return getCloudbaseDatabase(cloudbaseEnv)
+  }
+
   return {
     account: computed(() => snapshot.value.account),
     configurationMessage: readonly(configurationMessage),
     errorMessage: computed(() => snapshot.value.errorMessage),
+    getDatabase,
     initialize,
     isAuthenticated,
     isConfigured,
@@ -129,6 +139,7 @@ async function initializeOnce(
     return
   }
 
+  cloudbaseEnv = result.config.cloudbaseEnv
   const web = createWebYunlefunAuthorizationAdapter(result.config)
   nativeAdapter = createNativeYunlefunAuthorizationAdapter(result.config, async () => {
     const launch = await App.getLaunchUrl()

@@ -67,8 +67,25 @@ export interface CloudbaseAuthClient {
   signOut: () => Promise<{ error?: unknown } | void>
 }
 
+export interface CloudbaseDocumentRef {
+  get: () => Promise<{ code?: string, data?: unknown[], message?: string }>
+  set: (data: Record<string, unknown>) => Promise<{
+    code?: string
+    message?: string
+    updated?: number
+    upsertedId?: string | null
+  } | void>
+}
+
+export interface CloudbaseDatabase {
+  collection: (name: string) => {
+    doc: (id: string) => CloudbaseDocumentRef
+  }
+}
+
 interface CloudbaseApp {
   auth: (options?: { persistence: 'session' }) => CloudbaseAuthClient
+  database: () => CloudbaseDatabase
 }
 
 interface CloudbaseModule {
@@ -102,6 +119,7 @@ export interface WebYunlefunAuthorizationDependencies {
 }
 
 let cachedCloudbaseEnv = ''
+let cachedCloudbaseApp: Promise<CloudbaseApp> | undefined
 let cachedCloudbaseAuth: CloudbaseAuthClient | undefined
 
 export function createWebYunlefunAuthorizationAdapter(
@@ -229,25 +247,44 @@ function createNativeTransactionStore(): NativeSsoTransactionStore {
   }
 }
 
-async function getCloudbaseAuth(env: string): Promise<CloudbaseAuthClient> {
-  if (cachedCloudbaseAuth) {
+function getCloudbaseApp(env: string): Promise<CloudbaseApp> {
+  if (cachedCloudbaseApp) {
     if (cachedCloudbaseEnv !== env)
-      throw new Error('CloudBase environment cannot change at runtime')
-    return cachedCloudbaseAuth
+      return Promise.reject(new Error('CloudBase environment cannot change at runtime'))
+    return cachedCloudbaseApp
   }
 
-  const cloudbaseModule = await import('@cloudbase/js-sdk') as unknown as CloudbaseModule
-  const cloudbase = cloudbaseModule.default ?? cloudbaseModule
-  if (!cloudbase.init)
-    throw new Error('@cloudbase/js-sdk does not expose init()')
-
   cachedCloudbaseEnv = env
-  cachedCloudbaseAuth = cloudbase.init({
-    auth: { detectSessionInUrl: false },
-    env,
-    region: 'ap-shanghai',
-  }).auth({ persistence: 'session' })
+  cachedCloudbaseApp = (async () => {
+    const cloudbaseModule = await import('@cloudbase/js-sdk') as unknown as CloudbaseModule
+    const cloudbase = cloudbaseModule.default ?? cloudbaseModule
+    if (!cloudbase.init)
+      throw new Error('@cloudbase/js-sdk does not expose init()')
+
+    return cloudbase.init({
+      auth: { detectSessionInUrl: false },
+      env,
+      region: 'ap-shanghai',
+    })
+  })()
+  cachedCloudbaseApp.catch(() => {
+    cachedCloudbaseApp = undefined
+  })
+  return cachedCloudbaseApp
+}
+
+async function getCloudbaseAuth(env: string): Promise<CloudbaseAuthClient> {
+  const app = await getCloudbaseApp(env)
+  cachedCloudbaseAuth ??= app.auth({ persistence: 'session' })
   return cachedCloudbaseAuth
+}
+
+/** The database of the same CloudBase app that holds the SSO session. */
+export async function getCloudbaseDatabase(env: string): Promise<CloudbaseDatabase> {
+  // Initialise auth first so database requests carry the signed-in session.
+  await getCloudbaseAuth(env)
+  const app = await getCloudbaseApp(env)
+  return app.database()
 }
 
 async function readAuthenticatedAccount(auth: CloudbaseAuthClient): Promise<YunlefunAccount | null> {

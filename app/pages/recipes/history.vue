@@ -2,7 +2,7 @@
 import type { RecipeItem } from '~/types'
 import { Dialog } from '@capacitor/dialog'
 import dayjs from 'dayjs'
-import { recipeHistories } from '~/composables/store/history'
+import { clearRecipeHistories, recipeHistories, removeRecipeHistory } from '~/composables/store/history'
 
 definePageMeta({
   layout: 'child',
@@ -19,13 +19,13 @@ async function clearAllHistory() {
     cancelButtonTitle: '取消',
   }).then((result) => {
     if (result.value) {
-      recipeHistories.value = []
+      clearRecipeHistories()
     }
   })
 }
 
 function clearOneHistory(history: typeof recipeHistories.value[0]) {
-  recipeHistories.value = recipeHistories.value.filter(h => h !== history)
+  removeRecipeHistory(history)
 }
 
 function openDishLink(dish: RecipeItem) {

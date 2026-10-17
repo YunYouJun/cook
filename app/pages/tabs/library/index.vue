@@ -5,7 +5,7 @@ import { watchDebounced } from '@vueuse/core'
 import { computed, onMounted, ref } from 'vue'
 import { useIndexedDB } from '~/composables/db'
 import { isFavorited, toggleFavorite } from '~/composables/store/favorite'
-import { recipeHistories } from '~/composables/store/history'
+import { addRecipeHistory } from '~/composables/store/history'
 import { db } from '~/utils/db'
 
 definePageMeta({
@@ -73,7 +73,7 @@ function onClear() {
 
 function openDishLink(dish: DbRecipeItem) {
   // keep history like DishTag did
-  recipeHistories.value.push({ recipe: dish, time: Date.now() })
+  addRecipeHistory(dish)
   const href = dish.link || `https://www.bilibili.com/video/${dish.bv}`
   window.open(href, '_blank')
 }
