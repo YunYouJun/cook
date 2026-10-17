@@ -4,6 +4,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "cook-v1",
   "compatibility_date": "2026-10-12",
+  "routes": [
+    { "pattern": "v1.cook.yunyoujun.cn", "custom_domain": true }
+  ],
   "assets": {
     "directory": "./.output/public",
     "not_found_handling": "404-page"
