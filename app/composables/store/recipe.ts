@@ -110,6 +110,20 @@ export const useRecipeStore = defineStore('recipe', () => {
     const text = keyword.value.trim()
     return recipes.value.filter(recipe => recipe.tools?.includes(curTool.value) && (!text || recipe.name.includes(text)))
   })
+  /** 「再补一样」建议：差一种的菜里缺得最多的食材，补上后能直接多做几道 */
+  const unlockSuggestions = computed(() => {
+    const counts = new Map<string, number>()
+    for (const match of recipeMatches.value) {
+      const [missing] = match.missingStuff
+      if (match.missingStuff.length === 1 && missing)
+        counts.set(missing, (counts.get(missing) ?? 0) + 1)
+    }
+    return [...counts]
+      .filter(([, count]) => count >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([name, count]) => ({ name, count }))
+  })
   const resultCount = computed(() => selectedStuff.value.length ? recipeMatches.value.length : toolRecipes.value.length)
   const recipesLength = computed(() => recipes.value.length)
 
@@ -143,6 +157,7 @@ export const useRecipeStore = defineStore('recipe', () => {
     addStuff,
     recipeMatches,
     toolRecipes,
+    unlockSuggestions,
     resultCount,
     clickTool,
   }

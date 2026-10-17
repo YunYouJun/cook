@@ -38,6 +38,21 @@ describe('recipe interaction', () => {
     expect(store.resultCount).toBe(1)
   })
 
+  it('suggests the missing ingredient that completes the most recipes', async () => {
+    const store = useRecipeStore()
+    await db.recipes.bulkAdd([
+      { name: '腊肠焖饭', stuff: ['腊肠', '米'], tools: ['电饭煲'] },
+      { name: '土豆焖饭', stuff: ['土豆', '米'], tools: ['电饭煲'] },
+    ])
+    await store.loadRecipes()
+    store.addStuff('土豆')
+    store.addStuff('腊肠')
+    // 腊肠饭、土豆腊肠饭、腊肠焖饭、土豆焖饭 all wait only for 米.
+    expect(store.unlockSuggestions).toEqual([{ name: '米', count: 4 }])
+    store.addStuff('米')
+    expect(store.unlockSuggestions).toEqual([])
+  })
+
   it('clears ingredients, tool and filters together on reset', () => {
     const store = useRecipeStore()
     store.addStuff('土豆')
