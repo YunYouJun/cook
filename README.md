@@ -9,7 +9,27 @@
 
 - 存档站与新版是不同域名（不同 origin），浏览器本地保存的收藏、历史、已选食材等数据**不会**迁移到新版。
 - 已移除 GTM 统计、PWA/Service Worker 与 `server/` 接口；页面带 `noindex` 与指向新版的 canonical。
-- 构建（纯静态）：`pnpm install && pnpm build:static`（pnpm 9.15.4，Node 20+，本地以 Node 24 验证），产物目录 `.output/public`；部署到 Cloudflare（Worker `cook-v1`）：`npx wrangler deploy`。
+- 构建（纯静态）：`pnpm install && pnpm build:static`（pnpm 9.15.4，Node 20+，本地以 Node 24 验证），产物目录 `.output/public`。
+
+### 部署
+
+托管在 Cloudflare 的 [Workers 静态资源](https://developers.cloudflare.com/workers/static-assets/)（即 Cloudflare 新版 Pages），Worker 名为 `cook-v1`，配置见 [`wrangler.jsonc`](./wrangler.jsonc)：
+
+- 没有服务端代码，只托管 `.output/public` 里的静态文件；静态资源请求免费，不计入 Worker 调用次数。
+- 自定义域名 `v1.cook.yunyoujun.cn` 写在 `routes` 里，部署时会自动创建 DNS 记录；`workers.dev` 子域名未启用。
+- 未知路径返回 `404.html`（`not_found_handling: "404-page"`）；`/random` 这类路径会 307 跳转到带斜杠的 `/random/`。
+- `public/_headers` 为 `/_nuxt/*` 设置长期缓存。
+
+为什么不用经典 Pages 项目：新版 wrangler 的 `pages project create` 默认就会建成 Workers 静态资源，Cloudflare 也推荐新项目使用这种方式；存档站不需要 Git 自动构建和分支预览，配置放在仓库里，重新部署只需一条命令。
+
+重新部署（需要先 `wrangler login`；如果账号下有多个 Cloudflare 账户，要用 `CLOUDFLARE_ACCOUNT_ID` 指定）：
+
+```bash
+pnpm install && pnpm build:static
+npx wrangler deploy
+```
+
+> 注意：在 `.claude/worktrees/*` 这类嵌在其他 Nuxt 4 仓库内部的目录里构建会失败（Nuxt 3.15 会解析到上层目录的 `nuxt`），请在独立的 clone 中构建。
 
 ## 版本
 
