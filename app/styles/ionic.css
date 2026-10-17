@@ -38,3 +38,8 @@
 html {
   /* --ion-safe-area-top: 0px; */
 }
+
+/* 云乐坊 App 容器：工具栏右侧给悬浮胶囊让位 */
+.in-yunle-app ion-header ion-toolbar {
+  --padding-end: max(var(--cook-host-capsule-inset, 0px), 4px);
+}

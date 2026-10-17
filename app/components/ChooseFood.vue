@@ -6,6 +6,7 @@ import { useEmojiAnimation } from '~/composables/animation'
 import { useIncompatibleFoods } from '~/composables/incompatible-foods'
 
 import { meat, staple, tools, vegetable } from '~/data/food'
+import { yunleHaptic } from '~/utils/yunleHost'
 
 const rStore = useRecipeStore()
 const app = useAppStore()
@@ -37,8 +38,10 @@ onMounted(() => {
 function toggleStuff(item: StuffItem, category = '', e?: Event) {
   rStore.toggleStuff(item.name)
 
-  if (curStuff.value.includes(item.name))
+  if (curStuff.value.includes(item.name)) {
     playAnimation(item.emoji, e?.currentTarget as Element | null)
+    void yunleHaptic('light')
+  }
 
   proxy.dataLayer.push({
     event: 'click',
