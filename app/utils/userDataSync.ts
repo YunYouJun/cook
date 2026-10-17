@@ -7,8 +7,6 @@ import {
   USER_DATA_VERSION,
 } from './userData'
 
-export const USER_DATA_COLLECTION = 'cook_user_data'
-
 export interface UserDataDocument extends UserData {
   version: typeof USER_DATA_VERSION
   updatedAt: number

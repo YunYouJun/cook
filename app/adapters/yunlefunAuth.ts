@@ -67,25 +67,16 @@ export interface CloudbaseAuthClient {
   signOut: () => Promise<{ error?: unknown } | void>
 }
 
-export interface CloudbaseDocumentRef {
-  get: () => Promise<{ code?: string, data?: unknown[], message?: string }>
-  set: (data: Record<string, unknown>) => Promise<{
-    code?: string
-    message?: string
-    updated?: number
-    upsertedId?: string | null
-  } | void>
-}
-
-export interface CloudbaseDatabase {
-  collection: (name: string) => {
-    doc: (id: string) => CloudbaseDocumentRef
-  }
-}
+/** Calls a cloud function with the signed-in session and resolves its `result`. */
+export type CloudbaseFunctionCaller = (name: string, data: Record<string, unknown>) => Promise<unknown>
 
 interface CloudbaseApp {
   auth: (options?: { persistence: 'session' }) => CloudbaseAuthClient
-  database: () => CloudbaseDatabase
+  callFunction: (options: { name: string, data: Record<string, unknown> }) => Promise<{
+    errCode?: number | string
+    errMsg?: string
+    result?: unknown
+  } | undefined>
 }
 
 interface CloudbaseModule {
@@ -279,12 +270,20 @@ async function getCloudbaseAuth(env: string): Promise<CloudbaseAuthClient> {
   return cachedCloudbaseAuth
 }
 
-/** The database of the same CloudBase app that holds the SSO session. */
-export async function getCloudbaseDatabase(env: string): Promise<CloudbaseDatabase> {
-  // Initialise auth first so database requests carry the signed-in session.
+/** Call a cloud function on the same CloudBase app that holds the SSO session. */
+export async function callCloudbaseFunction(
+  env: string,
+  name: string,
+  data: Record<string, unknown>,
+): Promise<unknown> {
+  // Initialise auth first so the call carries the signed-in session.
   await getCloudbaseAuth(env)
   const app = await getCloudbaseApp(env)
-  return app.database()
+  const response = await app.callFunction({ name, data })
+  // A missing result means the call itself failed (not deployed, crashed, …).
+  if (!response || response.result === undefined)
+    throw new Error(`CloudBase function ${name} failed: ${response?.errCode ?? response?.errMsg ?? 'no result'}`)
+  return response.result
 }
 
 async function readAuthenticatedAccount(auth: CloudbaseAuthClient): Promise<YunlefunAccount | null> {

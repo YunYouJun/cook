@@ -1,0 +1,18 @@
+{
+  "version": "2.0",
+  "envId": "yunlefun-8g7ybcxc7345c490",
+  "$schema": "https://framework-1258016615.tcloudbaseapp.com/schema/latest.json",
+  "functionRoot": "./cloudfunctions",
+  "functions": [
+    {
+      "name": "cook-user-data",
+      "timeout": 10,
+      "runtime": "Nodejs18.15",
+      "memorySize": 256,
+      "installDependency": true,
+      "handler": "index.main",
+      "envVariables": {},
+      "ignore": ["*.local", "node_modules"]
+    }
+  ]
+}

@@ -1,13 +1,11 @@
-import type { CloudbaseDatabase, CloudbaseDocumentRef } from '../app/adapters/yunlefunAuth'
 import type { RecipeItem } from '../app/types'
 import type { DbRecipeItem } from '../app/utils/db'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createCloudbaseUserDataRemote } from '../app/adapters/userData'
+import { createCloudbaseUserDataRemote, USER_DATA_FUNCTION } from '../app/adapters/userData'
 import { favoriteEntries, setFavoriteEntries, toggleFavorite } from '../app/composables/store/favorite'
 import { addRecipeHistory, clearRecipeHistories, recipeHistories, removeRecipeHistory } from '../app/composables/store/history'
 import { exportLocalUserData, importLocalUserData, localUserData } from '../app/composables/store/userData'
 import { userDataMeta } from '../app/composables/store/userDataMeta'
-import { USER_DATA_COLLECTION } from '../app/utils/userDataSync'
 
 vi.mock('@capacitor/browser', () => ({ Browser: {} }))
 vi.mock('@capacitor/preferences', () => ({ Preferences: {} }))
@@ -105,71 +103,39 @@ describe('localUserData', () => {
 })
 
 describe('createCloudbaseUserDataRemote', () => {
-  function createDatabase(ref: Partial<CloudbaseDocumentRef>) {
-    const collection = vi.fn(() => ({ doc: vi.fn(() => ref as CloudbaseDocumentRef) }))
-    const database = { collection } as unknown as CloudbaseDatabase
-    return { collection, database }
+  const document = {
+    version: 1 as const,
+    favorites: [{ id: 1, time: NOW }],
+    favoriteRemovals: [],
+    histories: [{ recipe: { name: 'A', stuff: [], tools: [] } as RecipeItem, time: NOW }],
+    historyRemovals: [],
+    historyClearedAt: 0,
+    updatedAt: NOW,
   }
 
-  it('reads the account document from the Cook collection', async () => {
-    const doc = { favorites: [] }
-    const { collection, database } = createDatabase({ get: async () => ({ data: [doc] }) })
-    const remote = createCloudbaseUserDataRemote(async () => database)
+  it('reads through the cook-user-data function without naming a uid', async () => {
+    const callFunction = vi.fn(async () => ({ ok: true, document: { favorites: [] } }))
+    const remote = createCloudbaseUserDataRemote(callFunction)
 
-    await expect(remote.read('u1')).resolves.toBe(doc)
-    expect(collection).toHaveBeenCalledWith(USER_DATA_COLLECTION)
+    await expect(remote.read('u1')).resolves.toEqual({ favorites: [] })
+    expect(callFunction).toHaveBeenCalledWith(USER_DATA_FUNCTION, { action: 'get' })
   })
 
-  it('returns null when the document does not exist', async () => {
-    const { database } = createDatabase({ get: async () => ({ data: [] }) })
-    await expect(createCloudbaseUserDataRemote(async () => database).read('u1')).resolves.toBeNull()
+  it('returns null when the account has no document', async () => {
+    const remote = createCloudbaseUserDataRemote(async () => ({ ok: true, document: null }))
+    await expect(remote.read('u1')).resolves.toBeNull()
   })
 
-  it('surfaces error codes from reads and writes', async () => {
-    const { database } = createDatabase({
-      get: async () => ({ code: 'DATABASE_PERMISSION_DENIED' }),
-      set: async () => ({ code: 'DATABASE_PERMISSION_DENIED' }),
-    })
-    const remote = createCloudbaseUserDataRemote(async () => database)
-    await expect(remote.read('u1')).rejects.toThrow('DATABASE_PERMISSION_DENIED')
-    await expect(remote.write('u1', {
-      version: 1,
-      favorites: [],
-      favoriteRemovals: [],
-      histories: [{ recipe: { name: 'A', stuff: [], tools: [] } as RecipeItem, time: NOW }],
-      historyRemovals: [],
-      historyClearedAt: 0,
-      updatedAt: NOW,
-    })).rejects.toThrow('DATABASE_PERMISSION_DENIED')
+  it('writes the whole document', async () => {
+    const callFunction = vi.fn(async () => ({ ok: true, updatedAt: NOW }))
+    await createCloudbaseUserDataRemote(callFunction).write('u1', document)
+    expect(callFunction).toHaveBeenCalledWith(USER_DATA_FUNCTION, { action: 'set', document })
   })
 
-  it('treats a write that touched nothing as a failure', async () => {
-    const { database } = createDatabase({ set: async () => ({ updated: 0, upsertedId: null }) })
-    const remote = createCloudbaseUserDataRemote(async () => database)
-    await expect(remote.write('u1', {
-      version: 1,
-      favorites: [],
-      favoriteRemovals: [],
-      histories: [],
-      historyRemovals: [],
-      historyClearedAt: 0,
-      updatedAt: NOW,
-    })).rejects.toThrow('not applied')
-  })
-
-  it('writes the whole document with set()', async () => {
-    const set = vi.fn(async () => ({}))
-    const { database } = createDatabase({ set })
-    const document = {
-      version: 1 as const,
-      favorites: [{ id: 1, time: NOW }],
-      favoriteRemovals: [],
-      histories: [],
-      historyRemovals: [],
-      historyClearedAt: 0,
-      updatedAt: NOW,
-    }
-    await createCloudbaseUserDataRemote(async () => database).write('u1', document)
-    expect(set).toHaveBeenCalledWith(document)
+  it('surfaces function failures', async () => {
+    const remote = createCloudbaseUserDataRemote(async () => ({ ok: false, code: 'LOGIN_REQUIRED' }))
+    await expect(remote.read('u1')).rejects.toThrow('LOGIN_REQUIRED')
+    await expect(remote.write('u1', document)).rejects.toThrow('LOGIN_REQUIRED')
+    await expect(createCloudbaseUserDataRemote(async () => null).read('u1')).rejects.toThrow('unknown')
   })
 })

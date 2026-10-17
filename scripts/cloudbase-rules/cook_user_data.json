@@ -2,6 +2,5 @@
   "action": "updateResourcePermission",
   "resourceType": "noSqlDatabase",
   "resourceId": "cook_user_data",
-  "permission": "CUSTOM",
-  "securityRule": "{\"read\":\"auth.uid != null && doc._id == auth.uid\",\"create\":\"auth.uid != null && auth.loginType != 'ANONYMOUS'\",\"update\":\"auth.uid != null && auth.loginType != 'ANONYMOUS' && doc._id == auth.uid\",\"delete\":\"auth.uid != null && doc._id == auth.uid\"}"
+  "permission": "ADMINONLY"
 }

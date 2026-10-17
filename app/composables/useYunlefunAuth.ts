@@ -1,4 +1,4 @@
-import type { CloudbaseDatabase, NativeYunlefunAuthorizationAdapter } from '~/adapters/yunlefunAuth'
+import type { NativeYunlefunAuthorizationAdapter } from '~/adapters/yunlefunAuth'
 import type {
   YunlefunAuthController,
   YunlefunAuthSnapshot,
@@ -7,10 +7,10 @@ import { App } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
 import { Capacitor } from '@capacitor/core'
 import {
+  callCloudbaseFunction,
   createCloudbaseIdentityAdapter,
   createNativeYunlefunAuthorizationAdapter,
   createWebYunlefunAuthorizationAdapter,
-  getCloudbaseDatabase,
 } from '~/adapters/yunlefunAuth'
 import { stripNativeSsoCallbackHash } from '~/utils/nativeSso'
 import { createYunlefunAuthController } from '~/utils/yunlefunAuth'
@@ -69,18 +69,18 @@ export function useYunlefunAuth() {
     publishSnapshot(snapshot)
   }
 
-  /** The CloudBase database bound to the signed-in session. */
-  async function getDatabase(): Promise<CloudbaseDatabase> {
+  /** Call a CloudBase cloud function as the signed-in account. */
+  async function callFunction(name: string, data: Record<string, unknown>): Promise<unknown> {
     if (!cloudbaseEnv)
       throw new Error('CloudBase is not configured')
-    return getCloudbaseDatabase(cloudbaseEnv)
+    return callCloudbaseFunction(cloudbaseEnv, name, data)
   }
 
   return {
     account: computed(() => snapshot.value.account),
     configurationMessage: readonly(configurationMessage),
     errorMessage: computed(() => snapshot.value.errorMessage),
-    getDatabase,
+    callFunction,
     initialize,
     isAuthenticated,
     isConfigured,

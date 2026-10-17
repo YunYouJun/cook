@@ -2,7 +2,7 @@ import type { UserData } from '../app/utils/userData'
 import type { UserDataDocument, UserDataLocal, UserDataRemote } from '../app/utils/userDataSync'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createEmptyUserData } from '../app/utils/userData'
-import { createUserDataSyncScheduler, syncUserData, USER_DATA_COLLECTION, UserDataSyncError } from '../app/utils/userDataSync'
+import { createUserDataSyncScheduler, syncUserData, UserDataSyncError } from '../app/utils/userDataSync'
 
 const NOW = 1_800_000_000_000
 
@@ -173,17 +173,13 @@ describe('createUserDataSyncScheduler', () => {
   })
 })
 
-describe('cook_user_data security rule', () => {
-  it('targets the sync collection and only lets the owner touch their document', async () => {
+describe('cook_user_data permission', () => {
+  it('keeps the collection admin-only so only the cloud function can access it', async () => {
+    const { createRequire } = await import('node:module')
+    const fn = createRequire(import.meta.url)('../cloudfunctions/cook-user-data/index.js') as { _internal: { COLLECTION: string } }
     const { default: rule } = await import('../scripts/cloudbase-rules/cook_user_data.json')
-    expect(rule.resourceId).toBe(USER_DATA_COLLECTION)
-    expect(rule.permission).toBe('CUSTOM')
-    const securityRule = JSON.parse(rule.securityRule) as Record<string, string>
-    expect(Object.keys(securityRule).sort()).toEqual(['create', 'delete', 'read', 'update'])
-    // create rules cannot read doc.*: the document does not exist yet.
-    expect(securityRule.create).not.toContain('doc.')
-    expect(securityRule.create).toContain('auth.loginType != \'ANONYMOUS\'')
-    for (const action of ['read', 'update', 'delete'])
-      expect(securityRule[action]).toContain('doc._id == auth.uid')
+    expect(rule.resourceId).toBe(fn._internal.COLLECTION)
+    expect(rule.permission).toBe('ADMINONLY')
+    expect(rule).not.toHaveProperty('securityRule')
   })
 })

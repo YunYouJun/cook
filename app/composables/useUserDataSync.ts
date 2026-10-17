@@ -40,7 +40,7 @@ export function useUserDataSync() {
 
     const auth = useYunlefunAuth()
     const uid = computed(() => auth.isAuthenticated.value ? auth.account.value?.uid ?? '' : '')
-    const remote = createCloudbaseUserDataRemote(auth.getDatabase)
+    const remote = createCloudbaseUserDataRemote(auth.callFunction)
 
     // Local writes made by a sync round must not schedule another round.
     let applyingRemote = false
