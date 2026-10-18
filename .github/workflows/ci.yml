@@ -77,4 +77,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run convert
       - run: pnpm run validate
+      - name: Check recipe ids against base branch
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --depth=1 origin ${{ github.base_ref }}
+          pnpm run validate --base FETCH_HEAD
       - run: pnpm run test

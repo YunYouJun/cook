@@ -9,8 +9,9 @@ import { namespace } from '~/constants'
 export function useRandomRecipe(total: Ref<number>) {
   const randomRecipes = useStorage<(DbRecipeItem | undefined)[]>(`${namespace}:random:recipes`, [])
   async function random() {
-    const length = await db.recipes.count()
-    const randomArr = generateRandomArray(length, total.value)
+    // id 可能不连续（菜谱删除后留空），按实际存在的主键抽样
+    const ids = await db.recipes.toCollection().primaryKeys()
+    const randomArr = generateRandomArray(ids.length, Math.min(total.value, ids.length)).map(i => ids[i]!)
     const result = await db.recipes.bulkGet(randomArr)
     if (result)
       randomRecipes.value = result.filter(item => !!item)

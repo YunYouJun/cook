@@ -9,7 +9,7 @@ const dict: RecipeDictionary = {
 }
 
 function recipe(partial: Partial<RecipeItem>): RecipeItem {
-  return { name: '番茄炒蛋', stuff: ['番茄', '鸡蛋'], bv: 'BV1234567890', difficulty: '简单', methods: ['炒'], tools: ['一口大锅'], ...partial }
+  return { id: 0, name: '番茄炒蛋', stuff: ['番茄', '鸡蛋'], bv: 'BV1234567890', difficulty: '简单', methods: ['炒'], tools: ['一口大锅'], ...partial }
 }
 
 function messages(recipes: RecipeItem[], level: 'error' | 'warning' = 'error') {
@@ -42,13 +42,43 @@ describe('validateRecipes', () => {
   })
 
   it('warns on duplicates without failing', () => {
-    expect(messages([recipe({}), recipe({})])).toEqual([])
-    expect(messages([recipe({}), recipe({})], 'warning')[0]).toContain('第 2 行重复')
-    expect(messages([recipe({}), recipe({ bv: 'BV0987654321' })], 'warning')[0]).toContain('同名')
+    expect(messages([recipe({}), recipe({ id: 1 })])).toEqual([])
+    expect(messages([recipe({}), recipe({ id: 1 })], 'warning')[0]).toContain('第 2 行重复')
+    expect(messages([recipe({}), recipe({ id: 1, bv: 'BV0987654321' })], 'warning')[0]).toContain('同名')
   })
 
   it('counts missing optional fields', () => {
     const { stats } = validateRecipes([recipe({ difficulty: '', methods: [], bv: undefined })], dict)
     expect(stats).toEqual({ total: 1, missingDifficulty: 1, missingMethods: 1, missingVideo: 1 })
+  })
+
+  it('requires unique ids', () => {
+    expect(messages([recipe({ id: undefined })])[0]).toContain('缺少 id')
+    expect(messages([recipe({}), recipe({ name: '炒饭', bv: 'BV0987654321' })])[0]).toContain('id 0 与第 2 行重复')
+  })
+})
+
+describe('validateRecipes with base', () => {
+  const base = [recipe({ id: 0 }), recipe({ id: 1, name: '炒饭', bv: 'BV0987654321' })]
+  const check = (recipes: RecipeItem[]) => validateRecipes(recipes, dict, { base }).issues
+
+  it('allows renames and new ids', () => {
+    expect(check([recipe({ name: '西红柿炒蛋' }), base[1]!, recipe({ id: 2, name: '蛋汤', bv: 'BV1111111111' })])).toEqual([])
+  })
+
+  it('rejects giving an id to another recipe or reusing a deleted id', () => {
+    const errors = check([recipe({ id: 0, name: '蛋汤', bv: 'BV1111111111' })]).filter(i => i.level === 'error')
+    expect(errors[0]?.message).toContain('原来是「番茄炒蛋」')
+    expect(check([recipe({}), recipe({ id: 1, name: '蛋汤', bv: 'BV1111111111' })])[0]?.message).toContain('原来是「炒饭」')
+  })
+
+  it('rejects reusing the id of a deleted recipe', () => {
+    const withGap = [recipe({ id: 0 }), recipe({ id: 2, name: '炒饭', bv: 'BV0987654321' })]
+    const issues = validateRecipes([...withGap, recipe({ id: 1, name: '蛋汤', bv: 'BV1111111111' })], dict, { base: withGap }).issues
+    expect(issues[0]?.message).toContain('已删除菜谱的 id')
+  })
+
+  it('warns when a recipe is deleted', () => {
+    expect(check([recipe({})])[0]).toMatchObject({ level: 'warning', message: expect.stringContaining('删除了 id 1') })
   })
 })

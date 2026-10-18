@@ -49,6 +49,7 @@ metadata:
 | `tags`       | 标签                     | 懒人、下饭、广式                         |
 | `methods`    | 烹饪方式                 | 煲、炒、煮、蒸、烤、炸                   |
 | `tools`      | 所需厨具                 | 电饭煲、烤箱、空气炸锅、微波炉、一口大锅 |
+| `id`         | 菜谱固定编号             | 0                                        |
 
 > 视频教程链接格式：`https://www.bilibili.com/video/{bv}`
 
