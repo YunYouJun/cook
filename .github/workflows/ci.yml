@@ -76,4 +76,5 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm run convert
+      - run: pnpm run validate
       - run: pnpm run test

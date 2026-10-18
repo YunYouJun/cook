@@ -14,6 +14,8 @@
     "build:nuxt": "nuxt build",
     "build:android": "bash ./scripts/android/build.sh",
     "convert": "pnpm -C packages/cook run convert",
+    "validate": "tsx scripts/validate-recipes.ts",
+    "check:videos": "tsx scripts/check-video-links.ts",
     "fetch": "pnpm -C packages/cook run fetch",
     "dev": "nuxt dev",
     "dev:pwa": "VITE_PLUGIN_PWA=true nuxi dev",

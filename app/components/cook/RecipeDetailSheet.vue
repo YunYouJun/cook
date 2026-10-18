@@ -5,7 +5,7 @@ import { uniqueStuff } from '@yunyoujun/cook/recommend'
 import { isFavorited, toggleFavorite } from '~/composables/store/favorite'
 import { addRecipeHistory } from '~/composables/store/history'
 import { getEmojisFromStuff } from '~/utils'
-import { openRecipe } from '~/utils/recipe'
+import { getRecipeFeedbackLink, openRecipe } from '~/utils/recipe'
 import { yunleHaptic } from '~/utils/yunleHost'
 
 /**
@@ -97,6 +97,7 @@ function watchVideo() {
 
       <p class="cook-group-footer recipe-detail-note">
         食材来自菜谱记录，用量和调味以视频为准。
+        <a :href="getRecipeFeedbackLink(recipe)" target="_blank" rel="noreferrer">视频失效或信息不对？去反馈</a>
       </p>
     </ion-content>
   </ion-modal>
@@ -191,6 +192,11 @@ function watchVideo() {
 .recipe-detail-note {
   margin-top: 8px;
   padding-bottom: 32px;
+}
+.recipe-detail-note a {
+  display: block;
+  margin-top: 4px;
+  color: var(--ion-color-primary);
 }
 @keyframes recipe-detail-pop {
   0% {

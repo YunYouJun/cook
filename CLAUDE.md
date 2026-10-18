@@ -11,6 +11,7 @@ Cook (食用手册) is a Chinese recipe web/mobile app for finding recipes based
 ```bash
 pnpm install              # Install deps (auto-runs nuxt prepare via postinstall)
 pnpm convert              # Convert CSV recipe data → JSON (required before first run)
+pnpm validate             # Validate recipe.csv (ingredient/tool dictionary, values, video ids)
 pnpm dev                  # Dev server on http://localhost:3333
 pnpm lint                 # ESLint check (uses @antfu/eslint-config flat config)
 pnpm lint --fix           # Auto-fix lint issues
@@ -33,7 +34,9 @@ pnpm android              # Open in Android Studio
 
 ### Data Pipeline
 
-CSV source files (`app/data/recipe.csv`, `app/data/incompatible-foods.csv`) → `pnpm convert` (via `packages/cook` CLI) → JSON files (`app/data/recipe.json`, `app/data/incompatible-foods.json`) → consumed at runtime. The `pnpm fetch` command pulls fresh data from Feishu (飞书) API.
+CSV source files (`app/data/recipe.csv`, `app/data/incompatible-foods.csv`) → `pnpm convert` (via `packages/cook` CLI) → JSON files (`app/data/recipe.json`, `app/data/incompatible-foods.json`) → consumed at runtime. The `pnpm fetch` command pulls fresh data from Feishu (飞书) API. Data rules, validation and the feedback loop are in `docs/dev/data.md`; never delete or reorder existing CSV rows (favorites use the row index as id).
+
+Project decisions are recorded in `docs/decisions/` — read the relevant one before changing direction, and add a new record for significant decisions.
 
 ### Monorepo Structure (pnpm workspaces)
 

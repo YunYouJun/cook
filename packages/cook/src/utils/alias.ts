@@ -1,5 +1,5 @@
 /** 常见别名 → 数据库标准名 */
-const STUFF_ALIASES: Record<string, string> = {
+export const STUFF_ALIASES: Record<string, string> = {
   西红柿: '番茄',
   土豆丝: '土豆',
   洋芋: '土豆',
