@@ -50,7 +50,8 @@ PR 上 CI 还会运行 `pnpm validate --base <目标分支>`：同一个 id 的�
    - 在某组食材下点开了第几个结果（排得太靠后说明排序可以改进）。
 3. **失效巡检**：`Check Videos` workflow 每周一调用 B 站接口检查全部视频，把失效列表写进带 `dead-video` 标签的 issue（已有就更新）。本地可运行 `pnpm check:videos`。
 4. **AI 定期审查**：仓库里的 `recipe-data-review` skill（`skills/recipe-data-review/SKILL.md`）描述了完整流程：拉取应用内反馈和筛选信号、处理 `recipe-data` / `dead-video` issue、补全缺失字段、按评测结果优化筛选，跑校验，最后开一个 PR。它不绑定模型，Codex、Claude Code 或接了 DeepSeek 的 Agent 都能跑，在本地按计划执行即可，见下方「本地定时运行」。
-5. **合并发布**：维护者审核 PR，合并后照常构建发布，`Closes #n` 自动关闭 issue。
+5. **按主题补充**：`recipe-sourcing` skill（`skills/recipe-sourcing/SKILL.md`）描述了从 B 站、小红书等平台按主题搜罗菜谱的流程：网页搜索找 BV 号、逐个打开视频页核对、按数据规则追加并开 PR。
+6. **合并发布**：维护者审核 PR，合并后照常构建发布，`Closes #n` 自动关闭 issue。
 
 ### 本地定时运行
 
