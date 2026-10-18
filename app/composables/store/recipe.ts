@@ -6,6 +6,7 @@ import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { useIndexedDB } from '~/composables/db'
 import { defaultPantry, pantryOptions } from '~/data/pantry'
+import { trackCookEvent } from '~/utils/analytics'
 import { db } from '../../utils/db'
 import { useAppStore } from './app'
 
@@ -13,7 +14,6 @@ const namespace = 'cook'
 export type SearchMode = RecommendationMode
 
 export const useRecipeStore = defineStore('recipe', () => {
-  const { proxy } = useScriptGoogleTagManager()
   const { settings } = useAppStore()
   const indexedDB = useIndexedDB()
   const keyword = shallowRef('')
@@ -129,8 +129,7 @@ export const useRecipeStore = defineStore('recipe', () => {
 
   function clickTool(item: StuffItem) {
     toggleTools(item.name)
-    proxy.dataLayer.push({ event: 'click', category: `tool_${item.name}`, action: 'click_tool', label: '工具' })
-    proxy.dataLayer.push({ event: 'click_tool', action: item.name })
+    trackCookEvent('click_tool')
   }
 
   onMounted(loadRecipes)

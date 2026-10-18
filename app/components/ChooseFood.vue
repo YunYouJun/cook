@@ -4,6 +4,7 @@ import type { StuffItem } from '~/types'
 import { useEmojiAnimation } from '~/composables/animation'
 import { useIncompatibleFoods } from '~/composables/incompatible-foods'
 import { meat, staple, tools, vegetable } from '~/data/food'
+import { trackCookEvent } from '~/utils/analytics'
 import { yunleHaptic } from '~/utils/yunleHost'
 
 const props = defineProps<{
@@ -24,7 +25,6 @@ onMounted(() => {
 })
 
 const { playAnimation } = useEmojiAnimation(computed(() => unref(props.flightTarget)))
-const { proxy } = useScriptGoogleTagManager()
 
 const sections = [
   { title: '蔬菜', category: 'vegetable', items: vegetable },
@@ -45,8 +45,7 @@ function toggleStuff(item: StuffItem, category: string, e: Event) {
     void yunleHaptic('light')
   }
 
-  proxy.dataLayer.push({ event: 'click', category: `${category}_${item.name}`, action: 'click_stuff', label: '食材' })
-  proxy.dataLayer.push({ event: 'click_stuff', action: item.name })
+  trackCookEvent('click_stuff')
 }
 
 function clickTool(item: StuffItem) {
