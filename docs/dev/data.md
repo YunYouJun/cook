@@ -43,8 +43,28 @@ pnpm validate --json   # 输出 JSON，供 AI / 脚本使用
 
 1. **用户反馈**：菜谱详情底部的「视频失效或信息不对？去反馈」打开预填好菜名和视频的 Issue 表单（`.github/ISSUE_TEMPLATE/recipe.yml`），自动带上 `recipe-data` 标签。
 2. **失效巡检**：`Check Videos` workflow 每周一调用 B 站接口检查全部视频，把失效列表写进带 `dead-video` 标签的 issue（已有就更新）。本地可运行 `pnpm check:videos`。
-3. **AI 处理**：维护者给 issue 打上 `ai-fix` 标签，`Recipe AI` workflow 让 Claude 按上面的规则修改 CSV、跑 `pnpm validate`，然后在 issue 里回复改动并附上 PR 链接。只有能打标签的人才能触发，PR 由人审核合并。需要在仓库 Secrets 中配置 `ANTHROPIC_API_KEY`。
-4. **合并发布**：PR 合并后照常构建发布，`Closes #n` 自动关闭 issue。
+3. **AI 定期审查**：仓库里的 `recipe-data-review` skill（`skills/recipe-data-review/SKILL.md`）描述了完整流程：处理 `recipe-data` / `dead-video` issue、补全缺失字段、跑校验，最后开一个 PR。它不绑定模型，Codex、Claude Code 或接了 DeepSeek 的 Agent 都能跑，在本地按计划执行即可，见下方「本地定时运行」。
+4. **合并发布**：维护者审核 PR，合并后照常构建发布，`Closes #n` 自动关闭 issue。
+
+### 本地定时运行
+
+skill 通过软链接暴露给不同 Agent：`.agents/skills/`（Codex）、`.claude/skills/`（Claude Code）、`.codebuddy/skills/`。需要本机装好并登录 `gh`。
+
+```bash
+# Codex
+codex exec --full-auto "使用 recipe-data-review skill 做一次菜谱数据审查"
+
+# DeepSeek：用支持自定义 API 地址的 Agent（如 Claude Code 按 DeepSeek 文档配置 ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN）
+claude -p "使用 recipe-data-review skill 做一次菜谱数据审查" --permission-mode acceptEdits
+```
+
+每周跑一次即可，例如 crontab（周一 21:00，放在每周视频巡检之后）：
+
+```cron
+0 21 * * 1 cd ~/repos/cook && codex exec --full-auto "使用 recipe-data-review skill 做一次菜谱数据审查" >> ~/.cook-review.log 2>&1
+```
+
+Agent 只开 PR，不合并；没有改动时不开 PR。
 
 ## 性能
 

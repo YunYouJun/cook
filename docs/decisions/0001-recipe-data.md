@@ -27,9 +27,20 @@
 
 - `pnpm validate` 在 CI 中校验食材、厨具词典、取值和视频号格式。
 - 每周巡检 B 站视频，失效列表汇总到一个 issue。
-- 详情页反馈入口和菜谱 Issue 表单；维护者打 `ai-fix` 标签后由 Claude 起草修改 PR。
+- 详情页反馈入口和菜谱 Issue 表单。
+- AI 审查做成仓库内的 `recipe-data-review` skill，由维护者在本地用 Codex / DeepSeek 等定期运行，只开 PR。不放在 GitHub Actions 里，避免 API Key 进仓库 Secrets，也不绑定某一家模型。
 
-待定：数据源是否从飞书迁回仓库。倾向迁回仓库，飞书仅作为批量编辑工具（编辑后导出 CSV 提 PR）。若继续以飞书为源，需要加一个定时 `pnpm fetch` 并开 PR 的 workflow，飞书凭据放进 Actions Secrets，且飞书表格需要同步本次的 21 处修正，否则下次 fetch 会覆盖。
+待定：数据源是否从飞书迁回仓库。倾向迁回仓库，不新开飞书表格（多一份数据只会多一处冲突）。迁移时：
+
+1. 飞书表格设为只读，表格顶部插入归档说明（见下）。
+2. `build:full` 不再调用 `pnpm fetch`；`fetch` 命令保留，仅用于对比历史数据。
+3. 需要批量编辑时，用飞书 / Excel 打开 `recipe.csv`，改完提 PR，CI 校验。
+
+归档说明文字：
+
+> 本表已于 YYYY-MM-DD 停止维护，仅作历史参考。菜谱数据已迁移到 GitHub：https://github.com/YunYouJun/cook/blob/main/app/data/recipe.csv 。新增或纠错请在应用内点「去反馈」，或到 https://github.com/YunYouJun/cook/issues/new?template=recipe.yml 提交。
+
+若继续以飞书为源，需要加一个定时 `pnpm fetch` 并开 PR 的 workflow，飞书凭据放进 Actions Secrets，且飞书表格需要同步本次的 21 处修正，否则下次 fetch 会覆盖。
 
 ## 影响
 
