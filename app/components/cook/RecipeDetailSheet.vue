@@ -35,6 +35,7 @@ const groups = computed(() => {
     { label: '已有', items: match.matchedStuff, tone: 'have' },
     { label: '还缺', items: match.missingStuff, tone: 'missing' },
     { label: '常备调料', items: match.pantryStuff, tone: 'neutral' },
+    { label: '还能加', items: match.optionalStuff, tone: 'neutral' },
   ].filter(group => group.items.length)
 })
 
