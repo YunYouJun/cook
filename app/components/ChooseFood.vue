@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { MaybeElementRef } from '@vueuse/core'
 import type { StuffItem } from '~/types'
+import { METHOD_GROUPS } from '@yunyoujun/cook/recommend'
 import { useEmojiAnimation } from '~/composables/animation'
 import { useIncompatibleFoods } from '~/composables/incompatible-foods'
 import { meat, staple, tools, vegetable } from '~/data/food'
@@ -82,6 +83,16 @@ function clickTool(item: StuffItem) {
       />
     </IngredientSection>
 
+    <IngredientSection title="做法（可选）" :note="rStore.methodGroups.length ? '只看这些做法' : ''">
+      <IngredientChip
+        v-for="group in METHOD_GROUPS"
+        :key="group.label"
+        :label="group.label"
+        :selected="rStore.methodGroups.includes(group.label)"
+        @click="rStore.toggleMethodGroup(group.label)"
+      />
+    </IngredientSection>
+
     <h2 class="cook-group-header">
       调料和忌口
     </h2>
@@ -97,6 +108,11 @@ function clickTool(item: StuffItem) {
         <ion-note slot="end" class="choose-food-pantry-value">
           {{ rStore.selectedAvoid.length ? rStore.selectedAvoid.join('、') : '无' }}
         </ion-note>
+      </ion-item>
+      <ion-item>
+        <ion-toggle v-model="rStore.noSpicy" justify="space-between">
+          不吃辣
+        </ion-toggle>
       </ion-item>
     </ion-list>
 
