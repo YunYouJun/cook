@@ -5,14 +5,14 @@
 ```
 飞书电子表格 ──pnpm fetch──▶ app/data/recipe.csv ──pnpm convert──▶ recipe.json / 分片 ──▶ IndexedDB ──▶ 筛选
                                     ▲
-               Issue 表单 / PR / AI ─┘   CI：pnpm validate     每周：pnpm check:videos
+          应用内反馈 / Issue / AI PR ┘   CI：pnpm validate     每周：pnpm check:videos
 ```
 
 `app/data/recipe.csv` 是构建时实际使用的数据。数据源以后放在哪里见 [方案记录 0001](/decisions/0001-recipe-data)。
 
 ## 数据规则
 
-列为 `name,stuff,bv,difficulty,tags,methods,tools,`，行尾保留逗号。
+列为 `name,stuff,bv,difficulty,tags,methods,tools,id`。
 
 | 字段          | 规则                                                                                   |
 | ------------- | -------------------------------------------------------------------------------------- |
@@ -22,10 +22,11 @@
 | difficulty    | 简单 / 普通 / 困难，或留空                                                             |
 | methods、tags | 自由填写                                                                               |
 | tools         | 只能使用 `app/data/food.ts` 里的厨具名                                                 |
+| id            | 必填，非负整数且唯一；新菜谱用当前最大 id + 1                                          |
 
 单元格内多个值用顿号「、」分隔，不要用逗号或斜杠。
 
-**不要删除或调整已有行的顺序。** 收藏按行号记录（`app/utils/db.ts` 用行号作为 id，收藏存的是这个 id），删一行会让之后所有菜谱的收藏错位。新菜谱追加到末尾；重复或失效的菜谱先保留，等有了稳定 id 再清理。
+**id 一旦发布就不能修改或复用。** 收藏、用户反馈和筛选信号都按 id 记录（`app/utils/db.ts` 用它作 IndexedDB 主键）。可以改菜名、换视频，也可以调整行的顺序；删除一道菜只会让收藏了它的用户丢失这一条，其他菜不受影响。被删掉的 id 不要再给新菜用。
 
 ## 校验
 
@@ -34,17 +35,22 @@ pnpm validate          # 有错误时退出码为 1，CI 中会在对应行标�
 pnpm validate --json   # 输出 JSON，供 AI / 脚本使用
 ```
 
-错误会让 CI 失败：未知食材或厨具、分隔符错误、难度取值不对、视频号格式不对。
+错误会让 CI 失败：缺 id 或 id 重复、未知食材或厨具、分隔符错误、难度取值不对、视频号格式不对。
 警告只做提示：同名菜谱、完全重复的行。同时会统计缺难度、缺做法的比例。
+
+PR 上 CI 还会运行 `pnpm validate --base <目标分支>`：同一个 id 的菜名和视频都变了（像是把 id 挪给了另一道菜）或复用了已删除的 id 会报错，删除菜谱会给出警告。
 
 想用新的食材，先在 `app/data/food.ts` 里加上，再在菜谱里使用。
 
 ## 反馈闭环
 
-1. **用户反馈**：菜谱详情底部的「视频失效或信息不对？去反馈」打开预填好菜名和视频的 Issue 表单（`.github/ISSUE_TEMPLATE/recipe.yml`），自动带上 `recipe-data` 标签。
-2. **失效巡检**：`Check Videos` workflow 每周一调用 B 站接口检查全部视频，把失效列表写进带 `dead-video` 标签的 issue（已有就更新）。本地可运行 `pnpm check:videos`。
-3. **AI 定期审查**：仓库里的 `recipe-data-review` skill（`skills/recipe-data-review/SKILL.md`）描述了完整流程：处理 `recipe-data` / `dead-video` issue、补全缺失字段、跑校验，最后开一个 PR。它不绑定模型，Codex、Claude Code 或接了 DeepSeek 的 Agent 都能跑，在本地按计划执行即可，见下方「本地定时运行」。
-4. **合并发布**：维护者审核 PR，合并后照常构建发布，`Closes #n` 自动关闭 issue。
+1. **用户反馈**：菜谱详情底部点「反馈一下」，选问题类型（视频打不开、食材或厨具不对、难度或做法不对、其他）即可提交，不需要 GitHub，也不强制登录。数据进 CloudBase 的 `cook-feedback` 云函数；提交失败时引导用户去 GitHub Issue 表单（`.github/ISSUE_TEMPLATE/recipe.yml`，已预填菜名和视频）。
+2. **筛选信号**：应用匿名记录两类聚合数据，只有食材组合、厨具、模式和菜谱 id，不含账号：
+   - 停在一组食材上却没有任何结果（说明缺这类菜，或别名没对上）；
+   - 在某组食材下点开了第几个结果（排得太靠后说明排序可以改进）。
+3. **失效巡检**：`Check Videos` workflow 每周一调用 B 站接口检查全部视频，把失效列表写进带 `dead-video` 标签的 issue（已有就更新）。本地可运行 `pnpm check:videos`。
+4. **AI 定期审查**：仓库里的 `recipe-data-review` skill（`skills/recipe-data-review/SKILL.md`）描述了完整流程：拉取应用内反馈和筛选信号、处理 `recipe-data` / `dead-video` issue、补全缺失字段、按评测结果优化筛选，跑校验，最后开一个 PR。它不绑定模型，Codex、Claude Code 或接了 DeepSeek 的 Agent 都能跑，在本地按计划执行即可，见下方「本地定时运行」。
+5. **合并发布**：维护者审核 PR，合并后照常构建发布，`Closes #n` 自动关闭 issue。
 
 ### 本地定时运行
 
@@ -65,6 +71,25 @@ claude -p "使用 recipe-data-review skill 做一次菜谱数据审查" --permis
 ```
 
 Agent 只开 PR，不合并；没有改动时不开 PR。
+
+### 拉取反馈与筛选评测
+
+```bash
+pnpm feedback:pull   # 汇总到 .cook/feedback/summary.md，并更新 test/fixtures/search-eval.json
+pnpm eval:search     # 用真实信号评估当前排序：前 10 命中率、MRR、仍无结果的组合
+```
+
+`test/fixtures/search-eval.json` 是匿名聚合后的评测样例，会提交到仓库。AI 修改 `packages/cook/src/utils/alias.ts`（别名）或 `recommend.ts`（排序）时，必须在 PR 中写明修改前后的 `pnpm eval:search --json` 指标，且 `pnpm test` 通过。
+
+### CloudBase 配置（一次性）
+
+1. 在 CloudBase 控制台新建三个集合，权限都设为「仅管理端可读写」：`cook_recipe_feedback`、`cook_search_signals`、`cook_feedback_quota`。
+2. 部署云函数：`tcb fn deploy cook-feedback`（配置见 `cloudbaserc.json`）。
+3. 给 `cook-feedback` 设置环境变量 `COOK_FEEDBACK_EXPORT_TOKEN`（一串足够长的随机字符），并开启 HTTP 访问服务，得到一个访问地址。
+4. 让未登录用户也能调用 `cook-feedback`：在控制台开启匿名登录或允许未登录访问该函数。否则只有登录用户能提交，未登录用户会被引导去 GitHub。
+5. 本机 `.env` 填 `COOK_FEEDBACK_URL`（第 3 步的地址）和 `COOK_FEEDBACK_TOKEN`（同一个口令），之后就能 `pnpm feedback:pull`。
+
+云函数对每个设备（或账号）每天最多接受 200 次提交；同一个人对同一道菜的同一类问题每天只记一次。
 
 ## 性能
 

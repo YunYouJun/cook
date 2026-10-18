@@ -45,6 +45,7 @@ export default defineConfig({
           items: [
             { text: '说明', link: '/decisions/' },
             { text: '0001 菜谱数据', link: '/decisions/0001-recipe-data' },
+            { text: '0002 反馈与固定 id', link: '/decisions/0002-feedback-and-ids' },
           ],
         },
       ],

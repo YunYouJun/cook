@@ -42,3 +42,6 @@ skills/**/*.zip
 
 # Python cache
 __pycache__/
+
+# Pulled user feedback (pnpm feedback:pull)
+.cook/
