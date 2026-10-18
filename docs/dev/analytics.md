@@ -23,6 +23,8 @@ NUXT_PUBLIC_CLARITY_DOMAINS=cook.yunyoujun.cn,cook.yunle.fun
 
 原 Google Tag Manager 配置已移除；不再加载 Umami。前端切换不会取消已有 Vercel 或数据库资源的账单。
 
+旧版 PWA 的 Workbox 可能持续返回 2025 年缓存页面。`public/sw.js` 保留原脚本地址，接管后注销旧 worker 并刷新受控页面，不删除 localStorage、IndexedDB 或用户菜谱。即使关闭 PWA 模块，也不要删除这个迁移脚本，否则老访客可能无法收到新页面和统计代码。
+
 ## 事件与回放
 
 | 事件          | 操作           |
