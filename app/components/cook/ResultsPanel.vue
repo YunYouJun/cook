@@ -42,6 +42,8 @@ const detentOffsets = computed<Record<Detent, number>>(() => ({
 const detent = ref<Detent>('collapsed')
 const offset = ref(0)
 const dragging = ref(false)
+/** 首次量好尺寸之前不做过渡，否则冷启动时弹层会从完全展开滑到收起 */
+const settled = ref(false)
 
 function measure() {
   const page = pageEl.value
@@ -95,6 +97,7 @@ useResizeObserver(pageEl, measure)
 onMounted(() => {
   pageEl.value = panelRef.value?.closest('.ion-page') as HTMLElement | null
   measure()
+  requestAnimationFrame(() => requestAnimationFrame(() => settled.value = true))
   if (!panelRef.value)
     return
   gesture = createGesture({
@@ -210,7 +213,7 @@ const bodyOpacity = computed(() => Math.min(1, Math.max(0, (sheetHeight.value - 
 const sheetStyle = computed(() => ({
   'height': `${sheetHeight.value}px`,
   'transform': `translate3d(0, ${offset.value}px, 0)`,
-  'transition': dragging.value || reducedMotion.value === 'reduce' ? 'none' : undefined,
+  'transition': !settled.value || dragging.value || reducedMotion.value === 'reduce' ? 'none' : undefined,
   '--sheet-visible': `${sheetHeight.value - offset.value}px`,
 }))
 </script>
