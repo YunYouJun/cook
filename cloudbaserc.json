@@ -13,6 +13,16 @@
       "handler": "index.main",
       "envVariables": {},
       "ignore": ["*.local", "node_modules"]
+    },
+    {
+      "name": "cook-feedback",
+      "timeout": 10,
+      "runtime": "Nodejs18.15",
+      "memorySize": 256,
+      "installDependency": true,
+      "handler": "index.main",
+      "envVariables": {},
+      "ignore": ["*.local", "node_modules"]
     }
   ]
 }

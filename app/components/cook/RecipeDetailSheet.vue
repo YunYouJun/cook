@@ -1,13 +1,16 @@
 <script lang="ts" setup>
 import type { RecipeMatch } from '@yunyoujun/cook'
 import type { RecipeItem } from '~/types'
+import { actionSheetController, alertController, toastController } from '@ionic/vue'
 import { uniqueStuff } from '@yunyoujun/cook/recommend'
 import { isFavorited, toggleFavorite } from '~/composables/store/favorite'
 import { addRecipeHistory } from '~/composables/store/history'
 import { getEmojisFromStuff } from '~/utils'
 import { trackCookEvent } from '~/utils/analytics'
 import { isCustomRecipe } from '~/utils/customRecipe'
-import { getRecipeLink, openRecipe } from '~/utils/recipe'
+import { promptText } from '~/utils/dialog'
+import { feedbackKinds } from '~/utils/feedback'
+import { getRecipeFeedbackLink, getRecipeLink, openRecipe } from '~/utils/recipe'
 import { yunleHaptic } from '~/utils/yunleHost'
 
 /**
@@ -51,6 +54,57 @@ function onFavorite() {
     return
   toggleFavorite(props.recipe)
   void yunleHaptic(favorited.value ? 'success' : 'light')
+}
+
+const feedback = useRecipeFeedback()
+
+/** 选择问题类型后直接提交；提交不了时引导去 GitHub 填表 */
+async function onFeedback() {
+  const recipe = props.recipe
+  if (!recipe)
+    return
+  if (typeof recipe.id !== 'number') {
+    window.open(getRecipeFeedbackLink(recipe), '_blank')
+    return
+  }
+
+  const sheet = await actionSheetController.create({
+    header: '这道菜有什么问题？',
+    buttons: [
+      ...feedbackKinds.map(item => ({ text: item.label, data: item.kind })),
+      { text: '取消', role: 'cancel' },
+    ],
+  })
+  await sheet.present()
+  const { data: kind, role } = await sheet.onDidDismiss()
+  if (role === 'cancel' || !kind)
+    return
+
+  let note = ''
+  if (kind === 'other') {
+    const text = await promptText({ header: '具体是什么问题？', placeholder: '比如：用量不对、步骤有误', okText: '提交' })
+    if (text === undefined)
+      return
+    note = text
+  }
+
+  try {
+    await feedback.report({ recipeId: recipe.id, recipeName: recipe.name, kind, note })
+    void yunleHaptic('success')
+    const toast = await toastController.create({ message: '收到了，谢谢反馈', duration: 1800, position: 'top' })
+    await toast.present()
+  }
+  catch {
+    const alert = await alertController.create({
+      header: '暂时没能提交',
+      message: '可以到 GitHub 填写反馈表单，菜名和视频已经帮你填好。',
+      buttons: [
+        { text: '取消', role: 'cancel' },
+        { text: '去填写', handler: () => { window.open(getRecipeFeedbackLink(recipe), '_blank') } },
+      ],
+    })
+    await alert.present()
+  }
 }
 
 function watchVideo() {
@@ -123,7 +177,15 @@ function watchVideo() {
       </section>
 
       <p class="cook-group-footer recipe-detail-note">
-        {{ custom ? '这是你自己添加的菜谱，只保存在这台设备上。' : '食材来自菜谱记录，用量和调味以视频为准。' }}
+        <template v-if="custom">
+          这是你自己添加的菜谱，只保存在这台设备上。
+        </template>
+        <template v-else>
+          食材来自菜谱记录，用量和调味以视频为准。
+          <button type="button" class="recipe-detail-feedback" @click="onFeedback">
+            视频打不开或信息不对？反馈一下
+          </button>
+        </template>
       </p>
     </ion-content>
   </ion-modal>
@@ -227,6 +289,15 @@ function watchVideo() {
 .recipe-detail-note {
   margin-top: 8px;
   padding-bottom: 32px;
+}
+.recipe-detail-feedback {
+  display: block;
+  margin: 4px auto 0;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  color: var(--ion-color-primary);
+  font: inherit;
 }
 @keyframes recipe-detail-pop {
   0% {

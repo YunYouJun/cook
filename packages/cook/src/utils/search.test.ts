@@ -74,6 +74,8 @@ describe('normalizeStuff', () => {
     expect(normalizeStuff(['排骨'])).toEqual(['猪肉'])
     expect(normalizeStuff(['肥牛'])).toEqual(['牛肉'])
     expect(normalizeStuff(['虾仁'])).toEqual(['虾'])
+    expect(normalizeStuff(['鲈鱼'])).toEqual(['鱼'])
+    expect(normalizeStuff(['三文鱼'])).toEqual(['鱼'])
   })
 
   it('should keep unknown names unchanged', () => {

@@ -63,8 +63,10 @@ export function parseRecipeCsv(csvData: string): RecipeItem[] {
     const tags = row[4] ? row[4].trim().split(SEP).filter(Boolean) : []
     const methods = row[5] ? (row[5].trim().split(SEP).filter(Boolean)) as RecipeItem['methods'] : []
     const tools = row[6] ? row[6].trim().split(SEP).filter(Boolean) : []
+    const id = parseRecipeId(row[7])
 
     recipes.push({
+      ...(id === undefined ? {} : { id }),
       name,
       stuff,
       bv: bv || undefined,
@@ -122,6 +124,29 @@ export function parseIncompatibleFoodsCsv(csvData: string): IncompatibleRule[] {
 /**
  * 将 RecipeItem[] 转为 CSV 字符串
  */
+/**
+ * 飞书表格没有 id 列：按「菜名 + 视频」沿用本地 CSV 中的 id，新菜谱接在最大 id 之后
+ */
+export function assignRecipeIds(recipes: RecipeItem[], existing: RecipeItem[]): RecipeItem[] {
+  const key = (r: RecipeItem) => `${r.name}\u0000${r.bv ?? ''}`
+  const known = new Map<string, number[]>()
+  for (const r of existing) {
+    if (r.id !== undefined)
+      known.set(key(r), [...(known.get(key(r)) ?? []), r.id])
+  }
+  let next = Math.max(-1, ...existing.map(r => r.id ?? -1)) + 1
+  return recipes.map((r) => {
+    const id = known.get(key(r))?.shift() ?? next++
+    return { ...r, id }
+  })
+}
+
+/** id 列必须是非负整数，否则视为缺失 */
+export function parseRecipeId(value: string | undefined): number | undefined {
+  const text = value?.trim() ?? ''
+  return /^\d+$/.test(text) ? Number(text) : undefined
+}
+
 export function recipesToCsv(recipes: RecipeItem[]): string {
   const headers = RECIPE_CSV_HEADERS.split(',')
 
@@ -133,6 +158,7 @@ export function recipesToCsv(recipes: RecipeItem[]): string {
     item.tags?.join(SEP) || '',
     item.methods?.join(SEP) || '',
     item.tools?.join(SEP) || '',
+    item.id ?? '',
   ])
 
   const csv = Papa.unparse({

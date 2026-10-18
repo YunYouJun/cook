@@ -1,0 +1,38 @@
+name: Check Videos
+
+on:
+  schedule:
+    - cron: '0 2 * * 1' # 每周一 10:00（北京时间）
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check bilibili videos
+        run: pnpm run check:videos --out report.md
+
+      - name: Update dead video issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create dead-video --color d73a4a --description '菜谱视频失效' --force
+          number=$(gh issue list --label dead-video --state open --json number --jq '.[0].number')
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body-file report.md
+          else
+            gh issue create --title '失效视频巡检' --label dead-video --label recipe-data --body-file report.md
+          fi

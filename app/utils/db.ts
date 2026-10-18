@@ -19,7 +19,7 @@ interface RecipeMetaSingle extends RecipeMetaBase {
 interface RecipeMetaChunked extends RecipeMetaBase {
   chunked: true
   chunkSize: number
-  chunks: { index: number, hash: string, count: number }[]
+  chunks: { index: number, hash: string, count: number, ids?: number[] }[]
 }
 
 type RecipeMeta = RecipeMetaSingle | RecipeMetaChunked
@@ -63,17 +63,23 @@ function saveChunkHashes(hashes: Record<string, string>) {
 }
 
 /**
- * 单文件模式：全量加载 recipe.json
+ * 主键使用 recipe.csv 的固定 id（旧数据没有 id 时退回到位置）；
+ * 菜谱删掉后 id 不再出现，收藏它的记录自然失效，其他菜谱的收藏不受影响
+ */
+function withId(item: RecipeItem, fallback: number): DbRecipeItem {
+  return { id: fallback, ...item }
+}
+
+/**
+ * 单文件模式：全量加载 recipe.json，先清空以去掉已删除的菜谱
  */
 async function loadSingleFile() {
   const { default: recipeData } = await import('../data/recipe.json')
 
-  return db.recipes.bulkPut(
-    (recipeData as RecipeItem[]).map((item, i) => ({
-      id: i,
-      ...item,
-    })),
-  )
+  return db.transaction('rw', db.recipes, async () => {
+    await db.recipes.clear()
+    await db.recipes.bulkPut((recipeData as RecipeItem[]).map(withId))
+  })
 }
 
 /**
@@ -106,15 +112,19 @@ async function loadChunks(meta: RecipeMetaChunked) {
       const offset = chunk.index * meta.chunkSize
 
       await db.recipes.bulkPut(
-        (chunkData as RecipeItem[]).map((item, i) => ({
-          id: offset + i,
-          ...item,
-        })),
+        (chunkData as RecipeItem[]).map((item, i) => withId(item, offset + i)),
       )
 
       newHashes[String(chunk.index)] = chunk.hash
     }),
   )
+
+  // 删除已不在任何分片里的菜谱
+  if (meta.chunks.every(chunk => chunk.ids)) {
+    const valid = meta.chunks.flatMap(chunk => chunk.ids!)
+    const stale = await db.recipes.where(':id').noneOf(valid).primaryKeys()
+    await db.recipes.bulkDelete(stale)
+  }
 
   saveChunkHashes(newHashes)
 }
