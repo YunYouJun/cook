@@ -10,7 +10,7 @@ const open = defineModel<boolean>('open', { required: true })
 
 const sections = [
   { title: '蔬菜', items: vegetable },
-  { title: '肉和蛋', items: meat.filter(item => !item.name.includes('Todo')) },
+  { title: '肉和蛋', items: meat },
   { title: '主食', items: staple },
 ]
 </script>

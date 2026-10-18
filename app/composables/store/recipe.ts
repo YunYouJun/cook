@@ -9,6 +9,7 @@ import { defaultPantry, pantryOptions } from '~/data/pantry'
 import { trackCookEvent } from '~/utils/analytics'
 import { db } from '../../utils/db'
 import { useAppStore } from './app'
+import { customRecipes } from './customRecipe'
 
 const namespace = 'cook'
 export type SearchMode = RecommendationMode
@@ -120,7 +121,10 @@ export const useRecipeStore = defineStore('recipe', () => {
     return loading
   }
 
-  const recipeMatches = computed(() => recommendRecipes(recipes.value, {
+  // 自己添加的菜谱排在前面：匹配程度相同时优先推荐
+  const allRecipes = computed<RecipeItem[]>(() => [...customRecipes.value, ...recipes.value])
+
+  const recipeMatches = computed(() => recommendRecipes(allRecipes.value, {
     stuff: selectedStuff.value,
     pantry: selectedPantry.value,
     tool: curTool.value,
@@ -135,7 +139,7 @@ export const useRecipeStore = defineStore('recipe', () => {
     if (selectedStuff.value.length || !curTool.value)
       return []
     const text = keyword.value.trim()
-    return recipes.value.filter(recipe => recipe.tools?.includes(curTool.value)
+    return allRecipes.value.filter(recipe => recipe.tools?.includes(curTool.value)
       && (!text || recipe.name.includes(text))
       && passesPreferences(recipe))
   })
@@ -143,7 +147,7 @@ export const useRecipeStore = defineStore('recipe', () => {
   const randomPool = computed(() => {
     if (selectedStuff.value.length)
       return recipeMatches.value.map(match => match.recipe)
-    return recipes.value.filter(recipe => (!curTool.value || recipe.tools?.includes(curTool.value))
+    return allRecipes.value.filter(recipe => (!curTool.value || recipe.tools?.includes(curTool.value))
       && passesPreferences(recipe))
   })
   /** 「再补一样」建议：差一种的菜里缺得最多的食材，补上后能直接多做几道 */
@@ -161,7 +165,7 @@ export const useRecipeStore = defineStore('recipe', () => {
       .map(([name, count]) => ({ name, count }))
   })
   const resultCount = computed(() => selectedStuff.value.length ? recipeMatches.value.length : toolRecipes.value.length)
-  const recipesLength = computed(() => recipes.value.length)
+  const recipesLength = computed(() => allRecipes.value.length)
 
   function clickTool(item: StuffItem) {
     toggleTools(item.name)
