@@ -1,6 +1,6 @@
 # 0003 原生 iOS App 与 monorepo 结构
 
-- 状态：提议中
+- 状态：已采纳
 - 日期：2026-10-18
 - 关联：调整 [#98](https://github.com/YunYouJun/cook/issues/98) 的阶段 4
 
