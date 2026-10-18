@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import process from 'node:process'
 import { describe, expect, it } from 'vitest'
 import { parseRecipeCsv } from '../packages/cook/src/utils/csv'
-import { CATCH_ALL_MIN_STUFF, hasAvoidedStuff, recommendRecipes } from '../packages/cook/src/utils/recommend'
+import { CATCH_ALL_MIN_STUFF, hasAvoidedStuff, matchesTaste, recommendRecipes } from '../packages/cook/src/utils/recommend'
 
 // Use tracked CSV so this regression test does not depend on generated JSON files.
 const recipes = parseRecipeCsv(readFileSync(resolve(process.cwd(), 'app/data/recipe.csv'), 'utf8'))
@@ -79,6 +79,14 @@ describe('local recipe dataset acceptance', () => {
     expect(hasAvoidedStuff(omelette, ['西红柿'])).toBe(true)
     expect(hasAvoidedStuff(omelette, [])).toBe(false)
     expect(hasAvoidedStuff(omelette, ['牛肉'])).toBe(false)
+  })
+
+  it('tags spicy and soup recipes and records a method for almost every recipe', () => {
+    const byName = (name: string) => recipes.find(r => r.name === name)!
+    expect(matchesTaste(byName('麻婆豆腐'), { noSpicy: true })).toBe(false)
+    expect(matchesTaste(byName('白萝卜汤'), { methodGroups: ['汤羹'] })).toBe(true)
+    expect(matchesTaste(byName('宫保鸡丁'), { methodGroups: ['炒菜'] })).toBe(true)
+    expect(recipes.filter(r => !r.methods?.length).length).toBeLessThan(recipes.length * 0.05)
   })
 
   it.each([[], ['火龙果']])('handles empty or unmatched selection %j', (...stuff) => {
