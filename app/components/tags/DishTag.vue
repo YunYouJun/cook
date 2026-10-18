@@ -4,26 +4,15 @@ import type { DbRecipeItem } from '~/utils/db'
 import { addRecipeHistory } from '~/composables/store/history'
 import { tools } from '~/data/food'
 import { getEmojisFromStuff } from '~/utils'
+import { trackCookEvent } from '~/utils/analytics'
 
 const props = defineProps<{
   dish: RecipeItem | DbRecipeItem
 }>()
 
-const { proxy } = useScriptGoogleTagManager()
-
-function triggerGtm(dish: RecipeItem) {
+function onRecipeClick(dish: RecipeItem) {
   addRecipeHistory(dish)
-
-  proxy.dataLayer.push({
-    event: 'click',
-    category: `dish_${dish.name}`,
-    action: 'click_recipe',
-    label: '跳转菜谱',
-  })
-  proxy.dataLayer.push({
-    event: 'click_dish',
-    action: dish.name,
-  })
+  trackCookEvent('click_dish')
 }
 
 const dishLabel = computed(() => {
@@ -37,7 +26,7 @@ const dishLabel = computed(() => {
     :href="dish.link || `https://www.bilibili.com/video/${dish.bv}`" target="_blank" class="dish-tag tag rounded" p="x-2"
     border="~ blue-200 dark:blue-800"
     bg="blue-300 opacity-20"
-    @click="triggerGtm(dish)"
+    @click="onRecipeClick(dish)"
   >
     <span m="r-1" text="sm blue-700 dark:blue-200">
       <slot>{{ dishLabel }}</slot>

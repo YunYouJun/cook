@@ -83,6 +83,10 @@ pnpm convert
 
 ## 部署
 
+### 网站统计
+
+使用 Microsoft Clarity，复用 Cook 项目，通过 `NUXT_PUBLIC_CLARITY_PROJECT_ID` 和 `NUXT_PUBLIC_CLARITY_DOMAINS` 配置，无需部署统计服务器或数据库。显式设置空项目 ID 可关闭统计；静态站点须在构建前配置。详见 [网站统计](./docs/dev/analytics.md)。
+
 ### Docker
 
 ```bash

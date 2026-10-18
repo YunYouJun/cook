@@ -38,6 +38,9 @@ jobs:
         with:
           context: ./
           file: ./Dockerfile
+          build-args: |
+            NUXT_PUBLIC_CLARITY_PROJECT_ID=${{ vars.NUXT_PUBLIC_CLARITY_PROJECT_ID || 'ks1ebw03i5' }}
+            NUXT_PUBLIC_CLARITY_DOMAINS=${{ vars.NUXT_PUBLIC_CLARITY_DOMAINS || 'cook.yunyoujun.cn,cook.yunle.fun' }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
