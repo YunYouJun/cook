@@ -1,7 +1,7 @@
 import type { RecommendationMode } from '@yunyoujun/cook'
 import type { RecipeItem, StuffItem } from '~/types'
 import { StorageSerializers, useStorage } from '@vueuse/core'
-import { recommendRecipes, uniqueStuff } from '@yunyoujun/cook/recommend'
+import { hasAvoidedStuff, recommendRecipes, uniqueStuff } from '@yunyoujun/cook/recommend'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { useIndexedDB } from '~/composables/db'
@@ -23,9 +23,12 @@ export const useRecipeStore = defineStore('recipe', () => {
   const curTool = settings.keepLocalData ? useStorage(`${namespace}:tool`, '') : shallowRef('')
   const curMode = settings.keepLocalData ? useStorage<SearchMode>(`${namespace}:mode`, 'loose') : shallowRef<SearchMode>('loose')
   const pantry = settings.keepLocalData ? useStorage<string[]>(`${namespace}:pantry`, [...defaultPantry]) : ref([...defaultPantry])
+  // 忌口是个人偏好，和常备调料一样跨会话保留，「清空」不会动它
+  const avoid = settings.keepLocalData ? useStorage<string[]>(`${namespace}:avoid`, []) : ref<string[]>([])
 
   const selectedStuff = computed(() => uniqueStuff([...curStuff.value]))
   const selectedPantry = computed(() => uniqueStuff(pantry.value).filter(item => pantryOptions.includes(item)))
+  const selectedAvoid = computed(() => uniqueStuff(avoid.value))
 
   function toggleStuff(name: string) {
     const names = uniqueStuff([name])
@@ -49,6 +52,12 @@ export const useRecipeStore = defineStore('recipe', () => {
     pantry.value = selectedPantry.value.includes(name)
       ? selectedPantry.value.filter(item => item !== name)
       : [...selectedPantry.value, name]
+  }
+
+  function toggleAvoid(name: string) {
+    avoid.value = selectedAvoid.value.includes(name)
+      ? selectedAvoid.value.filter(item => item !== name)
+      : [...selectedAvoid.value, name]
   }
 
   function clearFilters() {
@@ -102,13 +111,23 @@ export const useRecipeStore = defineStore('recipe', () => {
     tool: curTool.value,
     keyword: keyword.value,
     mode: curMode.value,
+    avoid: selectedAvoid.value,
   }))
   /** 只选了厨具、还没选食材时，列出用这个厨具能做的菜（保留原来经典视图的用法） */
   const toolRecipes = computed(() => {
     if (selectedStuff.value.length || !curTool.value)
       return []
     const text = keyword.value.trim()
-    return recipes.value.filter(recipe => recipe.tools?.includes(curTool.value) && (!text || recipe.name.includes(text)))
+    return recipes.value.filter(recipe => recipe.tools?.includes(curTool.value)
+      && (!text || recipe.name.includes(text))
+      && !hasAvoidedStuff(recipe, selectedAvoid.value))
+  })
+  /** 「吃什么」随机的候选：选了食材就从匹配结果里抽，否则按厨具和忌口从全部菜谱里抽 */
+  const randomPool = computed(() => {
+    if (selectedStuff.value.length)
+      return recipeMatches.value.map(match => match.recipe)
+    return recipes.value.filter(recipe => (!curTool.value || recipe.tools?.includes(curTool.value))
+      && !hasAvoidedStuff(recipe, selectedAvoid.value))
   })
   /** 「再补一样」建议：差一种的菜里缺得最多的食材，补上后能直接多做几道 */
   const unlockSuggestions = computed(() => {
@@ -142,6 +161,7 @@ export const useRecipeStore = defineStore('recipe', () => {
     curMode,
     selectedStuff,
     selectedPantry,
+    selectedAvoid,
     isSearching,
     loadError,
     loadRecipes,
@@ -151,12 +171,15 @@ export const useRecipeStore = defineStore('recipe', () => {
     togglePantry,
     clearPantry: () => { pantry.value = [] },
     resetPantry: () => { pantry.value = [...defaultPantry] },
+    toggleAvoid,
+    clearAvoid: () => { avoid.value = [] },
     toggleTools,
     reset,
     setMode,
     addStuff,
     recipeMatches,
     toolRecipes,
+    randomPool,
     unlockSuggestions,
     resultCount,
     clickTool,

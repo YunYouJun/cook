@@ -1,19 +1,20 @@
-import type { DbRecipeItem } from '~/utils/db'
+import type { RecipeItem } from '~/types'
 import { useStorage } from '@vueuse/core'
 import { namespace } from '~/constants'
 
 /**
- * 随机几道菜
+ * 随机几道菜：候选跟随首页选的食材、厨具和忌口（见 recipe store 的 randomPool）
  * @param total
  */
 export function useRandomRecipe(total: Ref<number>) {
-  const randomRecipes = useStorage<(DbRecipeItem | undefined)[]>(`${namespace}:random:recipes`, [])
+  const rStore = useRecipeStore()
+  const randomRecipes = useStorage<(RecipeItem | undefined)[]>(`${namespace}:random:recipes`, [])
+
   async function random() {
-    const length = await db.recipes.count()
-    const randomArr = generateRandomArray(length, total.value)
-    const result = await db.recipes.bulkGet(randomArr)
-    if (result)
-      randomRecipes.value = result.filter(item => !!item)
+    await rStore.loadRecipes()
+    const pool = rStore.randomPool
+    const indexes = generateRandomArray(pool.length, Math.min(total.value, pool.length))
+    randomRecipes.value = indexes.map(i => pool[i]).filter(item => !!item)
   }
 
   watch(total, () => {

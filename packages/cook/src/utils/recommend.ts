@@ -29,6 +29,8 @@ export interface RecommendationOptions {
   tool?: string
   keyword?: string
   mode?: RecommendationMode
+  /** 忌口：普通菜只要用到就排除，大杂烩只是不再建议加它 */
+  avoid?: string[]
 }
 
 /** Reuse the catalog aliases; split recorded separators, trim and deduplicate. */
@@ -40,11 +42,24 @@ function isCatchAll(requiredStuff: string[]): boolean {
   return requiredStuff.length >= CATCH_ALL_MIN_STUFF
 }
 
+/** 菜里有没有忌口的食材；大杂烩里的食材都是可选的，不算 */
+export function hasAvoidedStuff(recipe: RecipeItem, avoid: string[]): boolean {
+  if (!avoid.length)
+    return false
+  const requiredStuff = uniqueStuff(recipe.stuff)
+  if (isCatchAll(requiredStuff))
+    return false
+  const avoided = new Set(uniqueStuff(avoid))
+  return requiredStuff.some(item => avoided.has(item))
+}
+
 /** Only explicitly recorded ingredients are requirements. Names/tags are never parsed. */
 export function recommendRecipes(recipes: RecipeItem[], options: RecommendationOptions): RecipeMatch[] {
   const selected = new Set(uniqueStuff(options.stuff))
   const pantry = new Set(uniqueStuff(options.pantry ?? []))
   const keyword = options.keyword?.trim() ?? ''
+  const avoid = options.avoid ?? []
+  const avoided = new Set(uniqueStuff(avoid))
   if (!selected.size)
     return []
 
@@ -53,6 +68,8 @@ export function recommendRecipes(recipes: RecipeItem[], options: RecommendationO
       return []
     if (keyword && !recipe.name.includes(keyword))
       return []
+    if (hasAvoidedStuff(recipe, avoid))
+      return []
 
     const requiredStuff = uniqueStuff(recipe.stuff)
     const matchedStuff = requiredStuff.filter(item => selected.has(item))
@@ -60,7 +77,7 @@ export function recommendRecipes(recipes: RecipeItem[], options: RecommendationO
     const unownedStuff = requiredStuff.filter(item => !selected.has(item) && !pantry.has(item))
     const catchAll = isCatchAll(requiredStuff)
     const missingStuff = catchAll ? [] : unownedStuff
-    const optionalStuff = catchAll ? unownedStuff : []
+    const optionalStuff = catchAll ? unownedStuff.filter(item => !avoided.has(item)) : []
 
     // Pantry alone must not create an unrelated recommendation; empty records are unknown.
     if (!matchedStuff.length || missingStuff.length > 2)

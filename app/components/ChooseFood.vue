@@ -14,6 +14,7 @@ const props = defineProps<{
 const rStore = useRecipeStore()
 const selected = computed(() => rStore.selectedStuff)
 const pantryOpen = ref(false)
+const avoidOpen = ref(false)
 
 // 食物相克检测
 const { warningMessage, hasWarning, checkIncompatibility } = useIncompatibleFoods()
@@ -82,13 +83,19 @@ function clickTool(item: StuffItem) {
     </IngredientSection>
 
     <h2 class="cook-group-header">
-      调料
+      调料和忌口
     </h2>
     <ion-list :inset="true" class="choose-food-pantry">
       <ion-item :button="true" @click="pantryOpen = true">
         <ion-label>家里常备</ion-label>
         <ion-note slot="end" class="choose-food-pantry-value">
           {{ rStore.selectedPantry.length ? rStore.selectedPantry.join('、') : '未选择' }}
+        </ion-note>
+      </ion-item>
+      <ion-item :button="true" @click="avoidOpen = true">
+        <ion-label>忌口</ion-label>
+        <ion-note slot="end" class="choose-food-pantry-value">
+          {{ rStore.selectedAvoid.length ? rStore.selectedAvoid.join('、') : '无' }}
         </ion-note>
       </ion-item>
     </ion-list>
@@ -99,6 +106,13 @@ function clickTool(item: StuffItem) {
       @toggle="rStore.togglePantry"
       @clear="rStore.clearPantry"
       @reset="rStore.resetPantry"
+    />
+
+    <AvoidSheet
+      v-model:open="avoidOpen"
+      :selected="rStore.selectedAvoid"
+      @toggle="rStore.toggleAvoid"
+      @clear="rStore.clearAvoid"
     />
 
     <ion-toast
