@@ -16,6 +16,7 @@ export default defineConfig({
     nav: [
       { text: '使用指南', link: '/guide/getting-started' },
       { text: '开发文档', link: '/dev/cli' },
+      { text: '方案记录', link: '/decisions/' },
       { text: '应用', link: 'https://cook.yunyoujun.cn' },
     ],
 
@@ -34,6 +35,17 @@ export default defineConfig({
           items: [
             { text: 'Cook CLI', link: '/dev/cli' },
             { text: '移动应用', link: '/dev/app' },
+            { text: '菜谱数据', link: '/dev/data' },
+          ],
+        },
+      ],
+      '/decisions/': [
+        {
+          text: '方案记录',
+          items: [
+            { text: '说明', link: '/decisions/' },
+            { text: '0001 菜谱数据', link: '/decisions/0001-recipe-data' },
+            { text: '0002 反馈与固定 id', link: '/decisions/0002-feedback-and-ids' },
           ],
         },
       ],

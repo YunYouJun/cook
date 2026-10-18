@@ -1,7 +1,7 @@
 import type { RecipeItem } from '../types/index.js'
 import { describe, expect, it } from 'vitest'
 import { RECIPE_CSV_HEADERS } from './config.js'
-import { cleanBv, parseRecipeCsv, recipesToCsv } from './csv.js'
+import { assignRecipeIds, cleanBv, parseRecipeCsv, recipesToCsv } from './csv.js'
 
 describe('cleanBv', () => {
   it('should clean bilibili URL prefix', () => {
@@ -257,5 +257,28 @@ describe('cSV roundtrip consistency', () => {
     // Verify arrays don't contain empty strings
     expect(recipes[0]?.stuff.every(s => s.length > 0)).toBe(true)
     expect(recipes[0]?.tags?.every(t => t.length > 0)).toBe(true)
+  })
+})
+
+describe('recipe ids', () => {
+  it('parses the id column and writes it back', () => {
+    const csvData = `${RECIPE_CSV_HEADERS}
+番茄炒蛋,番茄、鸡蛋,BV1234567890,简单,,炒,一口大锅,7`
+    const recipes = parseRecipeCsv(csvData)
+    expect(recipes[0]?.id).toBe(7)
+    expect(recipesToCsv(recipes).trim().split('\n')[1]).toMatch(/,7$/)
+  })
+
+  it('keeps existing ids by name and video and appends new ones', () => {
+    const existing: RecipeItem[] = [
+      { id: 0, name: 'A', bv: 'BV1', stuff: [], tools: [] },
+      { id: 5, name: 'B', bv: 'BV2', stuff: [], tools: [] },
+    ]
+    const fetched: RecipeItem[] = [
+      { name: 'B', bv: 'BV2', stuff: [], tools: [] },
+      { name: 'C', bv: 'BV3', stuff: [], tools: [] },
+      { name: 'A', bv: 'BV1', stuff: [], tools: [] },
+    ]
+    expect(assignRecipeIds(fetched, existing).map(r => r.id)).toEqual([5, 6, 0])
   })
 })

@@ -77,8 +77,8 @@ pnpm convert
 ### CSV 结构
 
 ```csv
-name,stuff,bv,difficulty,tags,methods,tools,
-宫保鸡丁,鸡胸肉、花生米,BV1234567890,简单,川菜、家常菜,炒、煎,炒锅,
+name,stuff,bv,difficulty,tags,methods,tools,id
+宫保鸡丁,鸡胸肉、花生米,BV1234567890,简单,川菜、家常菜,炒、煎,炒锅,0
 ```
 
 字段说明：
@@ -90,6 +90,7 @@ name,stuff,bv,difficulty,tags,methods,tools,
 - `tags`: 标签列表（用 `、` 分隔）
 - `methods`: 烹饪方式（炒/煎/烘/炸，用 `、` 分隔）
 - `tools`: 所需工具（用 `、` 分隔）
+- `id`: 固定编号（非负整数，唯一；已发布的 id 不能修改或复用）
 
 ### JSON 结构
 

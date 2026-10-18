@@ -2,6 +2,10 @@ export type Difficulty = '简单' | '普通' | '困难'
 
 export interface RecipeItem {
   /**
+   * 固定编号，对应 recipe.csv 的 id 列；收藏和反馈都按它记录
+   */
+  id?: number
+  /**
    * 菜名
    */
   name: string

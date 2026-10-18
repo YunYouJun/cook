@@ -1,0 +1,46 @@
+name: 菜谱反馈 / 投稿
+description: 新增菜谱，或反馈视频失效、食材不对等问题
+title: '[菜谱] '
+labels: [recipe-data]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 类型
+      options:
+        - 新增菜谱
+        - 视频失效
+        - 食材 / 厨具不对
+        - 难度 / 做法不对
+        - 其他
+    validations:
+      required: true
+  - type: input
+    id: name
+    attributes:
+      label: 菜名
+      placeholder: 番茄炒蛋
+    validations:
+      required: true
+  - type: input
+    id: video
+    attributes:
+      label: B 站视频链接或 BV 号
+      description: 新增菜谱必填；反馈视频失效时可以附上替代视频
+      placeholder: https://www.bilibili.com/video/BV...
+  - type: input
+    id: stuff
+    attributes:
+      label: 主要食材
+      description: 用顿号分隔，尽量用应用里已有的食材名
+      placeholder: 番茄、鸡蛋
+  - type: input
+    id: tools
+    attributes:
+      label: 厨具
+      placeholder: 一口大锅
+  - type: textarea
+    id: detail
+    attributes:
+      label: 补充说明
+      description: 哪里不对、应该是什么

@@ -62,14 +62,14 @@ function convertRecipes() {
       fs.unlinkSync(recipeJsonFile)
     }
 
-    const chunks: { index: number, hash: string, count: number }[] = []
+    const chunks: { index: number, hash: string, count: number, ids: number[] }[] = []
     for (let i = 0; i < recipes.length; i += CHUNK_SIZE) {
       const chunkIndex = Math.floor(i / CHUNK_SIZE)
       const chunk = recipes.slice(i, i + CHUNK_SIZE)
       const content = JSON.stringify(chunk)
       const chunkFile = path.join(dataDir, `recipe-chunk-${chunkIndex}.json`)
       fs.writeFileSync(chunkFile, content)
-      chunks.push({ index: chunkIndex, hash: shortHash(content), count: chunk.length })
+      chunks.push({ index: chunkIndex, hash: shortHash(content), count: chunk.length, ids: chunk.map((r, j) => r.id ?? i + j) })
       consola.success(`Generated: ${chunkFile} (${chunk.length} recipes)`)
     }
 

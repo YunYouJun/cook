@@ -2,12 +2,12 @@ import type { RecipeItem } from '../types/index.js'
 import fs from 'node:fs'
 import consola from 'consola'
 import {
-  RECIPE_CSV_HEADERS,
+  FEISHU_RECIPE_HEADERS,
   recipeCsvFile,
   recipeJsonFile,
   SEP,
 } from '../utils/config.js'
-import { cleanBv, recipesToCsv } from '../utils/csv.js'
+import { assignRecipeIds, cleanBv, parseRecipeCsv, recipesToCsv } from '../utils/csv.js'
 import {
   createFeishuClient,
   getFeishuCredentials,
@@ -28,7 +28,7 @@ function cellStr(value: unknown): string {
  * 校验表头是否符合预期
  */
 function validateHeaders(headers: unknown[]): void {
-  const expected = RECIPE_CSV_HEADERS.split(',').filter(Boolean)
+  const expected = FEISHU_RECIPE_HEADERS.split(',')
   const actual = headers.map(h => cellStr(h))
 
   for (let i = 0; i < expected.length; i++) {
@@ -110,13 +110,16 @@ export async function runFetch() {
 
   consola.info(`解析到 ${recipes.length} 条菜谱数据`)
 
+  const existing = fs.existsSync(recipeCsvFile) ? parseRecipeCsv(fs.readFileSync(recipeCsvFile, 'utf-8')) : []
+  const withIds = assignRecipeIds(recipes, existing)
+
   // 6. 写入 CSV
-  const csvContent = recipesToCsv(recipes)
+  const csvContent = recipesToCsv(withIds)
   fs.writeFileSync(recipeCsvFile, csvContent, 'utf-8')
   consola.success(`写入 CSV: ${recipeCsvFile}`)
 
   // 7. 写入 JSON
-  fs.writeFileSync(recipeJsonFile, JSON.stringify(recipes), 'utf-8')
+  fs.writeFileSync(recipeJsonFile, JSON.stringify(withIds), 'utf-8')
   consola.success(`写入 JSON: ${recipeJsonFile}`)
 
   consola.success(`完成！共 ${recipes.length} 条菜谱`)
