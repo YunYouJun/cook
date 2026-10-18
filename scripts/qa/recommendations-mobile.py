@@ -22,8 +22,8 @@ CASES = [
     (['番茄', '鸡蛋'], [40, 72, 48], '微波炉版番茄鸡蛋汤', ['米'], ['面食', '香肠']),
     (['土豆'], [30, 30, 19], '烤箱版M记同款薯条', ['鸡肉'], ['香肠', '米']),
     (['腊肠', '米'], [6, 30, 26], '电饭煲版广式腊肠煲饭', ['胡萝卜'], ['猪肉', '土豆']),
-    (['鸡肉', '洋葱', '菌菇'], [62, 34, 25], '电饭煲版烧鸡', ['米'], ['胡萝卜', '土豆']),
-    (['牛肉', '番茄', '米'], [13, 55, 50], '电饭煲版番茄牛腩焖饭', ['猪肉'], ['土豆', '胡萝卜']),
+    (['鸡肉', '洋葱', '菌菇'], [68, 34, 25], '电饭煲版烧鸡', ['米'], ['胡萝卜', '土豆']),
+    (['牛肉', '番茄', '米'], [15, 55, 50], '电饭煲版番茄牛腩焖饭', ['猪肉'], ['土豆', '胡萝卜']),
 ]
 LABELS = ['食材齐全', '还差一种', '还差两种']
 report = {'tested_at': datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds'), 'url': BASE_URL, 'mobile': '390 × 844, touch, DPR 1', 'cases': [], 'checks': [], 'errors': []}
@@ -114,7 +114,7 @@ with sync_playwright() as p:
     add(page, ['西红柿', '鸡蛋'])
     expect(page.get_by_text('这些食材已经在篮子里了，不用重复添加。')).to_be_visible()
     see_results(page)
-    check_counts(page, [40, 71, 49])
+    check_counts(page, [40, 72, 48])
     page.get_by_role('button', name=re.compile('再看 6 道')).tap()
     expect(page.locator('.match-card')).to_have_count(12)
     report['checks'].append('Aliases / duplicates share one basket item and keep identical counts; pagination 6 → 12')
@@ -135,14 +135,14 @@ with sync_playwright() as p:
     page.get_by_role('button', name='恢复油、盐', exact=True).tap()
     expect(page.locator('.pantry-option[aria-pressed="true"]')).to_have_text(['✓ 油', '✓ 盐'])
     see_results(page)
-    check_counts(page, [40, 71, 49])
+    check_counts(page, [40, 72, 48])
     report['checks'].append('Pantry toggles, cancel all, restore defaults and refresh persistence work; absent condiments never change counts')
 
     page.locator('.filter-summary').tap()
     page.get_by_label('筛选菜名').fill('不存在的菜谱')
     expect(page.get_by_text('暂时没有符合条件的菜谱', exact=True)).to_be_visible()
     page.get_by_role('button', name='清除筛选，保留食材', exact=True).tap()
-    check_counts(page, [40, 71, 49])
+    check_counts(page, [40, 72, 48])
     page.get_by_label('匹配范围').select_option('survival')
     check_counts(page, [40, 0, 0])
     page.get_by_role('button', name='还差一种 0 道', exact=True).tap()
@@ -187,7 +187,7 @@ with sync_playwright() as p:
     clear(page)
     see_results(page)
     page.get_by_role('button', name='试试番茄 + 鸡蛋', exact=True).tap()
-    check_counts(page, [40, 71, 49])
+    check_counts(page, [40, 72, 48])
     page.locator('.ranking-help summary').tap()
     expect(page.get_by_text(re.compile('优先食材齐全，再看还差一种'))).to_be_visible()
     report['checks'].append('Individual removal, full clear, unmatched ingredient, example recovery and visible ranking explanation work')
