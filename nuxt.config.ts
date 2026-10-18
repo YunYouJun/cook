@@ -74,6 +74,8 @@ export default defineNuxtConfig({
 
   app: {
     head: {
+      // Mask replay text, including account details and user-created recipes.
+      bodyAttrs: { 'data-clarity-mask': 'true' },
       viewport: 'width=device-width,initial-scale=1',
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
@@ -113,6 +115,8 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
+      clarityProjectId: process.env.NUXT_PUBLIC_CLARITY_PROJECT_ID ?? 'ks1ebw03i5',
+      clarityDomains: process.env.NUXT_PUBLIC_CLARITY_DOMAINS ?? 'cook.yunyoujun.cn,cook.yunle.fun',
       yunlefunCloudbaseEnv: process.env.NUXT_PUBLIC_YUNLEFUN_CLOUDBASE_ENV || 'yunlefun-8g7ybcxc7345c490',
       yunlefunSsoClientId: process.env.NUXT_PUBLIC_YUNLEFUN_SSO_CLIENT_ID || 'cook-web',
       yunlefunSsoExchangeUrl: process.env.NUXT_PUBLIC_YUNLEFUN_SSO_EXCHANGE_URL || 'https://api.yunle.fun/sso-ticket',
@@ -195,14 +199,4 @@ export default defineNuxtConfig({
 
   // pwa,
 
-  /**
-   * @see https://scripts.nuxt.com/scripts/tracking/google-tag-manager
-   */
-  scripts: {
-    registry: {
-      googleTagManager: {
-        id: 'GTM-5FJSV46',
-      },
-    },
-  },
 })

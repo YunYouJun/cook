@@ -5,6 +5,7 @@ import { uniqueStuff } from '@yunyoujun/cook/recommend'
 import { isFavorited, toggleFavorite } from '~/composables/store/favorite'
 import { addRecipeHistory } from '~/composables/store/history'
 import { getEmojisFromStuff } from '~/utils'
+import { trackCookEvent } from '~/utils/analytics'
 import { openRecipe } from '~/utils/recipe'
 import { yunleHaptic } from '~/utils/yunleHost'
 
@@ -16,8 +17,6 @@ const props = defineProps<{
   match?: RecipeMatch
 }>()
 const open = defineModel<boolean>('open', { required: true })
-
-const { proxy } = useScriptGoogleTagManager()
 
 const stuff = computed(() => props.recipe ? uniqueStuff(props.recipe.stuff) : [])
 const thumb = computed(() => props.recipe?.tags?.includes('杂烩') ? '🍲' : getEmojisFromStuff(stuff.value)[0] ?? '🍽️')
@@ -53,8 +52,7 @@ function watchVideo() {
   if (!props.recipe)
     return
   addRecipeHistory(props.recipe)
-  proxy.dataLayer.push({ event: 'click', category: `dish_${props.recipe.name}`, action: 'click_recipe', label: '跳转菜谱' })
-  proxy.dataLayer.push({ event: 'click_dish', action: props.recipe.name })
+  trackCookEvent('click_dish')
   openRecipe(props.recipe)
 }
 </script>
