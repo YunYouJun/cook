@@ -53,6 +53,7 @@ export default defineConfig({
             { text: '0005 应用图标', link: '/decisions/0005-app-icon' },
             { text: '0006 iOS Bundle ID', link: '/decisions/0006-ios-bundle-id' },
             { text: '0007 AI 与整句识别', link: '/decisions/0007-ai-and-sentence-input' },
+            { text: '0008 iOS 统计与反馈', link: '/decisions/0008-ios-analytics' },
           ],
         },
       ],

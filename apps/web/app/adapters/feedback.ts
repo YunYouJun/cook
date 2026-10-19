@@ -20,6 +20,15 @@ export interface SearchSignal {
   rank?: number
 }
 
+export type AppFeedbackCategory = 'bug' | 'idea' | 'recipe' | 'other'
+
+/** Feedback about the app itself, not one recipe. */
+export interface AppFeedback {
+  category: AppFeedbackCategory
+  note: string
+  contact?: string
+}
+
 interface FunctionResult {
   code?: string
   ok?: boolean
@@ -37,7 +46,8 @@ export function createFeedbackRemote(callFunction: CloudbaseFunctionCaller, devi
   }
 
   return {
-    report: (report: RecipeReport) => call({ action: 'report', ...report }),
-    signal: (signal: SearchSignal) => call({ action: 'signal', ...signal }),
+    report: (report: RecipeReport) => call({ action: 'report', platform: 'web', ...report }),
+    signal: (signal: SearchSignal) => call({ action: 'signal', platform: 'web', ...signal }),
+    feedback: (feedback: AppFeedback) => call({ action: 'feedback', platform: 'web', ...feedback }),
   }
 }

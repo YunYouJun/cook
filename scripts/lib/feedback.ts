@@ -10,6 +10,20 @@ export interface FeedbackRow {
   reporter: string
   signedIn: boolean
   day: string
+  /** Missing on rows from before platforms were recorded: those are web. */
+  platform?: string
+  version?: string
+}
+
+/** General feedback about the app, from the web or iOS. */
+export interface AppFeedbackRow {
+  category: string
+  note: string
+  contact: string
+  platform: string
+  version: string
+  signedIn: boolean
+  day: string
 }
 
 export interface SignalRow {
@@ -20,6 +34,9 @@ export interface SignalRow {
   recipeId: number
   count: number
   rankSum: number
+  /** Missing on rows from before platforms were recorded: those are web. */
+  platform?: string
+  lastVersion?: string
 }
 
 /** A selection users made and the recipe they opened, for evaluating ranking. */
@@ -35,14 +52,31 @@ export interface EvalCase {
 
 const SIGNED_IN_WEIGHT = 2
 
+export function platformOf(row: { platform?: string }): string {
+  return row.platform || 'web'
+}
+
+/** Add up a count per platform, e.g. `{ web: 3, ios: 1 }`. */
+export function countByPlatform<T extends { platform?: string }>(rows: T[], count: (row: T) => number = () => 1): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const row of rows)
+    counts[platformOf(row)] = (counts[platformOf(row)] ?? 0) + count(row)
+  return counts
+}
+
+export function formatPlatforms(counts: Record<string, number>): string {
+  return Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)).map(([p, n]) => `${p} ${n}`).join(' / ') || '-'
+}
+
 export function summarizeReports(rows: FeedbackRow[]) {
-  const byRecipe = new Map<number, { recipeId: number, recipeName: string, score: number, kinds: Record<string, number>, notes: string[], reporters: Set<string> }>()
+  const byRecipe = new Map<number, { recipeId: number, recipeName: string, score: number, kinds: Record<string, number>, platforms: Record<string, number>, notes: string[], reporters: Set<string> }>()
   for (const row of rows) {
-    const item = byRecipe.get(row.recipeId) ?? { recipeId: row.recipeId, recipeName: row.recipeName, score: 0, kinds: {}, notes: [], reporters: new Set<string>() }
+    const item = byRecipe.get(row.recipeId) ?? { recipeId: row.recipeId, recipeName: row.recipeName, score: 0, kinds: {}, platforms: {}, notes: [], reporters: new Set<string>() }
     if (!item.reporters.has(`${row.reporter}|${row.kind}`)) {
       item.reporters.add(`${row.reporter}|${row.kind}`)
       item.score += row.signedIn ? SIGNED_IN_WEIGHT : 1
       item.kinds[row.kind] = (item.kinds[row.kind] ?? 0) + 1
+      item.platforms[platformOf(row)] = (item.platforms[platformOf(row)] ?? 0) + 1
     }
     if (row.note)
       item.notes.push(row.note)
@@ -57,7 +91,38 @@ function selectionKey(row: { stuff: string[], tool?: string, mode?: string }) {
   return [[...row.stuff].sort().join('、'), row.tool ?? '', row.mode ?? 'loose'].join('|')
 }
 
-/** Merge signals into one eval case per selection. */
+export interface PlatformSignals {
+  platform: string
+  /** Selections left with no results, counted each time. */
+  empty: number
+  opened: number
+  /** Mean position of opened results, 1 = first. */
+  meanRank: number | null
+}
+
+/** Search signals per platform: the web and iOS screens differ, so compare them side by side. */
+export function summarizeSignals(signals: SignalRow[]): PlatformSignals[] {
+  const byPlatform = new Map<string, { empty: number, opened: number, rankSum: number }>()
+  for (const s of signals) {
+    const item = byPlatform.get(platformOf(s)) ?? { empty: 0, opened: 0, rankSum: 0 }
+    if (s.type === 'empty') {
+      item.empty += s.count
+    }
+    else {
+      item.opened += s.count
+      item.rankSum += s.rankSum
+    }
+    byPlatform.set(platformOf(s), item)
+  }
+  return [...byPlatform].sort(([a], [b]) => a.localeCompare(b)).map(([platform, { empty, opened, rankSum }]) => ({
+    platform,
+    empty,
+    opened,
+    meanRank: opened ? Math.round((rankSum / opened + 1) * 10) / 10 : null,
+  }))
+}
+
+/** Merge signals into one eval case per selection, adding up web and iOS. */
 export function buildEvalCases(signals: SignalRow[]): EvalCase[] {
   const cases = new Map<string, EvalCase>()
   for (const s of signals) {
@@ -66,10 +131,16 @@ export function buildEvalCases(signals: SignalRow[]): EvalCase[] {
     if (s.type === 'empty')
       item.empty = (item.empty ?? 0) + s.count
     else
-      item.opened = [...(item.opened ?? []), { id: s.recipeId, count: s.count }].sort((a, b) => b.count - a.count || a.id - b.id)
+      item.opened = addOpened(item.opened ?? [], s.recipeId, s.count)
     cases.set(key, item)
   }
   return [...cases.values()].sort((a, b) => selectionKey(a).localeCompare(selectionKey(b)))
+}
+
+function addOpened(opened: { id: number, count: number }[], id: number, count: number) {
+  const same = opened.find(o => o.id === id)
+  const next = same ? opened.map(o => o === same ? { id, count: o.count + count } : o) : [...opened, { id, count }]
+  return next.sort((a, b) => b.count - a.count || a.id - b.id)
 }
 
 export interface EvalResult {
