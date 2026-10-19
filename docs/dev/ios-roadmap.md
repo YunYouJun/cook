@@ -18,7 +18,7 @@
 - [x] 共享用例补上相克判断（`incompatible.json`）和搜索（`search.json`）。
 - [x] `apps/ios/CookCore`（Swift Package）实现菜谱加载、推荐、搜索、相克判断，CI 在 Linux 上跑 `swift test`。
 - [ ] 收集到真实筛选信号后，把 `test/fixtures/search-eval.json` 也纳入共享用例。
-- [ ] 在 Mac 上用 Xcode 打开 CookCore，确认 iOS 17 / macOS 14 能编译、测试通过。
+- [x] 在 Mac 上用 Xcode 打开 CookCore，确认 iOS 17 / macOS 14 能编译、测试通过（Xcode 26，`swift test` 和 `xcodebuild test` 均通过）。
 
 验收：TS 和 Swift 跑同一份用例全部通过；CI 两边都跑（Swift 部分可先用 Linux 上的 `swift test`，或 macOS runner）。
 
