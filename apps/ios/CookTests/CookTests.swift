@@ -130,7 +130,9 @@ final class CookTests: XCTestCase {
         XCTAssertTrue(session.selectedStuff.contains("羊肉"))
         XCTAssertFalse(store.isCatalogStuff("羊肉"))
 
+        // 上面那句设了「炒菜」，和电饭煲凑不出菜，先清掉筛选
         session.clearStuff()
+        session.clearFilters()
         XCTAssertFalse(session.hasSelection)
         session.toggleTool("电饭煲")
         XCTAssertTrue(session.hasSelection, "只选厨具也能看结果")
