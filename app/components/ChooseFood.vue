@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { MaybeElementRef } from '@vueuse/core'
 import type { StuffItem } from '~/types'
-import { METHOD_GROUPS } from '@yunyoujun/cook/recommend'
+import { DIFFICULTY_LEVELS, METHOD_GROUPS } from '@yunyoujun/cook/recommend'
 import { useEmojiAnimation } from '~/composables/animation'
 import { useIncompatibleFoods } from '~/composables/incompatible-foods'
 import { meat, staple, tools, vegetable } from '~/data/food'
@@ -89,6 +89,16 @@ function clickTool(item: StuffItem) {
         :label="group.label"
         :selected="rStore.methodGroups.includes(group.label)"
         @click="rStore.toggleMethodGroup(group.label)"
+      />
+    </IngredientSection>
+
+    <IngredientSection title="难度（可选）" :note="rStore.difficulty.length ? '没标难度的菜会被隐藏' : ''">
+      <IngredientChip
+        v-for="level in DIFFICULTY_LEVELS"
+        :key="level"
+        :label="level"
+        :selected="rStore.difficulty.includes(level)"
+        @click="rStore.toggleDifficulty(level)"
       />
     </IngredientSection>
 

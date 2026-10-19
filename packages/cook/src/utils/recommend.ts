@@ -1,4 +1,4 @@
-import type { RecipeItem } from '../types/recipe'
+import type { Difficulty, RecipeItem } from '../types/recipe'
 import { normalizeStuff } from './alias'
 
 export type RecommendationMode = 'loose' | 'strict' | 'survival'
@@ -35,6 +35,8 @@ export interface RecommendationOptions {
   methodGroups?: string[]
   /** 不吃辣：排除打了「辣」标签的菜 */
   noSpicy?: boolean
+  /** 难度，选了多个时满足任意一个即可；没有记录难度的菜会被排除 */
+  difficulty?: Difficulty[]
 }
 
 /**
@@ -53,6 +55,8 @@ export const METHOD_GROUPS: { label: string, methods: string[], tags?: string[] 
 ]
 
 export const SPICY_TAG = '辣'
+
+export const DIFFICULTY_LEVELS: Difficulty[] = ['简单', '普通', '困难']
 
 /** Reuse the catalog aliases; split recorded separators, trim and deduplicate. */
 export function uniqueStuff(stuff: string[]): string[] {
@@ -78,9 +82,11 @@ function recipeMethods(recipe: RecipeItem): string[] {
   return ((recipe.methods ?? []) as string[]).flatMap(method => method.split(/[、/]/)).filter(Boolean)
 }
 
-/** 做法和口味筛选；没有记录做法的菜在选了做法分组时不会出现 */
-export function matchesTaste(recipe: RecipeItem, options: Pick<RecommendationOptions, 'methodGroups' | 'noSpicy'>): boolean {
+/** 做法、口味和难度筛选；没有记录做法或难度的菜在选了对应条件时不会出现 */
+export function matchesTaste(recipe: RecipeItem, options: Pick<RecommendationOptions, 'methodGroups' | 'noSpicy' | 'difficulty'>): boolean {
   if (options.noSpicy && recipe.tags?.includes(SPICY_TAG))
+    return false
+  if (options.difficulty?.length && !(recipe.difficulty && options.difficulty.includes(recipe.difficulty)))
     return false
   const groups = METHOD_GROUPS.filter(group => options.methodGroups?.includes(group.label))
   if (!groups.length)
