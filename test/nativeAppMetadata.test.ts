@@ -19,7 +19,7 @@ function readPngMetadata(path: string) {
 }
 
 describe('native app metadata', () => {
-  it('uses 食用手册 as the installed app name on iOS and Android', () => {
+  it('uses 云食册 on iOS and 食用手册 on Android', () => {
     const capacitorConfig = readFileSync(resolve(root, 'capacitor.config.ts'), 'utf8')
     const iosInfo = readFileSync(resolve(root, 'ios/App/App/Info.plist'), 'utf8')
     const androidStrings = readFileSync(
@@ -28,7 +28,7 @@ describe('native app metadata', () => {
     )
 
     expect(capacitorConfig).toContain('appName: \'食用手册\'')
-    expect(iosInfo).toContain('<string>食用手册</string>')
+    expect(iosInfo).toMatch(/<key>CFBundleDisplayName<\/key>\s*<string>云食册<\/string>/)
     expect(androidStrings).toContain('<string name="app_name">食用手册</string>')
     expect(androidStrings).toContain('<string name="title_activity_main">食用手册</string>')
   })

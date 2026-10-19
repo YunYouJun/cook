@@ -48,6 +48,7 @@ export default defineConfig({
             { text: '0001 菜谱数据', link: '/decisions/0001-recipe-data' },
             { text: '0002 反馈与固定 id', link: '/decisions/0002-feedback-and-ids' },
             { text: '0003 原生 iOS 与 monorepo', link: '/decisions/0003-native-ios-monorepo' },
+            { text: '0004 iOS App 命名', link: '/decisions/0004-ios-app-name' },
           ],
         },
       ],
