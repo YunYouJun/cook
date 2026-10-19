@@ -41,7 +41,9 @@ targets:
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: true
         UIBackgroundModes: [remote-notification]
-        UILaunchScreen: {}
+        # 启动屏用和做菜页一样的分组背景色（浅色 #F2F2F7、深色黑色），避免先白屏再变灰
+        UILaunchScreen:
+          UIColorName: LaunchBackground
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
