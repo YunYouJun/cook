@@ -109,10 +109,15 @@ function watchVideo() {
   trackCookEvent('click_dish')
   openRecipe(props.recipe)
 }
+
+function onPresented() {
+  if (open.value && props.recipe)
+    trackCookEvent('view_recipe_detail')
+}
 </script>
 
 <template>
-  <ion-modal :is-open="open" :breakpoints="[0, 0.62, 1]" :initial-breakpoint="0.62" @did-dismiss="open = false">
+  <ion-modal :is-open="open" :breakpoints="[0, 0.62, 1]" :initial-breakpoint="0.62" @did-present="onPresented" @did-dismiss="open = false">
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="end">

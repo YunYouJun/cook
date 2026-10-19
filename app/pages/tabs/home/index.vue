@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { RecipeMatch } from '@yunyoujun/cook'
 import type { RecipeItem } from '~/types'
+import { onIonViewDidEnter, onIonViewWillLeave } from '@ionic/vue'
 import { yunleHaptic } from '~/utils/yunleHost'
 
 definePageMeta({
@@ -12,6 +13,13 @@ useHead({
 })
 
 const rStore = useRecipeStore()
+const active = shallowRef(false)
+onIonViewDidEnter(() => {
+  active.value = true
+})
+onIonViewWillLeave(() => {
+  active.value = false
+})
 const panelRef = ref<{ $el: HTMLElement }>()
 const flightTarget = computed(() => panelRef.value?.$el)
 const contentRef = ref<{ $el: HTMLIonContentElement }>()
@@ -82,7 +90,7 @@ watchDebounced(
       <ChooseFood :flight-target="flightTarget" />
     </ion-content>
 
-    <ResultsPanel ref="panelRef" v-model:inset="panelInset" @scroll-top="scrollTop" @detail="openDetail" />
+    <ResultsPanel ref="panelRef" v-model:inset="panelInset" :active="active" @scroll-top="scrollTop" @detail="openDetail" />
     <RecipeDetailSheet v-model:open="detailOpen" :recipe="detail?.recipe" :match="detail?.match" />
   </ion-page>
 </template>

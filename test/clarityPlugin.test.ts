@@ -24,7 +24,7 @@ async function setup(projectId = 'ks1ebw03i5', path = '/') {
 }
 
 describe('clarity client integration', () => {
-  it('loads once after Nuxt is ready and forwards only the three business action names', async () => {
+  it('loads once after Nuxt is ready and forwards legacy and funnel action names', async () => {
     const { send, load, script, ready } = await setup()
     expect(script).toHaveBeenCalledExactlyOnceWith({
       id: 'ks1ebw03i5',
@@ -38,7 +38,23 @@ describe('clarity client integration', () => {
     trackCookEvent('click_stuff')
     trackCookEvent('click_tool')
     trackCookEvent('click_dish')
-    expect(send.mock.calls).toEqual([['event', 'click_stuff'], ['event', 'click_tool'], ['event', 'click_dish']])
+    trackCookEvent('view_cook')
+    trackCookEvent('select_ingredients')
+    trackCookEvent('view_results')
+    trackCookEvent('results_empty')
+    trackCookEvent('view_recipe_detail')
+    trackCookEvent('click_recipe_video')
+    expect(send.mock.calls).toEqual([
+      ['event', 'click_stuff'],
+      ['event', 'click_tool'],
+      ['event', 'click_dish'],
+      ['event', 'view_cook'],
+      ['event', 'select_ingredients'],
+      ['event', 'view_results'],
+      ['event', 'results_empty'],
+      ['event', 'view_recipe_detail'],
+      ['event', 'click_recipe_video'],
+    ])
   })
 
   it('skips disabled projects and direct auth callback entries', async () => {

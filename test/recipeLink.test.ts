@@ -1,7 +1,21 @@
-import { describe, expect, it } from 'vitest'
-import { getRecipeFeedbackLink, getRecipeLink } from '../app/utils/recipe'
+import { describe, expect, it, vi } from 'vitest'
+import { setCookEventTracker } from '../app/utils/analytics'
+import { getRecipeFeedbackLink, getRecipeLink, openRecipe } from '../app/utils/recipe'
 
 describe('getRecipeLink', () => {
+  it('records the video click before leaving, and analytics failures never block navigation', () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+    const send = vi.fn(() => {
+      throw new Error('blocked')
+    })
+    setCookEventTracker(send)
+    openRecipe({ bv: 'BV1xx' })
+    expect(send).toHaveBeenCalledExactlyOnceWith('click_recipe_video')
+    expect(open).toHaveBeenCalledExactlyOnceWith('https://www.bilibili.com/video/BV1xx', '_blank')
+    setCookEventTracker(() => {})
+    open.mockRestore()
+  })
+
   it('prefers the recorded link', () => {
     expect(getRecipeLink({ link: 'https://example.com/recipe', bv: 'BV1xx' })).toBe('https://example.com/recipe')
   })

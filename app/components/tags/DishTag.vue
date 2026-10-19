@@ -13,6 +13,7 @@ const props = defineProps<{
 function onRecipeClick(dish: RecipeItem) {
   addRecipeHistory(dish)
   trackCookEvent('click_dish')
+  trackCookEvent('click_recipe_video')
 }
 
 const dishLabel = computed(() => {

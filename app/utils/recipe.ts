@@ -1,4 +1,5 @@
 import type { RecipeItem } from '~/types'
+import { trackCookEvent } from './analytics'
 
 /**
  * 菜谱的做法链接：优先使用收录的链接，否则拼出 B 站视频地址
@@ -8,6 +9,7 @@ export function getRecipeLink(recipe: Pick<RecipeItem, 'link' | 'bv'>) {
 }
 
 export function openRecipe(recipe: Pick<RecipeItem, 'link' | 'bv'>) {
+  trackCookEvent('click_recipe_video')
   window.open(getRecipeLink(recipe), '_blank')
 }
 
