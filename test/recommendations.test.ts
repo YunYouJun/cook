@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import process from 'node:process'
 import { describe, expect, it } from 'vitest'
 import { parseRecipeCsv } from '../packages/cook/src/utils/csv'
-import { CATCH_ALL_MIN_STUFF, createRecipeRecommender, recommendRecipes } from '../packages/cook/src/utils/recommend'
+import { CATCH_ALL_MIN_STUFF, createRecipeRecommender, hasAvoidedStuff, matchesTaste, recommendRecipes } from '../packages/cook/src/utils/recommend'
 
 // Use tracked CSV so this regression test does not depend on generated JSON files.
 const recipes = parseRecipeCsv(readFileSync(resolve(process.cwd(), 'app/data/recipe.csv'), 'utf8'))
@@ -69,6 +69,39 @@ describe('local recipe dataset acceptance', () => {
       if (match.requiredStuff.length < CATCH_ALL_MIN_STUFF)
         expect(match.optionalStuff).toEqual([])
     }
+  })
+
+  // #85: 忌口
+  it('drops regular recipes that use an avoided ingredient, aliases included', () => {
+    const matches = recommendRecipes(recipes, { stuff: ['番茄', '鸡蛋'], avoid: ['蘑菇'] })
+    expect(matches.length).toBeGreaterThan(0)
+    for (const match of matches) {
+      if (match.requiredStuff.length < CATCH_ALL_MIN_STUFF)
+        expect(match.requiredStuff).not.toContain('菌菇')
+    }
+    expect(matches.length).toBeLessThan(recommendRecipes(recipes, { stuff: ['番茄', '鸡蛋'] }).length)
+  })
+
+  it('keeps catch-all recipes but stops suggesting avoided add-ins', () => {
+    const name = '清汤锅万能高汤做法（鸡蛋+猪肉）'
+    const hotpot = recommendRecipes(recipes, { stuff: ['猪肉', '鸡蛋'], avoid: ['虾'] }).find(m => m.recipe.name === name)
+    expect(hotpot?.optionalStuff).not.toContain('虾')
+    expect(hotpot?.optionalStuff).toContain('豆腐')
+  })
+
+  it('hasAvoidedStuff matches the recommendation rule', () => {
+    const omelette = recipes.find(r => r.stuff.includes('番茄') && r.stuff.includes('鸡蛋') && r.stuff.length === 2)!
+    expect(hasAvoidedStuff(omelette, ['西红柿'])).toBe(true)
+    expect(hasAvoidedStuff(omelette, [])).toBe(false)
+    expect(hasAvoidedStuff(omelette, ['牛肉'])).toBe(false)
+  })
+
+  it('tags spicy and soup recipes and records a method for almost every recipe', () => {
+    const byName = (name: string) => recipes.find(r => r.name === name)!
+    expect(matchesTaste(byName('麻婆豆腐'), { noSpicy: true })).toBe(false)
+    expect(matchesTaste(byName('白萝卜汤'), { methodGroups: ['汤羹'] })).toBe(true)
+    expect(matchesTaste(byName('宫保鸡丁'), { methodGroups: ['炒菜'] })).toBe(true)
+    expect(recipes.filter(r => !r.methods?.length).length).toBeLessThan(recipes.length * 0.05)
   })
 
   it.each([[], ['火龙果']])('handles empty or unmatched selection %j', (...stuff) => {

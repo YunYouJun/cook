@@ -16,6 +16,17 @@ describe('getRecipeLink', () => {
     open.mockRestore()
   })
 
+  it('does nothing for a recipe without a video or link', () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+    const send = vi.fn()
+    setCookEventTracker(send)
+    openRecipe({})
+    expect(send).not.toHaveBeenCalled()
+    expect(open).not.toHaveBeenCalled()
+    setCookEventTracker(() => {})
+    open.mockRestore()
+  })
+
   it('prefers the recorded link', () => {
     expect(getRecipeLink({ link: 'https://example.com/recipe', bv: 'BV1xx' })).toBe('https://example.com/recipe')
   })
