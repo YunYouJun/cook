@@ -83,11 +83,24 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: true
         PRODUCT_BUNDLE_IDENTIFIER: cn.yunyoujun.cook.tests
+  CookUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: CookUITests
+    dependencies:
+      - target: Cook
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: true
+        PRODUCT_BUNDLE_IDENTIFIER: cn.yunyoujun.cook.uitests
+        TEST_TARGET_NAME: Cook
 schemes:
   Cook:
     build:
       targets:
         Cook: all
         CookTests: [test]
+        CookUITests: [test]
     test:
-      targets: [CookTests]
+      targets: [CookTests, CookUITests]
