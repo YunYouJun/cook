@@ -26,10 +26,12 @@
 - AI 只把用户的话翻译成现有筛选条件（食材、忌口、不辣、厨具、做法、难度），结果仍由推荐逻辑从现有菜谱里挑。不做 AI 编菜谱、菜品图和聊天。
 - 第一步不用模型：`parseCookQuery`（`packages/cook/src/utils/query.ts`）按 `packages/data/query.json` 的词表做最长匹配，支持「不要 / 不吃 / 过敏」前后置否定、「没有」和「不辣」。用例在 `packages/data/fixtures/query.json`，Web 和 iOS CookCore 都要通过。
 - Web 做菜页的输入框接受整句，识别结果写在输入框下方；只列食材时和原来一样。识别成功和失败分别上报 `parse_query`、`parse_query_empty`（只有事件名，不含输入内容）。
+- 词表识别是两端共有的底线。真正用模型的 AI 功能只做在 iOS 客户端、只用端侧模型；Web 不做：浏览器没有 Foundation Models，要做只能走云端，会带来调用费用和登记。
 - 之后按顺序推进，每步看数据再决定：
   1. iOS 移植 `parseCookQuery`，接 App Intents（M3）。
   2. iOS 在支持的设备上用 Foundation Models 把认不出的句子转成同样的结构，作为增强，没有时回落到词表。
-  3. 云端模型（CloudBase 云函数，Web 和 iOS 共用）和拍照识别食材作为会员功能（M4），上线前先完成登记。
+  3. iOS 27 起端侧模型能看图，在支持的设备上做「拍照识别食材」，可以作为会员功能（M4）。
+  4. 云端模型暂不做。只有端侧覆盖不了的用户明显吃亏，并且会员收入能覆盖调用费时再评估，上线前要先完成登记。
 
 ## 影响
 
