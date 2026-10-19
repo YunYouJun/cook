@@ -1,5 +1,5 @@
-import type { RecipeItem } from '../app/types'
-import type { UserData } from '../app/utils/userData'
+import type { RecipeItem } from '../apps/web/app/types'
+import type { UserData } from '../apps/web/app/utils/userData'
 import { describe, expect, it } from 'vitest'
 import {
   createEmptyUserData,
@@ -10,7 +10,7 @@ import {
   normalizeUserData,
   parseUserDataExport,
   TOMBSTONE_TTL,
-} from '../app/utils/userData'
+} from '../apps/web/app/utils/userData'
 
 const NOW = 1_800_000_000_000
 

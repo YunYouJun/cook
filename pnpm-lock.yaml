@@ -42,21 +42,6 @@ importers:
       '@capacitor/status-bar':
         specifier: 8.0.3
         version: 8.0.3(@capacitor/core@8.5.0)
-      '@cloudbase/js-sdk':
-        specifier: 3.7.1
-        version: 3.7.1
-      '@yunlefun/sso':
-        specifier: 0.7.0
-        version: 0.7.0
-      '@yunyoujun/cook':
-        specifier: workspace:*
-        version: link:packages/cook
-      dayjs:
-        specifier: ^1.11.21
-        version: 1.11.21
-      vue-about-me:
-        specifier: ^1.4.0
-        version: 1.4.0(typescript@5.9.3)
     devDependencies:
       '@antfu/eslint-config':
         specifier: ^8.3.0
@@ -67,6 +52,106 @@ importers:
       '@capacitor/cli':
         specifier: 8.5.0
         version: 8.5.0(supports-color@10.2.2)
+      '@types/node':
+        specifier: ^25.9.5
+        version: 25.9.5
+      '@unocss/eslint-config':
+        specifier: ^66.7.5
+        version: 66.7.5(eslint@10.8.1(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@5.9.3)
+      '@vue/test-utils':
+        specifier: ^2.4.11
+        version: 2.4.11(@vue/compiler-dom@3.5.41)(@vue/server-renderer@3.5.41)(vue@3.5.41(typescript@5.9.3))
+      '@vueuse/core':
+        specifier: ^14.4.0
+        version: 14.4.0(vue@3.5.41(typescript@5.9.3))
+      '@yunlefun/sso':
+        specifier: 0.7.0
+        version: 0.7.0
+      baseline-browser-mapping:
+        specifier: ^2.11.13
+        version: 2.11.13
+      bumpp:
+        specifier: ^11.1.0
+        version: 11.1.0
+      consola:
+        specifier: ^3.4.2
+        version: 3.4.2
+      eslint:
+        specifier: ^10.8.1
+        version: 10.8.1(jiti@2.7.0)(supports-color@10.2.2)
+      eslint-plugin-format:
+        specifier: ^2.0.1
+        version: 2.0.1(eslint@10.8.1(jiti@2.7.0)(supports-color@10.2.2))
+      fake-indexeddb:
+        specifier: ^6.2.5
+        version: 6.2.5
+      jsdom:
+        specifier: ^29.1.1
+        version: 29.1.1(@noble/hashes@1.8.0)
+      lint-staged:
+        specifier: ^16.4.0
+        version: 16.4.0
+      pinia:
+        specifier: ^3.0.4
+        version: 3.0.4(typescript@5.9.3)(vue@3.5.41(typescript@5.9.3))
+      serve:
+        specifier: ^14.2.6
+        version: 14.2.6(supports-color@10.2.2)
+      simple-git-hooks:
+        specifier: ^2.13.1
+        version: 2.13.1
+      tsx:
+        specifier: ^4.23.12
+        version: 4.23.12
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@25.9.5)(esbuild@0.28.2)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@1.8.0))(sass@1.102.0)(terser@5.49.2)(tsx@4.23.12)(yaml@2.9.0)
+
+  apps/web:
+    dependencies:
+      '@capacitor/app':
+        specifier: 8.1.1
+        version: 8.1.1(@capacitor/core@8.5.0)
+      '@capacitor/browser':
+        specifier: 8.0.4
+        version: 8.0.4(@capacitor/core@8.5.0)
+      '@capacitor/core':
+        specifier: 8.5.0
+        version: 8.5.0
+      '@capacitor/dialog':
+        specifier: 8.0.1
+        version: 8.0.1(@capacitor/core@8.5.0)
+      '@capacitor/haptics':
+        specifier: 8.0.2
+        version: 8.0.2(@capacitor/core@8.5.0)
+      '@capacitor/keyboard':
+        specifier: 8.0.5
+        version: 8.0.5(@capacitor/core@8.5.0)
+      '@capacitor/preferences':
+        specifier: 8.0.1
+        version: 8.0.1(@capacitor/core@8.5.0)
+      '@capacitor/status-bar':
+        specifier: 8.0.3
+        version: 8.0.3(@capacitor/core@8.5.0)
+      '@cloudbase/js-sdk':
+        specifier: 3.7.1
+        version: 3.7.1
+      '@yunlefun/sso':
+        specifier: 0.7.0
+        version: 0.7.0
+      '@yunyoujun/cook':
+        specifier: workspace:*
+        version: link:../../packages/cook
+      dayjs:
+        specifier: ^1.11.21
+        version: 1.11.21
+      vue-about-me:
+        specifier: ^1.4.0
+        version: 1.4.0(typescript@5.9.3)
+    devDependencies:
       '@headlessui/vue':
         specifier: ^1.7.23
         version: 1.7.23(vue@3.5.41(typescript@5.9.3))
@@ -115,18 +200,12 @@ importers:
       '@types/node':
         specifier: ^25.9.5
         version: 25.9.5
-      '@unocss/eslint-config':
-        specifier: ^66.7.5
-        version: 66.7.5(eslint@10.8.1(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@5.9.3)
       '@unocss/nuxt':
         specifier: ^66.7.5
         version: 66.7.5(esbuild@0.28.2)(magic-string@1.1.0)(magicast@0.5.4)(oxc-parser@0.140.0)(rolldown@1.2.3)(rollup@4.62.4)(unplugin@3.3.0(esbuild@0.28.2)(rolldown@1.2.3)(rollup@4.62.4)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.2)(tsx@4.23.12)(yaml@2.9.0)))(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.2)(tsx@4.23.12)(yaml@2.9.0))
       '@vite-pwa/nuxt':
         specifier: ^1.1.1
         version: 1.1.1(magicast@0.5.4)(supports-color@10.2.2)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.2)(tsx@4.23.12)(yaml@2.9.0))
-      '@vue/test-utils':
-        specifier: ^2.4.11
-        version: 2.4.11(@vue/compiler-dom@3.5.41)(@vue/server-renderer@3.5.41)(vue@3.5.41(typescript@5.9.3))
       '@vueuse/core':
         specifier: ^14.4.0
         version: 14.4.0(vue@3.5.41(typescript@5.9.3))
@@ -139,33 +218,9 @@ importers:
       '@yunlefun/vue':
         specifier: 0.4.2
         version: 0.4.2(nuxt@4.5.2(0f4a3527db7795df392b465c3de4796e))(sass@1.102.0)(vue@3.5.41(typescript@5.9.3))
-      baseline-browser-mapping:
-        specifier: ^2.11.13
-        version: 2.11.13
-      bumpp:
-        specifier: ^11.1.0
-        version: 11.1.0
-      consola:
-        specifier: ^3.4.2
-        version: 3.4.2
       dexie:
         specifier: ^4.4.4
         version: 4.4.4
-      eslint:
-        specifier: ^10.8.1
-        version: 10.8.1(jiti@2.7.0)(supports-color@10.2.2)
-      eslint-plugin-format:
-        specifier: ^2.0.1
-        version: 2.0.1(eslint@10.8.1(jiti@2.7.0)(supports-color@10.2.2))
-      fake-indexeddb:
-        specifier: ^6.2.5
-        version: 6.2.5
-      jsdom:
-        specifier: ^29.1.1
-        version: 29.1.1(@noble/hashes@1.8.0)
-      lint-staged:
-        specifier: ^16.4.0
-        version: 16.4.0
       nuxt:
         specifier: ^4.5.2
         version: 4.5.2(0f4a3527db7795df392b465c3de4796e)
@@ -175,30 +230,18 @@ importers:
       sass:
         specifier: ^1.102.0
         version: 1.102.0
-      serve:
-        specifier: ^14.2.6
-        version: 14.2.6(supports-color@10.2.2)
       simple-git:
         specifier: ^3.36.0
         version: 3.36.0(supports-color@10.2.2)
-      simple-git-hooks:
-        specifier: ^2.13.1
-        version: 2.13.1
       star-markdown-css:
         specifier: ^0.5.3
         version: 0.5.3
-      tsx:
-        specifier: ^4.23.12
-        version: 4.23.12
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       unocss:
         specifier: ^66.7.5
         version: 66.7.5(@unocss/webpack@66.7.5(esbuild@0.28.2)(rolldown@1.2.3)(rollup@4.62.4)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.2)(tsx@4.23.12)(yaml@2.9.0)))(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.2)(tsx@4.23.12)(yaml@2.9.0))
-      vitest:
-        specifier: ^4.1.10
-        version: 4.1.10(@types/node@25.9.5)(esbuild@0.28.2)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@1.8.0))(sass@1.102.0)(terser@5.49.2)(tsx@4.23.12)(yaml@2.9.0)
       vue-tsc:
         specifier: ^3.3.9
         version: 3.3.9(typescript@5.9.3)

@@ -1,8 +1,8 @@
-import type { RecipeItem } from '../app/types'
+import type { RecipeItem } from '../apps/web/app/types'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useRecipeStore } from '../app/composables/store/recipe'
-import { db } from '../app/utils/db'
+import { useRecipeStore } from '../apps/web/app/composables/store/recipe'
+import { db } from '../apps/web/app/utils/db'
 
 const fixtures: RecipeItem[] = [
   { name: '土豆', stuff: ['土豆'], tools: ['一口大锅'] },

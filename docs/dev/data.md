@@ -3,30 +3,30 @@
 ## 数据流
 
 ```
-飞书电子表格 ──pnpm fetch──▶ app/data/recipe.csv ──pnpm convert──▶ recipe.json / 分片 ──▶ IndexedDB ──▶ 筛选
+飞书电子表格 ──pnpm fetch──▶ packages/data/recipe.csv ──pnpm convert──▶ recipe.json / 分片 ──▶ IndexedDB ──▶ 筛选
                                     ▲
           应用内反馈 / Issue / AI PR ┘   CI：pnpm validate     每周：pnpm check:videos
 ```
 
-`app/data/recipe.csv` 是构建时实际使用的数据。数据源以后放在哪里见 [方案记录 0001](/decisions/0001-recipe-data)。
+`packages/data/recipe.csv` 是构建时实际使用的数据。数据源以后放在哪里见 [方案记录 0001](/decisions/0001-recipe-data)。
 
 ## 数据规则
 
 列为 `name,stuff,bv,difficulty,tags,methods,tools,id`。
 
-| 字段          | 规则                                                                                   |
-| ------------- | -------------------------------------------------------------------------------------- |
-| name          | 必填                                                                                   |
-| stuff         | 必填；只能使用 `app/data/food.ts` 里的食材名，别名（如「虾仁」）要写成标准名（「虾」） |
-| bv            | B 站 BV 号或 av 号                                                                     |
-| difficulty    | 简单 / 普通 / 困难，或留空                                                             |
-| methods、tags | 自由填写                                                                               |
-| tools         | 只能使用 `app/data/food.ts` 里的厨具名                                                 |
-| id            | 必填，非负整数且唯一；新菜谱用当前最大 id + 1                                          |
+| 字段          | 规则                                                                                            |
+| ------------- | ----------------------------------------------------------------------------------------------- |
+| name          | 必填                                                                                            |
+| stuff         | 必填；只能使用 `apps/web/app/data/food.ts` 里的食材名，别名（如「虾仁」）要写成标准名（「虾」） |
+| bv            | B 站 BV 号或 av 号                                                                              |
+| difficulty    | 简单 / 普通 / 困难，或留空                                                                      |
+| methods、tags | 自由填写                                                                                        |
+| tools         | 只能使用 `apps/web/app/data/food.ts` 里的厨具名                                                 |
+| id            | 必填，非负整数且唯一；新菜谱用当前最大 id + 1                                                   |
 
 单元格内多个值用顿号「、」分隔，不要用逗号或斜杠。
 
-**id 一旦发布就不能修改或复用。** 收藏、用户反馈和筛选信号都按 id 记录（`app/utils/db.ts` 用它作 IndexedDB 主键）。可以改菜名、换视频，也可以调整行的顺序；删除一道菜只会让收藏了它的用户丢失这一条，其他菜不受影响。被删掉的 id 不要再给新菜用。
+**id 一旦发布就不能修改或复用。** 收藏、用户反馈和筛选信号都按 id 记录（`apps/web/app/utils/db.ts` 用它作 IndexedDB 主键）。可以改菜名、换视频，也可以调整行的顺序；删除一道菜只会让收藏了它的用户丢失这一条，其他菜不受影响。被删掉的 id 不要再给新菜用。
 
 ## 校验
 
@@ -40,7 +40,7 @@ pnpm validate --json   # 输出 JSON，供 AI / 脚本使用
 
 PR 上 CI 还会运行 `pnpm validate --base <目标分支>`：同一个 id 的菜名和视频都变了（像是把 id 挪给了另一道菜）或复用了已删除的 id 会报错，删除菜谱会给出警告。
 
-想用新的食材，先在 `app/data/food.ts` 里加上，再在菜谱里使用。
+想用新的食材，先在 `apps/web/app/data/food.ts` 里加上，再在菜谱里使用。
 
 ## 反馈闭环
 
@@ -94,4 +94,4 @@ pnpm eval:search     # 用真实信号评估当前排序：前 10 命中率、MR
 
 ## 性能
 
-筛选目前在内存里对全部菜谱逐条计算（`app/composables/store/recipe.ts`），600 条约 1ms，上万条之内都不是瓶颈；首次加载在超过 1000 条后自动分片并按 hash 增量更新。数据量明显变大时，优先在 `convert` 阶段生成「食材 → 菜谱 id」倒排索引。
+筛选目前在内存里对全部菜谱逐条计算（`apps/web/app/composables/store/recipe.ts`），600 条约 1ms，上万条之内都不是瓶颈；首次加载在超过 1000 条后自动分片并按 hash 增量更新。数据量明显变大时，优先在 `convert` 阶段生成「食材 → 菜谱 id」倒排索引。

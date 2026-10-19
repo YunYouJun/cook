@@ -20,6 +20,7 @@ trustPolicyExclude:
   - '@capacitor/haptics@8.0.2'
 
 packages:
+  - apps/*
   - docs
   - packages/*
 

@@ -16,7 +16,7 @@ metadata:
 
 - 每道菜必须有一个**可播放的 B 站视频**（`bv` 列）。小红书、下厨房等只能作为找菜名、核对食材的参考，不进 csv。
 - **不编造视频号。** 每个 BV 号都要打开视频页（`https://www.bilibili.com/video/<BV号>/`）或调 `https://api.bilibili.com/x/web-interface/view?bvid=<BV号>`（`code` 为 0）确认：视频没失效，标题和菜名对得上。只在搜索结果里见过、没打开确认的不要用。
-- 食材、厨具只能用 `app/data/food.ts` 里的名称。具体品种写成标准名（鲈鱼 → 鱼、虾仁 → 虾），对应别名加进 `packages/cook/src/utils/alias.ts`。
+- 食材、厨具只能用 `apps/web/app/data/food.ts` 里的名称。具体品种写成标准名（鲈鱼 → 鱼、虾仁 → 虾），对应别名加进 `packages/cook/src/utils/alias.ts`。
 - `stuff` 只填视频标题、简介或标签里能看出来的主料，看不出来的配菜不填。`difficulty` 拿不准就留空。
 - **id 不能修改、不能复用。** 新菜谱追加到末尾，id 用当前最大 id + 1。
 - 不和已有菜重复：同一个视频、或同名同做法的菜不加。
@@ -31,7 +31,7 @@ metadata:
    pnpm install --frozen-lockfile
    ```
 
-2. **看现状**：在 `app/data/recipe.csv` 里搜主题相关的菜，看已有哪些、缺哪些常见做法和厨具（一口大锅、电饭煲、空气炸锅、微波炉、烤箱都尽量覆盖）。
+2. **看现状**：在 `packages/data/recipe.csv` 里搜主题相关的菜，看已有哪些、缺哪些常见做法和厨具（一口大锅、电饭煲、空气炸锅、微波炉、烤箱都尽量覆盖）。
 
 3. **找候选视频**
    - B 站搜索页（search.bilibili.com）和小红书一般禁止抓取，直接访问多半失败。可行的做法是用网页搜索，关键词带上 `bilibili.com/video` 和菜名，例如 `bilibili.com/video 红烧鱼 家常做法`、`bilibili.com/video 空气炸锅 秋刀鱼`，从结果里拿 BV 号。
@@ -41,7 +41,7 @@ metadata:
 
 4. **逐个核对**：打开每个候选视频页，记下标题、UP 主、播放量、简介和标签里的食材与厨具，确认没有失效提示。对不上的丢掉。
 
-5. **写入数据**：按 `name,stuff,bv,difficulty,tags,methods,tools,id` 追加到 `app/data/recipe.csv`，单元格内多个值用顿号「、」分隔。
+5. **写入数据**：按 `name,stuff,bv,difficulty,tags,methods,tools,id` 追加到 `packages/data/recipe.csv`，单元格内多个值用顿号「、」分隔。
 
 6. **验证**
 

@@ -1,7 +1,7 @@
 import type {
   NativeSsoTransaction,
   NativeSsoTransactionStore,
-} from '../app/utils/nativeSso'
+} from '../apps/web/app/utils/nativeSso'
 import { encodeSsoRedirectResult } from '@yunlefun/sso'
 import { describe, expect, it } from 'vitest'
 import {
@@ -9,7 +9,7 @@ import {
   consumeNativeSsoCallback,
   openNativeSsoRedirect,
   stripNativeSsoCallbackHash,
-} from '../app/utils/nativeSso'
+} from '../apps/web/app/utils/nativeSso'
 
 class MemoryTransactionStore implements NativeSsoTransactionStore {
   transaction: NativeSsoTransaction | null = null

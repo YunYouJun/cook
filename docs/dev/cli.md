@@ -53,8 +53,8 @@ pnpm fetch
 
 - 从飞书 Wiki 获取电子表格数据
 - 解析并清洗数据
-- 生成 `app/data/recipe.csv`
-- 生成 `app/data/recipe.json`
+- 生成 `packages/data/recipe.csv`
+- 生成 `packages/data/recipe.json`
 
 **输出示例:**
 
@@ -62,8 +62,8 @@ pnpm fetch
 ✔ 从飞书 Wiki 获取电子表格 token...
 ✔ 读取到 600 行数据 (含表头)
 ✔ 解析出 599 条菜谱
-✔ 写入 app/data/recipe.csv
-✔ 写入 app/data/recipe.json
+✔ 写入 packages/data/recipe.csv
+✔ 写入 packages/data/recipe.json
 ```
 
 ::: warning 注意
@@ -80,9 +80,9 @@ pnpm convert
 
 **功能:**
 
-- 读取 `app/data/recipe.csv`
+- 读取 `packages/data/recipe.csv`
 - 转换为 JSON 格式
-- 生成 `app/data/recipe.json`
+- 生成 `packages/data/recipe.json`
 
 **使用场景:**
 
@@ -104,7 +104,7 @@ pnpm dev
 ### 手动编辑数据
 
 ```bash
-# 1. 编辑 app/data/recipe.csv
+# 1. 编辑 packages/data/recipe.csv
 
 # 2. 转换为 JSON
 pnpm convert

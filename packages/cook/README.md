@@ -67,9 +67,9 @@ pnpm convert
 
 功能：
 
-- 读取 `app/data/recipe.csv`
+- 读取 `packages/data/recipe.csv`
 - 解析并验证数据
-- 生成 `app/data/recipe.json`
+- 生成 `packages/data/recipe.json`
 - 更新 `lastDbUpdated` 时间戳
 
 ## 数据格式

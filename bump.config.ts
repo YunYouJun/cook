@@ -8,5 +8,6 @@ export default defineConfig({
   push: true,
   files: [
     'package.json',
+    'apps/web/package.json',
   ],
 })

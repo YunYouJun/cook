@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildCustomRecipe, isCustomRecipe, parseRecipeSource } from '../app/utils/customRecipe'
-import { getRecipeLink } from '../app/utils/recipe'
+import { buildCustomRecipe, isCustomRecipe, parseRecipeSource } from '../apps/web/app/utils/customRecipe'
+import { getRecipeLink } from '../apps/web/app/utils/recipe'
 import { recommendRecipes } from '../packages/cook/src/utils/recommend'
 
 const input = { name: ' 外婆的红烧肉 ', stuff: ['五花肉', '西红柿', '番茄'], tools: ['一口大锅', '一口大锅'], source: '', note: '' }

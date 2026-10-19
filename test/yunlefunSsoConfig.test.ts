@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveYunlefunSsoConfig } from '../app/utils/yunlefunSsoConfig'
+import { resolveYunlefunSsoConfig } from '../apps/web/app/utils/yunlefunSsoConfig'
 
 const validConfig = {
   clientId: 'cook-web',

@@ -27,7 +27,7 @@ type RecipeMeta = RecipeMetaSingle | RecipeMetaChunked
 const CHUNK_HASH_STORAGE_KEY = 'cook:chunk-hashes'
 
 // 预注册分片文件，Vite 会在构建时处理这些 glob 导入
-const chunkModules = import.meta.glob<{ default: RecipeItem[] }>('../data/recipe-chunk-*.json')
+const chunkModules = import.meta.glob<{ default: RecipeItem[] }>('../../../../packages/data/recipe-chunk-*.json')
 
 export class MySubClassedDexie extends Dexie {
   recipes!: Table<DbRecipeItem>
@@ -74,7 +74,7 @@ function withId(item: RecipeItem, fallback: number): DbRecipeItem {
  * 单文件模式：全量加载 recipe.json，先清空以去掉已删除的菜谱
  */
 async function loadSingleFile() {
-  const { default: recipeData } = await import('../data/recipe.json')
+  const { default: recipeData } = await import('@cook/data/recipe.json')
 
   return db.transaction('rw', db.recipes, async () => {
     await db.recipes.clear()
@@ -101,7 +101,7 @@ async function loadChunks(meta: RecipeMetaChunked) {
   // 并行加载所有需要更新的分片
   await Promise.all(
     chunksToLoad.map(async (chunk) => {
-      const modulePath = `../data/recipe-chunk-${chunk.index}.json`
+      const modulePath = `../../../../packages/data/recipe-chunk-${chunk.index}.json`
       const loader = chunkModules[modulePath]
       if (!loader) {
         console.warn(`Chunk module not found: ${modulePath}`)
@@ -130,7 +130,7 @@ async function loadChunks(meta: RecipeMetaChunked) {
 }
 
 export async function initDb() {
-  const { default: meta } = await import('../data/recipe-meta.json') as { default: RecipeMeta }
+  const { default: meta } = await import('@cook/data/recipe-meta.json') as { default: RecipeMeta }
 
   if (meta.chunked) {
     return loadChunks(meta)

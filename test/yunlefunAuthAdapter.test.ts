@@ -1,5 +1,5 @@
 import type { AcquisitionContext, SsoAuthorizationResult } from '@yunlefun/sso'
-import type { YunlefunSsoConfig } from '../app/utils/yunlefunSsoConfig'
+import type { YunlefunSsoConfig } from '../apps/web/app/utils/yunlefunSsoConfig'
 import { Browser } from '@capacitor/browser'
 import { Preferences } from '@capacitor/preferences'
 import { SsoIdentityAdoptionError } from '@yunlefun/sso/browser'
@@ -8,7 +8,7 @@ import {
   createCloudbaseIdentityAdapter,
   createNativeYunlefunAuthorizationAdapter,
   createWebYunlefunAuthorizationAdapter,
-} from '../app/adapters/yunlefunAuth'
+} from '../apps/web/app/adapters/yunlefunAuth'
 
 vi.mock('@capacitor/browser', () => ({
   Browser: {

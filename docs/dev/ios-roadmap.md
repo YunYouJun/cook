@@ -6,9 +6,8 @@
 
 ## M0 仓库改成 monorepo
 
-- 等进行中的 PR 合并后，把 Nuxt 应用搬到 `apps/web`，只改路径不改逻辑。
-- 拆出 `packages/core`、`packages/data`、`packages/fixtures`，`packages/cook` 只保留 CLI。
-- CI、EdgeOne、Netlify、Docker、Capacitor 的路径同步更新。
+- [x] 把 Nuxt 应用搬到 `apps/web`、菜谱 CSV 和生成的 JSON 搬到 `packages/data`，只改路径不改逻辑。根目录的 `pnpm build` 仍然输出到 `dist/`，CI、EdgeOne、Netlify、Vercel、Docker、Capacitor 不用改配置。
+- [ ] 拆出 `packages/core`、`packages/fixtures`，`packages/cook` 只保留 CLI；`food.ts` 改成 `packages/data` 里的 JSON，iOS 也能读。
 
 验收：`pnpm lint`、`typecheck`、`test`、`build` 全绿；线上 Web 部署后行为不变；`pnpm eval:search` 指标与搬迁前一致。
 

@@ -36,34 +36,38 @@ pnpm android              # Open in Android Studio
 
 ### Data Pipeline
 
-CSV source files (`app/data/recipe.csv`, `app/data/incompatible-foods.csv`) → `pnpm convert` (via `packages/cook` CLI) → JSON files (`app/data/recipe.json`, `app/data/incompatible-foods.json`) → consumed at runtime. The `pnpm fetch` command pulls fresh data from Feishu (飞书) API. Data rules, validation and the feedback loop are in `docs/dev/data.md`; every recipe has a permanent `id` column (favorites, feedback and search signals key on it): never change or reuse an id; new recipes take max id + 1.
+CSV source files (`packages/data/recipe.csv`, `packages/data/incompatible-foods.csv`) → `pnpm convert` (via `packages/cook` CLI) → JSON files (`packages/data/recipe.json`, `packages/data/incompatible-foods.json`) → consumed at runtime. The `pnpm fetch` command pulls fresh data from Feishu (飞书) API. Data rules, validation and the feedback loop are in `docs/dev/data.md`; every recipe has a permanent `id` column (favorites, feedback and search signals key on it): never change or reuse an id; new recipes take max id + 1.
 
 Project decisions are recorded in `docs/decisions/` — read the relevant one before changing direction, and add a new record for significant decisions.
 
 ### Monorepo Structure (pnpm workspaces)
 
-- **Root** — Nuxt app (main application)
-- **packages/cook** — CLI tool with `convert` and `fetch` commands
+Layout follows `docs/decisions/0003-native-ios-monorepo.md`; the plan is in `docs/dev/ios-roadmap.md`.
+
+- **apps/web** — Nuxt app (main application). Root scripts (`pnpm dev`, `pnpm build`, `pnpm typecheck`) proxy to it; `pnpm build` copies `apps/web/dist` to the root `dist/` that deploy targets and Capacitor read
+- **packages/data** — Recipe CSV sources and the JSON generated from them (imported in the web app as `@cook/data/*`)
+- **packages/cook** — Types, recommendation/search logic, and the CLI (`convert`, `fetch`)
 - **docs** — VitePress documentation site
 - **scripts** — Build/utility scripts
+- **Root** — Workspace tooling, tests (`test/`), Capacitor shell (`capacitor.config.ts`, `ios/`, `android/`), `cloudfunctions/`
 
-### App Source (`app/`)
+### App Source (`apps/web/app/`)
 
 - **pages/** — Nuxt file-based routing; main interface uses Ionic tabs (`tabs.vue`)
 - **components/** — Organized by feature: `recipe/`, `tags/`, `layouts/`, `common/`
 - **composables/store/** — Pinia stores: `app`, `recipe`, `favorite`, `history`, `user`
 - **composables/** — Shared logic: `db.ts` (IndexedDB via Dexie), `dark.ts`, `recipe.ts`, `incompatible-foods.ts`
-- **data/** — Static JSON data + `food.ts` (food/tool definitions)
+- **data/** — `food.ts` (food/tool definitions) and `pantry.ts`; recipe data lives in `packages/data`
 - **types/** — TypeScript type definitions
 - **styles/** — SCSS including CSS variables (`css-vars.scss`)
 
 ### Key Patterns
 
-- **CSR-only**: SSR is disabled in `nuxt.config.ts`; app is statically generated
+- **CSR-only**: SSR is disabled in `apps/web/nuxt.config.ts`; app is statically generated
 - **Client storage**: Dexie (IndexedDB) for favorites, history, user preferences — enables offline support
 - **Styling**: UnoCSS with Wind preset (Tailwind-compatible), attributify mode, and custom shortcuts (`tag`, `btn`)
 - **Dark mode**: Class-based via `@nuxtjs/color-mode` (classSuffix: '')
-- **Icons**: Iconify with multiple packs (carbon, mdi, twemoji); food tool icons dynamically safelisted in `uno.config.ts`
+- **Icons**: Iconify with multiple packs (carbon, mdi, twemoji); food tool icons dynamically safelisted in `apps/web/uno.config.ts`
 
 ### Prerendered Routes
 
@@ -79,7 +83,7 @@ pnpm test -- test/recipe.test.ts
 
 ## Code Style
 
-Uses `@antfu/eslint-config` (flat config) with UnoCSS and formatters enabled. Pre-commit hook runs `lint-staged` via `simple-git-hooks`. Ignored paths include `app/data/*.json`, `ios/`, `android/`, `dist/`.
+Uses `@antfu/eslint-config` (flat config) with UnoCSS and formatters enabled. Pre-commit hook runs `lint-staged` via `simple-git-hooks`. Ignored paths include `packages/data/*.json`, `ios/`, `android/`, `dist/`.
 
 ## Environment Variables
 

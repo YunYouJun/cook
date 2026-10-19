@@ -1,6 +1,6 @@
 // @ts-check
 import antfu from '@antfu/eslint-config'
-import nuxt from './.nuxt/eslint.config.mjs'
+import nuxt from './apps/web/.nuxt/eslint.config.mjs'
 
 export default nuxt(
   antfu(
@@ -10,14 +10,14 @@ export default nuxt(
     },
     {
       ignores: [
-        'app/data/*.json',
+        'packages/data/*.json',
         'ios/**/*',
         'android/**/*',
-        'dist/**/*',
-        'public/**/*',
+        'apps/web/public/**/*',
         'node_modules/**/*',
-        '.nuxt/**/*',
-        '.output/**/*',
+        '**/.nuxt/**/*',
+        '**/.output/**/*',
+        '**/dist/**/*',
       ],
     },
     {

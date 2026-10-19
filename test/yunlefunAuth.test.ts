@@ -3,11 +3,11 @@ import type {
   YunlefunAccount,
   YunlefunAuthorizationAdapter,
   YunlefunIdentityAdapter,
-} from '../app/utils/yunlefunAuth'
+} from '../apps/web/app/utils/yunlefunAuth'
 import { describe, expect, it } from 'vitest'
 import {
   createYunlefunAuthController,
-} from '../app/utils/yunlefunAuth'
+} from '../apps/web/app/utils/yunlefunAuth'
 
 const authorization: SsoAuthorizationResult = {
   ok: true,

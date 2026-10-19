@@ -1,10 +1,10 @@
-import type { CookFunnelState } from '../app/composables/useCookFunnel'
+import type { CookFunnelState } from '../apps/web/app/composables/useCookFunnel'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { computed, effectScope, nextTick, reactive } from 'vue'
-import { useRecipeStore } from '../app/composables/store/recipe'
-import { useCookFunnel } from '../app/composables/useCookFunnel'
-import { setCookEventTracker } from '../app/utils/analytics'
+import { useRecipeStore } from '../apps/web/app/composables/store/recipe'
+import { useCookFunnel } from '../apps/web/app/composables/useCookFunnel'
+import { setCookEventTracker } from '../apps/web/app/utils/analytics'
 
 const scopes: ReturnType<typeof effectScope>[] = []
 afterEach(() => {

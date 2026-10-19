@@ -1,11 +1,11 @@
-import type { RecipeItem } from '../app/types'
-import type { DbRecipeItem } from '../app/utils/db'
+import type { RecipeItem } from '../apps/web/app/types'
+import type { DbRecipeItem } from '../apps/web/app/utils/db'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createCloudbaseUserDataRemote, USER_DATA_FUNCTION } from '../app/adapters/userData'
-import { favoriteEntries, setFavoriteEntries, toggleFavorite } from '../app/composables/store/favorite'
-import { addRecipeHistory, clearRecipeHistories, recipeHistories, removeRecipeHistory } from '../app/composables/store/history'
-import { exportLocalUserData, importLocalUserData, localUserData } from '../app/composables/store/userData'
-import { userDataMeta } from '../app/composables/store/userDataMeta'
+import { createCloudbaseUserDataRemote, USER_DATA_FUNCTION } from '../apps/web/app/adapters/userData'
+import { favoriteEntries, setFavoriteEntries, toggleFavorite } from '../apps/web/app/composables/store/favorite'
+import { addRecipeHistory, clearRecipeHistories, recipeHistories, removeRecipeHistory } from '../apps/web/app/composables/store/history'
+import { exportLocalUserData, importLocalUserData, localUserData } from '../apps/web/app/composables/store/userData'
+import { userDataMeta } from '../apps/web/app/composables/store/userDataMeta'
 
 vi.mock('@capacitor/browser', () => ({ Browser: {} }))
 vi.mock('@capacitor/preferences', () => ({ Preferences: {} }))

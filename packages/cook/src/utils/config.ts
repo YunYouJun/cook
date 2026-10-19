@@ -13,11 +13,11 @@ export const rootDir = root
 export const envFile = path.resolve(root, '.env')
 
 // Data 文件路径
-export const recipeCsvFile = path.resolve(root, 'app/data/recipe.csv')
-export const recipeJsonFile = path.resolve(root, 'app/data/recipe.json')
-export const recipeMetaJsonFile = path.resolve(root, 'app/data/recipe-meta.json')
-export const incompatibleFoodsCsvFile = path.resolve(root, 'app/data/incompatible-foods.csv')
-export const incompatibleFoodsJsonFile = path.resolve(root, 'app/data/incompatible-foods.json')
+export const recipeCsvFile = path.resolve(root, 'packages/data/recipe.csv')
+export const recipeJsonFile = path.resolve(root, 'packages/data/recipe.json')
+export const recipeMetaJsonFile = path.resolve(root, 'packages/data/recipe-meta.json')
+export const incompatibleFoodsCsvFile = path.resolve(root, 'packages/data/incompatible-foods.csv')
+export const incompatibleFoodsJsonFile = path.resolve(root, 'packages/data/incompatible-foods.json')
 
 // 分片配置
 export const CHUNK_SIZE = 200 // 每片菜谱数
