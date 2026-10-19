@@ -18,4 +18,4 @@
 | [0004](./0004-ios-app-name)        | iOS App 命名为「云食册」          | 已采纳 |
 | [0005](./0005-app-icon)            | 应用图标「蒸汽成云」              | 已采纳 |
 | [0006](./0006-ios-bundle-id)       | iOS App 使用 `fun.yunle.cook`     | 已采纳 |
-| [0007](./0007-ios-analytics)       | iOS App 的数据统计与反馈          | 已采纳 |
+| [0008](./0008-ios-analytics)       | iOS App 的数据统计与反馈          | 已采纳 |
