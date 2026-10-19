@@ -1,7 +1,7 @@
-import type { RecommendationMode } from '@yunyoujun/cook'
+import type { Difficulty, RecommendationMode } from '@yunyoujun/cook'
 import type { RecipeItem, StuffItem } from '~/types'
 import { StorageSerializers, useStorage } from '@vueuse/core'
-import { recommendRecipes, uniqueStuff } from '@yunyoujun/cook/recommend'
+import { createRecipeRecommender, hasAvoidedStuff, matchesTaste, uniqueStuff } from '@yunyoujun/cook/recommend'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { useIndexedDB } from '~/composables/db'
@@ -9,6 +9,7 @@ import { defaultPantry, pantryOptions } from '~/data/pantry'
 import { trackCookEvent } from '~/utils/analytics'
 import { db } from '../../utils/db'
 import { useAppStore } from './app'
+import { customRecipes } from './customRecipe'
 
 const namespace = 'cook'
 export type SearchMode = RecommendationMode
@@ -23,9 +24,15 @@ export const useRecipeStore = defineStore('recipe', () => {
   const curTool = settings.keepLocalData ? useStorage(`${namespace}:tool`, '') : shallowRef('')
   const curMode = settings.keepLocalData ? useStorage<SearchMode>(`${namespace}:mode`, 'loose') : shallowRef<SearchMode>('loose')
   const pantry = settings.keepLocalData ? useStorage<string[]>(`${namespace}:pantry`, [...defaultPantry]) : ref([...defaultPantry])
+  // 忌口是个人偏好，和常备调料一样跨会话保留，「清空」不会动它
+  const avoid = settings.keepLocalData ? useStorage<string[]>(`${namespace}:avoid`, []) : ref<string[]>([])
+  const noSpicy = settings.keepLocalData ? useStorage(`${namespace}:no-spicy`, false) : shallowRef(false)
+  const methodGroups = settings.keepLocalData ? useStorage<string[]>(`${namespace}:method-groups`, []) : ref<string[]>([])
+  const difficulty = settings.keepLocalData ? useStorage<Difficulty[]>(`${namespace}:difficulty`, []) : ref<Difficulty[]>([])
 
   const selectedStuff = computed(() => uniqueStuff([...curStuff.value]))
   const selectedPantry = computed(() => uniqueStuff(pantry.value).filter(item => pantryOptions.includes(item)))
+  const selectedAvoid = computed(() => uniqueStuff(avoid.value))
 
   function toggleStuff(name: string) {
     const names = uniqueStuff([name])
@@ -51,10 +58,36 @@ export const useRecipeStore = defineStore('recipe', () => {
       : [...selectedPantry.value, name]
   }
 
+  function toggleAvoid(name: string) {
+    avoid.value = selectedAvoid.value.includes(name)
+      ? selectedAvoid.value.filter(item => item !== name)
+      : [...selectedAvoid.value, name]
+  }
+
+  function toggleMethodGroup(label: string) {
+    methodGroups.value = methodGroups.value.includes(label)
+      ? methodGroups.value.filter(item => item !== label)
+      : [...methodGroups.value, label]
+  }
+
+  function toggleDifficulty(level: Difficulty) {
+    difficulty.value = difficulty.value.includes(level)
+      ? difficulty.value.filter(item => item !== level)
+      : [...difficulty.value, level]
+  }
+
+  /** 忌口、做法、口味、难度这几个对所有列表都生效的条件 */
+  function passesPreferences(recipe: RecipeItem) {
+    return !hasAvoidedStuff(recipe, selectedAvoid.value)
+      && matchesTaste(recipe, { methodGroups: methodGroups.value, noSpicy: noSpicy.value, difficulty: difficulty.value })
+  }
+
   function clearFilters() {
     keyword.value = ''
     curTool.value = ''
     curMode.value = 'loose'
+    methodGroups.value = []
+    difficulty.value = []
   }
 
   function reset() {
@@ -96,19 +129,36 @@ export const useRecipeStore = defineStore('recipe', () => {
     return loading
   }
 
-  const recipeMatches = computed(() => recommendRecipes(recipes.value, {
+  // 自己添加的菜谱排在前面：匹配程度相同时优先推荐
+  const allRecipes = computed<RecipeItem[]>(() => [...customRecipes.value, ...recipes.value])
+
+  const recommend = computed(() => createRecipeRecommender(allRecipes.value))
+  const recipeMatches = computed(() => recommend.value({
     stuff: selectedStuff.value,
     pantry: selectedPantry.value,
     tool: curTool.value,
     keyword: keyword.value,
     mode: curMode.value,
+    avoid: selectedAvoid.value,
+    methodGroups: methodGroups.value,
+    noSpicy: noSpicy.value,
+    difficulty: difficulty.value,
   }))
   /** 只选了厨具、还没选食材时，列出用这个厨具能做的菜（保留原来经典视图的用法） */
   const toolRecipes = computed(() => {
     if (selectedStuff.value.length || !curTool.value)
       return []
     const text = keyword.value.trim()
-    return recipes.value.filter(recipe => recipe.tools?.includes(curTool.value) && (!text || recipe.name.includes(text)))
+    return allRecipes.value.filter(recipe => recipe.tools?.includes(curTool.value)
+      && (!text || recipe.name.includes(text))
+      && passesPreferences(recipe))
+  })
+  /** 「吃什么」随机的候选：选了食材就从匹配结果里抽，否则按厨具和忌口从全部菜谱里抽 */
+  const randomPool = computed(() => {
+    if (selectedStuff.value.length)
+      return recipeMatches.value.map(match => match.recipe)
+    return allRecipes.value.filter(recipe => (!curTool.value || recipe.tools?.includes(curTool.value))
+      && passesPreferences(recipe))
   })
   /** 「再补一样」建议：差一种的菜里缺得最多的食材，补上后能直接多做几道 */
   const unlockSuggestions = computed(() => {
@@ -125,7 +175,7 @@ export const useRecipeStore = defineStore('recipe', () => {
       .map(([name, count]) => ({ name, count }))
   })
   const resultCount = computed(() => selectedStuff.value.length ? recipeMatches.value.length : toolRecipes.value.length)
-  const recipesLength = computed(() => recipes.value.length)
+  const recipesLength = computed(() => allRecipes.value.length)
 
   function clickTool(item: StuffItem) {
     toggleTools(item.name)
@@ -141,6 +191,10 @@ export const useRecipeStore = defineStore('recipe', () => {
     curMode,
     selectedStuff,
     selectedPantry,
+    selectedAvoid,
+    methodGroups,
+    noSpicy,
+    difficulty,
     isSearching,
     loadError,
     loadRecipes,
@@ -150,12 +204,17 @@ export const useRecipeStore = defineStore('recipe', () => {
     togglePantry,
     clearPantry: () => { pantry.value = [] },
     resetPantry: () => { pantry.value = [...defaultPantry] },
+    toggleAvoid,
+    clearAvoid: () => { avoid.value = [] },
+    toggleMethodGroup,
+    toggleDifficulty,
     toggleTools,
     reset,
     setMode,
     addStuff,
     recipeMatches,
     toolRecipes,
+    randomPool,
     unlockSuggestions,
     resultCount,
     clickTool,

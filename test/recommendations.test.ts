@@ -3,19 +3,34 @@ import { resolve } from 'node:path'
 import process from 'node:process'
 import { describe, expect, it } from 'vitest'
 import { parseRecipeCsv } from '../packages/cook/src/utils/csv'
-import { CATCH_ALL_MIN_STUFF, recommendRecipes } from '../packages/cook/src/utils/recommend'
+import { CATCH_ALL_MIN_STUFF, createRecipeRecommender, hasAvoidedStuff, matchesTaste, recommendRecipes } from '../packages/cook/src/utils/recommend'
 
 // Use tracked CSV so this regression test does not depend on generated JSON files.
 const recipes = parseRecipeCsv(readFileSync(resolve(process.cwd(), 'app/data/recipe.csv'), 'utf8'))
 const cases = [
-  { stuff: ['番茄', '鸡蛋'], counts: [40, 72, 48], first: '微波炉版番茄鸡蛋汤', partial: '番茄鸡蛋', missing: ['米'] },
+  { stuff: ['番茄', '鸡蛋'], counts: [40, 74, 48], first: '微波炉版番茄鸡蛋汤', partial: '番茄鸡蛋', missing: ['米'] },
   { stuff: ['土豆'], counts: [30, 30, 19], first: '烤箱版M记同款薯条', partial: '电饭煲版焖鸡腿土豆', missing: ['鸡肉'] },
   { stuff: ['腊肠', '米'], counts: [6, 30, 26], first: '电饭煲版广式腊肠煲饭', partial: '电饭煲版胡萝卜腊肠饭', missing: ['胡萝卜'] },
   { stuff: ['鸡肉', '洋葱', '菌菇'], counts: [68, 34, 25], first: '电饭煲版烧鸡', partial: '电饭煲版南瓜鸡腿焖饭', missing: ['米'] },
-  { stuff: ['牛肉', '番茄', '米'], counts: [15, 55, 50], first: '电饭煲版番茄牛腩焖饭', partial: '电饭煲版番茄炖排骨', missing: ['猪肉'] },
+  { stuff: ['牛肉', '番茄', '米'], counts: [15, 56, 50], first: '电饭煲版番茄牛腩焖饭', partial: '电饭煲版番茄炖排骨', missing: ['猪肉'] },
 ]
 
 describe('local recipe dataset acceptance', () => {
+  it('reuses the prepared catalog across all modes and filters without stale selections', () => {
+    const recommend = createRecipeRecommender(recipes)
+    for (const { stuff } of cases) {
+      for (const mode of ['loose', 'strict', 'survival'] as const) {
+        for (const tool of ['', '电饭煲', '一口大锅']) {
+          const options = { stuff, mode, tool, pantry: ['油', '盐'] }
+          expect(recommend(options)).toEqual(recommendRecipes(recipes, options))
+        }
+      }
+    }
+    expect(recommend({ stuff: [] })).toEqual([])
+    expect(recommend({ stuff: ['火龙果'] })).toEqual([])
+    expect(recommend({ stuff: ['鸡蛋'], keyword: '不存在的菜谱' })).toEqual([])
+  })
+
   it.each(cases)('$stuff: verifies every group and representative missing ingredients', ({ stuff, counts, first, partial, missing }) => {
     const matches = recommendRecipes(recipes, { stuff, pantry: ['油', '盐'] })
     expect([0, 1, 2].map(count => matches.filter(m => m.missingStuff.length === count).length)).toEqual(counts)
@@ -54,6 +69,39 @@ describe('local recipe dataset acceptance', () => {
       if (match.requiredStuff.length < CATCH_ALL_MIN_STUFF)
         expect(match.optionalStuff).toEqual([])
     }
+  })
+
+  // #85: 忌口
+  it('drops regular recipes that use an avoided ingredient, aliases included', () => {
+    const matches = recommendRecipes(recipes, { stuff: ['番茄', '鸡蛋'], avoid: ['蘑菇'] })
+    expect(matches.length).toBeGreaterThan(0)
+    for (const match of matches) {
+      if (match.requiredStuff.length < CATCH_ALL_MIN_STUFF)
+        expect(match.requiredStuff).not.toContain('菌菇')
+    }
+    expect(matches.length).toBeLessThan(recommendRecipes(recipes, { stuff: ['番茄', '鸡蛋'] }).length)
+  })
+
+  it('keeps catch-all recipes but stops suggesting avoided add-ins', () => {
+    const name = '清汤锅万能高汤做法（鸡蛋+猪肉）'
+    const hotpot = recommendRecipes(recipes, { stuff: ['猪肉', '鸡蛋'], avoid: ['虾'] }).find(m => m.recipe.name === name)
+    expect(hotpot?.optionalStuff).not.toContain('虾')
+    expect(hotpot?.optionalStuff).toContain('豆腐')
+  })
+
+  it('hasAvoidedStuff matches the recommendation rule', () => {
+    const omelette = recipes.find(r => r.stuff.includes('番茄') && r.stuff.includes('鸡蛋') && r.stuff.length === 2)!
+    expect(hasAvoidedStuff(omelette, ['西红柿'])).toBe(true)
+    expect(hasAvoidedStuff(omelette, [])).toBe(false)
+    expect(hasAvoidedStuff(omelette, ['牛肉'])).toBe(false)
+  })
+
+  it('tags spicy and soup recipes and records a method for almost every recipe', () => {
+    const byName = (name: string) => recipes.find(r => r.name === name)!
+    expect(matchesTaste(byName('麻婆豆腐'), { noSpicy: true })).toBe(false)
+    expect(matchesTaste(byName('白萝卜汤'), { methodGroups: ['汤羹'] })).toBe(true)
+    expect(matchesTaste(byName('宫保鸡丁'), { methodGroups: ['炒菜'] })).toBe(true)
+    expect(recipes.filter(r => !r.methods?.length).length).toBeLessThan(recipes.length * 0.05)
   })
 
   it.each([[], ['火龙果']])('handles empty or unmatched selection %j', (...stuff) => {

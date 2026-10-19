@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { MaybeElementRef } from '@vueuse/core'
 import type { StuffItem } from '~/types'
+import { DIFFICULTY_LEVELS, METHOD_GROUPS } from '@yunyoujun/cook/recommend'
 import { useEmojiAnimation } from '~/composables/animation'
 import { useIncompatibleFoods } from '~/composables/incompatible-foods'
 import { meat, staple, tools, vegetable } from '~/data/food'
@@ -15,6 +16,7 @@ const props = defineProps<{
 const rStore = useRecipeStore()
 const selected = computed(() => rStore.selectedStuff)
 const pantryOpen = ref(false)
+const avoidOpen = ref(false)
 
 // 食物相克检测
 const { warningMessage, hasWarning, checkIncompatibility } = useIncompatibleFoods()
@@ -80,8 +82,28 @@ function clickTool(item: StuffItem) {
       />
     </IngredientSection>
 
+    <IngredientSection title="做法（可选）" :note="rStore.methodGroups.length ? '只看这些做法' : ''">
+      <IngredientChip
+        v-for="group in METHOD_GROUPS"
+        :key="group.label"
+        :label="group.label"
+        :selected="rStore.methodGroups.includes(group.label)"
+        @click="rStore.toggleMethodGroup(group.label)"
+      />
+    </IngredientSection>
+
+    <IngredientSection title="难度（可选）" :note="rStore.difficulty.length ? '没标难度的菜会被隐藏' : ''">
+      <IngredientChip
+        v-for="level in DIFFICULTY_LEVELS"
+        :key="level"
+        :label="level"
+        :selected="rStore.difficulty.includes(level)"
+        @click="rStore.toggleDifficulty(level)"
+      />
+    </IngredientSection>
+
     <h2 class="cook-group-header">
-      调料
+      调料和忌口
     </h2>
     <ion-list :inset="true" class="choose-food-pantry">
       <ion-item :button="true" @click="pantryOpen = true">
@@ -89,6 +111,17 @@ function clickTool(item: StuffItem) {
         <ion-note slot="end" class="choose-food-pantry-value">
           {{ rStore.selectedPantry.length ? rStore.selectedPantry.join('、') : '未选择' }}
         </ion-note>
+      </ion-item>
+      <ion-item :button="true" @click="avoidOpen = true">
+        <ion-label>忌口</ion-label>
+        <ion-note slot="end" class="choose-food-pantry-value">
+          {{ rStore.selectedAvoid.length ? rStore.selectedAvoid.join('、') : '无' }}
+        </ion-note>
+      </ion-item>
+      <ion-item>
+        <ion-toggle v-model="rStore.noSpicy" justify="space-between">
+          不吃辣
+        </ion-toggle>
       </ion-item>
     </ion-list>
 
@@ -98,6 +131,13 @@ function clickTool(item: StuffItem) {
       @toggle="rStore.togglePantry"
       @clear="rStore.clearPantry"
       @reset="rStore.resetPantry"
+    />
+
+    <AvoidSheet
+      v-model:open="avoidOpen"
+      :selected="rStore.selectedAvoid"
+      @toggle="rStore.toggleAvoid"
+      @clear="rStore.clearAvoid"
     />
 
     <ion-toast

@@ -5,12 +5,14 @@ import type { RecipeMatch } from '@yunyoujun/cook'
 import type { SearchMode } from '~/composables/store/recipe'
 import type { RecipeItem } from '~/types'
 import { createGesture } from '@ionic/vue'
+import { useCookFunnel } from '~/composables/useCookFunnel'
 import { getEmojisFromStuff } from '~/utils'
 import { yunleHaptic } from '~/utils/yunleHost'
 
 /**
  * 常驻底部弹层（类似「地图」App）：收起时是一条结果预览，拖到一半能边选食材边看菜，拖到顶是完整列表
  */
+const props = defineProps<{ active: boolean }>()
 const emit = defineEmits<{ scrollTop: [], detail: [recipe: RecipeItem, match?: RecipeMatch] }>()
 /** 弹层当前遮住的高度，页面用它留出底部空白，保证最下面的分组能滚出来 */
 const inset = defineModel<number>('inset', { default: 0 })
@@ -18,7 +20,7 @@ const inset = defineModel<number>('inset', { default: 0 })
 type Detent = 'collapsed' | 'half' | 'full'
 
 /** 收起时露出的高度：把手 + 一行预览 */
-const COLLAPSED = 76
+const COLLAPSED = 92
 const HALF_RATIO = 0.52
 /** 完全展开时和页面顶部导航栏之间留的空隙 */
 const TOP_GAP = 8
@@ -117,7 +119,7 @@ onMounted(() => {
 onBeforeUnmount(() => gesture?.destroy())
 
 function onHeadClick() {
-  snapTo(detent.value === 'collapsed' ? 'half' : 'collapsed')
+  snapTo(detent.value === 'collapsed' ? 'full' : 'collapsed')
 }
 
 function goAdjust() {
@@ -185,17 +187,6 @@ function addSuggestion(name: string) {
 
 // ---------- 收起时的预览 ----------
 const count = computed(() => rStore.resultCount)
-const rollDirection = ref(1)
-const delta = ref(0)
-const deltaKey = ref(0)
-watch(count, (value, oldValue) => {
-  rollDirection.value = value >= oldValue ? 1 : -1
-  if (!rStore.isSearching && oldValue !== undefined && value !== oldValue) {
-    delta.value = value - oldValue
-    deltaKey.value++
-  }
-})
-
 const selectedEmojis = computed(() => {
   const emojis = getEmojisFromStuff(rStore.selectedStuff)
   return emojis.length ? emojis.slice(0, 3) : ['🧺']
@@ -209,6 +200,24 @@ const selectedSummary = computed(() => {
 
 // 收起时内容区移到页面以下，会从半透明的标签栏后面透出来；随展开程度淡入淡出（只改 opacity）
 const bodyOpacity = computed(() => Math.min(1, Math.max(0, (sheetHeight.value - offset.value - COLLAPSED) / 120)))
+
+const bodyRef = useTemplateRef<HTMLElement>('bodyRef')
+const bodyInViewport = useElementVisibility(bodyRef)
+const documentVisibility = useDocumentVisibility()
+// Do not build Ionic result rows while the user is still choosing ingredients.
+const bodyVisible = computed(() => props.active && hasSelection.value && (detent.value !== 'collapsed' || dragging.value))
+useCookFunnel(computed(() => ({
+  active: props.active && documentVisibility.value === 'visible',
+  hasIngredients: rStore.selectedStuff.length > 0,
+  results: !bodyVisible.value || !bodyInViewport.value || !settled.value || dragging.value || rStore.loadError
+    ? 'hidden'
+    : rStore.isSearching ? 'loading' : count.value > 0 ? 'ready' : 'empty',
+})))
+
+function tryExample() {
+  rStore.addStuff('番茄、鸡蛋')
+  snapTo('full')
+}
 
 const sheetStyle = computed(() => ({
   'height': `${sheetHeight.value}px`,
@@ -229,71 +238,24 @@ const sheetStyle = computed(() => ({
   >
     <div class="results-panel-head" @click="onHeadClick">
       <div class="results-panel-grabber" aria-hidden="true" />
-      <div class="results-panel-bar">
-        <template v-if="rStore.loadError">
-          <div class="results-panel-text">
-            <div class="results-panel-title">
-              菜谱没有加载成功
-            </div>
-            <div class="results-panel-sub">
-              {{ rStore.loadError }}
-            </div>
-          </div>
-          <ion-button shape="round" size="small" @click.stop="rStore.loadRecipes">
-            重试
-          </ion-button>
-        </template>
-        <template v-else-if="!hasSelection">
-          <span class="results-panel-avatars" aria-hidden="true"><span>🧺</span></span>
-          <div class="results-panel-text">
-            <div class="results-panel-title">
-              先选几样食材
-            </div>
-            <div class="results-panel-sub">
-              看看家里的食材能做什么
-            </div>
-          </div>
-          <ion-button shape="round" size="small" fill="outline" @click.stop="rStore.addStuff('番茄'); rStore.addStuff('鸡蛋')">
-            试试番茄＋鸡蛋
-          </ion-button>
-        </template>
-        <template v-else>
-          <button type="button" class="results-panel-avatars" aria-label="回到顶部调整食材" data-flight-target @click.stop="goAdjust">
-            <span v-for="(emoji, i) in selectedEmojis" :key="`${emoji}-${i}`">{{ emoji }}</span>
-          </button>
-          <div class="results-panel-text">
-            <div class="results-panel-title">
-              <template v-if="rStore.isSearching">
-                正在准备菜谱…
-              </template>
-              <template v-else>
-                {{ toolMode ? `用${rStore.curTool}能做` : '可以做' }}
-                <span class="results-panel-count" :style="{ '--roll': rollDirection }">
-                  <Transition name="count-roll" mode="out-in">
-                    <span :key="count" class="results-panel-count-value">{{ count }}</span>
-                  </Transition>
-                  <Transition name="count-delta">
-                    <span v-if="delta && detent === 'collapsed'" :key="deltaKey" class="results-panel-delta" :class="delta > 0 ? 'is-up' : 'is-down'" aria-hidden="true" @animationend="delta = 0">
-                      {{ delta > 0 ? `+${delta}` : delta }}
-                    </span>
-                  </Transition>
-                </span>
-                道菜
-              </template>
-            </div>
-            <div class="results-panel-sub">
-              {{ selectedSummary }}
-            </div>
-          </div>
-          <span class="results-panel-toggle" aria-hidden="true">
-            <ion-icon :icon="ioniconsChevronUp" />
-          </span>
-        </template>
-      </div>
+      <ResultsPreview
+        :loading="rStore.isSearching"
+        :error="rStore.loadError"
+        :has-selection="hasSelection"
+        :count="count"
+        :summary="selectedSummary"
+        :emojis="selectedEmojis"
+        :expanded="detent !== 'collapsed'"
+        @toggle="onHeadClick"
+        @adjust="goAdjust"
+        @example="tryExample"
+        @retry="rStore.loadRecipes"
+      />
     </div>
 
-    <div class="results-panel-body" :style="{ opacity: bodyOpacity, visibility: bodyOpacity ? 'visible' : 'hidden' }">
-      <template v-if="hasSelection && !rStore.loadError">
+    <div id="cook-results-body" ref="bodyRef" class="results-panel-body" :aria-busy="bodyVisible && rStore.isSearching" :style="{ opacity: bodyOpacity, visibility: bodyOpacity ? 'visible' : 'hidden' }">
+      <ResultsSkeleton v-if="bodyVisible && rStore.isSearching" />
+      <template v-else-if="bodyVisible && !rStore.loadError">
         <div v-if="rStore.unlockSuggestions.length && !toolMode" class="results-panel-unlock" aria-label="再补一样">
           <span class="results-panel-unlock-label">再补一样</span>
           <TransitionGroup name="unlock" tag="div" class="results-panel-unlock-row">
@@ -334,9 +296,15 @@ const sheetStyle = computed(() => ({
               </ion-select-option>
             </ion-select>
           </div>
-          <div v-if="rStore.curTool && !toolMode" class="results-panel-filter">
-            <button type="button" class="results-panel-filter-chip" :aria-label="`取消厨具筛选：${rStore.curTool}`" @click="rStore.toggleTools(rStore.curTool)">
+          <div v-if="(rStore.curTool && !toolMode) || rStore.methodGroups.length || rStore.difficulty.length" class="results-panel-filter">
+            <button v-if="rStore.curTool && !toolMode" type="button" class="results-panel-filter-chip" :aria-label="`取消厨具筛选：${rStore.curTool}`" @click="rStore.toggleTools(rStore.curTool)">
               厨具：{{ rStore.curTool }}<ion-icon :icon="ioniconsClose" aria-hidden="true" />
+            </button>
+            <button v-for="label in rStore.methodGroups" :key="label" type="button" class="results-panel-filter-chip" :aria-label="`取消做法筛选：${label}`" @click="rStore.toggleMethodGroup(label)">
+              做法：{{ label }}<ion-icon :icon="ioniconsClose" aria-hidden="true" />
+            </button>
+            <button v-for="level in rStore.difficulty" :key="level" type="button" class="results-panel-filter-chip" :aria-label="`取消难度筛选：${level}`" @click="rStore.toggleDifficulty(level)">
+              难度：{{ level }}<ion-icon :icon="ioniconsClose" aria-hidden="true" />
             </button>
           </div>
 
@@ -369,7 +337,10 @@ const sheetStyle = computed(() => ({
             </ion-list>
             <div v-else :key="`empty-${active}`" class="results-panel-empty">
               <h3>这一组暂时没有菜</h3>
-              <p>{{ rStore.keyword || rStore.curMode !== 'loose' ? '试试清除菜名或放宽匹配范围' : '换个分组，或者再加几样食材' }}</p>
+              <p>{{ rStore.keyword || rStore.curMode !== 'loose' ? '试试清除菜名或放宽匹配范围' : count ? '换个分组，或者再加几样食材' : '试试换成常见食材，或清除厨具筛选' }}</p>
+              <ion-button fill="clear" @click="goAdjust">
+                调整食材
+              </ion-button>
             </div>
           </Transition>
 
@@ -411,105 +382,6 @@ const sheetStyle = computed(() => ({
   margin: 0 auto 8px;
   border-radius: 3px;
   background: var(--ion-color-step-300, rgba(118, 118, 128, 0.4));
-}
-.results-panel-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 44px;
-}
-.results-panel-avatars {
-  display: inline-flex;
-  flex: none;
-  padding-inline-start: 6px;
-}
-.results-panel-avatars span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  margin-inline-start: -6px;
-  border: 2px solid var(--ion-background-color, #f2f2f6);
-  border-radius: 50%;
-  background: var(--ion-item-background, #fff);
-  font-size: 17px;
-}
-.results-panel-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-}
-.results-panel-title {
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 22px;
-  color: var(--ion-text-color, #000);
-}
-.results-panel-sub {
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--ion-color-medium);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.results-panel-toggle {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--cook-fill);
-  color: var(--ion-color-medium);
-  font-size: 16px;
-  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-}
-.results-panel:not(.is-collapsed) .results-panel-toggle {
-  transform: rotate(180deg);
-}
-.results-panel-count {
-  position: relative;
-  display: inline-flex;
-  vertical-align: bottom;
-}
-.results-panel-count-value {
-  display: inline-block;
-  min-width: 1ch;
-  font-variant-numeric: tabular-nums;
-}
-.results-panel-delta {
-  position: absolute;
-  left: 50%;
-  bottom: 100%;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-  pointer-events: none;
-  animation: results-delta 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-.results-panel-delta.is-up {
-  color: var(--ion-color-primary);
-}
-.results-panel-delta.is-down {
-  color: var(--ion-color-medium);
-}
-@keyframes results-delta {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, 6px) scale(0.8);
-  }
-  25% {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -10px);
-  }
 }
 .results-panel-body {
   transition: opacity 0.3s ease;
@@ -601,6 +473,9 @@ const sheetStyle = computed(() => ({
   color: var(--ion-color-primary);
 }
 .results-panel-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   padding: 4px 20px 0;
 }
 .results-panel-filter-chip {
@@ -684,32 +559,13 @@ const sheetStyle = computed(() => ({
   position: absolute;
 }
 
-.count-roll-enter-active,
-.count-roll-leave-active {
-  transition:
-    transform 0.14s ease,
-    opacity 0.14s ease;
-}
-.count-roll-enter-from {
-  opacity: 0;
-  transform: translateY(calc(var(--roll) * 0.8em));
-}
-.count-roll-leave-to {
-  opacity: 0;
-  transform: translateY(calc(var(--roll) * -0.8em));
-}
-
 @media (prefers-reduced-motion: reduce) {
   .results-panel,
-  .results-panel-toggle,
-  .count-roll-enter-active,
-  .count-roll-leave-active,
   .unlock-enter-active,
   .unlock-leave-active {
     transition: none;
   }
-  .results-panel-list :deep(.recipe-result-row),
-  .results-panel-delta {
+  .results-panel-list :deep(.recipe-result-row) {
     animation: none;
   }
   .results-slide-left-enter-active,

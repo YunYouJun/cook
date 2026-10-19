@@ -7,9 +7,10 @@ import { isFavorited, toggleFavorite } from '~/composables/store/favorite'
 import { addRecipeHistory } from '~/composables/store/history'
 import { getEmojisFromStuff } from '~/utils'
 import { trackCookEvent } from '~/utils/analytics'
+import { isCustomRecipe } from '~/utils/customRecipe'
 import { promptText } from '~/utils/dialog'
 import { feedbackKinds } from '~/utils/feedback'
-import { getRecipeFeedbackLink, openRecipe } from '~/utils/recipe'
+import { getRecipeFeedbackLink, getRecipeLink, openRecipe } from '~/utils/recipe'
 import { yunleHaptic } from '~/utils/yunleHost'
 
 /**
@@ -40,6 +41,10 @@ const groups = computed(() => {
     { label: '还能加', items: match.optionalStuff, tone: 'neutral' },
   ].filter(group => group.items.length)
 })
+
+const custom = computed(() => props.recipe && isCustomRecipe(props.recipe) ? props.recipe : undefined)
+const link = computed(() => props.recipe ? getRecipeLink(props.recipe) : '')
+const linkLabel = computed(() => props.recipe?.bv || link.value.includes('bilibili.com') ? '去 B 站看做法' : '看做法')
 
 const canFavorite = computed(() => typeof (props.recipe as { id?: number } | undefined)?.id === 'number')
 const favorited = computed(() => props.recipe ? isFavorited(props.recipe) : false)
@@ -109,10 +114,15 @@ function watchVideo() {
   trackCookEvent('click_dish')
   openRecipe(props.recipe)
 }
+
+function onPresented() {
+  if (open.value && props.recipe)
+    trackCookEvent('view_recipe_detail')
+}
 </script>
 
 <template>
-  <ion-modal :is-open="open" :breakpoints="[0, 0.62, 1]" :initial-breakpoint="0.62" @did-dismiss="open = false">
+  <ion-modal :is-open="open" :breakpoints="[0, 0.62, 1]" :initial-breakpoint="0.62" @did-present="onPresented" @did-dismiss="open = false">
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="end">
@@ -130,9 +140,23 @@ function watchVideo() {
       </div>
 
       <div class="recipe-detail-actions">
-        <ion-button expand="block" class="recipe-detail-primary" @click="watchVideo">
+        <ion-button v-if="link" expand="block" class="recipe-detail-primary" @click="watchVideo">
           <ion-icon slot="start" :icon="ioniconsPlayCircle" />
-          去 B 站看做法
+          {{ linkLabel }}
+        </ion-button>
+        <ion-button
+          v-if="custom"
+          :expand="link ? undefined : 'block'"
+          :fill="link ? 'clear' : 'solid'"
+          :class="link ? 'recipe-detail-fav' : 'recipe-detail-primary'"
+          :router-link="`/recipes/new?id=${custom.customId}`"
+          aria-label="编辑菜谱"
+          @click="open = false"
+        >
+          <ion-icon :slot="link ? 'icon-only' : 'start'" :icon="ioniconsCreateOutline" />
+          <template v-if="!link">
+            编辑菜谱
+          </template>
         </ion-button>
         <ion-button v-if="canFavorite" fill="clear" class="recipe-detail-fav" :aria-pressed="favorited" :aria-label="favorited ? '取消收藏' : '收藏'" @click="onFavorite">
           <ion-icon slot="icon-only" :icon="favorited ? ioniconsStar : ioniconsStarOutline" color="warning" />
@@ -148,17 +172,40 @@ function watchVideo() {
         </div>
       </section>
 
+      <section v-if="custom?.note" aria-label="做法备注">
+        <h3 class="cook-group-header">
+          做法备注
+        </h3>
+        <p class="recipe-detail-text">
+          {{ custom.note }}
+        </p>
+      </section>
+
       <p class="cook-group-footer recipe-detail-note">
-        食材来自菜谱记录，用量和调味以视频为准。
-        <button type="button" class="recipe-detail-feedback" @click="onFeedback">
-          视频打不开或信息不对？反馈一下
-        </button>
+        <template v-if="custom">
+          这是你自己添加的菜谱，只保存在这台设备上。
+        </template>
+        <template v-else>
+          食材来自菜谱记录，用量和调味以视频为准。
+          <button type="button" class="recipe-detail-feedback" @click="onFeedback">
+            视频打不开或信息不对？反馈一下
+          </button>
+        </template>
       </p>
     </ion-content>
   </ion-modal>
 </template>
 
 <style scoped>
+.recipe-detail-text {
+  margin: 0 16px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--ion-item-background, #fff);
+  font-size: 16px;
+  line-height: 22px;
+  white-space: pre-wrap;
+}
 .recipe-detail-hero {
   display: flex;
   flex-direction: column;

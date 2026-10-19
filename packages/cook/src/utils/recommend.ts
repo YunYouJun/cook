@@ -1,4 +1,4 @@
-import type { RecipeItem } from '../types/recipe'
+import type { Difficulty, RecipeItem } from '../types/recipe'
 import { normalizeStuff } from './alias'
 
 export type RecommendationMode = 'loose' | 'strict' | 'survival'
@@ -29,7 +29,34 @@ export interface RecommendationOptions {
   tool?: string
   keyword?: string
   mode?: RecommendationMode
+  /** 忌口：普通菜只要用到就排除，大杂烩只是不再建议加它 */
+  avoid?: string[]
+  /** 做法分组（见 METHOD_GROUPS），选了多个时满足任意一个即可 */
+  methodGroups?: string[]
+  /** 不吃辣：排除打了「辣」标签的菜 */
+  noSpicy?: boolean
+  /** 难度，选了多个时满足任意一个即可；没有记录难度的菜会被排除 */
+  difficulty?: Difficulty[]
 }
+
+/**
+ * 筛选用的做法分组：数据里的做法写法很散（烤/烘/焗、拌/凉拌），按吃起来的区别归成几类。
+ * 汤羹不是做法，靠「汤」标签识别。
+ */
+export const METHOD_GROUPS: { label: string, methods: string[], tags?: string[] }[] = [
+  { label: '炒菜', methods: ['炒'] },
+  { label: '汤羹', methods: [], tags: ['汤'] },
+  { label: '炖煮', methods: ['炖', '煮', '煲', '卤', '焖', '烧', '灼'] },
+  { label: '蒸', methods: ['蒸'] },
+  { label: '炸煎', methods: ['炸', '煎', '烙'] },
+  { label: '烤', methods: ['烤', '烘', '焗'] },
+  { label: '凉拌', methods: ['拌', '凉拌', '腌', '腌制', '泡菜', '油泼'] },
+  { label: '微波', methods: ['微波加热'] },
+]
+
+export const SPICY_TAG = '辣'
+
+export const DIFFICULTY_LEVELS: Difficulty[] = ['简单', '普通', '困难']
 
 /** Reuse the catalog aliases; split recorded separators, trim and deduplicate. */
 export function uniqueStuff(stuff: string[]): string[] {
@@ -40,44 +67,90 @@ function isCatchAll(requiredStuff: string[]): boolean {
   return requiredStuff.length >= CATCH_ALL_MIN_STUFF
 }
 
-/** Only explicitly recorded ingredients are requirements. Names/tags are never parsed. */
+/** 菜里有没有忌口的食材；大杂烩里的食材都是可选的，不算 */
+export function hasAvoidedStuff(recipe: RecipeItem, avoid: string[]): boolean {
+  if (!avoid.length)
+    return false
+  const requiredStuff = uniqueStuff(recipe.stuff)
+  if (isCatchAll(requiredStuff))
+    return false
+  const avoided = new Set(uniqueStuff(avoid))
+  return requiredStuff.some(item => avoided.has(item))
+}
+
+function recipeMethods(recipe: RecipeItem): string[] {
+  return ((recipe.methods ?? []) as string[]).flatMap(method => method.split(/[、/]/)).filter(Boolean)
+}
+
+/** 做法、口味和难度筛选；没有记录做法或难度的菜在选了对应条件时不会出现 */
+export function matchesTaste(recipe: RecipeItem, options: Pick<RecommendationOptions, 'methodGroups' | 'noSpicy' | 'difficulty'>): boolean {
+  if (options.noSpicy && recipe.tags?.includes(SPICY_TAG))
+    return false
+  if (options.difficulty?.length && !(recipe.difficulty && options.difficulty.includes(recipe.difficulty)))
+    return false
+  const groups = METHOD_GROUPS.filter(group => options.methodGroups?.includes(group.label))
+  if (!groups.length)
+    return true
+  const methods = recipeMethods(recipe)
+  return groups.some(group => group.methods.some(method => methods.includes(method))
+    || group.tags?.some(tag => recipe.tags?.includes(tag)))
+}
+
+/** Only explicitly recorded ingredients are requirements. Recipe names are never parsed. */
 export function recommendRecipes(recipes: RecipeItem[], options: RecommendationOptions): RecipeMatch[] {
-  const selected = new Set(uniqueStuff(options.stuff))
-  const pantry = new Set(uniqueStuff(options.pantry ?? []))
-  const keyword = options.keyword?.trim() ?? ''
-  if (!selected.size)
-    return []
+  return createRecipeRecommender(recipes)(options)
+}
 
-  return recipes.flatMap((recipe, sourceIndex): RecipeMatch[] => {
-    if (options.tool && !recipe.tools?.includes(options.tool))
-      return []
-    if (keyword && !recipe.name.includes(keyword))
-      return []
-
-    const requiredStuff = uniqueStuff(recipe.stuff)
-    const matchedStuff = requiredStuff.filter(item => selected.has(item))
-    const pantryStuff = requiredStuff.filter(item => !selected.has(item) && pantry.has(item))
-    const unownedStuff = requiredStuff.filter(item => !selected.has(item) && !pantry.has(item))
-    const catchAll = isCatchAll(requiredStuff)
-    const missingStuff = catchAll ? [] : unownedStuff
-    const optionalStuff = catchAll ? unownedStuff : []
-
-    // Pantry alone must not create an unrelated recommendation; empty records are unknown.
-    if (!matchedStuff.length || missingStuff.length > 2)
-      return []
-    if (catchAll && matchedStuff.length < CATCH_ALL_MIN_MATCH)
-      return []
-    if (options.mode === 'strict' && ![...selected].every(item => requiredStuff.includes(item)))
-      return []
-    if (options.mode === 'survival' && missingStuff.length)
+/** Prepare immutable catalog ingredients once, instead of normalizing all rows on every click. */
+export function createRecipeRecommender(recipes: RecipeItem[]) {
+  const catalog = recipes.map((recipe, sourceIndex) => ({
+    recipe,
+    sourceIndex,
+    requiredStuff: uniqueStuff(recipe.stuff),
+  }))
+  return (options: RecommendationOptions): RecipeMatch[] => {
+    const selected = new Set(uniqueStuff(options.stuff))
+    const pantry = new Set(uniqueStuff(options.pantry ?? []))
+    const keyword = options.keyword?.trim() ?? ''
+    const avoided = new Set(uniqueStuff(options.avoid ?? []))
+    if (!selected.size)
       return []
 
-    return [{ recipe, sourceIndex, requiredStuff, matchedStuff, pantryStuff, missingStuff, optionalStuff }]
-  }).sort((a, b) =>
-    a.missingStuff.length - b.missingStuff.length
-    // 大杂烩是兜底选项，排在同组的正经菜后面
-    || Number(isCatchAll(a.requiredStuff)) - Number(isCatchAll(b.requiredStuff))
-    || b.matchedStuff.length - a.matchedStuff.length
-    || a.sourceIndex - b.sourceIndex,
-  )
+    return catalog.flatMap(({ recipe, sourceIndex, requiredStuff }): RecipeMatch[] => {
+      if (options.tool && !recipe.tools?.includes(options.tool))
+        return []
+      if (keyword && !recipe.name.includes(keyword))
+        return []
+      const catchAll = isCatchAll(requiredStuff)
+      // 和 hasAvoidedStuff 同一条规则，这里直接用预处理好的食材
+      if (!catchAll && requiredStuff.some(item => avoided.has(item)))
+        return []
+      if (!matchesTaste(recipe, options))
+        return []
+
+      const matchedStuff = requiredStuff.filter(item => selected.has(item))
+      const pantryStuff = requiredStuff.filter(item => !selected.has(item) && pantry.has(item))
+      const unownedStuff = requiredStuff.filter(item => !selected.has(item) && !pantry.has(item))
+      const missingStuff = catchAll ? [] : unownedStuff
+      const optionalStuff = catchAll ? unownedStuff.filter(item => !avoided.has(item)) : []
+
+      // Pantry alone must not create an unrelated recommendation; empty records are unknown.
+      if (!matchedStuff.length || missingStuff.length > 2)
+        return []
+      if (catchAll && matchedStuff.length < CATCH_ALL_MIN_MATCH)
+        return []
+      if (options.mode === 'strict' && ![...selected].every(item => requiredStuff.includes(item)))
+        return []
+      if (options.mode === 'survival' && missingStuff.length)
+        return []
+
+      return [{ recipe, sourceIndex, requiredStuff, matchedStuff, pantryStuff, missingStuff, optionalStuff }]
+    }).sort((a, b) =>
+      a.missingStuff.length - b.missingStuff.length
+      // 大杂烩是兜底选项，排在同组的正经菜后面
+      || Number(isCatchAll(a.requiredStuff)) - Number(isCatchAll(b.requiredStuff))
+      || b.matchedStuff.length - a.matchedStuff.length
+      || a.sourceIndex - b.sourceIndex,
+    )
+  }
 }

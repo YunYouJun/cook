@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import dayjs from 'dayjs'
+import { customRecipes } from '~/composables/store/customRecipe'
 import { links } from '~/constants'
 
 definePageMeta({
@@ -131,6 +132,13 @@ async function handleSignOut(): Promise<void> {
         <ion-item router-link="/recipes/favorites">
           <CookListIcon slot="start" :icon="ioniconsStarOutline" color="#ff9500" />
           <ion-label>我的收藏</ion-label>
+        </ion-item>
+        <ion-item router-link="/recipes/mine">
+          <CookListIcon slot="start" :icon="ioniconsBookOutline" color="#a2845e" />
+          <ion-label>我的菜谱</ion-label>
+          <ion-note v-if="customRecipes.length" slot="end">
+            {{ customRecipes.length }}
+          </ion-note>
         </ion-item>
       </ion-list>
 

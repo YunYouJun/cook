@@ -113,6 +113,7 @@ export default defineNuxtConfig({
   colorMode: {
     classSuffix: '',
   },
+  spaLoadingTemplate: 'spa-loading-template.html',
   runtimeConfig: {
     public: {
       clarityProjectId: process.env.NUXT_PUBLIC_CLARITY_PROJECT_ID ?? 'ks1ebw03i5',
