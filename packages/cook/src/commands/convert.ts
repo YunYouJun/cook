@@ -5,12 +5,14 @@ import consola from 'consola'
 import {
   CHUNK_SIZE,
   CHUNK_THRESHOLD,
+  DATA_SCHEMA_VERSION,
   incompatibleFoodsCsvFile,
   incompatibleFoodsJsonFile,
   recipeCsvFile,
   recipeJsonFile,
   recipeMetaJsonFile,
   rootDir,
+  sharedDataFiles,
 } from '../utils/config.js'
 import { parseIncompatibleFoodsCsv, parseRecipeCsv } from '../utils/csv.js'
 
@@ -40,7 +42,7 @@ function shortHash(content: string): string {
 }
 
 /**
- * 转换 recipe CSV → JSON（支持分片输出）
+ * 转换 recipe CSV → JSON（支持分片输出），返回菜谱和要写进 recipe-meta.json 的分片信息
  */
 function convertRecipes() {
   consola.info('Converting recipe data...')
@@ -73,30 +75,28 @@ function convertRecipes() {
       consola.success(`Generated: ${chunkFile} (${chunk.length} recipes)`)
     }
 
-    const meta = {
-      chunked: true,
-      total: recipes.length,
-      chunkSize: CHUNK_SIZE,
-      chunks,
-      version: Date.now(),
-    }
-    fs.writeFileSync(recipeMetaJsonFile, JSON.stringify(meta, null, 2))
-    consola.success(`Generated: ${recipeMetaJsonFile} (${chunks.length} chunks, ${recipes.length} total)`)
+    return { recipes, meta: { chunked: true, total: recipes.length, chunkSize: CHUNK_SIZE, chunks } }
   }
   else {
     // 单文件模式：保持原有行为，同时生成 meta
     cleanChunkFiles()
     fs.writeFileSync(recipeJsonFile, JSON.stringify(recipes))
     consola.success(`Generated: ${recipeJsonFile} (${recipes.length} recipes)`)
-
-    const meta = {
-      chunked: false,
-      total: recipes.length,
-      version: Date.now(),
-    }
-    fs.writeFileSync(recipeMetaJsonFile, JSON.stringify(meta, null, 2))
-    consola.success(`Generated: ${recipeMetaJsonFile}`)
+    return { recipes, meta: { chunked: false, total: recipes.length } }
   }
+}
+
+/**
+ * 数据内容的版本：菜谱、相克规则、食材词典、常备调料和别名的 hash，内容不变则不变。
+ * iOS 按它判断 CDN 上的数据是否比内置的新。
+ */
+export function computeDataVersion(recipes: unknown, rules: unknown, sharedFiles: string[] = sharedDataFiles): string {
+  const hash = crypto.createHash('sha256')
+  hash.update(JSON.stringify(recipes))
+  hash.update(JSON.stringify(rules))
+  for (const file of sharedFiles)
+    hash.update(JSON.stringify(JSON.parse(fs.readFileSync(file, 'utf-8'))))
+  return hash.digest('hex').slice(0, 12)
 }
 
 /**
@@ -116,6 +116,7 @@ function convertIncompatibleFoods() {
 
     fs.writeFileSync(incompatibleFoodsJsonFile, JSON.stringify(rules, null, 2))
     consola.success(`Generated: ${incompatibleFoodsJsonFile} (${rules.length} rules)`)
+    return rules
   }
   catch (error) {
     consola.error('Failed to convert incompatible foods data:', error)
@@ -154,7 +155,17 @@ function updateLastDbUpdated() {
  * convert 命令入口
  */
 export function runConvert() {
-  convertRecipes()
-  convertIncompatibleFoods()
+  const converted = convertRecipes()
+  const rules = convertIncompatibleFoods() ?? []
+  if (converted) {
+    const meta = {
+      schemaVersion: DATA_SCHEMA_VERSION,
+      dataVersion: computeDataVersion(converted.recipes, rules),
+      ...converted.meta,
+      version: Date.now(),
+    }
+    fs.writeFileSync(recipeMetaJsonFile, JSON.stringify(meta, null, 2))
+    consola.success(`Generated: ${recipeMetaJsonFile} (dataVersion ${meta.dataVersion})`)
+  }
   updateLastDbUpdated()
 }

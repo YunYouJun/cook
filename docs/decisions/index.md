@@ -17,4 +17,5 @@
 | [0003](./0003-native-ios-monorepo)   | 原生 iOS App 与 monorepo 结构        | 已采纳 |
 | [0004](./0004-ios-app-name)          | iOS App 命名为「云食册」             | 已采纳 |
 | [0005](./0005-app-icon)              | 应用图标「蒸汽成云」                 | 已采纳 |
+| [0006](./0006-ios-bundle-id)         | iOS App 使用 `fun.yunle.cook`        | 已采纳 |
 | [0007](./0007-ai-and-sentence-input) | AI 能力：先做整句识别，AI 只负责听懂 | 已采纳 |

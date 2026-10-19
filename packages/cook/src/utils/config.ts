@@ -18,6 +18,15 @@ export const recipeJsonFile = path.resolve(root, 'packages/data/recipe.json')
 export const recipeMetaJsonFile = path.resolve(root, 'packages/data/recipe-meta.json')
 export const incompatibleFoodsCsvFile = path.resolve(root, 'packages/data/incompatible-foods.csv')
 export const incompatibleFoodsJsonFile = path.resolve(root, 'packages/data/incompatible-foods.json')
+/** 手写、直接提交的共享数据，参与 dataVersion 计算 */
+export const sharedDataFiles = ['aliases.json', 'food.json', 'pantry.json']
+  .map(file => path.resolve(root, 'packages/data', file))
+
+/**
+ * packages/data 里 JSON 的结构版本，写进 recipe-meta.json 的 schemaVersion。
+ * 字段改名、删除或改类型时加一，并同步更新 packages/data/schema 和 iOS 的 CookCore；只加可选字段不用改。
+ */
+export const DATA_SCHEMA_VERSION = 1
 
 // 分片配置
 export const CHUNK_SIZE = 200 // 每片菜谱数

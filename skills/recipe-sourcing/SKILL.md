@@ -52,7 +52,7 @@ metadata:
    pnpm lint
    ```
 
-   `test/recommendations.test.ts` 里的数量断言会随数据变化，只在变化是你新增的菜直接造成时才更新。`pnpm fixtures` 重新生成的 `packages/data/fixtures/recommend.json` 一起提交。
+   `test/recommendations.test.ts` 里的数量断言会随数据变化，只在变化是你新增的菜直接造成时才更新。`pnpm fixtures` 重新生成的 `packages/data/fixtures/*.json` 一起提交。
 
 7. **提交并开 PR**：PR 描述列出每道新菜的 id、菜名、BV 号、UP 主和视频标题，方便维护者抽查；说明哪些平台没能访问。
 
