@@ -1,10 +1,17 @@
-import type { FeedbackKind, SearchSignal } from '~/adapters/feedback'
+import type { AppFeedbackCategory, FeedbackKind, SearchSignal } from '~/adapters/feedback'
 
 export const feedbackKinds: { kind: FeedbackKind, label: string }[] = [
   { kind: 'video', label: '视频打不开' },
   { kind: 'stuff', label: '食材或厨具不对' },
   { kind: 'info', label: '难度或做法不对' },
   { kind: 'other', label: '其他问题' },
+]
+
+export const appFeedbackCategories: { category: AppFeedbackCategory, label: string }[] = [
+  { category: 'bug', label: '用着有问题' },
+  { category: 'idea', label: '功能建议' },
+  { category: 'recipe', label: '想要的菜没有' },
+  { category: 'other', label: '其他' },
 ]
 
 const DEVICE_ID_KEY = 'cook:device-id'

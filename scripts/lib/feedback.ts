@@ -12,6 +12,17 @@ export interface FeedbackRow {
   day: string
 }
 
+/** General feedback about the app, from the web or iOS. */
+export interface AppFeedbackRow {
+  category: string
+  note: string
+  contact: string
+  platform: string
+  version: string
+  signedIn: boolean
+  day: string
+}
+
 export interface SignalRow {
   type: 'empty' | 'open'
   stuff: string[]

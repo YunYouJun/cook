@@ -1,11 +1,11 @@
-import type { RecipeReport, SearchSignal } from '~/adapters/feedback'
+import type { AppFeedback, RecipeReport, SearchSignal } from '~/adapters/feedback'
 import { createFeedbackRemote } from '~/adapters/feedback'
 import { getDeviceId, signalKey } from '~/utils/feedback'
 
 const sentSignals = new Set<string>()
 
 /**
- * Recipe reports and anonymous search signals, sent to the `cook-feedback`
+ * Recipe reports, app feedback and anonymous search signals, sent to the `cook-feedback`
  * cloud function. Signals are best effort and never surface errors.
  */
 export function useRecipeFeedback() {
@@ -27,5 +27,9 @@ export function useRecipeFeedback() {
     remote().signal(input).catch(() => {})
   }
 
-  return { report, signal }
+  async function sendFeedback(input: AppFeedback): Promise<void> {
+    await remote().feedback(input)
+  }
+
+  return { report, signal, sendFeedback }
 }

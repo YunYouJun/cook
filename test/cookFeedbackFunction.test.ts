@@ -1,9 +1,11 @@
+import { Buffer } from 'node:buffer'
 import { createRequire } from 'node:module'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 interface FunctionModule {
   main: (event?: Record<string, unknown>) => Promise<Record<string, any>>
   _internal: {
+    APP_FEEDBACK: string
     DAILY_QUOTA: number
     FEEDBACK: string
     QUOTA: string
@@ -138,6 +140,61 @@ describe('cook-feedback function', () => {
     const body = JSON.parse(res.body)
     expect(body.feedback[0]).toMatchObject({ recipeId: 3, signedIn: false })
     expect(body.feedback[0].uid).toBeUndefined()
+    expect(body.appFeedback).toEqual([])
+  })
+
+  it('stores general app feedback with an optional contact', async () => {
+    const { table } = createApp()
+    const message = { action: 'feedback', deviceId, category: 'idea', note: ' 希望能按季节推荐 ', contact: 'wx: cook', platform: 'ios', version: '2.0.0' }
+    expect(await fn.main(message)).toEqual({ ok: true })
+    expect(await fn.main(message)).toEqual({ ok: true })
+    const rows = [...table(fn._internal.APP_FEEDBACK).values()]
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ category: 'idea', note: '希望能按季节推荐', contact: 'wx: cook', platform: 'ios', version: '2.0.0', uid: '' })
+    expect(await fn.main({ action: 'feedback', deviceId, category: 'bug', note: '闪退' })).toEqual({ ok: true })
+    expect([...table(fn._internal.APP_FEEDBACK).values()].find(r => r.note === '闪退')).toMatchObject({ platform: 'web', contact: '' })
+  })
+
+  it('rejects empty or oversized app feedback', async () => {
+    createApp()
+    const message = { action: 'feedback', deviceId, category: 'bug', note: '打不开' }
+    expect(await fn.main({ ...message, note: '  ' })).toEqual({ ok: false, code: 'INVALID_FEEDBACK' })
+    expect(await fn.main({ ...message, note: '长'.repeat(501) })).toEqual({ ok: false, code: 'INVALID_FEEDBACK' })
+    expect(await fn.main({ ...message, category: 'spam' })).toEqual({ ok: false, code: 'INVALID_FEEDBACK' })
+    expect(await fn.main({ ...message, platform: 'android' })).toEqual({ ok: false, code: 'INVALID_FEEDBACK' })
+    expect(await fn.main({ ...message, contact: 'x'.repeat(101) })).toEqual({ ok: false, code: 'INVALID_FEEDBACK' })
+  })
+
+  it('accepts reports, signals and feedback posted to the HTTP trigger', async () => {
+    const { table } = createApp()
+    const post = (body: unknown, extra: Record<string, unknown> = {}) => fn.main({ httpMethod: 'POST', headers: {}, body: typeof body === 'string' ? body : JSON.stringify(body), ...extra })
+
+    const res = await post({ ...report, note: '视频没了' })
+    expect(res.statusCode).toBe(200)
+    expect(JSON.parse(res.body)).toEqual({ ok: true })
+    expect([...table(fn._internal.FEEDBACK).values()]).toHaveLength(1)
+
+    const signal = Buffer.from(JSON.stringify({ action: 'signal', deviceId, type: 'empty', stuff: ['羊肉'] })).toString('base64')
+    expect((await post(signal, { isBase64Encoded: true })).statusCode).toBe(200)
+    expect([...table(fn._internal.SIGNALS).values()]).toHaveLength(1)
+
+    expect((await post({ action: 'feedback', deviceId, category: 'other', note: '好用', platform: 'ios' })).statusCode).toBe(200)
+
+    expect((await post({ ...report, kind: 'spam' })).statusCode).toBe(400)
+    expect((await post('not json')).statusCode).toBe(400)
+    expect((await post({ action: 'export', deviceId })).statusCode).toBe(400)
+    expect((await post({ ...report, note: 'x'.repeat(5000) })).statusCode).toBe(400)
+
+    const [quota] = [...table(fn._internal.QUOTA).values()]
+    quota!.count = fn._internal.DAILY_QUOTA
+    expect((await post(report)).statusCode).toBe(429)
+  })
+
+  it('does not export over POST, even with the token', async () => {
+    createApp()
+    process.env.COOK_FEEDBACK_EXPORT_TOKEN = 'secret-token'
+    const res = await fn.main({ httpMethod: 'POST', headers: { 'x-cook-token': 'secret-token' }, body: '{}' })
+    expect(res.statusCode).toBe(400)
   })
 
   it('refuses the export when no token is configured', async () => {

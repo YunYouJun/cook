@@ -5,10 +5,16 @@
  *   Signing in is optional; anonymous reports are keyed by a random device id.
  * - `signal`: anonymous, aggregated search signals (a selection with no
  *   results, or which result was opened at which rank) used to tune filtering.
+ * - `feedback`: general feedback about the app (a bug, an idea, a missing
+ *   recipe), with an optional way to reach the user.
  * - `export`: maintainers pull everything for the recipe-data-review skill.
- *   Only over the HTTP trigger with the COOK_FEEDBACK_EXPORT_TOKEN header.
+ *   Only over the HTTP trigger (GET) with the COOK_FEEDBACK_EXPORT_TOKEN header.
  *
- * All collections are ADMINONLY; browsers only reach them through this
+ * The web app calls the function through the CloudBase SDK. The native iOS app
+ * has no CloudBase SDK, so it POSTs the same `report` / `signal` / `feedback`
+ * bodies to the HTTP trigger, under the same device id and daily quota.
+ *
+ * All collections are ADMINONLY; clients only reach them through this
  * function. Raw device ids and uids are hashed before they are stored as a
  * reporter key; the uid itself is kept only on reports from signed-in users so
  * maintainers can follow up.
@@ -21,15 +27,22 @@ const process = require('node:process')
 const FEEDBACK = 'cook_recipe_feedback'
 const SIGNALS = 'cook_search_signals'
 const QUOTA = 'cook_feedback_quota'
+const APP_FEEDBACK = 'cook_app_feedback'
 
 const KINDS = new Set(['video', 'stuff', 'info', 'other'])
 const MODES = new Set(['loose', 'strict', 'survival'])
 const SIGNAL_TYPES = new Set(['empty', 'open'])
+const CATEGORIES = new Set(['bug', 'idea', 'recipe', 'other'])
+const PLATFORMS = new Set(['web', 'ios'])
+const PUBLIC_ACTIONS = new Set(['report', 'signal', 'feedback'])
 const DAILY_QUOTA = 200
 const MAX_NOTE = 200
 const MAX_NAME = 100
 const MAX_STUFF = 12
 const MAX_WORD = 20
+const MAX_MESSAGE = 500
+const MAX_CONTACT = 100
+const MAX_BODY = 4096
 const DEVICE_ID_RE = /^[\w-]{16,64}$/
 const EXPORT_PAGE = 1000
 const ANON_UIDS = new Set(['', 'anon'])
@@ -126,6 +139,36 @@ async function report(event, reporter, now) {
   return { ok: true }
 }
 
+async function appFeedback(event, reporter, now) {
+  const { category } = event
+  const note = typeof event.note === 'string' ? event.note.trim() : ''
+  const contact = typeof event.contact === 'string' ? event.contact.trim() : ''
+  const platform = event.platform ?? 'web'
+  const version = event.version ?? ''
+  if (!CATEGORIES.has(category) || !note || note.length > MAX_MESSAGE || contact.length > MAX_CONTACT
+    || !PLATFORMS.has(platform) || (version && !isWord(version, 32))) {
+    return fail('INVALID_FEEDBACK')
+  }
+  if (!await takeQuota(reporter, now))
+    return fail('RATE_LIMITED')
+
+  // Sending the same text twice in a day (a double tap, a retry) keeps one row.
+  const day = today(now)
+  const id = hash(`${reporter.key}|${day}|${note}`)
+  await getApp().database().collection(APP_FEEDBACK).doc(id).set({
+    category,
+    note,
+    contact,
+    platform,
+    version,
+    reporter: reporter.key,
+    uid: reporter.uid,
+    day,
+    createdAt: now,
+  })
+  return { ok: true }
+}
+
 function readSelection(event) {
   const stuff = Array.isArray(event.stuff) ? event.stuff : null
   if (!stuff || !stuff.length || stuff.length > MAX_STUFF || !stuff.every(item => isWord(item)))
@@ -187,45 +230,84 @@ async function exportAll(since) {
     ok: true,
     feedback: await readAll(FEEDBACK, after ? { createdAt: db.command.gt(after) } : null),
     signals: await readAll(SIGNALS, null),
+    appFeedback: await readAll(APP_FEEDBACK, after ? { createdAt: db.command.gt(after) } : null),
   }
 }
 
-/** Requests through the HTTP trigger: only the token-protected export. */
+async function handleAction(event) {
+  const reporter = readReporter(event)
+  if (!reporter)
+    return fail('REPORTER_REQUIRED')
+  const now = Date.now()
+  switch (event.action) {
+    case 'report':
+      return await report(event, reporter, now)
+    case 'signal':
+      return await signal(event, reporter, now)
+    case 'feedback':
+      return await appFeedback(event, reporter, now)
+    default:
+      return fail('UNKNOWN_ACTION')
+  }
+}
+
+function respond(statusCode, body) {
+  return { statusCode, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }
+}
+
+/** A JSON object body from the HTTP trigger, or null. */
+function readBody(event) {
+  let body = event.body
+  if (body && typeof body === 'object')
+    return Array.isArray(body) ? null : body
+  if (typeof body !== 'string')
+    return null
+  if (event.isBase64Encoded)
+    body = Buffer.from(body, 'base64').toString('utf8')
+  if (body.length > MAX_BODY)
+    return null
+  try {
+    const data = JSON.parse(body)
+    return data && typeof data === 'object' && !Array.isArray(data) ? data : null
+  }
+  catch {
+    return null
+  }
+}
+
+/**
+ * Requests through the HTTP trigger: POST carries the same actions as
+ * callFunction (for the native app); anything else is the token-protected export.
+ */
 async function handleHttp(event) {
+  if (event.httpMethod === 'POST') {
+    const data = readBody(event)
+    if (!data || !PUBLIC_ACTIONS.has(data.action))
+      return respond(400, fail('INVALID_BODY'))
+    const result = await handleAction(data)
+    const status = result.ok ? 200 : result.code === 'RATE_LIMITED' ? 429 : 400
+    return respond(status, result)
+  }
   const headers = event.headers || {}
   if (!sameToken(headers['x-cook-token'], process.env.COOK_FEEDBACK_EXPORT_TOKEN || ''))
     return { statusCode: 401, body: JSON.stringify(fail('UNAUTHORIZED')) }
   const params = event.queryStringParameters || {}
-  const body = await exportAll(Number(params.since))
-  return { statusCode: 200, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }
+  return respond(200, await exportAll(Number(params.since)))
 }
 
 async function main(event = {}) {
   try {
-    if (event.httpMethod)
-      return await handleHttp(event)
-
-    const reporter = readReporter(event)
-    if (!reporter)
-      return fail('REPORTER_REQUIRED')
-    const now = Date.now()
-    switch (event.action) {
-      case 'report':
-        return await report(event, reporter, now)
-      case 'signal':
-        return await signal(event, reporter, now)
-      default:
-        return fail('UNKNOWN_ACTION')
-    }
+    return event.httpMethod ? await handleHttp(event) : await handleAction(event)
   }
   catch (error) {
     console.error('[cook-feedback]', event.action || event.httpMethod, error && error.message)
-    return fail('INTERNAL_ERROR')
+    return event.httpMethod ? respond(500, fail('INTERNAL_ERROR')) : fail('INTERNAL_ERROR')
   }
 }
 
 exports.main = main
 exports._internal = {
+  APP_FEEDBACK,
   DAILY_QUOTA,
   FEEDBACK,
   QUOTA,

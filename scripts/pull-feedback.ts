@@ -1,4 +1,4 @@
-import type { FeedbackRow, SignalRow } from './lib/feedback'
+import type { AppFeedbackRow, FeedbackRow, SignalRow } from './lib/feedback'
 /**
  * 拉取 cook-feedback 云函数里的用户反馈和筛选信号，汇总给 recipe-data-review skill 使用
  *
@@ -31,7 +31,7 @@ if (!url || !token) {
 }
 
 const res = await fetch(url, { headers: { 'x-cook-token': token }, signal: AbortSignal.timeout(30_000) })
-const data = await res.json() as { ok?: boolean, code?: string, feedback?: FeedbackRow[], signals?: SignalRow[] }
+const data = await res.json() as { ok?: boolean, code?: string, feedback?: FeedbackRow[], signals?: SignalRow[], appFeedback?: AppFeedbackRow[] }
 if (!res.ok || !data.ok) {
   console.error(`拉取失败：${res.status} ${data.code ?? ''}`)
   process.exit(1)
@@ -49,10 +49,13 @@ const cases = buildEvalCases(signals)
 fs.writeFileSync(path.join(rootDir, 'test/fixtures/search-eval.json'), `${JSON.stringify(cases, null, 2)}\n`)
 
 const kindLabel: Record<string, string> = { video: '视频打不开', stuff: '食材或厨具不对', info: '难度或做法不对', other: '其他' }
+const categoryLabel: Record<string, string> = { bug: '用着有问题', idea: '功能建议', recipe: '想要的菜没有', other: '其他' }
+const appFeedback = [...data.appFeedback ?? []].sort((a, b) => b.day.localeCompare(a.day))
+const cell = (text: string) => text.replace(/\|/g, '/').replace(/\s+/g, ' ')
 const lines = [
   `# 用户反馈汇总（${new Date().toISOString().slice(0, 10)}）`,
   '',
-  `反馈 ${data.feedback?.length ?? 0} 条，涉及 ${reports.length} 道菜；筛选信号 ${signals.length} 组。`,
+  `反馈 ${data.feedback?.length ?? 0} 条，涉及 ${reports.length} 道菜；意见反馈 ${appFeedback.length} 条；筛选信号 ${signals.length} 组。`,
   '',
   '## 菜谱反馈（按分数排序，登录用户的反馈算 2 分）',
   '',
@@ -64,6 +67,14 @@ const lines = [
     const kinds = Object.entries(r.kinds).map(([k, n]) => `${kindLabel[k] ?? k}×${n}`).join('、')
     return `| ${r.recipeId} | ${name} | ${r.score} | ${r.reporters} | ${kinds} | ${r.notes.slice(0, 3).join('；').replace(/\|/g, '/')} |`
   }),
+  '',
+  '## 意见反馈（新的在前）',
+  '',
+  '联系方式只在 `.cook/feedback/export.json` 里，不要抄进 PR 或 issue。',
+  '',
+  '| 日期 | 来源 | 类型 | 内容 | 留了联系方式 |',
+  '| --- | --- | --- | --- | --- |',
+  ...appFeedback.map(f => `| ${f.day} | ${f.platform}${f.version ? ` ${f.version}` : ''} | ${categoryLabel[f.category] ?? f.category} | ${cell(f.note)} | ${f.contact ? '是' : '-'} |`),
   '',
   '## 没有结果的食材组合（缺哪些菜）',
   '',
