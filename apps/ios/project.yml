@@ -23,6 +23,11 @@ targets:
     platform: iOS
     sources:
       - path: Cook
+        excludes: [Resources/AppIcon.icon, Resources/AppIcon.icon/**]
+      # Icon Composer 分层图标（iOS 26+），作为单个文件加入；Assets.xcassets 里同名的 AppIcon.appiconset 给旧系统兜底
+      - path: Cook/Resources/AppIcon.icon
+        type: file
+        buildPhase: resources
     dependencies:
       - package: CookCore
     preBuildScripts:
