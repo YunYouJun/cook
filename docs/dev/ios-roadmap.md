@@ -24,6 +24,7 @@
 
 ## M2 iOS 第一版（可上 TestFlight）
 
+- App 名称「云食册 - 食用手册」，主屏显示「云食册」；Web 仍叫「食用手册」。
 - 食材选择 → 推荐结果、菜谱详情（B 站视频跳转）、随机一道菜、收藏、浏览历史、设置。
 - 只用系统控件搭界面：`TabView`、`NavigationStack`、`List`、sheet，自动获得 Liquid Glass。
 - SwiftData 本地存储，CloudKit 同步收藏和历史。
