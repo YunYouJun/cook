@@ -296,9 +296,15 @@ const sheetStyle = computed(() => ({
               </ion-select-option>
             </ion-select>
           </div>
-          <div v-if="rStore.curTool && !toolMode" class="results-panel-filter">
-            <button type="button" class="results-panel-filter-chip" :aria-label="`取消厨具筛选：${rStore.curTool}`" @click="rStore.toggleTools(rStore.curTool)">
+          <div v-if="(rStore.curTool && !toolMode) || rStore.methodGroups.length || rStore.difficulty.length" class="results-panel-filter">
+            <button v-if="rStore.curTool && !toolMode" type="button" class="results-panel-filter-chip" :aria-label="`取消厨具筛选：${rStore.curTool}`" @click="rStore.toggleTools(rStore.curTool)">
               厨具：{{ rStore.curTool }}<ion-icon :icon="ioniconsClose" aria-hidden="true" />
+            </button>
+            <button v-for="label in rStore.methodGroups" :key="label" type="button" class="results-panel-filter-chip" :aria-label="`取消做法筛选：${label}`" @click="rStore.toggleMethodGroup(label)">
+              做法：{{ label }}<ion-icon :icon="ioniconsClose" aria-hidden="true" />
+            </button>
+            <button v-for="level in rStore.difficulty" :key="level" type="button" class="results-panel-filter-chip" :aria-label="`取消难度筛选：${level}`" @click="rStore.toggleDifficulty(level)">
+              难度：{{ level }}<ion-icon :icon="ioniconsClose" aria-hidden="true" />
             </button>
           </div>
 
@@ -467,6 +473,9 @@ const sheetStyle = computed(() => ({
   color: var(--ion-color-primary);
 }
 .results-panel-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   padding: 4px 20px 0;
 }
 .results-panel-filter-chip {

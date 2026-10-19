@@ -1,4 +1,4 @@
-import type { RecipeItem } from '../types/recipe'
+import type { Difficulty, RecipeItem } from '../types/recipe'
 import { describe, expect, it } from 'vitest'
 import { matchesTaste, recommendRecipes, uniqueStuff } from './recommend'
 
@@ -89,5 +89,19 @@ describe('ingredient recommendations', () => {
     expect(names({ stuff: ['鸡蛋'], noSpicy: true })).not.toContain('剁椒蒸蛋')
     expect(matchesTaste(recipes[3]!, { methodGroups: ['炒菜'] })).toBe(false)
     expect(matchesTaste(recipes[3]!, {})).toBe(true)
+  })
+
+  it('filters by difficulty and drops recipes without one', () => {
+    const recipes: RecipeItem[] = [
+      { ...recipe('番茄炒蛋', ['番茄', '鸡蛋']), difficulty: '简单' },
+      { ...recipe('番茄牛腩', ['番茄', '牛肉']), difficulty: '困难' },
+      { ...recipe('番茄蛋汤', ['番茄', '鸡蛋']), difficulty: '普通' },
+      recipe('没记难度', ['番茄']),
+    ]
+    const names = (difficulty: Difficulty[]) => recommendRecipes(recipes, { stuff: ['番茄'], difficulty }).map(m => m.recipe.name)
+    expect(names([])).toHaveLength(4)
+    expect(names(['简单'])).toEqual(['番茄炒蛋'])
+    expect(names(['简单', '普通']).sort()).toEqual(['番茄炒蛋', '番茄蛋汤'].sort())
+    expect(matchesTaste(recipes[3]!, { difficulty: ['简单'] })).toBe(false)
   })
 })

@@ -1,4 +1,4 @@
-import type { RecommendationMode } from '@yunyoujun/cook'
+import type { Difficulty, RecommendationMode } from '@yunyoujun/cook'
 import type { RecipeItem, StuffItem } from '~/types'
 import { StorageSerializers, useStorage } from '@vueuse/core'
 import { createRecipeRecommender, hasAvoidedStuff, matchesTaste, uniqueStuff } from '@yunyoujun/cook/recommend'
@@ -28,6 +28,7 @@ export const useRecipeStore = defineStore('recipe', () => {
   const avoid = settings.keepLocalData ? useStorage<string[]>(`${namespace}:avoid`, []) : ref<string[]>([])
   const noSpicy = settings.keepLocalData ? useStorage(`${namespace}:no-spicy`, false) : shallowRef(false)
   const methodGroups = settings.keepLocalData ? useStorage<string[]>(`${namespace}:method-groups`, []) : ref<string[]>([])
+  const difficulty = settings.keepLocalData ? useStorage<Difficulty[]>(`${namespace}:difficulty`, []) : ref<Difficulty[]>([])
 
   const selectedStuff = computed(() => uniqueStuff([...curStuff.value]))
   const selectedPantry = computed(() => uniqueStuff(pantry.value).filter(item => pantryOptions.includes(item)))
@@ -69,10 +70,16 @@ export const useRecipeStore = defineStore('recipe', () => {
       : [...methodGroups.value, label]
   }
 
-  /** 忌口、做法、口味这几个对所有列表都生效的条件 */
+  function toggleDifficulty(level: Difficulty) {
+    difficulty.value = difficulty.value.includes(level)
+      ? difficulty.value.filter(item => item !== level)
+      : [...difficulty.value, level]
+  }
+
+  /** 忌口、做法、口味、难度这几个对所有列表都生效的条件 */
   function passesPreferences(recipe: RecipeItem) {
     return !hasAvoidedStuff(recipe, selectedAvoid.value)
-      && matchesTaste(recipe, { methodGroups: methodGroups.value, noSpicy: noSpicy.value })
+      && matchesTaste(recipe, { methodGroups: methodGroups.value, noSpicy: noSpicy.value, difficulty: difficulty.value })
   }
 
   function clearFilters() {
@@ -80,6 +87,7 @@ export const useRecipeStore = defineStore('recipe', () => {
     curTool.value = ''
     curMode.value = 'loose'
     methodGroups.value = []
+    difficulty.value = []
   }
 
   function reset() {
@@ -134,6 +142,7 @@ export const useRecipeStore = defineStore('recipe', () => {
     avoid: selectedAvoid.value,
     methodGroups: methodGroups.value,
     noSpicy: noSpicy.value,
+    difficulty: difficulty.value,
   }))
   /** 只选了厨具、还没选食材时，列出用这个厨具能做的菜（保留原来经典视图的用法） */
   const toolRecipes = computed(() => {
@@ -185,6 +194,7 @@ export const useRecipeStore = defineStore('recipe', () => {
     selectedAvoid,
     methodGroups,
     noSpicy,
+    difficulty,
     isSearching,
     loadError,
     loadRecipes,
@@ -197,6 +207,7 @@ export const useRecipeStore = defineStore('recipe', () => {
     toggleAvoid,
     clearAvoid: () => { avoid.value = [] },
     toggleMethodGroup,
+    toggleDifficulty,
     toggleTools,
     reset,
     setMode,

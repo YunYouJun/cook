@@ -12,6 +12,8 @@ const scope = computed(() => {
     parts.push(`用${rStore.curTool === '一口大锅' ? '炒锅' : rStore.curTool}做的`)
   if (rStore.methodGroups.length)
     parts.push(`做法：${rStore.methodGroups.join('、')}`)
+  if (rStore.difficulty.length)
+    parts.push(`难度：${rStore.difficulty.join('、')}`)
   if (rStore.noSpicy)
     parts.push('不吃辣')
   if (rStore.selectedAvoid.length)
