@@ -83,3 +83,46 @@ jobs:
           git fetch --depth=1 origin ${{ github.base_ref }}
           pnpm run validate --base FETCH_HEAD
       - run: pnpm run test
+
+  # iOS 的 CookCore 跑和 Web 共用的用例（ubuntu 镜像自带 Swift）
+  swift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - name: Set node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run convert
+      - run: swift --version
+      - run: swift test --package-path apps/ios/CookCore
+
+  # 云食册 iOS App：XcodeGen 生成工程，在 iOS 模拟器上编译并跑 CookTests
+  ios:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - name: Set node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run convert
+      - run: brew install xcodegen
+      - run: xcodegen generate --spec apps/ios/project.yml
+      - run: xcodebuild -version
+      - name: Build and test
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          print(next(d["udid"] for runtime in sorted(devices, reverse=True) if "iOS" in runtime for d in devices[runtime] if d["name"].startswith("iPhone")))
+          ')
+          xcodebuild test -project apps/ios/Cook.xcodeproj -scheme Cook -destination "id=$DEVICE" CODE_SIGNING_ALLOWED=NO

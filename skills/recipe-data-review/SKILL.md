@@ -64,7 +64,7 @@ metadata:
    pnpm eval:search --json > /tmp/eval-before.json
    ```
    - 「没有结果的食材组合」里，用户输入的词是已有食材的别名（如「羊排」之于「羊肉」）→ 在 `packages/data/aliases.json` 加别名。词典里根本没有的食材 → 写进「需要维护者决定」。
-   - 被频繁点开却排在 10 名以后的菜 → 可以调整 `recommend.ts` 的排序，但改动要小、要能解释。
+   - 被频繁点开却排在 10 名以后的菜 → 可以调整 `recommend.ts` 的排序，但改动要小、要能解释，并同步改 iOS 的 `apps/ios/CookCore/Sources/CookCore/Recommender.swift`（CI 的 swift 任务会用共享用例检查两边是否一致）。
    - 改完再跑一次，对比前后：
 
    ```bash
@@ -81,11 +81,11 @@ metadata:
    pnpm test -- --run
    ```
 
-   `test/recommendations.test.ts` 里的数量断言会随数据变化。只有当变化是你的修改直接造成的，才更新这些数字，并在 PR 描述中说明。其他测试失败就停下，不要提交。`pnpm fixtures` 会重新生成 Web 和 iOS 共用的推荐用例 `packages/data/fixtures/recommend.json`，一起提交。
+   `test/recommendations.test.ts` 里的数量断言会随数据变化。只有当变化是你的修改直接造成的，才更新这些数字，并在 PR 描述中说明。其他测试失败就停下，不要提交。`pnpm fixtures` 会重新生成 Web 和 iOS 共用的用例 `packages/data/fixtures/*.json`，一起提交。
 
 8. **提交并开 PR**
    ```bash
-   git add packages/data/recipe.csv packages/data/fixtures/recommend.json test/fixtures/search-eval.json test/recommendations.test.ts packages/data/aliases.json packages/cook/src/utils/recommend.ts
+   git add packages/data/recipe.csv packages/data/fixtures test/fixtures/search-eval.json test/recommendations.test.ts packages/data/aliases.json packages/cook/src/utils/recommend.ts apps/ios/CookCore/Sources
    git commit -m "chore(data): recipe review $(date +%F)"
    git push -u origin HEAD
    gh pr create --title "chore(data): recipe review $(date +%F)" --body-file /tmp/recipe-review-pr.md

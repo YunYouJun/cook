@@ -84,11 +84,20 @@ pnpm eval:search     # 用真实信号评估当前排序：前 10 命中率、MR
 
 `test/fixtures/search-eval.json` 是匿名聚合后的评测样例，会提交到仓库。AI 修改 `packages/data/aliases.json`（别名）或 `recommend.ts`（排序）时，必须在 PR 中写明修改前后的 `pnpm eval:search --json` 指标，且 `pnpm test` 通过。
 
-### Web 和 iOS 共用的推荐用例
+### Web 和 iOS 共用的用例
 
-`packages/data/fixtures/recommend.json` 记录了一组筛选条件和当前推荐逻辑给出的结果（菜谱 id、顺序和缺少的食材）。Web 的 `test/fixtures.test.ts` 和 iOS 的 CookCore 都要和它完全一致。
+`packages/data/fixtures/` 记录了一组输入和当前 TS 实现给出的结果：`recommend.json`（推荐，菜谱 id、顺序和缺少的食材）、`search.json`（搜索）、`incompatible.json`（相克判断）。Web 的 `test/fixtures.test.ts` 和 iOS 的 CookCore（`swift test --package-path apps/ios/CookCore`，CI 的 swift 任务）都要和它完全一致。
 
-改了 `recipe.csv`、`aliases.json` 或推荐逻辑后运行 `pnpm fixtures` 重新生成，并在 PR 里看结果的变化是否符合预期；忘了运行时 `pnpm test` 会失败。用例的输入在 `scripts/lib/fixtures.ts`。
+改了 `recipe.csv`、`aliases.json`、推荐或搜索逻辑后运行 `pnpm fixtures` 重新生成，并在 PR 里看结果的变化是否符合预期；忘了运行时 `pnpm test` 会失败。用例的输入在 `scripts/lib/fixtures.ts`。逻辑改动要同时改 `apps/ios/CookCore` 里对应的 Swift 代码。
+
+### 数据版本和结构
+
+`pnpm convert` 生成的 `recipe-meta.json` 带两个版本号：
+
+- `schemaVersion`：JSON 的结构版本，即 `packages/cook` 的 `DATA_SCHEMA_VERSION`。字段改名、删除或改类型时加一，同时更新 `packages/data/schema/` 和 CookCore 的 `CookData.supportedSchemaVersion`；只加可选字段不用改。App 遇到不认识的版本会继续用内置数据。
+- `dataVersion`：菜谱、相克规则、食材词典、常备调料和别名的内容 hash，内容不变则不变。iOS 按它判断 CDN 上的数据是否比内置的新。
+
+每个 JSON 的结构在 `packages/data/schema/*.schema.json`，`test/data-schema.test.ts` 会检查数据是否符合。
 
 ### CloudBase 配置（一次性）
 

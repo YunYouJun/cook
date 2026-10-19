@@ -67,6 +67,9 @@ importers:
       '@yunlefun/sso':
         specifier: 0.7.0
         version: 0.7.0
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
       baseline-browser-mapping:
         specifier: ^2.11.13
         version: 2.11.13

@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cook.yunyoujun.cn/schema/recipe.schema.json",
+  "title": "菜谱列表（recipe.json 和 recipe-chunk-*.json）",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["id", "name", "stuff", "tools"],
+    "properties": {
+      "id": { "type": "integer", "minimum": 0, "description": "固定编号，收藏、历史和同步的主键，不能修改或复用" },
+      "name": { "type": "string", "minLength": 1 },
+      "link": { "type": "string" },
+      "bv": { "type": "string", "pattern": "^(BV[0-9A-Za-z]{10}|av[0-9]+)$" },
+      "stuff": { "type": "array", "items": { "type": "string" } },
+      "emojis": { "type": "array", "items": { "type": "string" } },
+      "difficulty": { "enum": ["简单", "普通", "困难"] },
+      "tags": { "type": "array", "items": { "type": "string" } },
+      "methods": { "type": "array", "items": { "type": "string" } },
+      "tools": { "type": "array", "items": { "type": "string" } }
+    }
+  }
+}

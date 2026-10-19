@@ -4,6 +4,14 @@ packages/data/recipe-meta.json
 packages/data/recipe-chunk-*.json
 packages/data/incompatible-foods.json
 
+# Swift Package Manager
+apps/ios/**/.build
+apps/ios/**/.swiftpm
+# XcodeGen 生成
+apps/ios/*.xcodeproj
+apps/ios/Cook/Info.plist
+apps/ios/Cook/Cook.entitlements
+
 .DS_Store
 .vite-ssg-dist
 .vite-ssg-temp

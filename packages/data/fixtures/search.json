@@ -1,0 +1,168 @@
+{
+  "description": "由 pnpm fixtures 生成，勿手改。Web（test/fixtures.test.ts）和 iOS（CookCore）都要和它一致。",
+  "recipeCount": 629,
+  "search": [
+    {
+      "input": {
+        "stuff": [
+          "番茄",
+          "鸡蛋"
+        ]
+      },
+      "output": [
+        {"id":187,"matched":["番茄","鸡蛋"],"missing":[]},
+        {"id":248,"matched":["番茄","鸡蛋"],"missing":[]},
+        {"id":250,"matched":["番茄","鸡蛋"],"missing":[]},
+        {"id":425,"matched":["番茄","鸡蛋"],"missing":[]},
+        {"id":251,"matched":["番茄","鸡蛋"],"missing":["米"]},
+        {"id":275,"matched":["番茄","鸡蛋"],"missing":["面食"]},
+        {"id":276,"matched":["番茄","鸡蛋"],"missing":["面食"]},
+        {"id":333,"matched":["鸡蛋","番茄"],"missing":["西葫芦"]},
+        {"id":419,"matched":["番茄","鸡蛋"],"missing":["方便面"]},
+        {"id":420,"matched":["番茄","鸡蛋"],"missing":["面食"]}
+      ],
+      "warnings": []
+    },
+    {
+      "input": {
+        "stuff": [
+          "西红柿",
+          "鸡蛋"
+        ],
+        "limit": 5
+      },
+      "output": [
+        {"id":187,"matched":["番茄","鸡蛋"],"missing":[]},
+        {"id":248,"matched":["番茄","鸡蛋"],"missing":[]},
+        {"id":250,"matched":["番茄","鸡蛋"],"missing":[]},
+        {"id":425,"matched":["番茄","鸡蛋"],"missing":[]},
+        {"id":251,"matched":["番茄","鸡蛋"],"missing":["米"]}
+      ],
+      "warnings": []
+    },
+    {
+      "input": {
+        "stuff": [
+          "土豆"
+        ],
+        "tool": "锅"
+      },
+      "output": [
+        {"id":96,"matched":["土豆"],"missing":[]},
+        {"id":97,"matched":["土豆"],"missing":[]},
+        {"id":134,"matched":["土豆"],"missing":[]},
+        {"id":158,"matched":["土豆"],"missing":[]},
+        {"id":159,"matched":["土豆"],"missing":[]},
+        {"id":224,"matched":["土豆"],"missing":[]},
+        {"id":227,"matched":["土豆"],"missing":[]},
+        {"id":232,"matched":["土豆"],"missing":[]},
+        {"id":233,"matched":["土豆"],"missing":[]},
+        {"id":236,"matched":["土豆"],"missing":[]}
+      ],
+      "warnings": []
+    },
+    {
+      "input": {
+        "stuff": [
+          "牛奶",
+          "韭菜"
+        ]
+      },
+      "output": [],
+      "warnings": [
+        [
+          "牛奶",
+          "韭菜"
+        ]
+      ]
+    },
+    {
+      "input": {
+        "stuff": [
+          "鸡肉"
+        ],
+        "method": "烤",
+        "limit": 20
+      },
+      "output": [
+        {"id":45,"matched":["鸡肉","鸡肉"],"missing":["土豆","胡萝卜","花菜","西葫芦","芹菜","洋葱","莴笋","菌菇","茄子","包菜","午餐肉","香肠","猪肉","虾","牛肉"]},
+        {"id":43,"matched":["鸡肉"],"missing":[]},
+        {"id":47,"matched":["鸡肉"],"missing":[]},
+        {"id":48,"matched":["鸡肉"],"missing":[]},
+        {"id":56,"matched":["鸡肉"],"missing":[]},
+        {"id":57,"matched":["鸡肉"],"missing":[]},
+        {"id":70,"matched":["鸡肉"],"missing":[]},
+        {"id":73,"matched":["鸡肉"],"missing":[]},
+        {"id":77,"matched":["鸡肉"],"missing":[]},
+        {"id":98,"matched":["鸡肉"],"missing":[]},
+        {"id":50,"matched":["鸡肉"],"missing":["土豆"]},
+        {"id":68,"matched":["鸡肉"],"missing":["土豆"]},
+        {"id":66,"matched":["鸡肉"],"missing":["番茄","土豆"]},
+        {"id":46,"matched":["鸡肉"],"missing":["牛肉","茄子","鸡蛋","豆腐","菌菇","番茄"]}
+      ],
+      "warnings": []
+    },
+    {
+      "input": {
+        "tag": "辣",
+        "limit": 5
+      },
+      "output": [
+        {"id":21,"matched":[],"missing":["方便面","鸡蛋"]},
+        {"id":43,"matched":[],"missing":["鸡肉"]},
+        {"id":119,"matched":[],"missing":["虾","猪肉"]},
+        {"id":137,"matched":[],"missing":["鸡肉"]},
+        {"id":199,"matched":[],"missing":["豆腐","虾"]}
+      ],
+      "warnings": []
+    },
+    {
+      "input": {
+        "method": "炖",
+        "difficulty": "简单"
+      },
+      "output": [
+        {"id":228,"matched":[],"missing":["白萝卜"]},
+        {"id":295,"matched":[],"missing":["白萝卜"]},
+        {"id":300,"matched":[],"missing":["菌菇"]},
+        {"id":453,"matched":[],"missing":["花菜","豆腐","鸡蛋"]}
+      ],
+      "warnings": []
+    },
+    {
+      "input": {
+        "stuff": [
+          "火龙果"
+        ]
+      },
+      "output": [],
+      "warnings": []
+    },
+    {
+      "input": {
+        "stuff": [
+          "鸡蛋"
+        ],
+        "limit": 0
+      },
+      "output": [],
+      "warnings": []
+    },
+    {
+      "input": {},
+      "output": [
+        {"id":0,"matched":[],"missing":["腊肠","米"]},
+        {"id":1,"matched":[],"missing":["鸡肉","洋葱","菌菇"]},
+        {"id":2,"matched":[],"missing":["猪肉","面食"]},
+        {"id":3,"matched":[],"missing":["牛肉","番茄","米"]},
+        {"id":4,"matched":[],"missing":["鸡肉"]},
+        {"id":5,"matched":[],"missing":["鸡肉","洋葱","菌菇","米"]},
+        {"id":6,"matched":[],"missing":["猪肉","土豆","米","腊肠"]},
+        {"id":7,"matched":[],"missing":["腊肠","菌菇","洋葱","米","土豆"]},
+        {"id":8,"matched":[],"missing":["牛肉","米"]},
+        {"id":9,"matched":[],"missing":["猪肉","洋葱"]}
+      ],
+      "warnings": []
+    }
+  ]
+}
