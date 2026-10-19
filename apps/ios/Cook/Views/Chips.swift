@@ -95,17 +95,10 @@ struct ChipSection<Content: View>: View {
 struct CheckRow: View {
     let title: String
     let isSelected: Bool
-    /// 点击时报告标签在屏幕上的位置，做「入篮」动画用；不需要时不传
-    var onTap: ((CGRect) -> Void)? = nil
     let action: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var frameBox = FrameBox()
 
     var body: some View {
-        Button {
-            onTap?(frameBox.frame)
-            action()
-        } label: {
+        Button(action: action) {
             HStack {
                 Text(title)
                     .foregroundStyle(Color.primary)
