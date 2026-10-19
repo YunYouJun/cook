@@ -4,7 +4,7 @@ import { defineNuxtConfig } from 'nuxt/config'
 import { simpleGit } from 'simple-git'
 
 // import { pwa } from './app/config/pwa'
-import { appDescription } from './app/constants/index'
+import { appDescription, appStoreId } from './app/constants/index'
 
 // for cloudflare
 // Object.assign(process.env, {
@@ -89,6 +89,8 @@ export default defineNuxtConfig({
         // 与 iOS 模式的页面 / 导航栏背景一致
         { name: 'theme-color', media: '(prefers-color-scheme: light)', content: '#f2f2f6' },
         { name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#000000' },
+        // Safari 顶部的「在 App Store 中打开」横幅，需要写在静态 HTML 里才会生效
+        ...(appStoreId ? [{ name: 'apple-itunes-app', content: `app-id=${appStoreId}` }] : []),
       ],
       script: [
         // 系统开启「减弱动态效果」时关闭 Ionic 的转场动画；需要在 Ionic 初始化前写入 window.Ionic.config
