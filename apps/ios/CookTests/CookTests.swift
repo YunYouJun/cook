@@ -126,9 +126,9 @@ final class CookTests: XCTestCase {
         XCTAssertFalse(store.describe(query).isEmpty)
 
         // 词典里没有的食材也收下，按名字找菜
-        session.apply(store.queryParser.parse("羊肉"), normalizer: store.data.normalizer)
-        XCTAssertTrue(session.selectedStuff.contains("羊肉"))
-        XCTAssertFalse(store.isCatalogStuff("羊肉"))
+        session.apply(store.queryParser.parse("秋葵"), normalizer: store.data.normalizer)
+        XCTAssertTrue(session.selectedStuff.contains("秋葵"))
+        XCTAssertFalse(store.isCatalogStuff("秋葵"))
 
         // 上面那句设了「炒菜」，和电饭煲凑不出菜，先清掉筛选
         session.clearStuff()

@@ -32,7 +32,7 @@ struct CookView: View {
                 if !warnings.isEmpty {
                     IncompatibleWarning(rules: warnings)
                 }
-                // 输入的、词典里没有的食材（比如「羊肉」），点一下移除
+                // 输入的、词典里没有的食材（比如「秋葵」），点一下移除
                 if !extras.isEmpty {
                     ChipSection(title: "输入的食材", note: "词典里没有，按名字找菜") {
                         ForEach(extras, id: \.self) { name in
