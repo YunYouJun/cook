@@ -1,6 +1,7 @@
 import type { IncompatibleRule } from '~/types'
 import incompatibleFoodsData from '@cook/data/incompatible-foods.json'
 import { computed, onMounted, readonly, ref } from 'vue'
+import { findIncompatibleRules } from '../../../../packages/cook/src/utils/incompatible'
 
 /**
  * 食物相克检测 composable
@@ -37,21 +38,12 @@ export function useIncompatibleFoods() {
     // 重置警告信息
     warningMessage.value = ''
 
-    // 如果食材少于2个或规则还没加载完成，无需检测
-    if (ingredients.length < 2 || isLoading.value) {
+    // 规则还没加载完成时无需检测
+    if (isLoading.value) {
       return
     }
 
-    const foundRules: IncompatibleRule[] = []
-
-    const ingredientSet = new Set(ingredients)
-
-    for (const rule of incompatibleRules.value) {
-      // 检查规则中的两种食物是否都存在于我们的食材 Set 中
-      if (ingredientSet.has(rule.foodA) && ingredientSet.has(rule.foodB)) {
-        foundRules.push(rule)
-      }
-    }
+    const foundRules = findIncompatibleRules(ingredients, incompatibleRules.value)
 
     // 如果找到相克组合，生成警告信息
     if (foundRules.length > 0) {

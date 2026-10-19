@@ -63,6 +63,7 @@
     "@vue/test-utils": "^2.4.11",
     "@vueuse/core": "^14.4.0",
     "@yunlefun/sso": "0.7.0",
+    "ajv": "^8.20.0",
     "baseline-browser-mapping": "^2.11.13",
     "bumpp": "^11.1.0",
     "consola": "^3.4.2",

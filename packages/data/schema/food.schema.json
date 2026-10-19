@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cook.yunyoujun.cn/schema/food.schema.json",
+  "title": "食材和厨具词典（food.json）",
+  "type": "object",
+  "required": ["vegetable", "meat", "staple", "tools"],
+  "additionalProperties": false,
+  "properties": {
+    "vegetable": { "$ref": "#/definitions/items" },
+    "meat": { "$ref": "#/definitions/items" },
+    "staple": { "$ref": "#/definitions/items" },
+    "tools": { "$ref": "#/definitions/items" }
+  },
+  "definitions": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "emoji"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "emoji": { "type": "string" },
+          "image": { "type": "string" },
+          "alias": { "type": "string" },
+          "icon": { "type": "string" },
+          "label": { "type": "string" }
+        }
+      }
+    }
+  }
+}
