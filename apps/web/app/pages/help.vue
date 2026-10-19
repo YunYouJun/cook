@@ -27,6 +27,16 @@
           </ul>
         </FAQItem>
 
+        <FAQItem title="可以直接说一句话找菜吗？">
+          可以。在做菜页顶部的输入框里输入一句话，按回车即可，比如：
+          <ul>
+            <li>冰箱里有白菜和两个蛋，不要辣，简单点</li>
+            <li>想吃牛肉，洋葱不要，用电饭煲</li>
+          </ul>
+          能听懂食材、忌口（不要、不吃、过敏）、不辣、难度（简单、快手、硬菜）、做法（炒、煲汤、蒸）和厨具。
+          识别结果会合进当前的选择，输入框下方会说明按什么筛选；识别在本地完成，不会上传你输入的内容。
+        </FAQItem>
+
         <FAQItem title="如何快速清空所选食材和工具?">
           <div inline-flex items-center justify-center>
             点击顶部 <div i-mdi-pot-steam-outline mx-1 inline-block /> 图标即可。

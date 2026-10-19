@@ -1,6 +1,10 @@
 import type { Difficulty, RecipeItem } from '../types/recipe'
 import { normalizeStuff } from './alias'
 
+// 整句识别跟着推荐入口一起导出，Web 只引 @yunyoujun/cook/recommend
+export { isEmptyCookQuery, parseCookQuery } from './query'
+export type { CookQuery } from './query'
+
 export type RecommendationMode = 'loose' | 'strict' | 'survival'
 
 /**
