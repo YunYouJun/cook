@@ -7,6 +7,8 @@ struct CookView: View {
     @Environment(CookSession.self) private var session
     @Environment(FeedbackClient.self) private var feedback
     @State private var showingFilters = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var basket = BasketAnimator()
 
     var body: some View {
         let matchCount = store.recommender.recommend(session.options).count
@@ -48,13 +50,29 @@ struct CookView: View {
             }
             .safeAreaInset(edge: .bottom) {
                 NavigationLink(value: ResultsRoute()) {
-                    Text(session.selectedStuff.isEmpty ? "先选几样食材" : "看看能做什么（\(matchCount)）")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
+                    Group {
+                        if session.selectedStuff.isEmpty {
+                            Text("先选几样食材")
+                        } else {
+                            // 只让数字滚动，文字不跟着变形
+                            HStack(spacing: 0) {
+                                Text("看看能做什么（")
+                                Text("\(matchCount)")
+                                    .contentTransition(.numericText(value: Double(matchCount)))
+                                    .animation(.snappy, value: matchCount)
+                                Text("）")
+                            }
+                            .accessibilityElement(children: .combine)
+                        }
+                    }
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .disabled(session.selectedStuff.isEmpty)
+                .modifier(BasketBounce(animator: basket))
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { basket.target = $0 }
                 .padding(.horizontal)
                 .padding(.top, 16)
                 .padding(.bottom, 8)
@@ -91,7 +109,18 @@ struct CookView: View {
                     .presentationBackground(Color(uiColor: .systemGroupedBackground))
             }
         }
+        .overlay {
+            BasketFlightLayer(animator: basket)
+        }
         .sensoryFeedback(.selection, trigger: session.selectedStuff)
+    }
+
+    /// 选中（不是取消）食材时，从标签飞一个 emoji 到底部按钮；减弱动态效果时不飞
+    private func launchFlight(_ item: StuffItem, from frame: CGRect) {
+        guard !reduceMotion, !session.selectedStuff.contains(item.name) else {
+            return
+        }
+        basket.launch(label: item.emoji.isEmpty ? item.name : item.emoji, isEmoji: !item.emoji.isEmpty, from: frame)
     }
 
     /// 和 Web 一样，按菜名搜索时没有结果不算
@@ -107,7 +136,12 @@ struct CookView: View {
         let count = items.filter { session.selectedStuff.contains($0.name) }.count
         ChipSection(title: title, note: count > 0 ? "已选 \(count) 种" : nil) {
             ForEach(items, id: \.name) { item in
-                Chip(title: item.name, emoji: item.emoji, isSelected: session.selectedStuff.contains(item.name)) {
+                Chip(
+                    title: item.name,
+                    emoji: item.emoji,
+                    isSelected: session.selectedStuff.contains(item.name),
+                    onTap: { launchFlight(item, from: $0) }
+                ) {
                     session.toggleStuff(item.name)
                 }
             }
