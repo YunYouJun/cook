@@ -74,6 +74,8 @@ struct CookView: View {
             .sheet(isPresented: $showingFilters) {
                 FilterSheet()
                     .presentationDetents([.medium, .large])
+                    // 半屏时系统默认是半透明玻璃，后面选中的蓝色食材会透上来，看着像选中了某个做法
+                    .presentationBackground(Color(uiColor: .systemGroupedBackground))
             }
         }
         .sensoryFeedback(.selection, trigger: session.selectedStuff)

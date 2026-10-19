@@ -18,6 +18,18 @@ struct ResultsView: View {
     static let groupLabels = ["齐全", "差一种", "差两种"]
     static let groupHints = ["食材都有", "补一种就能做", "补两种就能做"]
 
+    private var filterSummary: [String] {
+        var items: [String] = []
+        if let tool = session.tool {
+            items.append(store.toolLabel(tool))
+        }
+        items += session.methodGroups + session.difficulty
+        if session.noSpicy {
+            items.append("不吃辣")
+        }
+        return items
+    }
+
     var body: some View {
         @Bindable var session = session
         let matches = store.recommender.recommend(session.options)
@@ -30,7 +42,13 @@ struct ResultsView: View {
                     }
                 }
             } footer: {
-                Text("已选：\(session.selectedStuff.joined(separator: "、"))")
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("已选：\(session.selectedStuff.joined(separator: "、"))")
+                    // 筛选条件在做菜页的 sheet 里设置，这里也写出来，免得结果变少时不知道为什么
+                    if !filterSummary.isEmpty {
+                        Text("筛选：\(filterSummary.joined(separator: "、"))")
+                    }
+                }
             }
 
             if matches.isEmpty {

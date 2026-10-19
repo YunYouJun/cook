@@ -62,6 +62,8 @@ struct LibraryView: View {
                 }
             }
             .navigationTitle("菜谱")
+            // 分栏视图的侧栏默认用小标题，和其他几个页签的大标题对齐
+            .navigationBarTitleDisplayMode(.large)
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜索菜名或食材")
             .toolbar {
                 if scope == .recent, !visits.isEmpty {
