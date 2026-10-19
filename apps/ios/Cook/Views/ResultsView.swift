@@ -59,7 +59,7 @@ struct ResultsView: View {
             }
         }
         .navigationTitle("能做的菜")
-        .searchable(text: $session.keyword, prompt: "按菜名筛选")
+        .searchable(text: $session.keyword, placement: .navigationBarDrawer(displayMode: .always), prompt: "按菜名筛选")
     }
 }
 

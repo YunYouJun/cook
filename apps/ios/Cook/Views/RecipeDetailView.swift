@@ -61,9 +61,6 @@ struct RecipeDetailView: View {
                     Text(store.thumbnail(for: recipe))
                         .font(.system(size: 64))
                         .accessibilityHidden(true)
-                    Text(recipe.name)
-                        .font(.title2.bold())
-                        .multilineTextAlignment(.center)
                     Text(store.meta(for: recipe))
                         .foregroundStyle(.secondary)
                 }
@@ -101,8 +98,9 @@ struct RecipeDetailView: View {
                 }
             }
         }
+        // 菜名只放在大标题里，滚动后收进导航栏，不在页面里再写一遍
         .navigationTitle(recipe.name)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
