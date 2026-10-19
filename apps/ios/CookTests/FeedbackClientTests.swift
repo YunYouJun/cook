@@ -61,9 +61,12 @@ final class FeedbackClientTests: XCTestCase {
         XCTAssertEqual(sent[0]["recipeId"] as? Int, 3)
         XCTAssertEqual(sent[0]["rank"] as? Int, 1)
         XCTAssertEqual(sent[0]["deviceId"] as? String, client.reporter)
+        XCTAssertEqual(sent[0]["platform"] as? String, "ios")
+        XCTAssertEqual(sent[0]["version"] as? String, "2.0.0")
         XCTAssertEqual(sent[1]["type"] as? String, "empty")
         XCTAssertEqual(sent[1]["tool"] as? String, "电饭煲")
         XCTAssertEqual(sent[1]["mode"] as? String, "strict")
+        XCTAssertEqual(sent[1]["platform"] as? String, "ios")
     }
 
     func testSignalsRespectTheSettingAndBuild() {
@@ -95,6 +98,8 @@ final class FeedbackClientTests: XCTestCase {
         XCTAssertEqual(sent[0]["recipeName"] as? String, recipe.name)
         XCTAssertEqual(sent[0]["kind"] as? String, "video")
         XCTAssertEqual(sent[0]["note"] as? String, "视频没了")
+        XCTAssertEqual(sent[0]["platform"] as? String, "ios")
+        XCTAssertEqual(sent[0]["version"] as? String, "2.0.0")
         XCTAssertEqual(sent[1]["action"] as? String, "feedback")
         XCTAssertEqual(sent[1]["category"] as? String, "idea")
         XCTAssertEqual(sent[1]["contact"] as? String, "cook@example.com")

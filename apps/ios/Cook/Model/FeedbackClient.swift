@@ -134,8 +134,6 @@ final class FeedbackClient {
             "category": category.rawValue,
             "note": String(note.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Self.maxNote)),
             "contact": String(contact.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Self.maxContact)),
-            "platform": "ios",
-            "version": version,
         ])
     }
 
@@ -145,6 +143,9 @@ final class FeedbackClient {
         }
         var body = body
         body["deviceId"] = reporter
+        // 每条都带上来源和版本，汇总时能把 iOS 和 Web 分开看
+        body["platform"] = "ios"
+        body["version"] = version
         var request = URLRequest(url: endpoint, timeoutInterval: 10)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
