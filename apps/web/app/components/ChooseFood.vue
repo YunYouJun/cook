@@ -58,7 +58,14 @@ function clickTool(item: StuffItem) {
 
 <template>
   <div class="choose-food">
-    <IngredientInput :selected="selected" @add="rStore.addStuff" @remove="rStore.toggleStuff" />
+    <IngredientInput
+      :selected="selected"
+      :parse="rStore.parseText"
+      placeholder="食材或一句话，如：土豆鸡蛋，不要辣"
+      @add="rStore.addStuff"
+      @remove="rStore.toggleStuff"
+      @apply="rStore.applyQuery"
+    />
 
     <IngredientSection v-for="section in sections" :key="section.category" :title="section.title" :note="selectedNote(section.items)">
       <IngredientChip

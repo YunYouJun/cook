@@ -38,6 +38,8 @@ NUXT_PUBLIC_CLARITY_DOMAINS=cook.yunyoujun.cn,cook.yunle.fun
 | `results_empty`      | 已展开且加载完成，但整个当前筛选没有推荐结果            |
 | `view_recipe_detail` | 菜谱详情弹层已展示（Ionic did-present），不是仅点击列表 |
 | `click_recipe_video` | 点击外部菜谱做法，覆盖详情、菜谱库、收藏、历史及旧标签  |
+| `parse_query`        | 做菜页输入框按整句识别出了条件（只列食材时不计）        |
+| `parse_query_empty`  | 做菜页输入框什么都没认出                                |
 
 主漏斗按顺序配置为 `view_cook → select_ingredients → view_results → view_recipe_detail → click_recipe_video`。厨具是可选筛选，不作为必经步骤；仅选厨具、菜谱库等直接访问路径另行分析。视频事件表示点击意图，不表示外站打开或播放成功。
 

@@ -90,6 +90,8 @@ pnpm eval:search     # 用真实信号评估当前排序：前 10 命中率、MR
 
 改了 `recipe.csv`、`aliases.json`、推荐或搜索逻辑后运行 `pnpm fixtures` 重新生成，并在 PR 里看结果的变化是否符合预期；忘了运行时 `pnpm test` 会失败。用例的输入在 `scripts/lib/fixtures.ts`。逻辑改动要同时改 `apps/ios/CookCore` 里对应的 Swift 代码。
 
+整句识别（`parseCookQuery`）的词表在 `packages/data/query.json`，用例 `fixtures/query.json` 是手写的，不由 `pnpm fixtures` 生成：改词表或规则时手动补用例，并核对期望结果。背景见 [0007](/decisions/0007-ai-and-sentence-input)。
+
 ### 数据版本和结构
 
 `pnpm convert` 生成的 `recipe-meta.json` 带两个版本号：

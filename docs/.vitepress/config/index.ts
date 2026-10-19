@@ -26,6 +26,7 @@ export default defineConfig({
           text: '使用指南',
           items: [
             { text: '快速开始', link: '/guide/getting-started' },
+            { text: '一句话找菜', link: '/guide/sentence-input' },
           ],
         },
       ],
@@ -49,6 +50,10 @@ export default defineConfig({
             { text: '0002 反馈与固定 id', link: '/decisions/0002-feedback-and-ids' },
             { text: '0003 原生 iOS 与 monorepo', link: '/decisions/0003-native-ios-monorepo' },
             { text: '0004 iOS App 命名', link: '/decisions/0004-ios-app-name' },
+            { text: '0005 应用图标', link: '/decisions/0005-app-icon' },
+            { text: '0006 iOS Bundle ID', link: '/decisions/0006-ios-bundle-id' },
+            { text: '0007 AI 与整句识别', link: '/decisions/0007-ai-and-sentence-input' },
+            { text: '0008 iOS 统计与反馈', link: '/decisions/0008-ios-analytics' },
           ],
         },
       ],

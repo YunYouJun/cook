@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cook.yunyoujun.cn/schema/query.schema.json",
+  "title": "整句识别词表（query.json）",
+  "type": "object",
+  "required": ["stuff", "ignore", "tools", "have", "avoid", "lack", "noSpicy", "difficulty", "methodGroups"],
+  "additionalProperties": false,
+  "definitions": {
+    "words": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "mapping": { "type": "object", "additionalProperties": { "type": "string", "minLength": 1 } }
+  },
+  "properties": {
+    "description": { "type": "string" },
+    "stuff": { "$ref": "#/definitions/mapping" },
+    "ignore": { "$ref": "#/definitions/words" },
+    "tools": { "$ref": "#/definitions/mapping" },
+    "have": { "$ref": "#/definitions/words" },
+    "avoid": { "$ref": "#/definitions/words" },
+    "lack": { "$ref": "#/definitions/words" },
+    "noSpicy": { "$ref": "#/definitions/words" },
+    "difficulty": {
+      "type": "object",
+      "propertyNames": { "enum": ["简单", "普通", "困难"] },
+      "additionalProperties": { "$ref": "#/definitions/words" }
+    },
+    "methodGroups": { "type": "object", "additionalProperties": { "$ref": "#/definitions/words" } }
+  }
+}
