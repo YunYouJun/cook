@@ -1,0 +1,82 @@
+{
+  "description": "由 pnpm fixtures 生成，勿手改。Web（test/fixtures.test.ts）和 iOS（CookCore）都要和它一致。",
+  "rules": [
+    {
+      "foodA": "牛奶",
+      "foodB": "韭菜",
+      "reason": "用例"
+    },
+    {
+      "foodA": "柿子",
+      "foodB": "螃蟹",
+      "reason": "用例"
+    },
+    {
+      "foodA": "韭菜",
+      "foodB": "菠菜",
+      "reason": "用例"
+    }
+  ],
+  "cases": [
+    {
+      "input": [
+        "牛奶",
+        "韭菜"
+      ],
+      "output": [
+        [
+          "牛奶",
+          "韭菜"
+        ]
+      ]
+    },
+    {
+      "input": [
+        "韭菜",
+        "鸡蛋",
+        "牛奶"
+      ],
+      "output": [
+        [
+          "牛奶",
+          "韭菜"
+        ]
+      ]
+    },
+    {
+      "input": [
+        "牛奶",
+        "韭菜",
+        "菠菜",
+        "螃蟹"
+      ],
+      "output": [
+        [
+          "牛奶",
+          "韭菜"
+        ],
+        [
+          "韭菜",
+          "菠菜"
+        ]
+      ]
+    },
+    {
+      "input": [
+        "牛奶"
+      ],
+      "output": []
+    },
+    {
+      "input": [
+        "牛奶",
+        "牛奶"
+      ],
+      "output": []
+    },
+    {
+      "input": [],
+      "output": []
+    }
+  ]
+}

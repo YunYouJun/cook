@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cook.yunyoujun.cn/schema/recipe-meta.schema.json",
+  "title": "菜谱数据的元信息（recipe-meta.json）",
+  "type": "object",
+  "required": ["schemaVersion", "dataVersion", "chunked", "total", "version"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "minimum": 1, "description": "数据结构版本，客户端只读自己支持的版本" },
+    "dataVersion": { "type": "string", "pattern": "^[0-9a-f]{12}$", "description": "数据内容的 hash，内容不变则不变" },
+    "chunked": { "type": "boolean" },
+    "total": { "type": "integer", "minimum": 0 },
+    "chunkSize": { "type": "integer", "minimum": 1 },
+    "chunks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["index", "hash", "count"],
+        "properties": {
+          "index": { "type": "integer", "minimum": 0 },
+          "hash": { "type": "string" },
+          "count": { "type": "integer", "minimum": 0 },
+          "ids": { "type": "array", "items": { "type": "integer" } }
+        }
+      }
+    },
+    "version": { "type": "integer", "description": "生成时间戳，旧版 Web 用" }
+  },
+  "if": { "properties": { "chunked": { "const": true } } },
+  "then": { "required": ["chunkSize", "chunks"] }
+}

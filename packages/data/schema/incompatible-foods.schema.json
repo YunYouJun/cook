@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cook.yunyoujun.cn/schema/incompatible-foods.schema.json",
+  "title": "食物相克规则（incompatible-foods.json）",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["foodA", "foodB", "reason"],
+    "additionalProperties": false,
+    "properties": {
+      "foodA": { "type": "string", "minLength": 1 },
+      "foodB": { "type": "string", "minLength": 1 },
+      "reason": { "type": "string" }
+    }
+  }
+}
