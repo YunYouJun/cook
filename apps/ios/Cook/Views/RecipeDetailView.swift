@@ -7,7 +7,7 @@ struct RecipeDetailView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(\.modelContext) private var context
     @Environment(\.openURL) private var openURL
-    @Query private var favorites: [FavoriteRecipe]
+    @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }) private var favorites: [Favorite]
     let route: RecipeRoute
 
     private var recipe: Recipe {
@@ -73,6 +73,8 @@ struct RecipeDetailView: View {
                     Text(group.items.map { name in
                         store.emoji(forStuff: name).map { "\($0) \(name)" } ?? name
                     }.joined(separator: "、"))
+                    // 读屏时不念 emoji 的名字，只念食材
+                    .accessibilityLabel(group.items.joined(separator: "、"))
                 }
             }
 
@@ -118,7 +120,8 @@ struct RecipeDetailView: View {
             }
         }
         .sensoryFeedback(.success, trigger: isFavorite)
-        .onAppear {
+        // iPad 分栏里换一道菜时视图不会重建，按菜谱 id 记浏览
+        .task(id: recipe.id) {
             context.recordVisit(recipe.id)
         }
     }

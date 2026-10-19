@@ -12,6 +12,7 @@ struct Chip: View {
             HStack(spacing: 4) {
                 if let emoji, !emoji.isEmpty {
                     Text(emoji)
+                        .accessibilityHidden(true)
                 }
                 Text(title)
                     .lineLimit(1)
@@ -26,6 +27,7 @@ struct Chip: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
@@ -34,11 +36,13 @@ struct Chip: View {
 struct ChipSection<Content: View>: View {
     let title: String
     var note: String? = nil
+    /// 跟着系统字号放大，字大时一行少放几个，免得菜名被截断（不能是 private，否则逐一成员构造器也会变成 private）
+    @ScaledMetric(relativeTo: .subheadline) var minChipWidth: CGFloat = 92
     @ViewBuilder let content: () -> Content
 
     var body: some View {
         Section {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], spacing: 8) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: minChipWidth), spacing: 8)], spacing: 8) {
                 content()
             }
             .padding(.vertical, 4)

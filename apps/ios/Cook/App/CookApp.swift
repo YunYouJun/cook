@@ -16,12 +16,13 @@ struct CookApp: App {
         let result = launchSignposter.withIntervalSignpost("加载菜谱数据") {
             Result { try RecipeStore.loadBundled() }
         }
-        let defaultPantry = (try? result.get())?.data.pantry.defaults ?? []
-        _loadResult = State(initialValue: result)
-        _session = State(initialValue: CookSession(defaultPantry: defaultPantry))
-        container = launchSignposter.withIntervalSignpost("打开本地数据库") {
+        let container = launchSignposter.withIntervalSignpost("打开本地数据库") {
             Persistence.makeContainer()
         }
+        let defaultPantry = (try? result.get())?.data.pantry.defaults ?? []
+        _loadResult = State(initialValue: result)
+        _session = State(initialValue: CookSession(defaultPantry: defaultPantry, context: container.mainContext))
+        self.container = container
     }
 
     var body: some Scene {

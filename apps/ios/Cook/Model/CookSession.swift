@@ -1,33 +1,46 @@
 import CookCore
 import Foundation
 import Observation
+import SwiftData
 
-/// 做菜页的选择：已选食材和筛选条件只在本次使用；常备调料、忌口和不吃辣会记住
+/// 做菜页的选择：已选食材和筛选条件只在本次使用；常备调料、忌口、不吃辣和推荐模式存在 SwiftData，随 iCloud 同步
 @Observable
 final class CookSession {
     var selectedStuff: [String] = []
     var tool: String?
-    var mode: RecommendationMode = .loose
     var methodGroups: [String] = []
     var difficulty: [String] = []
     var keyword = ""
-    private(set) var pantry: [String]
-    private(set) var avoid: [String]
-    private(set) var noSpicy: Bool
 
-    private let defaults: UserDefaults
+    private let context: ModelContext
+    private let preferences: Preferences
 
-    enum Keys {
-        static let pantry = "cook.pantry"
-        static let avoid = "cook.avoid"
-        static let noSpicy = "cook.noSpicy"
+    init(defaultPantry: [String], context: ModelContext) {
+        self.context = context
+        preferences = context.preferences(defaultPantry: defaultPantry)
     }
 
-    init(defaultPantry: [String], defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-        pantry = defaults.stringArray(forKey: Keys.pantry) ?? defaultPantry
-        avoid = defaults.stringArray(forKey: Keys.avoid) ?? []
-        noSpicy = defaults.bool(forKey: Keys.noSpicy)
+    // 偏好直接读写模型，其他设备同步过来的修改也会刷新界面
+    var pantry: [String] {
+        preferences.pantry
+    }
+
+    var avoid: [String] {
+        preferences.avoid
+    }
+
+    var noSpicy: Bool {
+        preferences.noSpicy
+    }
+
+    var mode: RecommendationMode {
+        get { RecommendationMode(rawValue: preferences.mode) ?? .loose }
+        set { updatePreferences { $0.mode = newValue.rawValue } }
+    }
+
+    /// 做法、难度和不吃辣这几个筛选条件选了几个，做菜页的「筛选」按钮上显示
+    var activeFilterCount: Int {
+        methodGroups.count + difficulty.count + (noSpicy ? 1 : 0)
     }
 
     var options: RecommendationOptions {
@@ -66,28 +79,36 @@ final class CookSession {
     }
 
     func togglePantry(_ name: String) {
-        pantry = Self.toggled(pantry, name)
-        defaults.set(pantry, forKey: Keys.pantry)
+        updatePreferences { $0.pantry = Self.toggled($0.pantry, name) }
     }
 
     func resetPantry(to defaultPantry: [String]) {
-        pantry = defaultPantry
-        defaults.set(pantry, forKey: Keys.pantry)
+        updatePreferences { $0.pantry = defaultPantry }
     }
 
     func toggleAvoid(_ name: String) {
-        avoid = Self.toggled(avoid, name)
-        defaults.set(avoid, forKey: Keys.avoid)
+        updatePreferences { $0.avoid = Self.toggled($0.avoid, name) }
     }
 
     func clearAvoid() {
-        avoid = []
-        defaults.set(avoid, forKey: Keys.avoid)
+        updatePreferences { $0.avoid = [] }
     }
 
     func setNoSpicy(_ value: Bool) {
-        noSpicy = value
-        defaults.set(value, forKey: Keys.noSpicy)
+        updatePreferences { $0.noSpicy = value }
+    }
+
+    /// 清掉做法、难度和不吃辣
+    func clearFilters() {
+        methodGroups = []
+        difficulty = []
+        setNoSpicy(false)
+    }
+
+    private func updatePreferences(_ change: (Preferences) -> Void) {
+        change(preferences)
+        preferences.updatedAt = Date()
+        try? context.save()
     }
 
     static func toggled(_ list: [String], _ item: String) -> [String] {

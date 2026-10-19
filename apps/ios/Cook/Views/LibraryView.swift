@@ -2,7 +2,7 @@ import CookCore
 import SwiftData
 import SwiftUI
 
-/// 菜谱：全部、收藏、最近浏览，可以按菜名或食材搜
+/// 菜谱：全部、收藏、最近浏览，可以按菜名或食材搜。iPad 上左边列表、右边详情，iPhone 上自动收成一栏
 struct LibraryView: View {
     enum Scope: String, CaseIterable, Identifiable {
         case all = "全部"
@@ -15,10 +15,15 @@ struct LibraryView: View {
     }
 
     @Environment(RecipeStore.self) private var store
-    @Query(sort: \FavoriteRecipe.createdAt, order: .reverse) private var favorites: [FavoriteRecipe]
-    @Query(sort: \RecipeVisit.visitedAt, order: .reverse) private var visits: [RecipeVisit]
+    @Environment(\.modelContext) private var context
+    @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }, sort: \Favorite.createdAt, order: .reverse)
+    private var favorites: [Favorite]
+    @Query(filter: #Predicate<HistoryEntry> { $0.deletedAt == nil }, sort: \HistoryEntry.visitedAt, order: .reverse)
+    private var visits: [HistoryEntry]
     @State private var scope: Scope = .all
     @State private var query = ""
+    @State private var selection: RecipeRoute?
+    @State private var confirmingClear = false
 
     private var recipes: [Recipe] {
         let base: [Recipe]
@@ -36,8 +41,8 @@ struct LibraryView: View {
     var body: some View {
         let visible = recipes
 
-        NavigationStack {
-            List {
+        NavigationSplitView {
+            List(selection: $selection) {
                 Picker("范围", selection: $scope) {
                     ForEach(Scope.allCases) { scope in
                         Text(scope.rawValue).tag(scope)
@@ -58,7 +63,24 @@ struct LibraryView: View {
             }
             .navigationTitle("菜谱")
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜索菜名或食材")
-            .recipeDestinations()
+            .toolbar {
+                if scope == .recent, !visits.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("清空") { confirmingClear = true }
+                    }
+                }
+            }
+            .confirmationDialog("清空浏览记录？", isPresented: $confirmingClear, titleVisibility: .visible) {
+                Button("清空浏览记录", role: .destructive) { context.clearHistory() }
+            }
+        } detail: {
+            NavigationStack {
+                if let selection {
+                    RecipeDetailView(route: selection)
+                } else {
+                    ContentUnavailableView("选一道菜看看", systemImage: "book", description: Text("从左边的列表里选"))
+                }
+            }
         }
     }
 

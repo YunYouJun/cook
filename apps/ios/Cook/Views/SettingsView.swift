@@ -19,7 +19,7 @@ struct SettingsView: View {
                 } header: {
                     Text("做菜偏好")
                 } footer: {
-                    Text("登录 iCloud 后，收藏和浏览记录会在你的设备间同步。")
+                    Text("登录 iCloud 后，收藏、浏览记录和做菜偏好会在你的设备间同步。")
                 }
                 Section("关于") {
                     LabeledContent("版本", value: appVersion)

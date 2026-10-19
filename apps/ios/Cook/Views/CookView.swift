@@ -1,10 +1,11 @@
 import CookCore
 import SwiftUI
 
-/// 做菜：选食材和筛选条件，底部按钮进入推荐结果
+/// 做菜：选食材和厨具，做法、难度和忌口放在「筛选」里，底部按钮进入推荐结果
 struct CookView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
+    @State private var showingFilters = false
 
     var body: some View {
         let matchCount = store.recommender.recommend(session.options).count
@@ -26,26 +27,18 @@ struct CookView: View {
                         }
                     }
                 }
-                ChipSection(title: "做法（可选）", note: session.methodGroups.isEmpty ? nil : "只看这些做法") {
-                    ForEach(Recommender.methodGroups, id: \.label) { group in
-                        Chip(title: group.label, isSelected: session.methodGroups.contains(group.label)) {
-                            session.toggleMethodGroup(group.label)
-                        }
-                    }
-                }
-                ChipSection(title: "难度（可选）", note: session.difficulty.isEmpty ? nil : "没标难度的菜会被隐藏") {
-                    ForEach(Recommender.difficultyLevels, id: \.self) { level in
-                        Chip(title: level, isSelected: session.difficulty.contains(level)) {
-                            session.toggleDifficulty(level)
-                        }
-                    }
-                }
-                Section("调料和忌口") {
-                    PreferenceRows()
-                }
             }
             .navigationTitle("做菜")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    let count = session.activeFilterCount
+                    Button {
+                        showingFilters = true
+                    } label: {
+                        Label("筛选", systemImage: count > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                    }
+                    .accessibilityValue(count > 0 ? "已选 \(count) 项" : "")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("清空") { session.clearStuff() }
                         .disabled(session.selectedStuff.isEmpty)
@@ -78,6 +71,10 @@ struct CookView: View {
                 ResultsView()
             }
             .recipeDestinations()
+            .sheet(isPresented: $showingFilters) {
+                FilterSheet()
+                    .presentationDetents([.medium, .large])
+            }
         }
         .sensoryFeedback(.selection, trigger: session.selectedStuff)
     }
@@ -96,6 +93,52 @@ struct CookView: View {
 }
 
 struct ResultsRoute: Hashable {}
+
+/// 筛选：做法、难度、不吃辣，以及家里常备和忌口
+struct FilterSheet: View {
+    @Environment(CookSession.self) private var session
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ChipSection(title: "做法", note: session.methodGroups.isEmpty ? nil : "只看这些做法") {
+                    ForEach(Recommender.methodGroups, id: \.label) { group in
+                        Chip(title: group.label, isSelected: session.methodGroups.contains(group.label)) {
+                            session.toggleMethodGroup(group.label)
+                        }
+                    }
+                }
+                ChipSection(title: "难度", note: session.difficulty.isEmpty ? nil : "没标难度的菜会被隐藏") {
+                    ForEach(Recommender.difficultyLevels, id: \.self) { level in
+                        Chip(title: level, isSelected: session.difficulty.contains(level)) {
+                            session.toggleDifficulty(level)
+                        }
+                    }
+                }
+                Section {
+                    PreferenceRows()
+                } header: {
+                    Text("调料和忌口")
+                } footer: {
+                    Text("家里常备、忌口和不吃辣会记住，下次打开还在。")
+                }
+            }
+            .navigationTitle("筛选")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("清除") { session.clearFilters() }
+                        .disabled(session.activeFilterCount == 0)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完成") { dismiss() }
+                }
+            }
+        }
+        .sensoryFeedback(.selection, trigger: session.activeFilterCount)
+    }
+}
 
 /// 已选食材里有相克组合时的提醒
 struct IncompatibleWarning: View {
