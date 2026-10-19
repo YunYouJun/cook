@@ -1,6 +1,6 @@
 # iOS App 打磨目标
 
-目标：做出一个能在 App Store 上架、值得用户付费的「食用手册」iOS App，同时 Web 继续可用。背景和取舍见 [0003 原生 iOS App 与 monorepo 结构](/decisions/0003-native-ios-monorepo)。
+目标：做出一个能在 App Store 上架、值得用户付费的「食用手册」iOS App（App 名「云食册」，见 [0004](/decisions/0004-ios-app-name)），同时 Web 继续可用。背景和取舍见 [0003 原生 iOS App 与 monorepo 结构](/decisions/0003-native-ios-monorepo)。
 
 每个阶段完成验收项后才进入下一阶段。数字类指标是起始目标，做出第一版后按实测调整。
 
@@ -42,7 +42,8 @@
 ## M4 会员与上架
 
 - StoreKit 2 会员：CloudBase 跨平台同步，以及之后确定的高级功能；恢复购买；Web 已购会员登录后解锁。
-- 付费墙、隐私清单、App Store 截图和文案、审核备注。
+- 付费墙、隐私清单、App Store 截图和文案、审核备注。App Store 名称「云食册 - 食用手册」，副标题「有什么食材，就做什么菜」。
+- 云乐坊账号登录，与 Web 同步收藏和历史；关于页注明「原食用手册」。上架后在 `apps/web/app/constants/index.ts` 填写 `appStoreId`，Web 显示 App 横幅和 iOS 版入口。
 - 以更新的方式替换现有 `cn.yunyoujun.cook` 商店条目。
 
 验收：沙盒环境走通购买、续订、退订、恢复；审核通过并上架。
