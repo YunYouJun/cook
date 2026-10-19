@@ -1,31 +1,25 @@
-# Design QA — 食用手册应用图标
+# Design QA — 云食册 / 食用手册应用图标
 
-- Date: 2026-08-17
-- Visual target: Product Design ideation option 2
-- Surfaces: Web/PWA, iOS launcher, Android launcher, YunLeFun native authorization sheet
+- Date: 2026-10-19
+- Visual target: 「蒸汽成云」（[0005](docs/decisions/0005-app-icon.md)）
+- Surfaces: Web/PWA, Capacitor iOS launcher, Android launcher
 
 ## Visual fidelity
 
-- Preserved the selected top-down pot composition, emerald background, cream vessel, and green/red/gold ingredients.
-- Flattened incidental raster shading into five stable brand colors without changing the silhouette or hierarchy.
-- Produced a transparent `cook-mark` and a full-square `cook-app-icon` from the same selected artwork.
-- Shifted the foreground down 16 units on the 1254-unit canvas so its measured vertical bounds are centered at 626.5.
-- Enlarged and regularized both handle openings so they stay legible at launcher sizes.
-- Replaced the traced inner rim with a cleaner 30-unit circular stroke.
-- Consolidated the two white highlights into one stronger four-point tomato highlight.
+- Follows the YunLeFun icon spec: sky gradient `#55AAFF → #2563EB`, cloud-white glyph, `#FACC15` accent, 64 × 64 reference grid.
+- The cloud reuses the 云乐盘 cloud outline so the icon sits in the same family as 云乐盘, 云生 and 云匣.
+- Keeps the pot and ladle from the earlier line logo; the steam becomes the cloud.
+- `cook-app-icon` fills the square with no corner mask or baked shadow; `cook-mark` is transparent.
 
 ## Platform checks
 
-- 16, 24, 32, and 64 px previews keep the pot and three ingredient groups distinguishable.
-- The full-square source has no precomposed corner mask or shadow; iOS and Android apply their own masks.
-- iOS Simulator shows the installed name as “食用手册” and the new launcher icon without clipping.
-- The YunLeFun authorization sheet renders the same PNG at 64 pt without overlap, fallback text, or transparency artifacts.
-- Web/PWA and iOS PNGs are opaque; the Android adaptive foreground retains transparency over the emerald background layer.
+- 20, 29, 40 and 64 pt previews keep the pot, cloud and ladle distinguishable in light and dark.
+- iOS asset catalog ships light, dark and tinted 1024 px variants; all PNGs are opaque RGB.
+- Android adaptive foreground stays inside the 66 dp safe zone over the gradient background drawable.
+- Favicon uses a 14-unit corner radius; the Safari pinned tab uses a single-color mark.
 
 ## Build gates
 
-- Cook lint, typecheck, targeted authentication tests, icon metadata tests, and static production build passed.
-- Android `assembleDebug` passed with the local OpenJDK 21 runtime.
-- YunLeFun/icons build, tests, lint, typecheck, docs build, and package dry run passed.
+- Cook lint and the full Vitest suite passed (including `test/nativeAppMetadata.test.ts`).
 
 final result: passed
