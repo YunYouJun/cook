@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { setCookEventTracker } from '../app/utils/analytics'
-import { getRecipeFeedbackLink, getRecipeLink, openRecipe } from '../app/utils/recipe'
+import { setCookEventTracker } from '../apps/web/app/utils/analytics'
+import { getRecipeFeedbackLink, getRecipeLink, openRecipe } from '../apps/web/app/utils/recipe'
 
 describe('getRecipeLink', () => {
   it('records the video click before leaving, and analytics failures never block navigation', () => {

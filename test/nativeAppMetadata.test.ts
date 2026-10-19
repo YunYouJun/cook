@@ -34,8 +34,8 @@ describe('native app metadata', () => {
   })
 
   it('ships the selected Cook icon across web, iOS, and Android', () => {
-    const appIcon = readFileSync(resolve(root, 'public/brand/cook-app-icon.svg'), 'utf8')
-    const mark = readFileSync(resolve(root, 'public/brand/cook-mark.svg'), 'utf8')
+    const appIcon = readFileSync(resolve(root, 'apps/web/public/brand/cook-app-icon.svg'), 'utf8')
+    const mark = readFileSync(resolve(root, 'apps/web/public/brand/cook-mark.svg'), 'utf8')
     const androidBackground = readFileSync(
       resolve(root, 'android/app/src/main/res/values/ic_launcher_background.xml'),
       'utf8',
@@ -48,9 +48,9 @@ describe('native app metadata', () => {
     expect(mark).toContain('<g transform="translate(0 16)">')
     expect(androidBackground).toContain('#07855F')
 
-    expect(readPngMetadata('public/pwa-192x192.png')).toMatchObject({ width: 192, height: 192, colorType: 2 })
-    expect(readPngMetadata('public/pwa-512x512.png')).toMatchObject({ width: 512, height: 512, colorType: 2 })
-    expect(readPngMetadata('public/apple-touch-icon.png')).toMatchObject({ width: 180, height: 180, colorType: 2 })
+    expect(readPngMetadata('apps/web/public/pwa-192x192.png')).toMatchObject({ width: 192, height: 192, colorType: 2 })
+    expect(readPngMetadata('apps/web/public/pwa-512x512.png')).toMatchObject({ width: 512, height: 512, colorType: 2 })
+    expect(readPngMetadata('apps/web/public/apple-touch-icon.png')).toMatchObject({ width: 180, height: 180, colorType: 2 })
     expect(readPngMetadata('ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png')).toMatchObject({ width: 1024, height: 1024, colorType: 2 })
     expect(readPngMetadata('android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png')).toMatchObject({ width: 108, height: 108, colorType: 6 })
   })

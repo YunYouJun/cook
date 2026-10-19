@@ -1,6 +1,6 @@
 import type { IncompatibleRule } from '~/types'
+import incompatibleFoodsData from '@cook/data/incompatible-foods.json'
 import { computed, onMounted, readonly, ref } from 'vue'
-import incompatibleFoodsData from '~/data/incompatible-foods.json'
 
 /**
  * 食物相克检测 composable

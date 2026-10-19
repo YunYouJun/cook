@@ -1,5 +1,5 @@
 /**
- * 校验 app/data/recipe.csv：食材/厨具词典、取值、视频号、重复
+ * 校验 packages/data/recipe.csv：食材/厨具词典、取值、视频号、重复
  *
  * pnpm validate          # 有错误时退出码为 1
  * pnpm validate --json   # 输出 JSON，供 AI / 脚本消费
@@ -8,12 +8,14 @@
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import process from 'node:process'
-import { meat, staple, tools, vegetable } from '../app/data/food'
+import { meat, staple, tools, vegetable } from '../apps/web/app/data/food'
 import { recipeCsvFile } from '../packages/cook/src/utils/config'
 import { parseRecipeCsv } from '../packages/cook/src/utils/csv'
 import { validateRecipes } from '../packages/cook/src/utils/validate'
 
-const csvPath = 'app/data/recipe.csv'
+const csvPath = 'packages/data/recipe.csv'
+// 迁移到 monorepo 之前的位置，对比旧基准分支时使用
+const legacyCsvPath = 'app/data/recipe.csv'
 const recipes = parseRecipeCsv(fs.readFileSync(recipeCsvFile, 'utf-8'))
 
 function readBase() {
@@ -21,7 +23,14 @@ function readBase() {
   const ref = index > -1 ? process.argv[index + 1] : undefined
   if (!ref)
     return undefined
-  const csv = execFileSync('git', ['show', `${ref}:${csvPath}`], { encoding: 'utf-8' })
+  const show = (path: string) => execFileSync('git', ['show', `${ref}:${path}`], { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] })
+  let csv: string
+  try {
+    csv = show(csvPath)
+  }
+  catch {
+    csv = show(legacyCsvPath)
+  }
   // 基准版本还没有 id 列时 parseRecipeCsv 返回空数组，等于不做对比
   return parseRecipeCsv(csv)
 }

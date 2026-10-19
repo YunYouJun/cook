@@ -14,11 +14,11 @@ metadata:
 
 ## 硬性规则
 
-- 数据只改 `app/data/recipe.csv`。需要新食材或厨具时，不要改 `app/data/food.ts`，写进 PR 描述的「需要维护者决定」部分。
+- 数据只改 `packages/data/recipe.csv`。需要新食材或厨具时，不要改 `apps/web/app/data/food.ts`，写进 PR 描述的「需要维护者决定」部分。
 - 列为 `name,stuff,bv,difficulty,tags,methods,tools,id`；单元格内多个值用顿号「、」分隔。
 - **id 不能修改、不能复用。** 收藏、反馈、筛选信号都按 id 记录。新菜谱追加到末尾，id 用当前最大 id + 1。
 - 不删除菜谱。重复或失效的菜写进「需要维护者决定」，由维护者决定是否删除（删除会让收藏它的用户丢失这一条）。
-- 食材、厨具只能用 `app/data/food.ts` 里的名称。难度只能是 简单 / 普通 / 困难，或留空。
+- 食材、厨具只能用 `apps/web/app/data/food.ts` 里的名称。难度只能是 简单 / 普通 / 困难，或留空。
 - **不编造视频号。** 替换视频时，必须用 `https://api.bilibili.com/x/web-interface/view?bvid=<BV号>` 确认 `code` 为 0，并且标题和菜名对得上；做不到就保留原值，写进 PR 描述。
 - 筛选逻辑只允许改 `packages/cook/src/utils/alias.ts`（别名）和 `packages/cook/src/utils/recommend.ts`（排序），且必须有评测数据支撑（见第 6 步）。
 - 拿不准的改动不做，写进 PR 描述。宁可少改，不要错改。
@@ -83,7 +83,7 @@ metadata:
 
 8. **提交并开 PR**
    ```bash
-   git add app/data/recipe.csv test/fixtures/search-eval.json test/recommendations.test.ts packages/cook/src/utils/alias.ts packages/cook/src/utils/recommend.ts
+   git add packages/data/recipe.csv test/fixtures/search-eval.json test/recommendations.test.ts packages/cook/src/utils/alias.ts packages/cook/src/utils/recommend.ts
    git commit -m "chore(data): recipe review $(date +%F)"
    git push -u origin HEAD
    gh pr create --title "chore(data): recipe review $(date +%F)" --body-file /tmp/recipe-review-pr.md

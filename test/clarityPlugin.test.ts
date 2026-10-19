@@ -18,7 +18,7 @@ async function setup(projectId = 'ks1ebw03i5', path = '/') {
   vi.stubGlobal('useScriptClarity', script)
   vi.stubGlobal('onNuxtReady', ready)
   vi.stubGlobal('useRouter', () => ({ beforeEach }))
-  const { default: plugin } = await import('../app/plugins/clarity.client')
+  const { default: plugin } = await import('../apps/web/app/plugins/clarity.client')
   ;(plugin as unknown as () => void)()
   return { send, load, script, ready, beforeEach }
 }
@@ -34,7 +34,7 @@ describe('clarity client integration', () => {
     expect(load).not.toHaveBeenCalled()
     ready.mock.calls[0]![0]()
     expect(load).toHaveBeenCalledTimes(1)
-    const { trackCookEvent } = await import('../app/utils/analytics')
+    const { trackCookEvent } = await import('../apps/web/app/utils/analytics')
     trackCookEvent('click_stuff')
     trackCookEvent('click_tool')
     trackCookEvent('click_dish')
@@ -75,7 +75,7 @@ describe('clarity client integration', () => {
     expect(stop).toHaveBeenCalledWith('stop')
     ready.mock.calls[0]![0]()
     expect(load).not.toHaveBeenCalled()
-    const { trackCookEvent } = await import('../app/utils/analytics')
+    const { trackCookEvent } = await import('../apps/web/app/utils/analytics')
     trackCookEvent('click_dish')
     expect(send).not.toHaveBeenCalled()
   })

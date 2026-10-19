@@ -59,7 +59,7 @@ cp .env.example .env
 # 从飞书拉取最新数据
 pnpm fetch
 
-# 或手动编辑 app/data/recipe.csv 后转换为 JSON
+# 或手动编辑 packages/data/recipe.csv 后转换为 JSON
 pnpm convert
 ```
 

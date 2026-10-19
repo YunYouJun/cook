@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { isPrivateAnalyticsUrl, resolveClarityConfig, setCookEventTracker, trackCookEvent } from '../app/utils/analytics'
+import { isPrivateAnalyticsUrl, resolveClarityConfig, setCookEventTracker, trackCookEvent } from '../apps/web/app/utils/analytics'
 
 const config = { projectId: 'ks1ebw03i5', domains: 'cook.yunyoujun.cn, cook.yunle.fun' }
 

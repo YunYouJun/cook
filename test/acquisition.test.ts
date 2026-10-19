@@ -27,7 +27,7 @@ describe('cook document acquisition', () => {
     'https://yunle.fun./login',
     'https://cook.yunle.fun/random',
   ])('excludes internal ecosystem navigation from external acquisition: %s', async (referrer) => {
-    const { captureCookAcquisition } = await import('../app/utils/acquisition')
+    const { captureCookAcquisition } = await import('../apps/web/app/utils/acquisition')
     const context = captureCookAcquisition(browser('https://cook.yunle.fun/', referrer), 1000)!
     expect(context.firstTouch.referrerHost).toBe('')
     expect(context.registerTouch.referrerHost).toBe('')
@@ -36,14 +36,14 @@ describe('cook document acquisition', () => {
   it.each(['https://github.com/YunYouJun/cook', 'https://www.zhihu.com/', 'https://notyunle.fun/'])(
     'retains an actual external referrer: %s',
     async (referrer) => {
-      const { captureCookAcquisition } = await import('../app/utils/acquisition')
+      const { captureCookAcquisition } = await import('../apps/web/app/utils/acquisition')
       const context = captureCookAcquisition(browser('https://cook.yunle.fun/', referrer), 1000)!
       expect(context.registerTouch.referrerHost).toBe(new URL(referrer).hostname)
     },
   )
 
   it('keeps first touch for 30 days while updating the current document entry', async () => {
-    const { captureCookAcquisition } = await import('../app/utils/acquisition')
+    const { captureCookAcquisition } = await import('../apps/web/app/utils/acquisition')
     const entry = browser()
     const first = captureCookAcquisition(entry, 1000)!
     entry.location = new URL('https://cook.yunle.fun/random?utm_source=github') as unknown as Location
@@ -60,7 +60,7 @@ describe('cook document acquisition', () => {
   })
 
   it('preserves the pre-auth entry through a callback and never captures OAuth referrers', async () => {
-    const { captureCookAcquisition, readCookAcquisition } = await import('../app/utils/acquisition')
+    const { captureCookAcquisition, readCookAcquisition } = await import('../apps/web/app/utils/acquisition')
     const entry = browser()
     const context = captureCookAcquisition(entry, 1000)
     entry.location = new URL('https://cook.yunle.fun/auth/callback?code=private#ylf_sso=private') as unknown as Location
@@ -71,12 +71,12 @@ describe('cook document acquisition', () => {
   })
 
   it('does not invent attribution for a callback without an earlier document entry', async () => {
-    const { captureCookAcquisition } = await import('../app/utils/acquisition')
+    const { captureCookAcquisition } = await import('../apps/web/app/utils/acquisition')
     expect(captureCookAcquisition(browser('https://cook.yunle.fun/auth/callback'), 1000)).toBeNull()
   })
 
   it.each([null, '{broken', JSON.stringify({ capturedAt: -1 })])('does not restore a readable deleted or invalid entry from memory: %s', async (stored) => {
-    const { captureCookAcquisition, readCookAcquisition } = await import('../app/utils/acquisition')
+    const { captureCookAcquisition, readCookAcquisition } = await import('../apps/web/app/utils/acquisition')
     const entry = browser()
     expect(captureCookAcquisition(entry, 1000)?.registerTouch.utmSource).toBe('知乎')
     entry.sessionStorage.getItem = () => stored
@@ -88,7 +88,7 @@ describe('cook document acquisition', () => {
   })
 
   it('uses the current entry when readable first touch is cleared, without reviving its old campaign', async () => {
-    const { captureCookAcquisition, readCookAcquisition } = await import('../app/utils/acquisition')
+    const { captureCookAcquisition, readCookAcquisition } = await import('../apps/web/app/utils/acquisition')
     const entry = browser()
     captureCookAcquisition(entry, 1000)
     entry.location = new URL('https://cook.yunle.fun/random?utm_source=github') as unknown as Location
@@ -102,7 +102,7 @@ describe('cook document acquisition', () => {
   })
 
   it('keeps a validated memory first touch across blocked storage and expires stale entry data', async () => {
-    const { captureCookAcquisition, readCookAcquisition } = await import('../app/utils/acquisition')
+    const { captureCookAcquisition, readCookAcquisition } = await import('../apps/web/app/utils/acquisition')
     const entry = browser()
     for (const storage of [entry.localStorage, entry.sessionStorage]) {
       storage.getItem = () => {
@@ -121,7 +121,7 @@ describe('cook document acquisition', () => {
   })
 
   it('uses the new entry when a failed write leaves the old value readable, then respects deletion', async () => {
-    const { captureCookAcquisition, readCookAcquisition } = await import('../app/utils/acquisition')
+    const { captureCookAcquisition, readCookAcquisition } = await import('../apps/web/app/utils/acquisition')
     const entry = browser('https://cook.yunle.fun/?utm_source=old')
     captureCookAcquisition(entry, 1000)
     entry.sessionStorage.setItem = () => {
@@ -140,7 +140,7 @@ describe('cook document acquisition', () => {
   })
 
   it('ignores credentials, invalid UTM and storage failures without blocking authentication', async () => {
-    const { captureCookAcquisition, readCookAcquisition } = await import('../app/utils/acquisition')
+    const { captureCookAcquisition, readCookAcquisition } = await import('../apps/web/app/utils/acquisition')
     const entry = browser('https://cook.yunle.fun/?utm_source=hello%0Aworld&token=private', 'https://user:pass@example.com/path')
     for (const storage of ['localStorage', 'sessionStorage']) {
       Object.defineProperty(entry, storage, {

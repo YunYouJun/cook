@@ -1,5 +1,5 @@
 /**
- * 巡检 app/data/recipe.csv 中的 B 站视频是否失效，输出 Markdown 报告
+ * 巡检 packages/data/recipe.csv 中的 B 站视频是否失效，输出 Markdown 报告
  *
  * pnpm check:videos                       # 打印报告
  * pnpm check:videos --out report.md       # 同时写入文件（供 workflow 更新 issue）

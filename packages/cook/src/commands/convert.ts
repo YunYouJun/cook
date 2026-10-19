@@ -126,7 +126,7 @@ function convertIncompatibleFoods() {
  * 更新 lastDbUpdated 时间戳
  */
 function updateLastDbUpdated() {
-  const constantsFile = path.join(rootDir, 'app/constants/index.ts')
+  const constantsFile = path.join(rootDir, 'apps/web/app/constants/index.ts')
 
   if (!fs.existsSync(constantsFile)) {
     consola.warn('Constants file not found, skipping timestamp update')

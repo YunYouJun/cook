@@ -14,14 +14,15 @@ export default defineConfig({
     setupFiles: ['test/setup.ts'],
 
     alias: {
-      '~': fileURLToPath(new URL('./app', import.meta.url)),
+      '~': fileURLToPath(new URL('./apps/web/app', import.meta.url)),
+      '@cook/data': fileURLToPath(new URL('./packages/data', import.meta.url)),
       '@yunyoujun/cook/recommend': fileURLToPath(new URL('./packages/cook/src/utils/recommend.ts', import.meta.url)),
     },
 
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['app/**/*.{ts,vue}', 'packages/**/src/**/*.ts'],
+      include: ['apps/web/app/**/*.{ts,vue}', 'packages/**/src/**/*.ts'],
       exclude: [
         'test/**',
         '**/*.test.ts',

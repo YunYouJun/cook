@@ -14,7 +14,7 @@ PKCE 能阻止授权码被旁路窃取，但不能阻止恶意 App 主动冒充�
 
 iOS 的 Associated Domains 与站点 `apple-app-site-association` 已纳入项目。Android 上架前还需用
 Google Play App Signing 的发布证书 SHA-256 生成站点文件
-`public/.well-known/assetlinks.json`，关系必须限定为：
+`apps/web/public/.well-known/assetlinks.json`，关系必须限定为：
 
 ```json
 [

@@ -1,8 +1,8 @@
-import type { UserData } from '../app/utils/userData'
-import type { UserDataDocument, UserDataLocal, UserDataRemote } from '../app/utils/userDataSync'
+import type { UserData } from '../apps/web/app/utils/userData'
+import type { UserDataDocument, UserDataLocal, UserDataRemote } from '../apps/web/app/utils/userDataSync'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createEmptyUserData } from '../app/utils/userData'
-import { createUserDataSyncScheduler, syncUserData, UserDataSyncError } from '../app/utils/userDataSync'
+import { createEmptyUserData } from '../apps/web/app/utils/userData'
+import { createUserDataSyncScheduler, syncUserData, UserDataSyncError } from '../apps/web/app/utils/userDataSync'
 
 const NOW = 1_800_000_000_000
 

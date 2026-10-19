@@ -26,14 +26,14 @@ metadata:
 
 ### 数据源
 
-| 数据          | 在线地址（GitHub Raw）                                                                  | 格式       |
-| ------------- | --------------------------------------------------------------------------------------- | ---------- |
-| 菜谱库        | `https://raw.githubusercontent.com/YunYouJun/cook/main/app/data/recipe.csv`             | CSV        |
-| 食物相克      | `https://raw.githubusercontent.com/YunYouJun/cook/main/app/data/incompatible-foods.csv` | CSV        |
-| 食材/厨具分类 | `https://raw.githubusercontent.com/YunYouJun/cook/main/app/data/food.ts`                | TypeScript |
+| 数据          | 在线地址（GitHub Raw）                                                                       | 格式       |
+| ------------- | -------------------------------------------------------------------------------------------- | ---------- |
+| 菜谱库        | `https://raw.githubusercontent.com/YunYouJun/cook/main/packages/data/recipe.csv`             | CSV        |
+| 食物相克      | `https://raw.githubusercontent.com/YunYouJun/cook/main/packages/data/incompatible-foods.csv` | CSV        |
+| 食材/厨具分类 | `https://raw.githubusercontent.com/YunYouJun/cook/main/apps/web/app/data/food.ts`            | TypeScript |
 
 > **Skill 内置数据**：本 Skill 自带 `data/recipe.csv` 和 `data/incompatible-foods.csv`，Fallback 时优先读取，无需网络。
-> **Cook 项目本地**：如果在 Cook 项目内使用，直接读取 `app/data/` 目录下的文件。
+> **Cook 项目本地**：如果在 Cook 项目内使用，直接读取 `packages/data/`（菜谱、相克）和 `apps/web/app/data/food.ts`（食材/厨具）。
 > **在线获取**：以上均不可用时，通过 GitHub Raw URL 获取。
 
 ### CSV 字段说明
@@ -82,7 +82,7 @@ npx @yunyoujun/cook search --stuff "鸡蛋,番茄" --json
 按以下优先级读取数据，手动筛选：
 
 1. **Skill 内置数据**（推荐）：读取本 Skill 目录下的 `data/recipe.csv` 和 `data/incompatible-foods.csv`
-2. **Cook 项目本地数据**：读取 `app/data/recipe.csv`（仅在 Cook 项目内有效）
+2. **Cook 项目本地数据**：读取 `packages/data/recipe.csv`（仅在 Cook 项目内有效）
 3. **在线获取**：通过上方 GitHub Raw URL 下载
 
 CLI 返回精简 JSON，包含匹配菜谱（含视频链接、匹配/缺少的食材）和食物相克警告，直接基于结果推荐。支持食材别名（如 西红柿→番茄、泡面→方便面）。

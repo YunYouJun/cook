@@ -1,4 +1,4 @@
-import type { YunleHostEnv, YunleJSAPI } from '../app/utils/yunleHost'
+import type { YunleHostEnv, YunleJSAPI } from '../apps/web/app/utils/yunleHost'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   applyYunleHostLayout,
@@ -9,7 +9,7 @@ import {
   resolveDisplayMode,
   waitForYunleHost,
   yunleHaptic,
-} from '../app/utils/yunleHost'
+} from '../apps/web/app/utils/yunleHost'
 
 function env(overrides: Partial<YunleHostEnv> = {}): YunleHostEnv {
   return {

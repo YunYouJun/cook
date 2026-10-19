@@ -14,7 +14,7 @@ const dataFiles = [
   'incompatible-foods.csv',
 ]
 
-const dataSourceDir = resolve(root, 'app/data')
+const dataSourceDir = resolve(root, 'packages/data')
 const dataTargetDir = resolve(skillDir, 'data')
 
 // 1. 复制数据文件到 skills/cook/data/
