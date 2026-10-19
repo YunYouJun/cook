@@ -25,8 +25,8 @@ describe('recipe store: sentence input', () => {
   })
 
   it('recognizes ingredients from my own recipes', () => {
-    customRecipes.value = [{ customId: 'custom-a', name: '羊肉汤', stuff: ['羊肉'], tools: [], createdAt: 1, updatedAt: 1 }]
+    customRecipes.value = [{ customId: 'custom-a', name: '红烧兔肉', stuff: ['兔肉'], tools: [], createdAt: 1, updatedAt: 1 }]
     const store = useRecipeStore()
-    expect(store.parseText('冰箱里有羊肉').stuff).toEqual(['羊肉'])
+    expect(store.parseText('冰箱里有兔肉').stuff).toEqual(['兔肉'])
   })
 })
