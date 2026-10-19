@@ -10,6 +10,7 @@ private let launchSignposter = OSSignposter(subsystem: "fun.yunle.cook", categor
 struct CookApp: App {
     @State private var loadResult: Result<RecipeStore, Error>
     @State private var session: CookSession
+    @State private var feedback = FeedbackClient()
     private let container: ModelContainer
 
     init() {
@@ -32,6 +33,7 @@ struct CookApp: App {
                 RootView()
                     .environment(store)
                     .environment(session)
+                    .environment(feedback)
             case let .failure(error):
                 ContentUnavailableView(
                     "菜谱数据加载失败",

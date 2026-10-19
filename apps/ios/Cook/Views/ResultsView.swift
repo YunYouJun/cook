@@ -33,6 +33,7 @@ struct ResultsView: View {
     var body: some View {
         @Bindable var session = session
         let matches = store.recommender.recommend(session.options)
+        let ranks = Dictionary(matches.enumerated().map { ($1.recipe.id, $0) }, uniquingKeysWith: { first, _ in first })
 
         List {
             Section {
@@ -64,7 +65,7 @@ struct ResultsView: View {
                 if !items.isEmpty {
                     Section {
                         ForEach(items, id: \.recipe.id) { match in
-                            NavigationLink(value: RecipeRoute(recipe: match.recipe, match: match)) {
+                            NavigationLink(value: RecipeRoute(recipe: match.recipe, match: match, rank: ranks[match.recipe.id])) {
                                 RecipeRow(recipe: match.recipe, match: match)
                             }
                         }

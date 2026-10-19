@@ -5,10 +5,12 @@ import SwiftUI
 struct CookView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
+    @Environment(FeedbackClient.self) private var feedback
     @State private var showingFilters = false
 
     var body: some View {
         let matchCount = store.recommender.recommend(session.options).count
+        let emptySignal = emptySignalID(matchCount: matchCount)
         let warnings = findIncompatibleRules(session.selectedStuff, rules: store.data.incompatibleRules)
 
         NavigationStack {
@@ -67,6 +69,17 @@ struct CookView: View {
                     .ignoresSafeArea(edges: .bottom)
                 }
             }
+            // 选了食材却一道菜都没有，停留 3 秒后匿名记一次，用来发现缺哪些菜；条件一变就重新计时
+            .task(id: emptySignal) {
+                guard emptySignal != nil else {
+                    return
+                }
+                try? await Task.sleep(for: .seconds(3))
+                guard !Task.isCancelled else {
+                    return
+                }
+                feedback.signalEmpty(stuff: session.selectedStuff, tool: session.tool, mode: session.mode)
+            }
             .navigationDestination(for: ResultsRoute.self) { _ in
                 ResultsView()
             }
@@ -79,6 +92,14 @@ struct CookView: View {
             }
         }
         .sensoryFeedback(.selection, trigger: session.selectedStuff)
+    }
+
+    /// 和 Web 一样，按菜名搜索时没有结果不算
+    private func emptySignalID(matchCount: Int) -> String? {
+        guard matchCount == 0, !session.selectedStuff.isEmpty, session.keyword.isEmpty else {
+            return nil
+        }
+        return ([session.tool ?? "", session.mode.rawValue] + session.selectedStuff.sorted()).joined(separator: "|")
     }
 
     @ViewBuilder

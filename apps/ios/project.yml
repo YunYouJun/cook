@@ -42,6 +42,8 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         ITSAppUsesNonExemptEncryption: false
+        # cook-feedback 云函数的 HTTP 访问地址（docs/dev/data.md），生成工程前 export COOK_FEEDBACK_URL=…；不填时反馈入口改成跳 GitHub，也不发筛选信号
+        CookFeedbackURL: ${COOK_FEEDBACK_URL}
         LSApplicationQueriesSchemes: [bilibili]
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: true

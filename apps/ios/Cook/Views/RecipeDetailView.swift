@@ -5,8 +5,15 @@ import SwiftUI
 /// 菜谱详情：已有、还缺、常备分开列出，可以收藏、分享、去 B 站看做法
 struct RecipeDetailView: View {
     @Environment(RecipeStore.self) private var store
+    @Environment(CookSession.self) private var session
+    @Environment(FeedbackClient.self) private var feedback
     @Environment(\.modelContext) private var context
     @Environment(\.openURL) private var openURL
+    @State private var choosingIssue = false
+    @State private var writingNote = false
+    @State private var note = ""
+    @State private var showingSent = false
+    @State private var showingFailed = false
     @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }) private var favorites: [Favorite]
     let route: RecipeRoute
 
@@ -95,10 +102,43 @@ struct RecipeDetailView: View {
                         Label(recipe.bv == nil ? "看做法" : "去 B 站看做法", systemImage: "play.rectangle")
                     }
                 }
-                Link(destination: feedbackURL) {
+                Button {
+                    // 没配置反馈地址的构建（比如本机调试）直接去 GitHub
+                    if feedback.isConfigured {
+                        choosingIssue = true
+                    } else {
+                        openURL(feedbackURL)
+                    }
+                } label: {
                     Label("反馈这道菜的问题", systemImage: "exclamationmark.bubble")
                 }
+                .confirmationDialog("这道菜有什么问题？", isPresented: $choosingIssue, titleVisibility: .visible) {
+                    ForEach(FeedbackClient.RecipeIssue.allCases) { issue in
+                        Button(issue.label) {
+                            if issue == .other {
+                                note = ""
+                                writingNote = true
+                            } else {
+                                submit(issue)
+                            }
+                        }
+                    }
+                }
+                .alert("具体是什么问题？", isPresented: $writingNote) {
+                    TextField("比如：用量不对、步骤有误", text: $note)
+                    Button("取消", role: .cancel) {}
+                    Button("提交") { submit(.other, note: note) }
+                }
             }
+        }
+        .alert("收到了，谢谢反馈", isPresented: $showingSent) {
+            Button("好", role: .cancel) {}
+        }
+        .alert("暂时没能提交", isPresented: $showingFailed) {
+            Button("取消", role: .cancel) {}
+            Button("去 GitHub 填写") { openURL(feedbackURL) }
+        } message: {
+            Text("可以到 GitHub 填写反馈表单，菜名和视频已经帮你填好。")
         }
         // 菜名只放在大标题里，滚动后收进导航栏，不在页面里再写一遍
         .navigationTitle(recipe.name)
@@ -123,6 +163,22 @@ struct RecipeDetailView: View {
         // iPad 分栏里换一道菜时视图不会重建，按菜谱 id 记浏览
         .task(id: recipe.id) {
             context.recordVisit(recipe.id)
+            // 从推荐结果点进来时，匿名记录这组食材下点开了第几个，用来评估排序
+            if let rank = route.rank {
+                feedback.signalOpen(stuff: session.selectedStuff, tool: session.tool, mode: session.mode, recipeId: recipe.id, rank: rank)
+            }
+        }
+        .sensoryFeedback(.success, trigger: showingSent) { _, sent in sent }
+    }
+
+    private func submit(_ issue: FeedbackClient.RecipeIssue, note: String = "") {
+        Task {
+            do {
+                try await feedback.report(recipe, issue: issue, note: note)
+                showingSent = true
+            } catch {
+                showingFailed = true
+            }
         }
     }
 
