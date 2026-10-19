@@ -37,14 +37,14 @@
 1. **工程骨架和做菜主流程**
    - `apps/ios/Cook` 用 XcodeGen 的 `project.yml` 生成工程，不提交手改的 pbxproj，避免冲突。
    - 依赖本地 CookCore。构建前运行 `pnpm convert`，构建脚本把 `packages/data` 的 JSON 拷进 App。
-   - Bundle id `cn.yunyoujun.cook`，显示名「云食册」，最低 iOS 17，用 Xcode 26 SDK 构建以获得 Liquid Glass。
+   - Bundle id `fun.yunle.cook`（见 [0006](/decisions/0006-ios-bundle-id)），显示名「云食册」，最低 iOS 17，用 Xcode 26 SDK 构建以获得 Liquid Glass。
    - 做菜页：按 `food.json` 分组的食材网格和厨具，推荐模式。
    - 筛选 sheet：做法、难度、不吃辣、忌口。
    - 相克提示、结果列表。
    - 菜谱详情：已有、常备和缺少的食材，B 站视频（有 B 站 App 就打开 App，否则用 Safari），分享。
 2. **收藏、历史和设置**
    - SwiftData 模型：`Favorite`、`HistoryEntry` 以 recipe id 为主键，带 `updatedAt` 和软删除；`Preferences` 存常备调料、忌口和推荐模式。
-   - CloudKit 容器 `iCloud.cn.yunyoujun.cook`。
+   - CloudKit 容器 `iCloud.fun.yunle.cook`。
    - 「我的」页：常备调料、关于、反馈。
 3. **随机、iPad、无障碍和 CI**
    - 「今天吃什么」随机页。
@@ -52,13 +52,13 @@
    - 动态字体和 VoiceOver 标签。
    - macOS runner 上跑 `xcodegen` 和 `xcodebuild test`（iOS 模拟器）。
 
-之后在 Mac 上 archive 并上传 TestFlight，构建号要高于现有 Capacitor 版。
+之后在 Mac 上 archive 并上传 TestFlight。
 
 需要准备：
 
 - 装了 Xcode 26 的 Mac，以及 cook 仓库的本地克隆。
 - Apple 开发者账号（`.env` 里的 `APPLE_DEVELOPMENT_TEAM`）。
-- App Store Connect 里现有的 `cn.yunyoujun.cook` 条目，以及在开发者后台开启的 iCloud 容器。
+- 在开发者后台注册 `fun.yunle.cook` 并开启 iCloud 容器，在 App Store Connect 新建「云食册」条目。
 
 验收：核心流程不依赖网络；冷启动到可点击不超过 1 秒（iPhone 12 级别设备）；滚动无明显掉帧；VoiceOver 能走完「选食材 → 打开菜谱」；TestFlight 内测无崩溃。
 
@@ -77,7 +77,7 @@
 - StoreKit 2 会员：CloudBase 跨平台同步，以及之后确定的高级功能；恢复购买；Web 已购会员登录后解锁。
 - 付费墙、隐私清单、App Store 截图和文案、审核备注。App Store 名称「云食册 - 食用手册」，副标题「有什么食材，就做什么菜」。
 - 云乐坊账号登录，与 Web 同步收藏和历史；关于页注明「原食用手册」。上架后在 `apps/web/app/constants/index.ts` 填写 `appStoreId`，Web 显示 App 横幅和 iOS 版入口。
-- 以更新的方式替换现有 `cn.yunyoujun.cook` 商店条目。
+- 作为新 App `fun.yunle.cook` 上架；Capacitor 版 `cn.yunyoujun.cook` 没有上架过，不需要迁移。
 
 验收：沙盒环境走通购买、续订、退订、恢复；审核通过并上架。
 

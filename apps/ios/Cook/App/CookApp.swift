@@ -4,7 +4,7 @@ import SwiftData
 import SwiftUI
 
 /// 启动阶段打点，在 Instruments 的 Points of Interest 里看耗时
-private let launchSignposter = OSSignposter(subsystem: "cn.yunyoujun.cook", category: .pointsOfInterest)
+private let launchSignposter = OSSignposter(subsystem: "fun.yunle.cook", category: .pointsOfInterest)
 
 @main
 struct CookApp: App {
