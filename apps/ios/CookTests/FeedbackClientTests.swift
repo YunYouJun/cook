@@ -18,7 +18,8 @@ private final class FakeTransport: @unchecked Sendable {
         let body = try JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any] ?? [:]
         lock.withLock { bodies.append(body) }
         let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!
-        let data = try JSONSerialization.data(withJSONObject: ok ? ["ok": true] : ["ok": false, "code": "INVALID_REPORT"])
+        let reply: [String: Any] = ok ? ["ok": true] : ["ok": false, "code": "INVALID_REPORT"]
+        let data = try JSONSerialization.data(withJSONObject: reply)
         return (data, response)
     }
 }
