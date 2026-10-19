@@ -7,20 +7,20 @@ struct WebUserData: Equatable {
     static let app = "cook"
     static let version = 1
 
-    struct Favorite: Equatable {
+    struct FavoriteItem: Equatable {
         var recipeId: Int
         var time: Date
     }
 
-    struct Visit: Equatable {
+    struct VisitItem: Equatable {
         var name: String
         var time: Date
     }
 
     /// 生效的收藏（已经去掉被取消的），按收藏时间从早到晚
-    var favorites: [Favorite]
+    var favorites: [FavoriteItem]
     /// 生效的浏览记录（已经去掉被删除和清空的），每道菜只留最近一次，从早到晚
-    var visits: [Visit]
+    var visits: [VisitItem]
 
     /// 解析网页版导出的文本；不是食用手册导出的数据时返回 nil，坏掉的条目直接跳过
     static func parse(_ text: String) -> WebUserData? {
@@ -47,7 +47,7 @@ struct WebUserData: Equatable {
         }
         let favorites = added
             .filter { id, time in (removed[id] ?? .distantPast) < time }
-            .map { Favorite(recipeId: $0.key, time: $0.value) }
+            .map { FavoriteItem(recipeId: $0.key, time: $0.value) }
             .sorted { ($0.time, $0.recipeId) < ($1.time, $1.recipeId) }
 
         let clearedAt = time(object["historyClearedAt"]) ?? Date(timeIntervalSince1970: 0)
@@ -69,7 +69,7 @@ struct WebUserData: Equatable {
             }
         }
         let visits = latest
-            .map { Visit(name: $0.key, time: $0.value) }
+            .map { VisitItem(name: $0.key, time: $0.value) }
             .sorted { ($0.time, $0.name) < ($1.time, $1.name) }
 
         return WebUserData(favorites: favorites, visits: visits)
