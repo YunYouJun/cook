@@ -61,7 +61,18 @@ struct CookView: View {
                 .controlSize(.large)
                 .disabled(session.selectedStuff.isEmpty)
                 .padding(.horizontal)
+                .padding(.top, 16)
                 .padding(.bottom, 8)
+                .background {
+                    // 按钮没选食材时是半透明的，垫一层底色，免得和下面滚过的列表叠在一起
+                    let background = Color(uiColor: .systemGroupedBackground)
+                    VStack(spacing: 0) {
+                        LinearGradient(colors: [background.opacity(0), background], startPoint: .top, endPoint: .bottom)
+                            .frame(height: 16)
+                        background
+                    }
+                    .ignoresSafeArea(edges: .bottom)
+                }
             }
             .navigationDestination(for: ResultsRoute.self) { _ in
                 ResultsView()

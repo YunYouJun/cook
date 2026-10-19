@@ -57,7 +57,7 @@ struct LibraryView: View {
                 }
             }
             .navigationTitle("菜谱")
-            .searchable(text: $query, prompt: "搜索菜名或食材")
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜索菜名或食材")
             .recipeDestinations()
         }
     }
