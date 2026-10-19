@@ -14,15 +14,15 @@
 
 列为 `name,stuff,bv,difficulty,tags,methods,tools,id`。
 
-| 字段          | 规则                                                                                            |
-| ------------- | ----------------------------------------------------------------------------------------------- |
-| name          | 必填                                                                                            |
-| stuff         | 必填；只能使用 `apps/web/app/data/food.ts` 里的食材名，别名（如「虾仁」）要写成标准名（「虾」） |
-| bv            | B 站 BV 号或 av 号                                                                              |
-| difficulty    | 简单 / 普通 / 困难，或留空                                                                      |
-| methods、tags | 自由填写                                                                                        |
-| tools         | 只能使用 `apps/web/app/data/food.ts` 里的厨具名                                                 |
-| id            | 必填，非负整数且唯一；新菜谱用当前最大 id + 1                                                   |
+| 字段          | 规则                                                                                          |
+| ------------- | --------------------------------------------------------------------------------------------- |
+| name          | 必填                                                                                          |
+| stuff         | 必填；只能使用 `packages/data/food.json` 里的食材名，别名（如「虾仁」）要写成标准名（「虾」） |
+| bv            | B 站 BV 号或 av 号                                                                            |
+| difficulty    | 简单 / 普通 / 困难，或留空                                                                    |
+| methods、tags | 自由填写                                                                                      |
+| tools         | 只能使用 `packages/data/food.json` 里的厨具名                                                 |
+| id            | 必填，非负整数且唯一；新菜谱用当前最大 id + 1                                                 |
 
 单元格内多个值用顿号「、」分隔，不要用逗号或斜杠。
 
@@ -40,7 +40,7 @@ pnpm validate --json   # 输出 JSON，供 AI / 脚本使用
 
 PR 上 CI 还会运行 `pnpm validate --base <目标分支>`：同一个 id 的菜名和视频都变了（像是把 id 挪给了另一道菜）或复用了已删除的 id 会报错，删除菜谱会给出警告。
 
-想用新的食材，先在 `apps/web/app/data/food.ts` 里加上，再在菜谱里使用。
+想用新的食材，先在 `packages/data/food.json` 里加上，再在菜谱里使用。
 
 ## 反馈闭环
 
@@ -80,7 +80,13 @@ pnpm feedback:pull   # 汇总到 .cook/feedback/summary.md，并更新 test/fixt
 pnpm eval:search     # 用真实信号评估当前排序：前 10 命中率、MRR、仍无结果的组合
 ```
 
-`test/fixtures/search-eval.json` 是匿名聚合后的评测样例，会提交到仓库。AI 修改 `packages/cook/src/utils/alias.ts`（别名）或 `recommend.ts`（排序）时，必须在 PR 中写明修改前后的 `pnpm eval:search --json` 指标，且 `pnpm test` 通过。
+`test/fixtures/search-eval.json` 是匿名聚合后的评测样例，会提交到仓库。AI 修改 `packages/data/aliases.json`（别名）或 `recommend.ts`（排序）时，必须在 PR 中写明修改前后的 `pnpm eval:search --json` 指标，且 `pnpm test` 通过。
+
+### Web 和 iOS 共用的推荐用例
+
+`packages/data/fixtures/recommend.json` 记录了一组筛选条件和当前推荐逻辑给出的结果（菜谱 id、顺序和缺少的食材）。Web 的 `test/fixtures.test.ts` 和 iOS 的 CookCore 都要和它完全一致。
+
+改了 `recipe.csv`、`aliases.json` 或推荐逻辑后运行 `pnpm fixtures` 重新生成，并在 PR 里看结果的变化是否符合预期；忘了运行时 `pnpm test` 会失败。用例的输入在 `scripts/lib/fixtures.ts`。
 
 ### CloudBase 配置（一次性）
 

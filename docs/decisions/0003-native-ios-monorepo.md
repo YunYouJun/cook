@@ -44,6 +44,8 @@ docs/            不变
 - `packages/core` 从 `packages/cook` 里拆出；`@yunyoujun/cook/recommend` 保留重新导出，已有用法不受影响。
 - iOS 侧有一个 Swift Package（`CookCore`），读同一份 JSON、跑同一份 `packages/fixtures`。推荐逻辑改动必须同时改两端，CI 里两边都跑用例。
 
+> **实施时的调整（2026-10-19）**：`packages/cook` 的推荐逻辑本来就不依赖 Vue / Node，并已通过 `@yunyoujun/cook/recommend` 单独导出，所以不再拆 `packages/core`；共享用例放在 `packages/data/fixtures/`，不单独建 `packages/fixtures`。食材词典、常备调料和别名也改成 `packages/data` 里的 JSON，Web 和 iOS 读同一份。
+
 ### 数据
 
 - JSON 加 `schemaVersion`（结构）和 `dataVersion`（内容）。App 内置一份，启动后可从 CDN 拉更新的 `dataVersion`，改菜谱不用发版。

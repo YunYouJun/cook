@@ -14,13 +14,13 @@ metadata:
 
 ## 硬性规则
 
-- 数据只改 `packages/data/recipe.csv`。需要新食材或厨具时，不要改 `apps/web/app/data/food.ts`，写进 PR 描述的「需要维护者决定」部分。
+- 数据只改 `packages/data/recipe.csv`。需要新食材或厨具时，不要改 `packages/data/food.json`，写进 PR 描述的「需要维护者决定」部分。
 - 列为 `name,stuff,bv,difficulty,tags,methods,tools,id`；单元格内多个值用顿号「、」分隔。
 - **id 不能修改、不能复用。** 收藏、反馈、筛选信号都按 id 记录。新菜谱追加到末尾，id 用当前最大 id + 1。
 - 不删除菜谱。重复或失效的菜写进「需要维护者决定」，由维护者决定是否删除（删除会让收藏它的用户丢失这一条）。
-- 食材、厨具只能用 `apps/web/app/data/food.ts` 里的名称。难度只能是 简单 / 普通 / 困难，或留空。
+- 食材、厨具只能用 `packages/data/food.json` 里的名称。难度只能是 简单 / 普通 / 困难，或留空。
 - **不编造视频号。** 替换视频时，必须用 `https://api.bilibili.com/x/web-interface/view?bvid=<BV号>` 确认 `code` 为 0，并且标题和菜名对得上；做不到就保留原值，写进 PR 描述。
-- 筛选逻辑只允许改 `packages/cook/src/utils/alias.ts`（别名）和 `packages/cook/src/utils/recommend.ts`（排序），且必须有评测数据支撑（见第 6 步）。
+- 筛选逻辑只允许改 `packages/data/aliases.json`（别名）和 `packages/cook/src/utils/recommend.ts`（排序），且必须有评测数据支撑（见第 6 步）。
 - 拿不准的改动不做，写进 PR 描述。宁可少改，不要错改。
 
 ## 步骤
@@ -62,7 +62,7 @@ metadata:
    ```bash
    pnpm eval:search --json > /tmp/eval-before.json
    ```
-   - 「没有结果的食材组合」里，用户输入的词是已有食材的别名（如「羊排」之于「羊肉」）→ 在 `alias.ts` 加别名。词典里根本没有的食材 → 写进「需要维护者决定」。
+   - 「没有结果的食材组合」里，用户输入的词是已有食材的别名（如「羊排」之于「羊肉」）→ 在 `packages/data/aliases.json` 加别名。词典里根本没有的食材 → 写进「需要维护者决定」。
    - 被频繁点开却排在 10 名以后的菜 → 可以调整 `recommend.ts` 的排序，但改动要小、要能解释。
    - 改完再跑一次，对比前后：
 
@@ -76,14 +76,15 @@ metadata:
 
    ```bash
    pnpm validate --base origin/main
+   pnpm fixtures
    pnpm test -- --run
    ```
 
-   `test/recommendations.test.ts` 里的数量断言会随数据变化。只有当变化是你的修改直接造成的，才更新这些数字，并在 PR 描述中说明。其他测试失败就停下，不要提交。
+   `test/recommendations.test.ts` 里的数量断言会随数据变化。只有当变化是你的修改直接造成的，才更新这些数字，并在 PR 描述中说明。其他测试失败就停下，不要提交。`pnpm fixtures` 会重新生成 Web 和 iOS 共用的推荐用例 `packages/data/fixtures/recommend.json`，一起提交。
 
 8. **提交并开 PR**
    ```bash
-   git add packages/data/recipe.csv test/fixtures/search-eval.json test/recommendations.test.ts packages/cook/src/utils/alias.ts packages/cook/src/utils/recommend.ts
+   git add packages/data/recipe.csv packages/data/fixtures/recommend.json test/fixtures/search-eval.json test/recommendations.test.ts packages/data/aliases.json packages/cook/src/utils/recommend.ts
    git commit -m "chore(data): recipe review $(date +%F)"
    git push -u origin HEAD
    gh pr create --title "chore(data): recipe review $(date +%F)" --body-file /tmp/recipe-review-pr.md

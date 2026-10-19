@@ -16,11 +16,11 @@ metadata:
 
 - 每道菜必须有一个**可播放的 B 站视频**（`bv` 列）。小红书、下厨房等只能作为找菜名、核对食材的参考，不进 csv。
 - **不编造视频号。** 每个 BV 号都要打开视频页（`https://www.bilibili.com/video/<BV号>/`）或调 `https://api.bilibili.com/x/web-interface/view?bvid=<BV号>`（`code` 为 0）确认：视频没失效，标题和菜名对得上。只在搜索结果里见过、没打开确认的不要用。
-- 食材、厨具只能用 `apps/web/app/data/food.ts` 里的名称。具体品种写成标准名（鲈鱼 → 鱼、虾仁 → 虾），对应别名加进 `packages/cook/src/utils/alias.ts`。
+- 食材、厨具只能用 `packages/data/food.json` 里的名称。具体品种写成标准名（鲈鱼 → 鱼、虾仁 → 虾），对应别名加进 `packages/data/aliases.json`。
 - `stuff` 只填视频标题、简介或标签里能看出来的主料，看不出来的配菜不填。`difficulty` 拿不准就留空。
 - **id 不能修改、不能复用。** 新菜谱追加到末尾，id 用当前最大 id + 1。
 - 不和已有菜重复：同一个视频、或同名同做法的菜不加。
-- 需要新食材或新厨具时，写进 PR 描述的「需要维护者决定」，不要自己加进 `food.ts`（维护者明确要求的除外）。
+- 需要新食材或新厨具时，写进 PR 描述的「需要维护者决定」，不要自己加进 `packages/data/food.json`（维护者明确要求的除外）。
 
 ## 步骤
 
@@ -47,11 +47,12 @@ metadata:
 
    ```bash
    pnpm validate --base origin/main
+   pnpm fixtures
    pnpm test -- --run
    pnpm lint
    ```
 
-   `test/recommendations.test.ts` 里的数量断言会随数据变化，只在变化是你新增的菜直接造成时才更新。
+   `test/recommendations.test.ts` 里的数量断言会随数据变化，只在变化是你新增的菜直接造成时才更新。`pnpm fixtures` 重新生成的 `packages/data/fixtures/recommend.json` 一起提交。
 
 7. **提交并开 PR**：PR 描述列出每道新菜的 id、菜名、BV 号、UP 主和视频标题，方便维护者抽查；说明哪些平台没能访问。
 

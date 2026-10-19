@@ -86,13 +86,13 @@ export function validateRecipes(recipes: RecipeItem[], dict: RecipeDictionary, o
         const suggestion = suggestStuff(item, dict)
         error(suggestion
           ? `食材「${item}」请改为标准名「${suggestion}」`
-          : `食材「${item}」不在食材词典中（apps/web/app/data/food.ts），请改为已有食材或先加入词典`)
+          : `食材「${item}」不在食材词典中（packages/data/food.json），请改为已有食材或先加入词典`)
       }
     }
 
     for (const tool of recipe.tools) {
       if (!dict.tools.has(tool))
-        error(`厨具「${tool}」不在厨具词典中（apps/web/app/data/food.ts）`)
+        error(`厨具「${tool}」不在厨具词典中（packages/data/food.json）`)
     }
 
     if (recipe.difficulty && !(DIFFICULTIES as readonly string[]).includes(recipe.difficulty))

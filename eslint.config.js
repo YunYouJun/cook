@@ -10,7 +10,7 @@ export default nuxt(
     },
     {
       ignores: [
-        'packages/data/*.json',
+        'packages/data/**/*.json',
         'ios/**/*',
         'android/**/*',
         'apps/web/public/**/*',

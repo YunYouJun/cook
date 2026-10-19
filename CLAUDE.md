@@ -14,6 +14,7 @@ pnpm convert              # Convert CSV recipe data → JSON (required before fi
 pnpm validate             # Validate recipe.csv (ids, ingredient/tool dictionary, values, video ids)
 pnpm feedback:pull        # Pull in-app feedback + search signals from CloudBase (needs .env)
 pnpm eval:search          # Evaluate recommendation ranking against real search signals
+pnpm fixtures             # Regenerate shared Web/iOS recommendation fixtures (after data, alias or ranking changes)
 pnpm dev                  # Dev server on http://localhost:3333
 pnpm lint                 # ESLint check (uses @antfu/eslint-config flat config)
 pnpm lint --fix           # Auto-fix lint issues
@@ -45,8 +46,8 @@ Project decisions are recorded in `docs/decisions/` — read the relevant one be
 Layout follows `docs/decisions/0003-native-ios-monorepo.md`; the plan is in `docs/dev/ios-roadmap.md`.
 
 - **apps/web** — Nuxt app (main application). Root scripts (`pnpm dev`, `pnpm build`, `pnpm typecheck`) proxy to it; `pnpm build` copies `apps/web/dist` to the root `dist/` that deploy targets and Capacitor read
-- **packages/data** — Recipe CSV sources and the JSON generated from them (imported in the web app as `@cook/data/*`)
-- **packages/cook** — Types, recommendation/search logic, and the CLI (`convert`, `fetch`)
+- **packages/data** — Data shared by Web and iOS: recipe CSV sources and the JSON generated from them (imported in the web app as `@cook/data/*`), the food dictionary (`food.json`), pantry defaults (`pantry.json`), ingredient aliases (`aliases.json`), and recommendation fixtures (`fixtures/recommend.json`, regenerate with `pnpm fixtures`)
+- **packages/cook** — Types, recommendation/search logic (the TS core the iOS CookCore mirrors), and the CLI (`convert`, `fetch`)
 - **docs** — VitePress documentation site
 - **scripts** — Build/utility scripts
 - **Root** — Workspace tooling, tests (`test/`), Capacitor shell (`capacitor.config.ts`, `ios/`, `android/`), `cloudfunctions/`
@@ -57,7 +58,7 @@ Layout follows `docs/decisions/0003-native-ios-monorepo.md`; the plan is in `doc
 - **components/** — Organized by feature: `recipe/`, `tags/`, `layouts/`, `common/`
 - **composables/store/** — Pinia stores: `app`, `recipe`, `favorite`, `history`, `user`
 - **composables/** — Shared logic: `db.ts` (IndexedDB via Dexie), `dark.ts`, `recipe.ts`, `incompatible-foods.ts`
-- **data/** — `food.ts` (food/tool definitions) and `pantry.ts`; recipe data lives in `packages/data`
+- **data/** — typed wrappers over `packages/data/food.json` (food/tool dictionary) and `pantry.json`
 - **types/** — TypeScript type definitions
 - **styles/** — SCSS including CSS variables (`css-vars.scss`)
 
@@ -83,7 +84,7 @@ pnpm test -- test/recipe.test.ts
 
 ## Code Style
 
-Uses `@antfu/eslint-config` (flat config) with UnoCSS and formatters enabled. Pre-commit hook runs `lint-staged` via `simple-git-hooks`. Ignored paths include `packages/data/*.json`, `ios/`, `android/`, `dist/`.
+Uses `@antfu/eslint-config` (flat config) with UnoCSS and formatters enabled. Pre-commit hook runs `lint-staged` via `simple-git-hooks`. Ignored paths include `packages/data/**/*.json`, `ios/`, `android/`, `dist/`.
 
 ## Environment Variables
 

@@ -142,7 +142,7 @@ packages/cook/
 │   │   ├── convert.ts     # CSV 转 JSON
 │   │   └── search.ts      # 菜谱检索
 │   ├── utils/
-│   │   ├── alias.ts       # 食材别名映射
+│   │   ├── alias.ts       # 食材别名（数据在 packages/data/aliases.json）
 │   │   ├── config.ts      # 配置和常量
 │   │   ├── csv.ts         # CSV 处理工具
 │   │   ├── csv.test.ts    # CSV 测试

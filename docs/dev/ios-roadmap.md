@@ -7,14 +7,15 @@
 ## M0 仓库改成 monorepo
 
 - [x] 把 Nuxt 应用搬到 `apps/web`、菜谱 CSV 和生成的 JSON 搬到 `packages/data`，只改路径不改逻辑。根目录的 `pnpm build` 仍然输出到 `dist/`，CI、EdgeOne、Netlify、Vercel、Docker、Capacitor 不用改配置。
-- [ ] 拆出 `packages/core`、`packages/fixtures`，`packages/cook` 只保留 CLI；`food.ts` 改成 `packages/data` 里的 JSON，iOS 也能读。
+- [x] 食材词典、常备调料、别名改成 `packages/data` 里的 JSON（`food.json`、`pantry.json`、`aliases.json`），Web 和 iOS 读同一份。
+- [x] 两端共用的推荐用例 `packages/data/fixtures/recommend.json`，`pnpm fixtures` 生成，`pnpm test` 检查是否过期。`packages/cook` 的推荐逻辑本身不依赖 Vue / Node，不再单独拆 `packages/core`。
 
 验收：`pnpm lint`、`typecheck`、`test`、`build` 全绿；线上 Web 部署后行为不变；`pnpm eval:search` 指标与搬迁前一致。
 
 ## M1 数据与核心逻辑两端一致
 
 - JSON 加 `schemaVersion`、`dataVersion` 和 JSON Schema。
-- `packages/fixtures` 从 `test/fixtures/search-eval.json` 和现有推荐测试整理出共享用例。
+- 共享用例补上相克判断和搜索；收集到真实筛选信号后，把 `test/fixtures/search-eval.json` 也纳入。
 - `apps/ios/CookCore`（Swift Package）实现菜谱加载、推荐、搜索、相克判断。
 
 验收：TS 和 Swift 跑同一份用例全部通过；CI 两边都跑（Swift 部分可先用 Linux 上的 `swift test`，或 macOS runner）。
