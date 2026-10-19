@@ -2,6 +2,7 @@ export type CookEventName
   = | 'click_stuff' | 'click_tool' | 'click_dish'
     | 'view_cook' | 'select_ingredients' | 'view_results'
     | 'results_empty' | 'view_recipe_detail' | 'click_recipe_video'
+    | 'parse_query' | 'parse_query_empty'
 
 interface ClarityConfig {
   projectId: string

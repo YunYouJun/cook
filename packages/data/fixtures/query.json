@@ -1,0 +1,288 @@
+{
+  "description": "整句识别用例，期望结果是人工核对过的规则，不是自动生成。Web（test/query.test.ts）和 iOS（CookCore）都要和它一致；改规则或词表时同步改这里。",
+  "cases": [
+    {
+      "input": "土豆",
+      "output": {
+        "stuff": [
+          "土豆"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "西红柿、鸡蛋",
+      "output": {
+        "stuff": [
+          "番茄",
+          "鸡蛋"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "土豆，羊肉",
+      "output": {
+        "stuff": [
+          "土豆"
+        ],
+        "unknown": [
+          "羊肉"
+        ],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "冰箱里有半颗白菜两个蛋，不要辣，15分钟能做的",
+      "output": {
+        "stuff": [
+          "白菜",
+          "鸡蛋"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": true,
+        "difficulty": [
+          "简单"
+        ],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "家里有西红柿、土豆，不吃辣，想吃清蒸的",
+      "output": {
+        "stuff": [
+          "番茄",
+          "土豆"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": true,
+        "difficulty": [],
+        "methodGroups": [
+          "蒸"
+        ]
+      }
+    },
+    {
+      "input": "想吃番茄炒蛋",
+      "output": {
+        "stuff": [
+          "番茄",
+          "鸡蛋"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": [
+          "炒菜"
+        ]
+      }
+    },
+    {
+      "input": "用电饭煲做个简单的",
+      "output": {
+        "stuff": [],
+        "unknown": [],
+        "avoid": [],
+        "tool": "电饭煲",
+        "noSpicy": false,
+        "difficulty": [
+          "简单"
+        ],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "空气炸锅烤鸡翅",
+      "output": {
+        "stuff": [
+          "鸡肉"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": "空气炸锅",
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": [
+          "烤"
+        ]
+      }
+    },
+    {
+      "input": "炒锅做个硬菜，有牛腩和土豆",
+      "output": {
+        "stuff": [
+          "牛肉",
+          "土豆"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": "一口大锅",
+        "noSpicy": false,
+        "difficulty": [
+          "困难"
+        ],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "不要洋葱和胡萝卜，有牛肉",
+      "output": {
+        "stuff": [
+          "牛肉"
+        ],
+        "unknown": [],
+        "avoid": [
+          "洋葱",
+          "胡萝卜"
+        ],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "土豆鸡蛋都有，洋葱不要",
+      "output": {
+        "stuff": [
+          "土豆",
+          "鸡蛋"
+        ],
+        "unknown": [],
+        "avoid": [
+          "洋葱"
+        ],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "我对虾过敏，有鸡肉和菌菇",
+      "output": {
+        "stuff": [
+          "鸡肉",
+          "菌菇"
+        ],
+        "unknown": [],
+        "avoid": [
+          "虾"
+        ],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "鸡蛋没了，还有土豆和米饭",
+      "output": {
+        "stuff": [
+          "土豆",
+          "米"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "想喝汤，有排骨和玉米",
+      "output": {
+        "stuff": [
+          "猪肉"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": [
+          "汤羹"
+        ]
+      }
+    },
+    {
+      "input": "不要炸的，有鱼",
+      "output": {
+        "stuff": [
+          "鱼"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "有豆腐但是不能吃辣",
+      "output": {
+        "stuff": [
+          "豆腐"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": true,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "我也不知道吃什么",
+      "output": {
+        "stuff": [],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "有羊肉和土豆",
+      "extraStuff": [
+        "羊肉"
+      ],
+      "output": {
+        "stuff": [
+          "羊肉",
+          "土豆"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    }
+  ]
+}

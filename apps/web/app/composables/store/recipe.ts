@@ -1,7 +1,8 @@
 import type { Difficulty, RecommendationMode } from '@yunyoujun/cook'
+import type { CookQuery } from '@yunyoujun/cook/recommend'
 import type { RecipeItem, StuffItem } from '~/types'
 import { StorageSerializers, useStorage } from '@vueuse/core'
-import { createRecipeRecommender, hasAvoidedStuff, matchesTaste, uniqueStuff } from '@yunyoujun/cook/recommend'
+import { createRecipeRecommender, hasAvoidedStuff, matchesTaste, parseCookQuery, uniqueStuff } from '@yunyoujun/cook/recommend'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { useIndexedDB } from '~/composables/db'
@@ -74,6 +75,25 @@ export const useRecipeStore = defineStore('recipe', () => {
     difficulty.value = difficulty.value.includes(level)
       ? difficulty.value.filter(item => item !== level)
       : [...difficulty.value, level]
+  }
+
+  /** 整句识别，自己添加的菜谱里用到的食材也要认 */
+  function parseText(text: string) {
+    return parseCookQuery(text, customRecipes.value.flatMap(recipe => recipe.stuff))
+  }
+
+  /** 把一句话识别出的条件合进当前筛选；忌口和「不辣」与手动勾选一样会一直保留 */
+  function applyQuery(query: CookQuery) {
+    const avoided = new Set(uniqueStuff(query.avoid))
+    curStuff.value = new Set(uniqueStuff([...selectedStuff.value, ...query.stuff, ...query.unknown]).filter(item => !avoided.has(item)))
+    if (avoided.size)
+      avoid.value = uniqueStuff([...selectedAvoid.value, ...avoided])
+    if (query.noSpicy)
+      noSpicy.value = true
+    if (query.tool)
+      curTool.value = query.tool
+    methodGroups.value = [...new Set([...methodGroups.value, ...query.methodGroups])]
+    difficulty.value = [...new Set([...difficulty.value, ...query.difficulty])]
   }
 
   /** 忌口、做法、口味、难度这几个对所有列表都生效的条件 */
@@ -212,6 +232,8 @@ export const useRecipeStore = defineStore('recipe', () => {
     reset,
     setMode,
     addStuff,
+    parseText,
+    applyQuery,
     recipeMatches,
     toolRecipes,
     randomPool,
