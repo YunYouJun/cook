@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cook.yunyoujun.cn/schema/recipe-text.schema.json",
+  "title": "图文做法正文（recipe-text.json），App 离线排版用",
+  "type": "object",
+  "required": ["source", "recipes"],
+  "properties": {
+    "source": {
+      "type": "object",
+      "required": ["name", "url", "license", "commit"],
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string", "pattern": "^https://" },
+        "license": { "type": "string" },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+      }
+    },
+    "recipes": {
+      "type": "object",
+      "description": "按菜谱 id 索引",
+      "propertyNames": { "pattern": "^[0-9]+$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["blocks"],
+        "properties": {
+          "blocks": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": ["type", "text"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": { "enum": ["heading", "paragraph"] },
+                    "text": { "type": "string", "minLength": 1, "description": "行内 Markdown：加粗、外链" }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": ["type", "ordered", "items"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": { "const": "list" },
+                    "ordered": { "type": "boolean" },
+                    "start": { "type": "integer", "minimum": 0 },
+                    "items": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+                  }
+                }
+              ]
+            }
+          },
+          "images": { "type": "integer", "minimum": 1, "description": "原文配图数量" }
+        }
+      }
+    }
+  }
+}

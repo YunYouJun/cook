@@ -19,6 +19,7 @@
     "feedback:pull": "tsx scripts/pull-feedback.ts",
     "eval:search": "tsx scripts/eval-search.ts",
     "fixtures": "tsx scripts/gen-fixtures.ts",
+    "howtocook": "tsx scripts/import-howtocook.ts",
     "fetch": "pnpm -C packages/cook run fetch",
     "dev": "pnpm -C apps/web run dev",
     "dev:pwa": "pnpm -C apps/web run dev:pwa",

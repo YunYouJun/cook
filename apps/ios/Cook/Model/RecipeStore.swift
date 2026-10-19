@@ -17,9 +17,13 @@ final class RecipeStore {
     let recommender: Recommender
     let recipesById: [Int: Recipe]
     private let emojiByStuff: [String: String]
+    /// 内置数据目录，图文做法正文用到时才读
+    @ObservationIgnored private let dataDirectory: URL?
+    @ObservationIgnored private lazy var textLibrary: RecipeTextLibrary? = dataDirectory.flatMap { try? RecipeTextLibrary.load(from: $0) }
 
-    init(data: CookData) {
+    init(data: CookData, dataDirectory: URL? = nil) {
         self.data = data
+        self.dataDirectory = dataDirectory
         recommender = Recommender(recipes: data.recipes, normalizer: data.normalizer)
         recipesById = Dictionary(data.recipes.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let items = data.food.vegetable + data.food.meat + data.food.staple
@@ -30,7 +34,16 @@ final class RecipeStore {
         guard let url = bundle.url(forResource: "CookData", withExtension: nil) else {
             throw RecipeStoreError.missingBundledData
         }
-        return RecipeStore(data: try CookData.load(from: url))
+        return RecipeStore(data: try CookData.load(from: url), dataDirectory: url)
+    }
+
+    /// 内置的图文做法正文（目前来自 HowToCook），没有时去原文网页看
+    func text(for recipe: Recipe) -> RecipeText? {
+        textLibrary?.text(for: recipe.id)
+    }
+
+    var textSource: RecipeTextLibrary.Source? {
+        textLibrary?.source
     }
 
     var recipes: [Recipe] {

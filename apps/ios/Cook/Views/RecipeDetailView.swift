@@ -105,7 +105,14 @@ struct RecipeDetailView: View {
                         Label("去 B 站看做法", systemImage: "play.rectangle")
                     }
                 }
-                if let textURL {
+                // 有内置正文时在 App 里看，不用等 GitHub 打开；正文页里也能打开原文
+                if let text = store.text(for: recipe) {
+                    NavigationLink {
+                        RecipeTextView(recipe: recipe, text: text, source: store.textSource)
+                    } label: {
+                        Label("看图文做法", systemImage: "doc.text")
+                    }
+                } else if let textURL {
                     Button {
                         openURL(textURL)
                     } label: {
