@@ -34,7 +34,9 @@ final class CookTests: XCTestCase {
     }
 
     func testFavoritesAndHistory() throws {
-        let context = Persistence.makeContainer(inMemory: true).mainContext
+        // 要持有容器，否则它被释放后 context 会崩溃
+        let container = Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
 
         context.toggleFavorite(1)
         XCTAssertTrue(context.isFavorite(1))

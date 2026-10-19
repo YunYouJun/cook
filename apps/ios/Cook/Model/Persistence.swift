@@ -34,6 +34,8 @@ enum Persistence {
     static func makeContainer(inMemory: Bool = false) -> ModelContainer {
         let schema = Schema(models)
         if !inMemory {
+            // 首次启动时 Application Support 还不存在，先建好再让 SwiftData 建库
+            try? FileManager.default.createDirectory(at: .applicationSupportDirectory, withIntermediateDirectories: true)
             let cloud = ModelConfiguration(schema: schema, cloudKitDatabase: .automatic)
             if let container = try? ModelContainer(for: schema, configurations: cloud) {
                 return container
