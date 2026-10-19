@@ -1,7 +1,7 @@
 import type { RecommendationMode } from '@yunyoujun/cook'
 import type { RecipeItem, StuffItem } from '~/types'
 import { StorageSerializers, useStorage } from '@vueuse/core'
-import { hasAvoidedStuff, matchesTaste, recommendRecipes, uniqueStuff } from '@yunyoujun/cook/recommend'
+import { createRecipeRecommender, hasAvoidedStuff, matchesTaste, uniqueStuff } from '@yunyoujun/cook/recommend'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { useIndexedDB } from '~/composables/db'
@@ -124,7 +124,8 @@ export const useRecipeStore = defineStore('recipe', () => {
   // 自己添加的菜谱排在前面：匹配程度相同时优先推荐
   const allRecipes = computed<RecipeItem[]>(() => [...customRecipes.value, ...recipes.value])
 
-  const recipeMatches = computed(() => recommendRecipes(allRecipes.value, {
+  const recommend = computed(() => createRecipeRecommender(allRecipes.value))
+  const recipeMatches = computed(() => recommend.value({
     stuff: selectedStuff.value,
     pantry: selectedPantry.value,
     tool: curTool.value,

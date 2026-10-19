@@ -92,46 +92,59 @@ export function matchesTaste(recipe: RecipeItem, options: Pick<RecommendationOpt
 
 /** Only explicitly recorded ingredients are requirements. Recipe names are never parsed. */
 export function recommendRecipes(recipes: RecipeItem[], options: RecommendationOptions): RecipeMatch[] {
-  const selected = new Set(uniqueStuff(options.stuff))
-  const pantry = new Set(uniqueStuff(options.pantry ?? []))
-  const keyword = options.keyword?.trim() ?? ''
-  const avoid = options.avoid ?? []
-  const avoided = new Set(uniqueStuff(avoid))
-  if (!selected.size)
-    return []
+  return createRecipeRecommender(recipes)(options)
+}
 
-  return recipes.flatMap((recipe, sourceIndex): RecipeMatch[] => {
-    if (options.tool && !recipe.tools?.includes(options.tool))
-      return []
-    if (keyword && !recipe.name.includes(keyword))
-      return []
-    if (hasAvoidedStuff(recipe, avoid) || !matchesTaste(recipe, options))
-      return []
-
-    const requiredStuff = uniqueStuff(recipe.stuff)
-    const matchedStuff = requiredStuff.filter(item => selected.has(item))
-    const pantryStuff = requiredStuff.filter(item => !selected.has(item) && pantry.has(item))
-    const unownedStuff = requiredStuff.filter(item => !selected.has(item) && !pantry.has(item))
-    const catchAll = isCatchAll(requiredStuff)
-    const missingStuff = catchAll ? [] : unownedStuff
-    const optionalStuff = catchAll ? unownedStuff.filter(item => !avoided.has(item)) : []
-
-    // Pantry alone must not create an unrelated recommendation; empty records are unknown.
-    if (!matchedStuff.length || missingStuff.length > 2)
-      return []
-    if (catchAll && matchedStuff.length < CATCH_ALL_MIN_MATCH)
-      return []
-    if (options.mode === 'strict' && ![...selected].every(item => requiredStuff.includes(item)))
-      return []
-    if (options.mode === 'survival' && missingStuff.length)
+/** Prepare immutable catalog ingredients once, instead of normalizing all rows on every click. */
+export function createRecipeRecommender(recipes: RecipeItem[]) {
+  const catalog = recipes.map((recipe, sourceIndex) => ({
+    recipe,
+    sourceIndex,
+    requiredStuff: uniqueStuff(recipe.stuff),
+  }))
+  return (options: RecommendationOptions): RecipeMatch[] => {
+    const selected = new Set(uniqueStuff(options.stuff))
+    const pantry = new Set(uniqueStuff(options.pantry ?? []))
+    const keyword = options.keyword?.trim() ?? ''
+    const avoided = new Set(uniqueStuff(options.avoid ?? []))
+    if (!selected.size)
       return []
 
-    return [{ recipe, sourceIndex, requiredStuff, matchedStuff, pantryStuff, missingStuff, optionalStuff }]
-  }).sort((a, b) =>
-    a.missingStuff.length - b.missingStuff.length
-    // 大杂烩是兜底选项，排在同组的正经菜后面
-    || Number(isCatchAll(a.requiredStuff)) - Number(isCatchAll(b.requiredStuff))
-    || b.matchedStuff.length - a.matchedStuff.length
-    || a.sourceIndex - b.sourceIndex,
-  )
+    return catalog.flatMap(({ recipe, sourceIndex, requiredStuff }): RecipeMatch[] => {
+      if (options.tool && !recipe.tools?.includes(options.tool))
+        return []
+      if (keyword && !recipe.name.includes(keyword))
+        return []
+      const catchAll = isCatchAll(requiredStuff)
+      // 和 hasAvoidedStuff 同一条规则，这里直接用预处理好的食材
+      if (!catchAll && requiredStuff.some(item => avoided.has(item)))
+        return []
+      if (!matchesTaste(recipe, options))
+        return []
+
+      const matchedStuff = requiredStuff.filter(item => selected.has(item))
+      const pantryStuff = requiredStuff.filter(item => !selected.has(item) && pantry.has(item))
+      const unownedStuff = requiredStuff.filter(item => !selected.has(item) && !pantry.has(item))
+      const missingStuff = catchAll ? [] : unownedStuff
+      const optionalStuff = catchAll ? unownedStuff.filter(item => !avoided.has(item)) : []
+
+      // Pantry alone must not create an unrelated recommendation; empty records are unknown.
+      if (!matchedStuff.length || missingStuff.length > 2)
+        return []
+      if (catchAll && matchedStuff.length < CATCH_ALL_MIN_MATCH)
+        return []
+      if (options.mode === 'strict' && ![...selected].every(item => requiredStuff.includes(item)))
+        return []
+      if (options.mode === 'survival' && missingStuff.length)
+        return []
+
+      return [{ recipe, sourceIndex, requiredStuff, matchedStuff, pantryStuff, missingStuff, optionalStuff }]
+    }).sort((a, b) =>
+      a.missingStuff.length - b.missingStuff.length
+      // 大杂烩是兜底选项，排在同组的正经菜后面
+      || Number(isCatchAll(a.requiredStuff)) - Number(isCatchAll(b.requiredStuff))
+      || b.matchedStuff.length - a.matchedStuff.length
+      || a.sourceIndex - b.sourceIndex,
+    )
+  }
 }

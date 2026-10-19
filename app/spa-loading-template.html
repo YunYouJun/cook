@@ -1,0 +1,107 @@
+<div class="cook-boot" role="status" aria-live="polite" aria-label="正在准备做菜页面">
+  <div class="cook-boot-header">做菜</div>
+  <div class="cook-boot-content" aria-hidden="true">
+    <div class="cook-boot-search cook-boot-pulse"></div>
+    <div class="cook-boot-label cook-boot-pulse"></div>
+    <div class="cook-boot-group">
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    </div>
+    <div class="cook-boot-label cook-boot-pulse"></div>
+    <div class="cook-boot-group"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <p>正在准备菜谱…</p>
+  </div>
+  <noscript>请启用 JavaScript 来选择食材和查看菜谱。</noscript>
+</div>
+<style>
+  .cook-boot {
+    position: fixed;
+    inset: 0;
+    box-sizing: border-box;
+    background: #f2f2f6;
+    color: #1c1c1e;
+    font-family:
+      system-ui,
+      -apple-system,
+      sans-serif;
+    padding-top: env(safe-area-inset-top);
+  }
+  .cook-boot-header {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 600;
+    border-bottom: 1px solid #ddd;
+  }
+  .cook-boot-content {
+    padding: 28px 16px;
+    max-width: 720px;
+    margin: auto;
+  }
+  .cook-boot-search {
+    height: 36px;
+    border-radius: 10px;
+    background: #e3e3e8;
+    margin: 16px 0 32px;
+  }
+  .cook-boot-label {
+    height: 12px;
+    width: 56px;
+    margin: 24px 12px 12px;
+    border-radius: 6px;
+    background: #dedee3;
+  }
+  .cook-boot-group {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    background: #fff;
+    padding: 18px;
+    border-radius: 12px;
+  }
+  .cook-boot-group i {
+    display: block;
+    height: 32px;
+    border-radius: 18px;
+    background: #ededf1;
+    animation: cook-boot-pulse 1.6s ease-in-out infinite alternate;
+  }
+  .cook-boot-pulse {
+    animation: cook-boot-pulse 1.6s ease-in-out infinite alternate;
+  }
+  .cook-boot-content p {
+    font-size: 14px;
+    text-align: center;
+    color: #74747a;
+    margin-top: 28px;
+  }
+  @keyframes cook-boot-pulse {
+    to {
+      opacity: 0.45;
+    }
+  }
+  @media (prefers-color-scheme: dark) {
+    .cook-boot {
+      background: #000;
+      color: #fff;
+    }
+    .cook-boot-header {
+      border-color: #333;
+    }
+    .cook-boot-group {
+      background: #1c1c1e;
+    }
+    .cook-boot-group i,
+    .cook-boot-search,
+    .cook-boot-label {
+      background: #323236;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cook-boot-pulse,
+    .cook-boot-group i {
+      animation: none;
+    }
+  }
+</style>
