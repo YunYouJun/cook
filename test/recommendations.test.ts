@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import process from 'node:process'
 import { describe, expect, it } from 'vitest'
 import { parseRecipeCsv } from '../packages/cook/src/utils/csv'
-import { CATCH_ALL_MIN_STUFF, recommendRecipes } from '../packages/cook/src/utils/recommend'
+import { CATCH_ALL_MIN_STUFF, createRecipeRecommender, recommendRecipes } from '../packages/cook/src/utils/recommend'
 
 // Use tracked CSV so this regression test does not depend on generated JSON files.
 const recipes = parseRecipeCsv(readFileSync(resolve(process.cwd(), 'app/data/recipe.csv'), 'utf8'))
@@ -16,6 +16,21 @@ const cases = [
 ]
 
 describe('local recipe dataset acceptance', () => {
+  it('reuses the prepared catalog across all modes and filters without stale selections', () => {
+    const recommend = createRecipeRecommender(recipes)
+    for (const { stuff } of cases) {
+      for (const mode of ['loose', 'strict', 'survival'] as const) {
+        for (const tool of ['', '电饭煲', '一口大锅']) {
+          const options = { stuff, mode, tool, pantry: ['油', '盐'] }
+          expect(recommend(options)).toEqual(recommendRecipes(recipes, options))
+        }
+      }
+    }
+    expect(recommend({ stuff: [] })).toEqual([])
+    expect(recommend({ stuff: ['火龙果'] })).toEqual([])
+    expect(recommend({ stuff: ['鸡蛋'], keyword: '不存在的菜谱' })).toEqual([])
+  })
+
   it.each(cases)('$stuff: verifies every group and representative missing ingredients', ({ stuff, counts, first, partial, missing }) => {
     const matches = recommendRecipes(recipes, { stuff, pantry: ['油', '盐'] })
     expect([0, 1, 2].map(count => matches.filter(m => m.missingStuff.length === count).length)).toEqual(counts)

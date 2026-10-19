@@ -1,7 +1,7 @@
 import type { RecommendationMode } from '@yunyoujun/cook'
 import type { RecipeItem, StuffItem } from '~/types'
 import { StorageSerializers, useStorage } from '@vueuse/core'
-import { recommendRecipes, uniqueStuff } from '@yunyoujun/cook/recommend'
+import { createRecipeRecommender, uniqueStuff } from '@yunyoujun/cook/recommend'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { useIndexedDB } from '~/composables/db'
@@ -96,7 +96,8 @@ export const useRecipeStore = defineStore('recipe', () => {
     return loading
   }
 
-  const recipeMatches = computed(() => recommendRecipes(recipes.value, {
+  const recommend = computed(() => createRecipeRecommender(recipes.value))
+  const recipeMatches = computed(() => recommend.value({
     stuff: selectedStuff.value,
     pantry: selectedPantry.value,
     tool: curTool.value,
