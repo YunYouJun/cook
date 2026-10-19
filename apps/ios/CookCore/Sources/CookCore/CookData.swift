@@ -17,12 +17,19 @@ public struct CookData: Sendable {
     public var aliases: [String: String]
     public var food: FoodCatalog
     public var pantry: Pantry
+    /// 整句识别的词表
+    public var query: QueryRules
 
     public var normalizer: StuffNormalizer {
         StuffNormalizer(aliases: aliases)
     }
 
-    /// 从目录读取：recipe-meta.json、recipe.json 或 recipe-chunk-*.json、incompatible-foods.json、aliases.json、food.json、pantry.json
+    /// 整句识别；建词表要遍历全部词，调用方建一次后留着用
+    public func makeQueryParser() -> CookQueryParser {
+        CookQueryParser(rules: query, food: food, aliases: aliases)
+    }
+
+    /// 从目录读取：recipe-meta.json、recipe.json 或 recipe-chunk-*.json、incompatible-foods.json、aliases.json、food.json、pantry.json、query.json
     public static func load(from directory: URL) throws -> CookData {
         let decoder = JSONDecoder()
         func read<T: Decodable>(_ type: T.Type, _ name: String) throws -> T {
@@ -46,6 +53,7 @@ public struct CookData: Sendable {
         let aliases = try read([String: String].self, "aliases.json")
         let food = try read(FoodCatalog.self, "food.json")
         let pantry = try read(Pantry.self, "pantry.json")
+        let query = try read(QueryRules.self, "query.json")
 
         return CookData(
             meta: meta,
@@ -53,7 +61,8 @@ public struct CookData: Sendable {
             incompatibleRules: incompatibleRules,
             aliases: aliases,
             food: food,
-            pantry: pantry
+            pantry: pantry,
+            query: query
         )
     }
 }

@@ -61,8 +61,39 @@ final class CookSession {
         selectedStuff = Self.toggled(selectedStuff, name)
     }
 
+    func addStuff(_ name: String) {
+        if !selectedStuff.contains(name) {
+            selectedStuff.append(name)
+        }
+    }
+
+    /// 选了食材或厨具，就能去看结果
+    var hasSelection: Bool {
+        !selectedStuff.isEmpty || tool != nil
+    }
+
+    /// 清空做菜页：已选的食材和厨具
     func clearStuff() {
         selectedStuff = []
+        tool = nil
+    }
+
+    /// 把一句话识别出的条件合进当前选择；忌口和「不吃辣」与手动勾选一样会一直保留（和 Web 的 applyQuery 一致）
+    func apply(_ query: CookQuery, normalizer: StuffNormalizer) {
+        let avoided = Set(normalizer.unique(query.avoid))
+        selectedStuff = normalizer.unique(selectedStuff + query.stuff + query.unknown).filter { !avoided.contains($0) }
+        if !avoided.isEmpty {
+            let merged = normalizer.unique(avoid + query.avoid)
+            updatePreferences { $0.avoid = merged }
+        }
+        if query.noSpicy {
+            setNoSpicy(true)
+        }
+        if let tool = query.tool {
+            self.tool = tool
+        }
+        methodGroups = uniqueStrings(methodGroups + query.methodGroups)
+        difficulty = uniqueStrings(difficulty + query.difficulty)
     }
 
     /// 厨具只能选一个，再点一次取消

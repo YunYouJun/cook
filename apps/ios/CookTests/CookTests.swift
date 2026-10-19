@@ -110,4 +110,69 @@ final class CookTests: XCTestCase {
         XCTAssertEqual(store.filter([recipe], query: "西红柿").count, 1, "按食材别名也能搜到")
         XCTAssertEqual(store.filter([recipe], query: "牛肉").count, 0)
     }
+
+    func testSentenceInputAppliesToSession() throws {
+        let container = Persistence.makeContainer(inMemory: true)
+        let store = try RecipeStore.loadBundled()
+        let session = CookSession(defaultPantry: [], context: container.mainContext)
+        session.toggleStuff("土豆")
+
+        let query = store.queryParser.parse("冰箱里有西红柿和鸡蛋，不吃牛肉，不吃辣，想炒个菜")
+        session.apply(query, normalizer: store.data.normalizer)
+        XCTAssertEqual(session.selectedStuff, ["土豆", "番茄", "鸡蛋"])
+        XCTAssertEqual(session.avoid, ["牛肉"])
+        XCTAssertTrue(session.noSpicy)
+        XCTAssertEqual(session.methodGroups, ["炒菜"])
+        XCTAssertFalse(store.describe(query).isEmpty)
+
+        // 词典里没有的食材也收下，按名字找菜
+        session.apply(store.queryParser.parse("羊肉"), normalizer: store.data.normalizer)
+        XCTAssertTrue(session.selectedStuff.contains("羊肉"))
+        XCTAssertFalse(store.isCatalogStuff("羊肉"))
+
+        session.clearStuff()
+        XCTAssertFalse(session.hasSelection)
+        session.toggleTool("电饭煲")
+        XCTAssertTrue(session.hasSelection, "只选厨具也能看结果")
+        XCTAssertFalse(store.recommender.recipes(using: "电饭煲", options: session.options).isEmpty)
+    }
+
+    func testWebDataImportAndExport() throws {
+        let container = Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let store = try RecipeStore.loadBundled()
+        let first = store.recipes[0]
+        let second = store.recipes[1]
+
+        // App 里先收藏了第二道菜，又取消了；之后才在网页版收藏的第一道菜要加进来
+        context.toggleFavorite(second.id, at: Date(timeIntervalSince1970: 100))
+        context.toggleFavorite(second.id, at: Date(timeIntervalSince1970: 200))
+        let text = """
+        {"app":"cook","version":1,"exportedAt":0,
+         "favorites":[{"id":\(first.id),"time":150000},{"id":\(second.id),"time":150000},{"id":999999,"time":1}],
+         "favoriteRemovals":[],
+         "histories":[{"recipe":{"name":"\(first.name)"},"time":120000},{"recipe":{"name":"不存在的菜"},"time":1}],
+         "historyRemovals":[],"historyClearedAt":0}
+        """
+        let data = try XCTUnwrap(WebUserData.parse(text))
+        let added = context.importWebData(data, recipeIdByName: store.recipeIdByName, validIds: Set(store.recipesById.keys))
+        XCTAssertEqual(added.favorites, 1, "App 里取消得更晚的不加回来，不认识的 id 跳过")
+        XCTAssertEqual(added.visits, 1)
+        XCTAssertTrue(context.isFavorite(first.id))
+        XCTAssertFalse(context.isFavorite(second.id))
+        XCTAssertEqual(try activeVisits(context), [first.id])
+
+        let again = context.importWebData(data, recipeIdByName: store.recipeIdByName, validIds: Set(store.recipesById.keys))
+        XCTAssertEqual(again.favorites + again.visits, 0, "重复导入不会再加")
+
+        let exported = WebUserData.export(
+            favorites: try context.fetch(FetchDescriptor<Favorite>()),
+            visits: try context.fetch(FetchDescriptor<HistoryEntry>()),
+            recipesById: store.recipesById
+        )
+        let roundTrip = try XCTUnwrap(WebUserData.parse(exported))
+        XCTAssertEqual(roundTrip.favorites.map(\.recipeId), [first.id])
+        XCTAssertEqual(roundTrip.visits.map(\.name), [first.name])
+        XCTAssertNil(WebUserData.parse("{\"app\":\"other\",\"version\":1}"))
+    }
 }
