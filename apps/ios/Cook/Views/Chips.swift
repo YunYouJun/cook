@@ -5,10 +5,17 @@ struct Chip: View {
     let title: String
     var emoji: String? = nil
     let isSelected: Bool
+    /// 点击时报告标签在屏幕上的位置，做「入篮」动画用；不需要时不传
+    var onTap: ((CGRect) -> Void)? = nil
     let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var frameBox = FrameBox()
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            onTap?(frameBox.frame)
+            action()
+        } label: {
             HStack(spacing: 4) {
                 if let emoji, !emoji.isEmpty {
                     Text(emoji)
@@ -27,8 +34,36 @@ struct Chip: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .modifier(SelectBounce(isSelected: isSelected, enabled: !reduceMotion))
+        .onGeometryChange(for: CGRect.self) { proxy in
+            proxy.frame(in: .global)
+        } action: { frame in
+            frameBox.frame = frame
+        }
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+/// 选中时轻轻按下再弹回；取消选中和减弱动态效果时不动
+private struct SelectBounce: ViewModifier {
+    let isSelected: Bool
+    let enabled: Bool
+    @State private var bounces = 0
+
+    func body(content: Content) -> some View {
+        content
+            .keyframeAnimator(initialValue: CGFloat(1), trigger: bounces) { view, scale in
+                view.scaleEffect(scale)
+            } keyframes: { _ in
+                SpringKeyframe(CGFloat(0.9), duration: 0.08)
+                SpringKeyframe(CGFloat(1), duration: 0.3, spring: .bouncy)
+            }
+            .onChange(of: isSelected) { _, selected in
+                if selected, enabled {
+                    bounces += 1
+                }
+            }
     }
 }
 

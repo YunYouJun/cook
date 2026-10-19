@@ -33,6 +33,8 @@ struct RootView: View {
 struct RecipeRoute: Hashable {
     let recipe: Recipe
     var match: RecipeMatch? = nil
+    /// 在推荐结果里排第几（从 0 开始），用来匿名记录点开的位置；其他入口为 nil
+    var rank: Int? = nil
 }
 
 extension View {
