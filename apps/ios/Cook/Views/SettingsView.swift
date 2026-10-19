@@ -30,11 +30,16 @@ struct SettingsView: View {
                         }
                     }
                     Link("在 GitHub 上反馈", destination: URL(string: "https://github.com/YunYouJun/cook/issues")!)
-                    Toggle("帮助改进推荐", isOn: $shareSignals)
+                    // 没配置反馈地址的构建不会发筛选信号，开关也就不显示
+                    if feedback.isConfigured {
+                        Toggle("帮助改进推荐", isOn: $shareSignals)
+                    }
                 } header: {
                     Text("反馈")
                 } footer: {
-                    Text("匿名发送选过的食材组合和点开了哪道菜，用来补菜和调整排序，不含账号和设备信息。")
+                    if feedback.isConfigured {
+                        Text("匿名发送选过的食材组合和点开了哪道菜，用来补菜和调整排序，不含账号和设备信息。")
+                    }
                 }
                 Section("关于") {
                     LabeledContent("版本", value: appVersion)
