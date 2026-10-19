@@ -121,6 +121,37 @@ describe('cook-feedback function', () => {
     expect(await fn.main({ ...signal, rank: 5000 })).toEqual({ ok: false, code: 'INVALID_SIGNAL' })
   })
 
+  it('records the platform on reports and counts signals per platform', async () => {
+    const { table } = createApp()
+    await fn.main(report)
+    await fn.main({ ...report, deviceId: 'ios-device-0123456789', platform: 'ios', version: '2.0.0' })
+    const reports = [...table(fn._internal.FEEDBACK).values()]
+    expect(reports.find(r => r.platform === 'web')).toMatchObject({ version: '' })
+    expect(reports.find(r => r.platform === 'ios')).toMatchObject({ version: '2.0.0' })
+    expect(await fn.main({ ...report, platform: 'android' })).toEqual({ ok: false, code: 'INVALID_REPORT' })
+
+    const empty = { action: 'signal', deviceId, type: 'empty', stuff: ['羊肉'] }
+    await fn.main(empty)
+    await fn.main({ ...empty, platform: 'web' })
+    await fn.main({ ...empty, platform: 'ios', version: '2.0.0' })
+    const signals = [...table(fn._internal.SIGNALS).entries()]
+    expect(signals).toHaveLength(2)
+    expect(signals.find(([, r]) => r.platform === 'web')![1]).toMatchObject({ count: 2 })
+    expect(signals.find(([, r]) => r.platform === 'ios')![1]).toMatchObject({ count: 1, lastVersion: '2.0.0' })
+    expect(await fn.main({ ...empty, platform: 'android' })).toEqual({ ok: false, code: 'INVALID_SIGNAL' })
+  })
+
+  it('keeps the signal key of rows stored before platforms existed', async () => {
+    const { table } = createApp()
+    await fn.main({ action: 'signal', deviceId, type: 'empty', stuff: ['羊肉'] })
+    const [[id, row]] = [...table(fn._internal.SIGNALS).entries()]
+    // An older row: same key, no platform field.
+    delete row.platform
+    await fn.main({ action: 'signal', deviceId, type: 'empty', stuff: ['羊肉'], platform: 'web' })
+    expect(table(fn._internal.SIGNALS).size).toBe(1)
+    expect(table(fn._internal.SIGNALS).get(id)).toMatchObject({ count: 2 })
+  })
+
   it('rate limits a reporter per day', async () => {
     const { table } = createApp()
     await fn.main(report)

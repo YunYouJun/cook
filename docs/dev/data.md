@@ -46,7 +46,7 @@ PR 上 CI 还会运行 `pnpm validate --base <目标分支>`：同一个 id 的�
 
 1. **用户反馈**：菜谱详情底部点「反馈一下」，选问题类型（视频打不开、食材或厨具不对、难度或做法不对、其他）即可提交，不需要 GitHub，也不强制登录。数据进 CloudBase 的 `cook-feedback` 云函数；提交失败时引导用户去 GitHub Issue 表单（`.github/ISSUE_TEMPLATE/recipe.yml`，已预填菜名和视频）。
    「我的 → 问题反馈」是不针对某道菜的意见反馈：选类型（用着有问题、功能建议、想要的菜没有、其他），写几句，可以留邮箱或微信，同样不用登录，提交失败时引导去 GitHub Issues。
-   iOS App（云食册）没有 CloudBase SDK，用 `POST` 把同样的请求体发到云函数的 HTTP 访问地址，和 Web 共用设备限额和数据集合，区别只在意见反馈的 `platform` 为 `ios`。
+   iOS App（云食册）没有 CloudBase SDK，用 `POST` 把同样的请求体发到云函数的 HTTP 访问地址，和 Web 共用设备限额和数据集合。三类请求都带 `platform`（`web` 或 `ios`）和 `version`（iOS 为 App 版本号），没有 `platform` 的旧数据算作 web。筛选信号按端分开累计（Web 的记录键不变，iOS 的另起一组），`summary.md` 里菜谱反馈、意见反馈和筛选信号都按端分开统计；`search-eval.json` 把两端合在一起评测排序。
 2. **筛选信号**：应用匿名记录两类聚合数据，只有食材组合、厨具、模式和菜谱 id，不含账号：
    - 停在一组食材上却没有任何结果（说明缺这类菜，或别名没对上）；
    - 在某组食材下点开了第几个结果（排得太靠后说明排序可以改进）。

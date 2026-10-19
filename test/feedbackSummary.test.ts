@@ -1,7 +1,7 @@
 import type { RecipeItem } from '../packages/cook/src/types/index'
 import type { FeedbackRow, SignalRow } from '../scripts/lib/feedback'
 import { describe, expect, it } from 'vitest'
-import { buildEvalCases, evaluate, summarizeReports } from '../scripts/lib/feedback'
+import { buildEvalCases, evaluate, summarizeReports, summarizeSignals } from '../scripts/lib/feedback'
 
 const row = (partial: Partial<FeedbackRow>): FeedbackRow => ({ recipeId: 1, recipeName: '番茄炒蛋', kind: 'video', note: '', reporter: 'a', signedIn: false, day: '2026-10-18', ...partial })
 
@@ -15,6 +15,11 @@ describe('summarizeReports', () => {
     ])
     expect(summary[0]).toMatchObject({ recipeId: 1, score: 3, reporters: 2, kinds: { video: 2 }, notes: ['打不开'] })
     expect(summary[1]).toMatchObject({ recipeId: 2, score: 1 })
+  })
+
+  it('counts reporters per platform, treating a missing platform as web', () => {
+    const [summary] = summarizeReports([row({}), row({ reporter: 'b', platform: 'web' }), row({ reporter: 'c', platform: 'ios' })])
+    expect(summary!.platforms).toEqual({ web: 2, ios: 1 })
   })
 })
 
@@ -35,6 +40,28 @@ describe('buildEvalCases', () => {
     expect(buildEvalCases(signals)).toEqual([
       { stuff: ['番茄', '鸡蛋'], opened: [{ id: 10, count: 3 }, { id: 12, count: 1 }] },
       { stuff: ['羊肉'], empty: 5 },
+    ])
+  })
+})
+
+describe('platforms', () => {
+  const both: SignalRow[] = [
+    ...signals,
+    { type: 'open', stuff: ['番茄', '鸡蛋'], tool: '', mode: 'loose', recipeId: 10, count: 2, rankSum: 0, platform: 'ios' },
+    { type: 'empty', stuff: ['羊肉'], tool: '', mode: 'loose', recipeId: -1, count: 1, rankSum: 0, platform: 'ios' },
+  ]
+
+  it('summarizes signals per platform', () => {
+    expect(summarizeSignals(both)).toEqual([
+      { platform: 'ios', empty: 1, opened: 2, meanRank: 1 },
+      { platform: 'web', empty: 5, opened: 4, meanRank: 2.3 },
+    ])
+  })
+
+  it('adds up both platforms in one eval case without listing a recipe twice', () => {
+    expect(buildEvalCases(both)).toEqual([
+      { stuff: ['番茄', '鸡蛋'], opened: [{ id: 10, count: 5 }, { id: 12, count: 1 }] },
+      { stuff: ['羊肉'], empty: 6 },
     ])
   })
 })

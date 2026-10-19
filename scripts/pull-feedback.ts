@@ -16,7 +16,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { recipeCsvFile, rootDir } from '../packages/cook/src/utils/config'
 import { parseRecipeCsv } from '../packages/cook/src/utils/csv'
-import { buildEvalCases, summarizeReports } from './lib/feedback'
+import { buildEvalCases, countByPlatform, formatPlatforms, platformOf, summarizeReports, summarizeSignals } from './lib/feedback'
 
 try {
   process.loadEnvFile(path.join(rootDir, '.env'))
@@ -45,6 +45,7 @@ const recipes = new Map(parseRecipeCsv(fs.readFileSync(recipeCsvFile, 'utf-8')).
 const reports = summarizeReports(data.feedback ?? [])
 const signals = data.signals ?? []
 const empties = signals.filter(s => s.type === 'empty').sort((a, b) => b.count - a.count).slice(0, 30)
+const signalStats = summarizeSignals(signals)
 const cases = buildEvalCases(signals)
 fs.writeFileSync(path.join(rootDir, 'test/fixtures/search-eval.json'), `${JSON.stringify(cases, null, 2)}\n`)
 
@@ -55,17 +56,19 @@ const cell = (text: string) => text.replace(/\|/g, '/').replace(/\s+/g, ' ')
 const lines = [
   `# 用户反馈汇总（${new Date().toISOString().slice(0, 10)}）`,
   '',
-  `反馈 ${data.feedback?.length ?? 0} 条，涉及 ${reports.length} 道菜；意见反馈 ${appFeedback.length} 条；筛选信号 ${signals.length} 组。`,
+  `菜谱反馈 ${data.feedback?.length ?? 0} 条（${formatPlatforms(countByPlatform(data.feedback ?? []))}），涉及 ${reports.length} 道菜；意见反馈 ${appFeedback.length} 条（${formatPlatforms(countByPlatform(appFeedback))}）；筛选信号 ${signals.length} 组。`,
+  '',
+  '没有记录来源的旧数据都算作 web。',
   '',
   '## 菜谱反馈（按分数排序，登录用户的反馈算 2 分）',
   '',
-  '| id | 菜名 | 分数 | 人数 | 问题 | 备注 |',
-  '| --- | --- | --- | --- | --- | --- |',
+  '| id | 菜名 | 分数 | 人数 | 来源 | 问题 | 备注 |',
+  '| --- | --- | --- | --- | --- | --- | --- |',
   ...reports.map((r) => {
     const current = recipes.get(r.recipeId)
     const name = current ? current.name : `${r.recipeName}（已不在数据中）`
     const kinds = Object.entries(r.kinds).map(([k, n]) => `${kindLabel[k] ?? k}×${n}`).join('、')
-    return `| ${r.recipeId} | ${name} | ${r.score} | ${r.reporters} | ${kinds} | ${r.notes.slice(0, 3).join('；').replace(/\|/g, '/')} |`
+    return `| ${r.recipeId} | ${name} | ${r.score} | ${r.reporters} | ${formatPlatforms(r.platforms)} | ${kinds} | ${r.notes.slice(0, 3).join('；').replace(/\|/g, '/')} |`
   }),
   '',
   '## 意见反馈（新的在前）',
@@ -76,11 +79,19 @@ const lines = [
   '| --- | --- | --- | --- | --- |',
   ...appFeedback.map(f => `| ${f.day} | ${f.platform}${f.version ? ` ${f.version}` : ''} | ${categoryLabel[f.category] ?? f.category} | ${cell(f.note)} | ${f.contact ? '是' : '-'} |`),
   '',
+  '## 筛选信号按端统计',
+  '',
+  '两端界面不同，「没有结果」和点开位置分开看。',
+  '',
+  '| 端 | 没有结果（次） | 点开结果（次） | 点开的平均位置 |',
+  '| --- | --- | --- | --- |',
+  ...signalStats.map(s => `| ${s.platform} | ${s.empty} | ${s.opened} | ${s.meanRank ?? '-'} |`),
+  '',
   '## 没有结果的食材组合（缺哪些菜）',
   '',
-  '| 食材 | 厨具 | 模式 | 次数 |',
-  '| --- | --- | --- | --- |',
-  ...empties.map(s => `| ${s.stuff.join('、')} | ${s.tool || '-'} | ${s.mode} | ${s.count} |`),
+  '| 食材 | 厨具 | 模式 | 端 | 次数 |',
+  '| --- | --- | --- | --- | --- |',
+  ...empties.map(s => `| ${s.stuff.join('、')} | ${s.tool || '-'} | ${s.mode} | ${platformOf(s)} | ${s.count} |`),
   '',
   '筛选排序的评测见 `pnpm eval:search`。',
   '',

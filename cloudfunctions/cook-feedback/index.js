@@ -115,10 +115,20 @@ async function takeQuota(reporter, now) {
   return count <= DAILY_QUOTA
 }
 
+/** Which app sent it: `platform` defaults to web, so older clients and rows count as web. */
+function readSource(event) {
+  const platform = event.platform ?? 'web'
+  const version = event.version ?? ''
+  if (!PLATFORMS.has(platform) || (version && !isWord(version, 32)))
+    return null
+  return { platform, version }
+}
+
 async function report(event, reporter, now) {
   const { recipeId, recipeName, kind } = event
   const note = typeof event.note === 'string' ? event.note.trim().slice(0, MAX_NOTE) : ''
-  if (!isIndex(recipeId, 1e6) || !isWord(recipeName, MAX_NAME) || !KINDS.has(kind))
+  const source = readSource(event)
+  if (!isIndex(recipeId, 1e6) || !isWord(recipeName, MAX_NAME) || !KINDS.has(kind) || !source)
     return fail('INVALID_REPORT')
   if (!await takeQuota(reporter, now))
     return fail('RATE_LIMITED')
@@ -131,6 +141,7 @@ async function report(event, reporter, now) {
     recipeName: recipeName.trim(),
     kind,
     note,
+    ...source,
     reporter: reporter.key,
     uid: reporter.uid,
     day,
@@ -143,12 +154,9 @@ async function appFeedback(event, reporter, now) {
   const { category } = event
   const note = typeof event.note === 'string' ? event.note.trim() : ''
   const contact = typeof event.contact === 'string' ? event.contact.trim() : ''
-  const platform = event.platform ?? 'web'
-  const version = event.version ?? ''
-  if (!CATEGORIES.has(category) || !note || note.length > MAX_MESSAGE || contact.length > MAX_CONTACT
-    || !PLATFORMS.has(platform) || (version && !isWord(version, 32))) {
+  const source = readSource(event)
+  if (!CATEGORIES.has(category) || !note || note.length > MAX_MESSAGE || contact.length > MAX_CONTACT || !source)
     return fail('INVALID_FEEDBACK')
-  }
   if (!await takeQuota(reporter, now))
     return fail('RATE_LIMITED')
 
@@ -159,8 +167,7 @@ async function appFeedback(event, reporter, now) {
     category,
     note,
     contact,
-    platform,
-    version,
+    ...source,
     reporter: reporter.key,
     uid: reporter.uid,
     day,
@@ -182,7 +189,8 @@ function readSelection(event) {
 
 async function signal(event, reporter, now) {
   const selection = readSelection(event)
-  if (!selection || !SIGNAL_TYPES.has(event.type))
+  const source = readSource(event)
+  if (!selection || !source || !SIGNAL_TYPES.has(event.type))
     return fail('INVALID_SIGNAL')
   const open = event.type === 'open'
   if (open && (!isIndex(event.recipeId, 1e6) || !isIndex(event.rank, 999)))
@@ -193,12 +201,16 @@ async function signal(event, reporter, now) {
   const db = getApp().database()
   const recipeId = open ? event.recipeId : -1
   const rank = open ? event.rank : 0
-  const id = hash([event.type, selection.stuff.join('、'), selection.tool, selection.mode, recipeId].join('|'))
-  const doc = db.collection(SIGNALS).doc(id)
+  // Counted per platform, since the web and iOS screens differ. Web keeps its
+  // original key, so rows aggregated before platforms existed keep counting.
+  const key = [event.type, selection.stuff.join('、'), selection.tool, selection.mode, recipeId]
+  if (source.platform !== 'web')
+    key.push(source.platform)
+  const doc = db.collection(SIGNALS).doc(hash(key.join('|')))
   const day = today(now)
-  const result = await doc.update({ count: db.command.inc(1), rankSum: db.command.inc(rank), lastDay: day })
+  const result = await doc.update({ count: db.command.inc(1), rankSum: db.command.inc(rank), lastDay: day, lastVersion: source.version })
   if (!result || !result.updated)
-    await doc.set({ type: event.type, ...selection, recipeId, count: 1, rankSum: rank, firstDay: day, lastDay: day })
+    await doc.set({ type: event.type, ...selection, recipeId, platform: source.platform, count: 1, rankSum: rank, firstDay: day, lastDay: day, lastVersion: source.version })
   return { ok: true }
 }
 
