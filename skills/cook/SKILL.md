@@ -26,14 +26,14 @@ metadata:
 
 ### 数据源
 
-| 数据          | 在线地址（GitHub Raw）                                                                       | 格式       |
-| ------------- | -------------------------------------------------------------------------------------------- | ---------- |
-| 菜谱库        | `https://raw.githubusercontent.com/YunYouJun/cook/main/packages/data/recipe.csv`             | CSV        |
-| 食物相克      | `https://raw.githubusercontent.com/YunYouJun/cook/main/packages/data/incompatible-foods.csv` | CSV        |
-| 食材/厨具分类 | `https://raw.githubusercontent.com/YunYouJun/cook/main/apps/web/app/data/food.ts`            | TypeScript |
+| 数据          | 在线地址（GitHub Raw）                                                                       | 格式 |
+| ------------- | -------------------------------------------------------------------------------------------- | ---- |
+| 菜谱库        | `https://raw.githubusercontent.com/YunYouJun/cook/main/packages/data/recipe.csv`             | CSV  |
+| 食物相克      | `https://raw.githubusercontent.com/YunYouJun/cook/main/packages/data/incompatible-foods.csv` | CSV  |
+| 食材/厨具分类 | `https://raw.githubusercontent.com/YunYouJun/cook/main/packages/data/food.json`              | JSON |
 
 > **Skill 内置数据**：本 Skill 自带 `data/recipe.csv` 和 `data/incompatible-foods.csv`，Fallback 时优先读取，无需网络。
-> **Cook 项目本地**：如果在 Cook 项目内使用，直接读取 `packages/data/`（菜谱、相克）和 `apps/web/app/data/food.ts`（食材/厨具）。
+> **Cook 项目本地**：如果在 Cook 项目内使用，直接读取 `packages/data/` 下的文件（菜谱、相克、食材/厨具）。
 > **在线获取**：以上均不可用时，通过 GitHub Raw URL 获取。
 
 ### CSV 字段说明

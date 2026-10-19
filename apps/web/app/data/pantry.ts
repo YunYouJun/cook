@@ -1,2 +1,5 @@
-export const pantryOptions = ['油', '盐', '糖', '生抽', '老抽', '醋', '料酒', '蚝油', '胡椒粉', '淀粉', '葱', '姜', '蒜']
-export const defaultPantry = ['油', '盐']
+import pantry from '../../../../packages/data/pantry.json'
+
+// 常备调料在 packages/data/pantry.json，Web 和 iOS 共用
+export const pantryOptions: string[] = pantry.options
+export const defaultPantry: string[] = pantry.defaults
