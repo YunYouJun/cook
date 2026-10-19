@@ -37,9 +37,14 @@ final class CookUITests: XCTestCase {
         XCTAssertTrue(recipe.waitForExistence(timeout: 5))
         recipe.tap()
 
+        // 收藏存在本机数据库里，同一台模拟器上次跑完可能已经收藏过，先取消再收藏
+        let unfavorite = app.buttons["取消收藏"]
+        if unfavorite.waitForExistence(timeout: 2) {
+            unfavorite.tap()
+        }
         let favorite = app.buttons["收藏"]
         XCTAssertTrue(favorite.waitForExistence(timeout: 5))
         favorite.tap()
-        XCTAssertTrue(app.buttons["取消收藏"].waitForExistence(timeout: 5))
+        XCTAssertTrue(unfavorite.waitForExistence(timeout: 5))
     }
 }
