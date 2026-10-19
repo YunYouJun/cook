@@ -5,6 +5,7 @@ export const DIFFICULTIES = ['简单', '普通', '困难'] as const
 
 /** B 站视频号：BV 号或旧版 av 号 */
 const VIDEO_ID_RE = /^(?:BV[0-9A-Za-z]{10}|av\d+)$/
+const LINK_RE = /^https:\/\/\S+$/
 /** 单元格内应使用顿号分隔，出现这些字符通常是录入错误 */
 const BAD_SEP_RE = /[,，/／]/
 
@@ -52,7 +53,7 @@ function suggestStuff(value: string, dict: RecipeDictionary) {
 export function validateRecipes(recipes: RecipeItem[], dict: RecipeDictionary, options: ValidateOptions = {}): ValidateResult {
   const issues: RecipeIssue[] = []
   const stats: RecipeStats = { total: recipes.length, missingDifficulty: 0, missingMethods: 0, missingVideo: 0 }
-  const seen = new Map<string, { line: number, bv?: string }[]>()
+  const seen = new Map<string, { line: number, source?: string }[]>()
   const ids = new Map<number, number>()
   const maxId = Math.max(-1, ...recipes.map(r => r.id ?? -1))
 
@@ -109,17 +110,21 @@ export function validateRecipes(recipes: RecipeItem[], dict: RecipeDictionary, o
 
     if (recipe.bv && !VIDEO_ID_RE.test(recipe.bv))
       error(`视频号「${recipe.bv}」格式不对，应为 BV 号或 av 号`)
+    if (recipe.link && !LINK_RE.test(recipe.link))
+      error(`图文链接「${recipe.link}」应为 https:// 开头的网址`)
     if (!recipe.bv && !recipe.link)
       stats.missingVideo++
 
     const same = seen.get(name) ?? []
-    const twin = same.find(other => other.bv === recipe.bv)
+    // 视频优先，没有视频的按图文链接比较
+    const source = recipe.bv || recipe.link
+    const twin = same.find(other => other.source === source)
     // 重复只提示：删掉其中一行会让收藏了它的用户丢失这条收藏，交给人决定
     if (twin)
-      warn(`与第 ${twin.line} 行重复（菜名和视频都相同）`)
+      warn(`与第 ${twin.line} 行重复（菜名和做法链接都相同）`)
     else if (same.length)
       warn(`与第 ${same.map(s => s.line).join('、')} 行同名但视频不同，确认是否为不同做法`)
-    same.push({ line, bv: recipe.bv })
+    same.push({ line, source })
     seen.set(name, same)
   })
 

@@ -46,6 +46,21 @@ describe('parseRecipeCsv', () => {
     })
   })
 
+  it('reads the optional link column', () => {
+    const csvData = `${RECIPE_CSV_HEADERS}
+番茄炒蛋,番茄、鸡蛋,BV1234567890,简单,,炒,一口大锅,1,https://example.com/a.md
+清炒花菜,花菜,,简单,,炒,一口大锅,2,https://example.com/b.md
+土豆丝,土豆,BV1234567891,简单,,炒,一口大锅,3`
+
+    const recipes = parseRecipeCsv(csvData)
+
+    expect(recipes.map(r => [r.bv, r.link])).toEqual([
+      ['BV1234567890', 'https://example.com/a.md'],
+      [undefined, 'https://example.com/b.md'],
+      ['BV1234567891', undefined],
+    ])
+  })
+
   it('should filter out empty values in arrays', () => {
     const csvData = `${RECIPE_CSV_HEADERS}
 测试菜,土豆、、青椒,,,标签1、、标签2,炒、,工具1、,`
@@ -266,7 +281,7 @@ describe('recipe ids', () => {
 番茄炒蛋,番茄、鸡蛋,BV1234567890,简单,,炒,一口大锅,7`
     const recipes = parseRecipeCsv(csvData)
     expect(recipes[0]?.id).toBe(7)
-    expect(recipesToCsv(recipes).trim().split('\n')[1]).toMatch(/,7$/)
+    expect(recipesToCsv(recipes).trim().split('\n')[1]).toMatch(/,7,$/)
   })
 
   it('keeps existing ids by name and video and appends new ones', () => {

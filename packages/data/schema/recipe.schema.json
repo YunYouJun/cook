@@ -9,7 +9,7 @@
     "properties": {
       "id": { "type": "integer", "minimum": 0, "description": "固定编号，收藏、历史和同步的主键，不能修改或复用" },
       "name": { "type": "string", "minLength": 1 },
-      "link": { "type": "string" },
+      "link": { "type": "string", "description": "图文做法的网址；有视频时作为第二个入口" },
       "bv": { "type": "string", "pattern": "^(BV[0-9A-Za-z]{10}|av[0-9]+)$" },
       "stuff": { "type": "array", "items": { "type": "string" } },
       "emojis": { "type": "array", "items": { "type": "string" } },

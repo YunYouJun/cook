@@ -3,6 +3,7 @@ import consola from 'consola'
 import Papa from 'papaparse'
 import {
   INCOMPATIBLE_FOODS_CSV_HEADERS,
+  LEGACY_RECIPE_CSV_HEADERS,
   RECIPE_CSV_HEADERS,
   SEP,
 } from './config.js'
@@ -38,7 +39,8 @@ export function parseRecipeCsv(csvData: string): RecipeItem[] {
 
   // 验证表头
   const headerRow = rows[0]?.join(',')
-  if (headerRow !== RECIPE_CSV_HEADERS) {
+  // 没有 link 列的旧表头仍然可读（比如 validate --base 读加列之前的分支）
+  if (headerRow !== RECIPE_CSV_HEADERS && headerRow !== LEGACY_RECIPE_CSV_HEADERS) {
     consola.warn(`Headers Changed: ${headerRow}`)
     return []
   }
@@ -64,11 +66,14 @@ export function parseRecipeCsv(csvData: string): RecipeItem[] {
     const methods = row[5] ? (row[5].trim().split(SEP).filter(Boolean)) as RecipeItem['methods'] : []
     const tools = row[6] ? row[6].trim().split(SEP).filter(Boolean) : []
     const id = parseRecipeId(row[7])
+    // link 列可选：没有图文做法的行可以只写到 id
+    const link = row[8]?.trim()
 
     recipes.push({
       ...(id === undefined ? {} : { id }),
       name,
       stuff,
+      ...(link ? { link } : {}),
       bv: bv || undefined,
       difficulty: difficulty || undefined,
       tags: tags.length > 0 ? tags : [],
@@ -159,6 +164,7 @@ export function recipesToCsv(recipes: RecipeItem[]): string {
     item.methods?.join(SEP) || '',
     item.tools?.join(SEP) || '',
     item.id ?? '',
+    item.link || '',
   ])
 
   const csv = Papa.unparse({

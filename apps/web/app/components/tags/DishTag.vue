@@ -5,6 +5,7 @@ import { addRecipeHistory } from '~/composables/store/history'
 import { tools } from '~/data/food'
 import { getEmojisFromStuff } from '~/utils'
 import { trackCookEvent } from '~/utils/analytics'
+import { getRecipeLink } from '~/utils/recipe'
 
 const props = defineProps<{
   dish: RecipeItem | DbRecipeItem
@@ -24,7 +25,7 @@ const dishLabel = computed(() => {
 
 <template>
   <a
-    :href="dish.link || `https://www.bilibili.com/video/${dish.bv}`" target="_blank" class="dish-tag tag rounded" p="x-2"
+    :href="getRecipeLink(dish)" target="_blank" class="dish-tag tag rounded" p="x-2"
     border="~ blue-200 dark:blue-800"
     bg="blue-300 opacity-20"
     @click="onRecipeClick(dish)"

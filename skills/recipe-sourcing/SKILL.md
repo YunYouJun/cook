@@ -14,7 +14,7 @@ metadata:
 
 ## 硬性规则
 
-- 每道菜必须有一个**可播放的 B 站视频**（`bv` 列）。小红书、下厨房等只能作为找菜名、核对食材的参考，不进 csv。
+- 每道菜必须有一个**可播放的 B 站视频**（`bv` 列）。小红书、下厨房等只能作为找菜名、核对食材的参考，不进 csv。图文做法（`link` 列）目前只收 HowToCook，见 `docs/decisions/0009-text-recipes.md`。
 - **不编造视频号。** 每个 BV 号都要打开视频页（`https://www.bilibili.com/video/<BV号>/`）或调 `https://api.bilibili.com/x/web-interface/view?bvid=<BV号>`（`code` 为 0）确认：视频没失效，标题和菜名对得上。只在搜索结果里见过、没打开确认的不要用。
 - 食材、厨具只能用 `packages/data/food.json` 里的名称。具体品种写成标准名（鲈鱼 → 鱼、虾仁 → 虾），对应别名加进 `packages/data/aliases.json`。
 - `stuff` 只填视频标题、简介或标签里能看出来的主料，看不出来的配菜不填。`difficulty` 拿不准就留空。
