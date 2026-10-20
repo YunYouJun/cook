@@ -4,9 +4,12 @@
 
 - 桶：`yunlefun-assets-prod-1325586649`（ap-shanghai）
 - 前缀：`cook/howtocook/`
-- 访问地址：`https://yunlefun-assets-prod-1325586649.cos.ap-shanghai.myqcloud.com/cook/`（`recipe-text.json` 的 `imageBase`）
+- 访问地址：`https://assets.yunle.fun/cook/`（`recipe-text.json` 的 `imageBase`，已接入 EdgeOne）
+- COS 源站：`https://yunlefun-assets-prod-1325586649.cos.ap-shanghai.myqcloud.com/cook/`
 
-App 直接用这个地址加载，桶要允许公开读（私有写公有读，或者只给 `cook/*` 开公开读）。
+App 通过 EdgeOne 加载配图，EdgeOne 使用私有回源访问这个桶。桶的 ACL 保持私有，只给 `cook/*` 增加公开读策略，允许 `GetObject`、`HeadObject`，也方便直接验证源站。其他前缀沿用已有策略。
+
+2026-10-20 已通过 COS API 核实地域为 `ap-shanghai`，并通过 EdgeOne API 确认 `assets.yunle.fun` 已上线、源站为上述桶。
 
 ## 为什么用这个桶
 
@@ -65,6 +68,8 @@ App 直接用这个地址加载，桶要允许公开读（私有写公有读，�
   ]
 }
 ```
+
+生产上传子账号为 `cook-recipe-images`，不允许控制台登录，使用上面的策略。密钥保存在仓库 Actions Secrets 中。
 
 本地手动上传：把同样的变量写进 `.env`（见 `.env.example`），先 `pnpm howtocook ../HowToCook`，再 `pnpm images:upload`。
 

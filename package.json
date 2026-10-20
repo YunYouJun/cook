@@ -20,7 +20,7 @@
     "eval:search": "tsx scripts/eval-search.ts",
     "fixtures": "tsx scripts/gen-fixtures.ts",
     "howtocook": "tsx scripts/import-howtocook.ts",
-    "images:upload": "tsx scripts/upload-recipe-images.ts",
+    "images:upload": "tsx --env-file-if-exists=.env scripts/upload-recipe-images.ts",
     "fetch": "pnpm -C packages/cook run fetch",
     "dev": "pnpm -C apps/web run dev",
     "dev:pwa": "pnpm -C apps/web run dev:pwa",
