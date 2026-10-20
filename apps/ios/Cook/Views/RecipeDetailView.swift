@@ -30,8 +30,20 @@ struct RecipeDetailView: View {
         let items: [String]
     }
 
+    /// 从推荐结果进来时，按当前已选的食材和常备重新算一遍：宽屏时左栏还能接着改选，详情要跟着变。
+    /// 不看推荐方式和菜名搜索，免得改了这些菜就从详情里「消失」；缺得太多不再推荐时只列食材
+    private var match: RecipeMatch? {
+        guard route.match != nil else {
+            return nil
+        }
+        var options = session.options
+        options.mode = .loose
+        options.keyword = nil
+        return store.recommender.recommend(options).first { $0.recipe.id == recipe.id }
+    }
+
     private var groups: [IngredientGroup] {
-        guard let match = route.match else {
+        guard let match else {
             return [IngredientGroup(label: "食材", items: store.data.normalizer.unique(recipe.stuff))]
         }
         return [

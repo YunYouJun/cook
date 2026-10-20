@@ -15,6 +15,8 @@ struct CookView: View {
     @State private var input = ""
     @State private var isInputPresented = false
     @State private var notice: InputNotice?
+    /// 宽屏时一打开就并排显示两栏，不等用户点开侧栏
+    @State private var columns: NavigationSplitViewVisibility = .all
 
     var body: some View {
         let toolOnly = session.selectedStuff.isEmpty && session.tool != nil
@@ -27,7 +29,7 @@ struct CookView: View {
 
         Group {
             if sizeClass == .regular {
-                NavigationSplitView {
+                NavigationSplitView(columnVisibility: $columns) {
                     chooser(warnings: warnings, extras: extras, emptySignal: emptySignal)
                         .navigationSplitViewColumnWidth(min: 320, ideal: 400, max: 480)
                 } detail: {
