@@ -51,7 +51,8 @@ final class FridgeTests: XCTestCase {
     }
 
     func testAddAndRemoveFridgeItems() throws {
-        let context = Persistence.makeContainer(inMemory: true).mainContext
+        let container = Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
         let item = context.addToFridge("鸡蛋", days: 30, at: day(10, 20, hour: 18), calendar: calendar)
         XCTAssertEqual(item.expiresAt, day(11, 19))
 
