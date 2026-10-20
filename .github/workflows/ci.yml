@@ -101,7 +101,7 @@ jobs:
       - run: swift --version
       - run: swift test --package-path apps/ios/CookCore
 
-  # 云食册 iOS App：XcodeGen 生成工程，在 iOS 模拟器上编译并跑 CookTests
+  # 云食册 iOS App：XcodeGen 生成工程，在 iPhone 和 iPad 模拟器上编译并跑测试（窄屏和宽屏两种布局）
   ios:
     runs-on: macos-26
     steps:
@@ -120,9 +120,13 @@ jobs:
       - run: xcodebuild -version
       - name: Build and test
         run: |
-          DEVICE=$(xcrun simctl list devices available -j | python3 -c '
+          pick() {
+            xcrun simctl list devices available -j | python3 -c '
           import json, sys
           devices = json.load(sys.stdin)["devices"]
-          print(next(d["udid"] for runtime in sorted(devices, reverse=True) if "iOS" in runtime for d in devices[runtime] if d["name"].startswith("iPhone")))
-          ')
-          xcodebuild test -project apps/ios/Cook.xcodeproj -scheme Cook -destination "id=$DEVICE" CODE_SIGNING_ALLOWED=NO
+          print(next(d["udid"] for runtime in sorted(devices, reverse=True) if "iOS" in runtime for d in devices[runtime] if d["name"].startswith(sys.argv[1])))
+          ' "$1"
+          }
+          IPHONE=$(pick iPhone)
+          IPAD=$(pick iPad)
+          xcodebuild test -project apps/ios/Cook.xcodeproj -scheme Cook -destination "id=$IPHONE" -destination "id=$IPAD" CODE_SIGNING_ALLOWED=NO

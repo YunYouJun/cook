@@ -48,7 +48,7 @@
    - 「我的」页：常备调料、关于、反馈。
 3. **随机、iPad、无障碍和 CI**
    - 「今天吃什么」随机页。
-   - iPad 用 `NavigationSplitView`。
+   - iPad 用 `NavigationSplitView`。按水平 size class 切换布局，不按设备型号判断：宽屏（iPad、iPhone Duo 展开的内屏、大屏 iPhone 横屏）做菜页左边选食材、右边实时出结果，菜谱页左列表右详情；窄屏（iPhone、折叠屏外屏、分屏后变窄）收成一栏。CI 在 iPhone 和 iPad 模拟器上各跑一遍 UI 测试。
    - 动态字体和 VoiceOver 标签。
    - macOS runner 上跑 `xcodegen` 和 `xcodebuild test`（iOS 模拟器）。
 
