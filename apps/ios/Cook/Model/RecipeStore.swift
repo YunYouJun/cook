@@ -16,6 +16,10 @@ final class RecipeStore {
     let data: CookData
     let recommender: Recommender
     let recipesById: [Int: Recipe]
+    /// 网页版的浏览记录按菜名认，导入时用
+    let recipeIdByName: [String: Int]
+    /// 整句识别，词表只建一次
+    let queryParser: CookQueryParser
     private let emojiByStuff: [String: String]
     /// 内置数据目录，图文做法正文用到时才读
     @ObservationIgnored private let dataDirectory: URL?
@@ -26,6 +30,8 @@ final class RecipeStore {
         self.dataDirectory = dataDirectory
         recommender = Recommender(recipes: data.recipes, normalizer: data.normalizer)
         recipesById = Dictionary(data.recipes.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        recipeIdByName = Dictionary(data.recipes.map { ($0.name, $0.id) }, uniquingKeysWith: { first, _ in first })
+        queryParser = data.makeQueryParser()
         let items = data.food.vegetable + data.food.meat + data.food.staple
         emojiByStuff = Dictionary(items.map { ($0.name, $0.emoji) }, uniquingKeysWith: { first, _ in first })
     }
@@ -99,8 +105,41 @@ final class RecipeStore {
         }
     }
 
-    func randomRecipe(excluding id: Int? = nil) -> Recipe? {
-        let candidates = recipes.filter { $0.id != id }
-        return candidates.randomElement() ?? recipes.randomElement()
+    func randomRecipe(from pool: [Recipe]? = nil, excluding id: Int? = nil) -> Recipe? {
+        let pool = pool ?? recipes
+        let candidates = pool.filter { $0.id != id }
+        return candidates.randomElement() ?? pool.randomElement()
+    }
+
+    /// 输入框联想：菜名或别名里含输入的食材，已选的不再出现
+    func stuffSuggestions(for text: String, excluding selected: [String], limit: Int = 6) -> [StuffItem] {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else {
+            return []
+        }
+        return Array(stuffItems
+            .filter { !selected.contains($0.name) && ($0.name.contains(text) || ($0.alias?.contains(text) ?? false)) }
+            .prefix(limit))
+    }
+
+    /// 词典里有的食材（做菜页标签里能点到的）
+    func isCatalogStuff(_ name: String) -> Bool {
+        emojiByStuff[name] != nil
+    }
+
+    /// 识别结果写成一行，让人知道哪些说法生效了；和 Web 的 describeQuery 一致
+    func describe(_ query: CookQuery) -> String {
+        var parts = [(query.stuff + query.unknown).joined(separator: "、")]
+        if !query.avoid.isEmpty {
+            parts.append("忌口\(query.avoid.joined(separator: "、"))")
+        }
+        if query.noSpicy {
+            parts.append("不辣")
+        }
+        if let tool = query.tool {
+            parts.append(toolLabel(tool))
+        }
+        parts += query.methodGroups + query.difficulty
+        return parts.filter { !$0.isEmpty }.joined(separator: " · ")
     }
 }

@@ -166,6 +166,8 @@ struct RecipeDetailView: View {
                     context.toggleFavorite(recipe.id)
                 } label: {
                     Label(isFavorite ? "取消收藏" : "收藏", systemImage: isFavorite ? "heart.fill" : "heart")
+                        .contentTransition(.symbolEffect(.replace))
+                        .symbolEffect(.bounce, value: isFavorite)
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {

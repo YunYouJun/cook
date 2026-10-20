@@ -40,6 +40,7 @@ struct LibraryView: View {
 
     var body: some View {
         let visible = recipes
+        let favoriteIds = Set(favorites.map(\.recipeId))
 
         NavigationSplitView {
             List(selection: $selection) {
@@ -58,6 +59,9 @@ struct LibraryView: View {
                 ForEach(visible) { recipe in
                     NavigationLink(value: RecipeRoute(recipe: recipe)) {
                         RecipeRow(recipe: recipe)
+                    }
+                    .recipeActions(recipe, isFavorite: favoriteIds.contains(recipe.id), store: store) {
+                        withAnimation(.snappy) { context.toggleFavorite(recipe.id) }
                     }
                 }
             }
@@ -92,7 +96,7 @@ struct LibraryView: View {
         }
         switch scope {
         case .all: return "还没有菜谱"
-        case .favorites: return "还没有收藏，在菜谱详情里点 ♡ 收藏"
+        case .favorites: return "还没有收藏，右滑菜谱或在详情里点 ♡ 收藏"
         case .recent: return "还没有浏览记录"
         }
     }

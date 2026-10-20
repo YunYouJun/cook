@@ -134,6 +134,53 @@ final class SharedFixtureTests: XCTestCase {
         }
     }
 
+    struct QueryCase: Decodable {
+        var input: String
+        var extraStuff: [String]?
+        var output: CookQuery
+    }
+
+    struct QueryFixtures: Decodable {
+        var cases: [QueryCase]
+    }
+
+    func testQuery() throws {
+        let data = try Self.loadData()
+        let fixtures = try Self.fixture(QueryFixtures.self, "query.json")
+        XCTAssertFalse(fixtures.cases.isEmpty)
+        let parser = data.makeQueryParser()
+        for item in fixtures.cases {
+            let output = parser.adding(extraStuff: item.extraStuff ?? []).parse(item.input)
+            XCTAssertEqual(output, item.output, "输入：\(item.input)")
+        }
+        XCTAssertTrue(parser.parse("我也不知道吃什么").isEmpty)
+        XCTAssertFalse(parser.parse("不辣").isEmpty)
+    }
+
+    func testToolOnlyAndUnlockSuggestions() throws {
+        let data = try Self.loadData()
+        let recommender = Recommender(recipes: data.recipes, normalizer: data.normalizer)
+        let tool = try XCTUnwrap(data.food.tools.first?.name)
+
+        let all = recommender.recipes(using: tool, options: RecommendationOptions(stuff: []))
+        XCTAssertFalse(all.isEmpty)
+        XCTAssertTrue(all.allSatisfy { $0.tools.contains(tool) })
+        let mild = recommender.recipes(using: tool, options: RecommendationOptions(stuff: [], noSpicy: true))
+        XCTAssertTrue(mild.allSatisfy { !$0.tags.contains(Recommender.spicyTag) })
+        XCTAssertEqual(recommender.candidates(RecommendationOptions(stuff: [], tool: tool)), all)
+        XCTAssertEqual(recommender.candidates(RecommendationOptions(stuff: [])).count, data.recipes.count)
+
+        let matches = recommender.recommend(RecommendationOptions(stuff: ["番茄", "鸡蛋", "土豆"], pantry: data.pantry.defaults))
+        let suggestions = Recommender.unlockSuggestions(matches)
+        XCTAssertLessThanOrEqual(suggestions.count, 4)
+        for suggestion in suggestions {
+            let unlocked = matches.filter { $0.missingStuff == [suggestion.name] }.count
+            XCTAssertEqual(suggestion.count, unlocked)
+            XCTAssertGreaterThanOrEqual(unlocked, 2)
+        }
+        XCTAssertEqual(suggestions.map(\.count), suggestions.map(\.count).sorted(by: >))
+    }
+
     func testRejectsNewerSchema() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
