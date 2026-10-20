@@ -200,7 +200,7 @@ private struct ReminderPrompt: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("开启临期提醒")
                         .font(.headline)
-                    Text("食材到期前一天和当天早上提醒你一次，同一天的合成一条。")
+                    Text("食材到期前一天和当天各提醒一次，同一天的合成一条。")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     Button("开启") {

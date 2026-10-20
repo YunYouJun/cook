@@ -30,6 +30,7 @@ enum Freshness: Equatable {
         case let .expired(days): return "过期 \(days) 天"
         case .today: return "今天到期"
         case .soon(1): return "明天到期"
+        case .soon(2): return "后天到期"
         case let .soon(days), let .fresh(days): return "还剩 \(days) 天"
         }
     }

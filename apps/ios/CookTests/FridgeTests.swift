@@ -22,6 +22,7 @@ final class FridgeTests: XCTestCase {
         XCTAssertEqual(Freshness(expiresAt: day(10, 22), now: now, calendar: calendar), .soon(days: 2))
         XCTAssertEqual(Freshness(expiresAt: day(10, 23), now: now, calendar: calendar), .fresh(days: 3))
         XCTAssertEqual(Freshness.soon(days: 1).label, "明天到期")
+        XCTAssertEqual(Freshness.soon(days: 2).label, "后天到期")
         XCTAssertEqual(Freshness.fresh(days: 3).label, "还剩 3 天")
         XCTAssertEqual(Freshness.expired(days: 2).label, "过期 2 天")
     }
