@@ -164,7 +164,7 @@ private struct FridgeRow: View {
                     .foregroundStyle(Color.primary)
                 Text("\(item.addedAt.formatted(.dateTime.month().day()))放入")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondary)
             }
             Spacer()
             Text(freshness.label)
