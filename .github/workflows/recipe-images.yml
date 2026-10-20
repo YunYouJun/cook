@@ -18,28 +18,50 @@ concurrency:
 permissions:
   contents: read
 
+# 桶和前缀见 docs/dev/recipe-images.md；换桶时在仓库 Variables 里覆盖
+env:
+  COS_BUCKET: ${{ vars.COS_BUCKET || 'yunlefun-cos-1253292018' }}
+  COS_REGION: ${{ vars.COS_REGION || 'ap-shanghai' }}
+  COS_PREFIX: ${{ vars.COS_PREFIX || 'cook/' }}
+
 jobs:
   upload:
     runs-on: ubuntu-latest
-    # 还没配置 COS 时跳过，不让主分支变红
-    if: vars.COS_BUCKET != ''
     steps:
+      # 还没配置上传密钥时跳过，不让主分支变红
+      - name: Check COS credentials
+        id: credentials
+        env:
+          COS_SECRET_ID: ${{ secrets.COS_SECRET_ID }}
+          COS_SECRET_KEY: ${{ secrets.COS_SECRET_KEY }}
+        run: |
+          if [ -n "$COS_SECRET_ID" ] && [ -n "$COS_SECRET_KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::没有配置 COS_SECRET_ID / COS_SECRET_KEY，跳过上传配图（见 docs/dev/recipe-images.md）"
+          fi
+
       - uses: actions/checkout@v7
+        if: steps.credentials.outputs.ready == 'true'
 
       - name: Install pnpm
+        if: steps.credentials.outputs.ready == 'true'
         uses: pnpm/action-setup@v6
 
       - name: Set node
+        if: steps.credentials.outputs.ready == 'true'
         uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
 
       - name: Install
+        if: steps.credentials.outputs.ready == 'true'
         run: pnpm install --frozen-lockfile
 
       # 取导入时用的那个提交，只下载 dishes 目录
       - name: Check out HowToCook
+        if: steps.credentials.outputs.ready == 'true'
         run: |
           commit=$(node -p "require('./packages/data/recipe-text.json').source.commit")
           git init -q ../HowToCook
@@ -50,17 +72,17 @@ jobs:
           git checkout -q FETCH_HEAD
 
       - name: Build images
+        if: steps.credentials.outputs.ready == 'true'
         run: pnpm howtocook ../HowToCook
 
       # 同一个提交重新导入，正文应该完全一样；不一样说明 recipe-text.json 没跟着 recipe.csv 重新生成
       - name: Check recipe-text.json is up to date
+        if: steps.credentials.outputs.ready == 'true'
         run: git diff --exit-code packages/data/recipe-text.json
 
       - name: Upload
+        if: steps.credentials.outputs.ready == 'true'
         run: pnpm images:upload
         env:
           COS_SECRET_ID: ${{ secrets.COS_SECRET_ID }}
           COS_SECRET_KEY: ${{ secrets.COS_SECRET_KEY }}
-          COS_BUCKET: ${{ vars.COS_BUCKET }}
-          COS_REGION: ${{ vars.COS_REGION }}
-          COS_PREFIX: ${{ vars.COS_PREFIX || 'cook/' }}

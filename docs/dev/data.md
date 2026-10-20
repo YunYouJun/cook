@@ -48,7 +48,7 @@ git clone --depth 1 https://github.com/Anduin2017/HowToCook.git ../HowToCook
 pnpm howtocook ../HowToCook
 ```
 
-配图不进仓库：`pnpm howtocook` 把原文配图压成 webp 写到 `.cache/recipe-images`，文件名是原图内容的哈希；合并到 main 后 `Recipe Images` 工作流会自动上传到 COS。本地手动上传用 `pnpm images:upload`（需要 `.env` 里的 COS 配置）。`recipe-text.json` 的 `imageBase` 是配图地址前缀，换域名时用 `COOK_IMAGE_BASE=https://…/cook/ pnpm howtocook ../HowToCook` 重新生成。
+配图不进仓库：`pnpm howtocook` 把原文配图压成 webp 写到 `.cache/recipe-images`，合并到 main 后由 `Recipe Images` 工作流上传到 COS。桶、上传权限和换地址的做法见 [图文做法配图](/dev/recipe-images)。
 
 导入规则和取舍见 [方案记录 0009](/decisions/0009-text-recipes)。
 
