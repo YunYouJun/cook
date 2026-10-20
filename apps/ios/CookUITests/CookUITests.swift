@@ -10,6 +10,8 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testCookFlowByAccessibilityLabels() {
         let app = XCUIApplication()
+        // 真机上跑时不去建 CloudKit 结构（见 CloudKitSchema），免得首屏多等几秒
+        app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launch()
 
         // 食材按钮只读名字，不读 emoji，选中后带「已选」状态
