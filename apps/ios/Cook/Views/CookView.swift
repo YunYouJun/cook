@@ -1,4 +1,5 @@
 import CookCore
+import SwiftData
 import SwiftUI
 
 /// 做菜：选食材和厨具，或者在搜索框里说一句话；做法、难度和忌口放在「筛选」里。
@@ -9,6 +10,7 @@ struct CookView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(CookSession.self) private var session
     @Environment(FeedbackClient.self) private var feedback
+    @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }, sort: \FridgeItem.expiresAt) private var fridgeItems: [FridgeItem]
     @State private var showingFilters = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var basket = BasketAnimator()
@@ -77,6 +79,7 @@ struct CookView: View {
             if !warnings.isEmpty {
                 IncompatibleWarning(rules: warnings)
             }
+            fridgeShortcut
             // 输入的、词典里没有的食材（比如「秋葵」），点一下移除
             if !extras.isEmpty {
                 ChipSection(title: "输入的食材", note: "词典里没有，按名字找菜") {
@@ -164,6 +167,38 @@ struct CookView: View {
                 .presentationDetents([.medium, .large])
                 // 半屏时系统默认是半透明玻璃，后面选中的蓝色食材会透上来，看着像选中了某个做法
                 .presentationBackground(Color(uiColor: .systemGroupedBackground))
+        }
+    }
+
+    /// 冰箱里有没过期的食材时，一键都加上；快过期的写在说明里
+    @ViewBuilder
+    private var fridgeShortcut: some View {
+        let now = Date()
+        let usable = fridgeItems.filter { !Freshness(expiresAt: $0.expiresAt, now: now).isExpired }
+        let names = uniqueStrings(usable.map(\.name))
+        let urgent = uniqueStrings(usable.filter { Freshness(expiresAt: $0.expiresAt, now: now).needsAttention }.map(\.name))
+        if !names.isEmpty {
+            let added = names.allSatisfy(session.selectedStuff.contains)
+            Section {
+                Button {
+                    withAnimation(.snappy) {
+                        names.forEach(session.addStuff)
+                    }
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(added ? "冰箱里的都加上了" : "加上冰箱里的 \(names.count) 样食材")
+                                .foregroundStyle(added ? Color.secondary : Color.primary)
+                            Text(urgent.isEmpty ? FridgeReminder.names(names) : "\(FridgeReminder.names(urgent))快过期了")
+                                .font(.caption)
+                                .foregroundStyle(urgent.isEmpty ? Color.secondary : Color.orange)
+                        }
+                    } icon: {
+                        Image(systemName: "refrigerator")
+                    }
+                }
+                .disabled(added)
+            }
         }
     }
 

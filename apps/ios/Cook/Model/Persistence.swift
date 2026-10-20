@@ -50,8 +50,29 @@ final class Preferences {
     }
 }
 
+/// 冰箱里的一样食材。同一种可以放好几份（比如前天和今天各买了一盒鸡蛋），各记各的到期日
+@Model
+final class FridgeItem {
+    var name: String = ""
+    /// 放进冰箱的那天
+    var addedAt: Date = Date()
+    /// 最后一天能吃（当天 0 点），默认按 shelf-life.json 估
+    var expiresAt: Date = Date()
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
+    var deletedAt: Date?
+
+    init(name: String, addedAt: Date, expiresAt: Date) {
+        self.name = name
+        self.addedAt = addedAt
+        self.expiresAt = expiresAt
+        createdAt = addedAt
+        updatedAt = addedAt
+    }
+}
+
 enum Persistence {
-    static let models: [any PersistentModel.Type] = [Favorite.self, HistoryEntry.self, Preferences.self]
+    static let models: [any PersistentModel.Type] = [Favorite.self, HistoryEntry.self, Preferences.self, FridgeItem.self]
 
     /// 软删除的记录保留多久，过期后真正删掉
     static let tombstoneLifetime: TimeInterval = 30 * 24 * 60 * 60
@@ -215,6 +236,42 @@ extension ModelContext {
         }
         try? save()
         return (addedFavorites, addedVisits)
+    }
+
+    /// 放进冰箱，到期日按放入那天加上默认天数
+    @discardableResult
+    func addToFridge(_ name: String, days: Int, at date: Date = Date(), calendar: Calendar = .current) -> FridgeItem {
+        let today = calendar.startOfDay(for: date)
+        let expiresAt = calendar.date(byAdding: .day, value: days, to: today) ?? today
+        let item = FridgeItem(name: name, addedAt: date, expiresAt: expiresAt)
+        insert(item)
+        try? save()
+        return item
+    }
+
+    /// 吃完了或者扔了：软删除，其他设备同步后也会消失
+    func removeFromFridge(_ items: [FridgeItem], at date: Date = Date()) {
+        for item in items where item.deletedAt == nil {
+            item.deletedAt = date
+            item.updatedAt = date
+        }
+        purgeFridgeTombstones(now: date)
+        try? save()
+    }
+
+    func setExpiry(_ item: FridgeItem, to date: Date, calendar: Calendar = .current) {
+        item.expiresAt = calendar.startOfDay(for: date)
+        item.updatedAt = Date()
+        try? save()
+    }
+
+    private func purgeFridgeTombstones(now: Date) {
+        let removed = (try? fetch(FetchDescriptor<FridgeItem>(predicate: #Predicate<FridgeItem> { $0.deletedAt != nil }))) ?? []
+        for item in removed {
+            if let deletedAt = item.deletedAt, now.timeIntervalSince(deletedAt) > Persistence.tombstoneLifetime {
+                delete(item)
+            }
+        }
     }
 
     private func favorites(for recipeId: Int) -> [Favorite] {

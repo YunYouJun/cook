@@ -1,21 +1,31 @@
 import CookCore
+import SwiftData
 import SwiftUI
 
 enum AppTab: Hashable {
     case cook
+    case fridge
     case library
     case random
     case settings
 }
 
 struct RootView: View {
-    @State private var tab: AppTab = .cook
+    @Environment(AppRouter.self) private var router
+    @Environment(\.scenePhase) private var scenePhase
+    @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }) private var fridgeItems: [FridgeItem]
+    @AppStorage(FridgeReminder.enabledKey) private var remindersEnabled = false
+    @AppStorage(FridgeReminder.timeKey) private var reminderMinutes = FridgeReminder.defaultMinutes
 
     var body: some View {
-        TabView(selection: $tab) {
+        @Bindable var router = router
+        TabView(selection: $router.tab) {
             CookView()
                 .tabItem { Label("做菜", systemImage: "frying.pan") }
                 .tag(AppTab.cook)
+            FridgeView()
+                .tabItem { Label("冰箱", systemImage: "refrigerator") }
+                .tag(AppTab.fridge)
             LibraryView()
                 .tabItem { Label("菜谱", systemImage: "book") }
                 .tag(AppTab.library)
@@ -27,6 +37,26 @@ struct RootView: View {
                 .tag(AppTab.settings)
         }
         .minimizesTabBarOnScroll()
+        // 冰箱里的食材（包括其他设备同步过来的）或提醒设置一变，就重排临期通知；回到前台时也排一次，过了一天也不会漏
+        .task(id: reminderSignature) {
+            await FridgeReminder.reschedule(reminderEntries)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task { await FridgeReminder.reschedule(reminderEntries) }
+            }
+        }
+    }
+
+    private var reminderEntries: [FridgeReminder.Entry] {
+        fridgeItems.map { FridgeReminder.Entry(name: $0.name, expiresAt: $0.expiresAt) }
+    }
+
+    private var reminderSignature: String {
+        let items = reminderEntries
+            .map { "\($0.name)@\(Int($0.expiresAt.timeIntervalSince1970))" }
+            .sorted()
+        return ([remindersEnabled ? "on" : "off", String(reminderMinutes)] + items).joined(separator: "|")
     }
 }
 

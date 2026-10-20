@@ -32,8 +32,17 @@ describe('packages/data matches its JSON Schema', () => {
     ['aliases.json', 'aliases.schema.json'],
     ['query.json', 'query.schema.json'],
     ['recipe-text.json', 'recipe-text.schema.json'],
+    ['shelf-life.json', 'shelf-life.schema.json'],
   ])('%s', (file, schema) => {
     expect(validate(schema, readJson(file))).toEqual([])
+  })
+
+  // 冰箱按它给默认到期日，词典里的食材都要有
+  it('shelf-life.json covers every food in food.json', () => {
+    const food = readJson('food.json')
+    const shelfLife = readJson('shelf-life.json')
+    const names = [...food.vegetable, ...food.meat, ...food.staple].map((item: { name: string }) => item.name)
+    expect(names.filter(name => !(name in shelfLife.items))).toEqual([])
   })
 
   // pnpm convert 生成，CI 里先 convert 再 test
