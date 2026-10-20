@@ -42,7 +42,7 @@ struct RecipeTextView: View {
             // 大图里翻到别的图时，正文跟着滚过去，收起时缩回那张图的位置
             .onChange(of: photoSelection) { _, id in
                 if showsPhotos {
-                    proxy.scrollTo(id, anchor: .center)
+                    proxy.scrollTo(PhotoAnchor(id: id), anchor: .center)
                 }
             }
         }
@@ -92,6 +92,7 @@ struct RecipeTextView: View {
                     photoSelection = photo.id
                     showsPhotos = true
                 }
+                .id(PhotoAnchor(id: photo.id))
             }
         }
     }
@@ -138,6 +139,11 @@ struct RecipeTextView: View {
         let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         return (try? AttributedString(markdown: string, options: options)) ?? AttributedString(string)
     }
+}
+
+/// 配图在正文里的滚动定位。单独一个类型，免得和列表项（也按序号区分）的 id 撞上
+private struct PhotoAnchor: Hashable {
+    let id: Int
 }
 
 /// 正文里的一张配图：加载前按原图比例占位，不让正文跳动；点一下看大图；加载失败就收起，不影响看文字

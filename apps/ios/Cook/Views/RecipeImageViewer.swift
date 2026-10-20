@@ -58,7 +58,7 @@ struct RecipeImageViewer: View {
     var body: some View {
         TabView(selection: $selection) {
             ForEach(photos) { photo in
-                ZoomablePhoto(photo: photo) {
+                ZoomablePhoto(photo: photo, isCurrent: photo.id == selection) {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         chromeHidden.toggle()
                     }
@@ -82,13 +82,19 @@ struct RecipeImageViewer: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
-                    .background(.ultraThinMaterial, in: Capsule())
+                    .floatingGlass(in: Capsule())
                     .padding()
                     .transition(.opacity)
             }
         }
         .environment(\.colorScheme, .dark)
         .statusBarHidden()
+        // 隐藏按钮时连 Home 指示条一起淡掉，只留图片
+        .persistentSystemOverlays(chromeHidden ? .hidden : .automatic)
+        // VoiceOver 双指搓擦（Z 字）关闭
+        .accessibilityAction(.escape) {
+            dismiss()
+        }
     }
 
     private var topBar: some View {
@@ -99,7 +105,8 @@ struct RecipeImageViewer: View {
                 Image(systemName: "xmark")
                     .font(.body.weight(.semibold))
                     .frame(width: 44, height: 44)
-                    .background(.ultraThinMaterial, in: Circle())
+                    .floatingGlass(in: Circle(), interactive: true)
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("关闭")
@@ -111,7 +118,7 @@ struct RecipeImageViewer: View {
                     .font(.subheadline.monospacedDigit())
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(.ultraThinMaterial, in: Capsule())
+                    .floatingGlass(in: Capsule())
                     .accessibilityLabel("第 \(index + 1) 张，共 \(photos.count) 张")
             }
         }
@@ -124,12 +131,14 @@ struct RecipeImageViewer: View {
 /// 大图里的一页：先用正文里已经加载好的图，没有再下载
 private struct ZoomablePhoto: View {
     let photo: RecipeTextPhoto
+    let isCurrent: Bool
     let onTap: () -> Void
     @State private var image: UIImage?
     @State private var failed = false
 
-    init(photo: RecipeTextPhoto, onTap: @escaping () -> Void) {
+    init(photo: RecipeTextPhoto, isCurrent: Bool, onTap: @escaping () -> Void) {
         self.photo = photo
+        self.isCurrent = isCurrent
         self.onTap = onTap
         _image = State(initialValue: RecipeImageCache.cached(photo.url))
     }
@@ -137,7 +146,7 @@ private struct ZoomablePhoto: View {
     var body: some View {
         Group {
             if let image {
-                ZoomableImageView(image: image, onTap: onTap)
+                ZoomableImageView(image: image, isCurrent: isCurrent, onTap: onTap)
                     .accessibilityElement()
                     .accessibilityLabel(photo.accessibilityLabel)
                     .accessibilityAddTraits(.isImage)
@@ -169,6 +178,8 @@ private struct ZoomablePhoto: View {
 /// 用 UIScrollView 做缩放：双指缩放、双击放大到点的位置，放大后可以拖着看，图片始终居中
 private struct ZoomableImageView: UIViewRepresentable {
     let image: UIImage
+    /// 翻到别的图后把这一张缩回原样，翻回来时和系统相册一样从整张图看起
+    let isCurrent: Bool
     let onTap: () -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -194,6 +205,8 @@ private struct ZoomableImageView: UIViewRepresentable {
         context.coordinator.onTap = onTap
         if scrollView.imageView.image !== image {
             scrollView.imageView.image = image
+            scrollView.resetZoom()
+        } else if !isCurrent, scrollView.zoomScale != scrollView.minimumZoomScale {
             scrollView.resetZoom()
         }
     }
@@ -224,7 +237,8 @@ private struct ZoomableImageView: UIViewRepresentable {
                 return
             }
             let point = recognizer.location(in: scrollView.imageView)
-            let scale = min(scrollView.maximumZoomScale, 2.5)
+            // 放大到图片铺满屏幕（横图在手机上就是撑满高度），至少放大 2 倍
+            let scale = min(scrollView.maximumZoomScale, max(2, scrollView.fillScale))
             let size = CGSize(width: scrollView.bounds.width / scale, height: scrollView.bounds.height / scale)
             let rect = CGRect(x: point.x - size.width / 2, y: point.y - size.height / 2, width: size.width, height: size.height)
             scrollView.zoom(to: rect, animated: true)
@@ -278,6 +292,13 @@ private final class ZoomingScrollView: UIScrollView {
         }
         let scale = min(bounds.width / size.width, bounds.height / size.height)
         return CGSize(width: (size.width * scale).rounded(.down), height: (size.height * scale).rounded(.down))
+    }
+
+    /// 缩放到这个倍数时图片正好铺满可见区域
+    var fillScale: CGFloat {
+        let fitted = fittedSize
+        guard fitted.width > 0, fitted.height > 0 else { return 1 }
+        return max(bounds.width / fitted.width, bounds.height / fitted.height)
     }
 
     /// 图片比可见区域小的方向用 contentInset 居中
