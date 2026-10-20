@@ -48,6 +48,8 @@ git clone --depth 1 https://github.com/Anduin2017/HowToCook.git ../HowToCook
 pnpm howtocook ../HowToCook
 ```
 
+配图不进仓库：`pnpm howtocook` 把原文配图压成 webp 写到 `.cache/recipe-images`，文件名是原图内容的哈希；合并到 main 后 `Recipe Images` 工作流会自动上传到 COS。本地手动上传用 `pnpm images:upload`（需要 `.env` 里的 COS 配置）。`recipe-text.json` 的 `imageBase` 是配图地址前缀，换域名时用 `COOK_IMAGE_BASE=https://…/cook/ pnpm howtocook ../HowToCook` 重新生成。
+
 导入规则和取舍见 [方案记录 0009](/decisions/0009-text-recipes)。
 
 PR 上 CI 还会运行 `pnpm validate --base <目标分支>`：同一个 id 的菜名和视频都变了（像是把 id 挪给了另一道菜）或复用了已删除的 id 会报错，删除菜谱会给出警告。

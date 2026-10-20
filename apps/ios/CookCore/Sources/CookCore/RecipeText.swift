@@ -7,9 +7,11 @@ public enum RecipeTextBlock: Decodable, Hashable, Sendable {
     case paragraph(String)
     /// 列表项里的换行是补充说明或子项
     case list(ordered: Bool, start: Int, items: [String])
+    /// 配图：src 相对 RecipeTextLibrary.imageBase；宽高用来在加载前按比例占位
+    case image(src: String, width: Int, height: Int, alt: String?)
 
     private enum CodingKeys: String, CodingKey {
-        case type, text, ordered, start, items
+        case type, text, ordered, start, items, src, width, height, alt
     }
 
     public init(from decoder: Decoder) throws {
@@ -24,6 +26,13 @@ public enum RecipeTextBlock: Decodable, Hashable, Sendable {
                 start: try container.decodeIfPresent(Int.self, forKey: .start) ?? 1,
                 items: try container.decode([String].self, forKey: .items)
             )
+        case "image":
+            self = .image(
+                src: try container.decode(String.self, forKey: .src),
+                width: try container.decode(Int.self, forKey: .width),
+                height: try container.decode(Int.self, forKey: .height),
+                alt: try container.decodeIfPresent(String.self, forKey: .alt)
+            )
         default:
             // 新版数据加了不认识的类型时按段落显示
             self = .paragraph(try container.decodeIfPresent(String.self, forKey: .text) ?? "")
@@ -34,22 +43,17 @@ public enum RecipeTextBlock: Decodable, Hashable, Sendable {
 /// 一道菜的图文做法正文，App 离线显示，不用打开原文网页
 public struct RecipeText: Decodable, Hashable, Sendable {
     public var blocks: [RecipeTextBlock]
-    /// 原文里的配图数量；图片不收录，提示去原文看
-    public var images: Int
 
-    private enum CodingKeys: String, CodingKey {
-        case blocks, images
-    }
-
-    public init(blocks: [RecipeTextBlock], images: Int = 0) {
+    public init(blocks: [RecipeTextBlock]) {
         self.blocks = blocks
-        self.images = images
     }
 
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        blocks = try container.decode([RecipeTextBlock].self, forKey: .blocks)
-        images = try container.decodeIfPresent(Int.self, forKey: .images) ?? 0
+    /// 配图张数，没配置配图地址时提示去原文看
+    public var imageCount: Int {
+        blocks.filter {
+            if case .image = $0 { return true }
+            return false
+        }.count
     }
 }
 
@@ -63,6 +67,8 @@ public struct RecipeTextLibrary: Decodable, Sendable {
     }
 
     public var source: Source
+    /// 配图地址前缀（以 / 结尾），没有时不显示配图
+    public var imageBase: URL?
     private var recipes: [String: RecipeText]
 
     public static let fileName = "recipe-text.json"
@@ -82,5 +88,11 @@ public struct RecipeTextLibrary: Decodable, Sendable {
 
     public func text(for recipeId: Int) -> RecipeText? {
         recipes[String(recipeId)]
+    }
+
+    /// 配图的完整地址；没配置 imageBase 时为 nil
+    public func imageURL(_ src: String) -> URL? {
+        guard let imageBase else { return nil }
+        return URL(string: src, relativeTo: imageBase)?.absoluteURL
     }
 }

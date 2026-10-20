@@ -52,6 +52,16 @@ final class RecipeStore {
         textLibrary?.source
     }
 
+    /// 图文做法配图的地址；没配置配图地址时为 nil
+    func textImageURL(_ src: String) -> URL? {
+        textLibrary?.imageURL(src)
+    }
+
+    /// 内置数据配了配图地址，正文里能显示图片
+    var showsTextImages: Bool {
+        textLibrary?.imageBase != nil
+    }
+
     var recipes: [Recipe] {
         data.recipes
     }

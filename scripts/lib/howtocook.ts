@@ -1,16 +1,16 @@
 /**
  * 把 HowToCook 的 Markdown 菜谱转成 App 能直接排版的段落（packages/data/recipe-text.json）
  *
- * 只保留文字：图片放在 GitHub 上，国内加载慢，App 里只提示原文有几张配图。
+ * 配图在这里只记下 Markdown 里写的地址，由导入脚本压缩、改成对象存储上的路径。
  */
-import type { RecipeText, RecipeTextBlock, RecipeTextList } from '../../packages/cook/src/types/recipe-text'
+import type { RecipeTextBlock, RecipeTextImage, RecipeTextList } from '../../packages/cook/src/types/recipe-text'
 
 export const HOWTOCOOK_REPO = 'https://github.com/Anduin2017/HowToCook'
 export const HOWTOCOOK_BLOB = `${HOWTOCOOK_REPO}/blob/master/`
 
 /** 每篇末尾的固定结束语，App 里不需要 */
 const BOILERPLATE = /^如果您遵循本指南的制作流程而发现有问题或可以改进的流程/
-const IMAGE = /!\[[^\]]*\]\([^)]*\)/g
+const IMAGE = /!\[([^\]]*)\]\(([^)]*)\)/g
 const LIST_ITEM = /^([*+-]|\d+\.)\s+(\S.*)$/
 
 /** HowToCook 链接在仓库里的相对路径，不是 HowToCook 的链接时返回 undefined */
@@ -30,6 +30,15 @@ function inline(text: string) {
     .trim()
 }
 
+/** 解析出的配图，`src` 还是 Markdown 里的原始地址 */
+export interface ParsedImage {
+  type: 'image'
+  src: string
+  alt?: string
+}
+
+export type ParsedBlock = Exclude<RecipeTextBlock, RecipeTextImage> | ParsedImage
+
 function isTableSeparator(line: string) {
   return /^\|?\s*:?-{2,}/.test(line)
 }
@@ -39,9 +48,8 @@ function tableRow(line: string) {
   return line.replace(/^\||\|$/g, '').split('|').map(cell => cell.trim()).filter(Boolean).join(' · ')
 }
 
-export function parseHowToCook(markdown: string): RecipeText {
-  const blocks: RecipeTextBlock[] = []
-  let images = 0
+export function parseHowToCook(markdown: string): ParsedBlock[] {
+  const blocks: ParsedBlock[] = []
   let paragraph: string[] = []
   let list: RecipeTextList | undefined
   /** 列表项下面缩进的内容（补充说明、子列表）接在这一项后面 */
@@ -62,30 +70,28 @@ export function parseHowToCook(markdown: string): RecipeText {
     blankInList = false
   }
 
-  for (const raw of markdown.replace(/\r\n?/g, '\n').split('\n')) {
-    images += raw.match(IMAGE)?.length ?? 0
-    const line = raw.replace(IMAGE, '').replace(/\s+$/, '')
+  function handleLine(line: string) {
     const indent = line.length - line.trimStart().length
     const text = line.trim()
 
     if (text.startsWith('```')) {
       inFence = !inFence
-      continue
+      return
     }
     if (inFence)
-      continue
+      return
 
     // 空行和分隔线都结束一段
     if (!text || /^(?:-{3,}|\*{3,})$/.test(text)) {
       flushParagraph()
       if (list)
         blankInList = true
-      continue
+      return
     }
 
     // 只有图片的列表项，去掉图片后是空的
     if (/^(?:[*+-]|\d+\.)$/.test(text))
-      continue
+      return
 
     const heading = /^(#{1,6})\s+(\S.*)$/.exec(text)
     if (heading && indent === 0) {
@@ -94,7 +100,7 @@ export function parseHowToCook(markdown: string): RecipeText {
       // 一级标题是「XX的做法」，App 里菜名已经是页面标题
       if (heading[1]!.length > 1)
         blocks.push({ type: 'heading', text: inline(heading[2]!) })
-      continue
+      return
     }
 
     const item = LIST_ITEM.exec(text)
@@ -104,7 +110,7 @@ export function parseHowToCook(markdown: string): RecipeText {
       const extra = item ? `• ${inline(item[2]!)}` : inline(text)
       list.items[last] = `${list.items[last]}\n${extra}`
       blankInList = false
-      continue
+      return
     }
 
     if (item && indent < 2) {
@@ -120,14 +126,14 @@ export function parseHowToCook(markdown: string): RecipeText {
       if (!BOILERPLATE.test(itemText))
         list.items.push(itemText)
       blankInList = false
-      continue
+      return
     }
 
     // 列表后面空一行再接正文，列表就结束了；没空行时是上一项换行接着写
     if (list?.items.length && !blankInList) {
       const last = list.items.length - 1
       list.items[last] = `${list.items[last]}${inline(text)}`
-      continue
+      return
     }
     closeList()
 
@@ -135,14 +141,27 @@ export function parseHowToCook(markdown: string): RecipeText {
       flushParagraph()
       if (!isTableSeparator(text))
         blocks.push({ type: 'paragraph', text: inline(tableRow(text)) })
-      continue
+      return
     }
     paragraph.push(text.replace(/^>\s*/, ''))
+  }
+
+  for (const raw of markdown.replace(/\r\n?/g, '\n').split('\n')) {
+    const images = [...raw.matchAll(IMAGE)]
+    handleLine(raw.replace(IMAGE, '').replace(/\s+$/, ''))
+    if (inFence || !images.length)
+      continue
+    // 图片单独成块，打断前面的段落和列表；后面的步骤编号照原文接着排
+    flushParagraph()
+    closeList()
+    for (const [, alt, url] of images) {
+      const src = url!.trim().split(/\s+/)[0]!
+      blocks.push({ type: 'image', src, ...(alt?.trim() ? { alt: alt.trim() } : {}) })
+    }
   }
   flushParagraph()
   closeList()
 
   // 去掉结束语后，「附加内容」这类标题下面可能没有内容了
-  const kept = blocks.filter((block, index) => block.type !== 'heading' || (blocks[index + 1] && blocks[index + 1]!.type !== 'heading'))
-  return { blocks: kept, ...(images ? { images } : {}) }
+  return blocks.filter((block, index) => block.type !== 'heading' || (blocks[index + 1] && blocks[index + 1]!.type !== 'heading'))
 }

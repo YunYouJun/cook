@@ -3,25 +3,52 @@
   "$id": "https://cook.yunyoujun.cn/schema/recipe-text.schema.json",
   "title": "图文做法正文（recipe-text.json），App 离线排版用",
   "type": "object",
-  "required": ["source", "recipes"],
+  "required": [
+    "source",
+    "recipes"
+  ],
   "properties": {
     "source": {
       "type": "object",
-      "required": ["name", "url", "license", "commit"],
+      "required": [
+        "name",
+        "url",
+        "license",
+        "commit"
+      ],
       "properties": {
-        "name": { "type": "string" },
-        "url": { "type": "string", "pattern": "^https://" },
-        "license": { "type": "string" },
-        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https://"
+        },
+        "license": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
       }
+    },
+    "imageBase": {
+      "type": "string",
+      "pattern": "^https://\\S+/$",
+      "description": "配图地址前缀，App 用 imageBase + src 加载；没有时不显示配图"
     },
     "recipes": {
       "type": "object",
       "description": "按菜谱 id 索引",
-      "propertyNames": { "pattern": "^[0-9]+$" },
+      "propertyNames": {
+        "pattern": "^[0-9]+$"
+      },
       "additionalProperties": {
         "type": "object",
-        "required": ["blocks"],
+        "required": [
+          "blocks"
+        ],
         "properties": {
           "blocks": {
             "type": "array",
@@ -30,29 +57,90 @@
               "oneOf": [
                 {
                   "type": "object",
-                  "required": ["type", "text"],
+                  "required": [
+                    "type",
+                    "text"
+                  ],
                   "additionalProperties": false,
                   "properties": {
-                    "type": { "enum": ["heading", "paragraph"] },
-                    "text": { "type": "string", "minLength": 1, "description": "行内 Markdown：加粗、外链" }
+                    "type": {
+                      "enum": [
+                        "heading",
+                        "paragraph"
+                      ]
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "行内 Markdown：加粗、外链"
+                    }
                   }
                 },
                 {
                   "type": "object",
-                  "required": ["type", "ordered", "items"],
+                  "required": [
+                    "type",
+                    "ordered",
+                    "items"
+                  ],
                   "additionalProperties": false,
                   "properties": {
-                    "type": { "const": "list" },
-                    "ordered": { "type": "boolean" },
-                    "start": { "type": "integer", "minimum": 0 },
-                    "items": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+                    "type": {
+                      "const": "list"
+                    },
+                    "ordered": {
+                      "type": "boolean"
+                    },
+                    "start": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "items": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "src",
+                    "width",
+                    "height"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "const": "image"
+                    },
+                    "src": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9-]+/[0-9a-f]{16}\\.webp$",
+                      "description": "相对 imageBase 的路径，按原图内容哈希命名"
+                    },
+                    "width": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "height": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "alt": {
+                      "type": "string",
+                      "minLength": 1
+                    }
                   }
                 }
               ]
             }
-          },
-          "images": { "type": "integer", "minimum": 1, "description": "原文配图数量" }
-        }
+          }
+        },
+        "additionalProperties": false
       }
     }
   }
