@@ -47,6 +47,19 @@ describe('validateRecipes', () => {
     expect(messages([recipe({}), recipe({ id: 1, bv: 'BV0987654321' })], 'warning')[0]).toContain('同名')
   })
 
+  it('accepts text recipes and checks their links', () => {
+    expect(messages([recipe({ bv: undefined, link: 'https://example.com/a.md' })])).toEqual([])
+    expect(messages([recipe({ link: 'example.com/a.md' })])[0]).toContain('https://')
+    const { stats } = validateRecipes([recipe({ bv: undefined, link: 'https://example.com/a.md' })], dict)
+    expect(stats.missingVideo).toBe(0)
+  })
+
+  it('compares text-only recipes by link when looking for duplicates', () => {
+    const a = recipe({ bv: undefined, link: 'https://example.com/a.md' })
+    expect(messages([a, { ...a, id: 1 }], 'warning')[0]).toContain('重复')
+    expect(messages([a, { ...a, id: 1, link: 'https://example.com/b.md' }], 'warning')[0]).toContain('同名')
+  })
+
   it('counts missing optional fields', () => {
     const { stats } = validateRecipes([recipe({ difficulty: '', methods: [], bv: undefined })], dict)
     expect(stats).toEqual({ total: 1, missingDifficulty: 1, missingMethods: 1, missingVideo: 1 })

@@ -14,6 +14,8 @@ pnpm convert              # Convert CSV recipe data → JSON (required before fi
 pnpm validate             # Validate recipe.csv (ids, ingredient/tool dictionary, values, video ids)
 pnpm feedback:pull        # Pull in-app feedback + search signals from CloudBase (needs .env)
 pnpm eval:search          # Evaluate recommendation ranking against real search signals
+pnpm howtocook <dir>      # Regenerate packages/data/recipe-text.json (in-app text recipes) and .cache/recipe-images from a HowToCook checkout
+pnpm images:upload        # Upload text-recipe images to Tencent COS (needs COS_* env; CI does this on main)
 pnpm fixtures             # Regenerate shared Web/iOS fixtures: recommend, search, incompatible (after data, alias, ranking or search changes)
 pnpm dev                  # Dev server on http://localhost:3333
 pnpm lint                 # ESLint check (uses @antfu/eslint-config flat config)
@@ -47,7 +49,7 @@ Layout follows `docs/decisions/0003-native-ios-monorepo.md`; the plan is in `doc
 
 - **apps/ios/CookCore** — Swift Package porting the recommend/search/incompatible logic for the native iOS app; `swift test --package-path apps/ios/CookCore` (after `pnpm convert`) runs the shared fixtures. Change TS and Swift logic together
 - **apps/web** — Nuxt app (main application). Root scripts (`pnpm dev`, `pnpm build`, `pnpm typecheck`) proxy to it; `pnpm build` copies `apps/web/dist` to the root `dist/` that deploy targets and Capacitor read
-- **packages/data** — Data shared by Web and iOS: recipe CSV sources and the JSON generated from them (imported in the web app as `@cook/data/*`), the food dictionary (`food.json`), pantry defaults (`pantry.json`), ingredient aliases (`aliases.json`), sentence-input word lists (`query.json`), shared fixtures (`fixtures/*.json`, regenerate with `pnpm fixtures`; `fixtures/query.json` is hand-written), and JSON Schemas (`schema/`). `recipe-meta.json` carries `schemaVersion` (bump `DATA_SCHEMA_VERSION` in `packages/cook/src/utils/config.ts` and CookCore together on breaking shape changes) and `dataVersion` (content hash)
+- **packages/data** — Data shared by Web and iOS: recipe CSV sources and the JSON generated from them (imported in the web app as `@cook/data/*`), the food dictionary (`food.json`), pantry defaults (`pantry.json`), ingredient aliases (`aliases.json`), sentence-input word lists (`query.json`), text recipe bodies the iOS app shows offline (`recipe-text.json`, from `pnpm howtocook`), shared fixtures (`fixtures/*.json`, regenerate with `pnpm fixtures`; `fixtures/query.json` is hand-written), and JSON Schemas (`schema/`). `recipe-meta.json` carries `schemaVersion` (bump `DATA_SCHEMA_VERSION` in `packages/cook/src/utils/config.ts` and CookCore together on breaking shape changes) and `dataVersion` (content hash)
 - **packages/cook** — Types, recommendation/search logic (the TS core the iOS CookCore mirrors), and the CLI (`convert`, `fetch`)
 - **docs** — VitePress documentation site
 - **scripts** — Build/utility scripts

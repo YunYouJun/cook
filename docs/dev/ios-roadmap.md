@@ -48,7 +48,7 @@
    - 「我的」页：常备调料、关于、反馈。
 3. **随机、iPad、无障碍和 CI**
    - 「今天吃什么」随机页。
-   - iPad 用 `NavigationSplitView`。
+   - iPad 用 `NavigationSplitView`。按水平 size class 切换布局，不按设备型号判断：宽屏（iPad、iPhone Duo 展开的内屏、大屏 iPhone 横屏）做菜页左边选食材、右边实时出结果，菜谱页左列表右详情；窄屏（iPhone、折叠屏外屏、分屏后变窄）收成一栏。CI 在 iPhone 和 iPad 模拟器上各跑一遍 UI 测试。
    - 动态字体和 VoiceOver 标签。
    - macOS runner 上跑 `xcodegen` 和 `xcodebuild test`（iOS 模拟器）。
 
@@ -69,6 +69,14 @@
 - Spotlight 索引菜谱，系统分享面板，触感反馈，空状态和引导页。
 - 菜谱数据在线更新（按 `dataVersion` 从 CDN 拉取），失败时用内置数据。
 - 从 Capacitor 版迁移：首次启动导入旧版收藏和历史（方案待验证，备选是旧版先同步到云端）。
+
+和 Web 对齐（已完成）：
+
+- [x] 做菜页搜索框支持打字加食材和整句识别（CookCore 移植 `parseCookQuery`，跑 `fixtures/query.json`），识别结果写在列表顶部，词典里没有的食材单独列出。
+- [x] 只选厨具也能看菜；结果页「再补一样」，点一下加上食材。
+- [x] 「今天吃什么」按已选食材、厨具、忌口和筛选挑，摇一摇换一道。
+- [x] 「我的」页导入网页版导出的收藏和浏览记录（只加不减），也能导出给网页版，在账号同步之前过渡。
+- [x] iOS 26 起底部按钮用 Liquid Glass、Tab 栏下滑收小；菜谱行左滑收藏、长按预览。
 
 验收：每项功能有截图走查记录；旧版用户升级后收藏不丢；崩溃率和卡顿通过 Xcode Organizer 观察一周无异常。
 

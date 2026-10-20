@@ -31,13 +31,13 @@
       }
     },
     {
-      "input": "土豆，羊肉",
+      "input": "土豆，兔肉",
       "output": {
         "stuff": [
           "土豆"
         ],
         "unknown": [
-          "羊肉"
+          "兔肉"
         ],
         "avoid": [],
         "tool": null,
@@ -214,7 +214,8 @@
       "input": "想喝汤，有排骨和玉米",
       "output": {
         "stuff": [
-          "猪肉"
+          "猪肉",
+          "玉米"
         ],
         "unknown": [],
         "avoid": [],
@@ -282,6 +283,39 @@
         "noSpicy": false,
         "difficulty": [],
         "methodGroups": []
+      }
+    },
+    {
+      "input": "有鸭腿和土豆，不吃羊肉",
+      "output": {
+        "stuff": [
+          "鸭肉",
+          "土豆"
+        ],
+        "unknown": [],
+        "avoid": [
+          "羊肉"
+        ],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "空心菜炒一下，家里没有鸭蛋",
+      "output": {
+        "stuff": [
+          "空心菜"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": [
+          "炒菜"
+        ]
       }
     }
   ]

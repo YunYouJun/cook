@@ -34,7 +34,9 @@ export const CHUNK_THRESHOLD = 1000 // 超过此数量启用分片
 
 // CSV Headers
 // id 是菜谱的固定编号：收藏、反馈都按它记录，已有行的 id 不能修改或复用
-export const RECIPE_CSV_HEADERS = 'name,stuff,bv,difficulty,tags,methods,tools,id'
+export const RECIPE_CSV_HEADERS = 'name,stuff,bv,difficulty,tags,methods,tools,id,link'
+/** 加 link 列之前的表头 */
+export const LEGACY_RECIPE_CSV_HEADERS = 'name,stuff,bv,difficulty,tags,methods,tools,id'
 /** 飞书表格只有前 7 列，没有 id */
 export const FEISHU_RECIPE_HEADERS = 'name,stuff,bv,difficulty,tags,methods,tools'
 export const INCOMPATIBLE_FOODS_CSV_HEADERS = 'foodA,foodB,reason'

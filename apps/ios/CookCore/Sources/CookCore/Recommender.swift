@@ -59,6 +59,12 @@ public struct RecipeMatch: Hashable, Sendable {
     public var optionalStuff: [String]
 }
 
+/// 「再补一样」的一条建议：补上这样食材，能多做 count 道差一种的菜
+public struct UnlockSuggestion: Hashable, Sendable {
+    public var name: String
+    public var count: Int
+}
+
 /// 做法分组：数据里的做法写法很散，按吃起来的区别归成几类；汤羹靠「汤」标签识别
 public struct MethodGroup: Hashable, Sendable {
     public var label: String
@@ -140,6 +146,62 @@ public struct Recommender: Sendable {
         return groups.contains { group in
             group.methods.contains { methods.contains($0) } || group.tags.contains { recipe.tags.contains($0) }
         }
+    }
+
+    /// 只选了厨具、还没选食材时，列出用这个厨具能做的菜；忌口、做法、口味和难度照样生效。
+    /// 对应 Web 做菜页的 toolRecipes
+    public func recipes(using tool: String, options: RecommendationOptions) -> [Recipe] {
+        let keyword = (options.keyword ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let avoided = Set(normalizer.unique(options.avoid ?? []))
+        return catalog.compactMap { entry in
+            let recipe = entry.recipe
+            guard recipe.tools.contains(tool),
+                  keyword.isEmpty || recipe.name.contains(keyword),
+                  Self.isCatchAll(entry.requiredStuff) || !entry.requiredStuff.contains(where: { avoided.contains($0) }),
+                  Self.matchesTaste(recipe, methodGroups: options.methodGroups, noSpicy: options.noSpicy ?? false, difficulty: options.difficulty)
+            else {
+                return nil
+            }
+            return recipe
+        }
+    }
+
+    /// 「今天吃什么」的候选：不看食材，只按厨具、忌口、做法、口味和难度从全部菜里挑
+    public func candidates(_ options: RecommendationOptions) -> [Recipe] {
+        if let tool = options.tool, !tool.isEmpty {
+            return recipes(using: tool, options: options)
+        }
+        let avoided = Set(normalizer.unique(options.avoid ?? []))
+        return catalog.compactMap { entry in
+            let recipe = entry.recipe
+            guard Self.isCatchAll(entry.requiredStuff) || !entry.requiredStuff.contains(where: { avoided.contains($0) }),
+                  Self.matchesTaste(recipe, methodGroups: options.methodGroups, noSpicy: options.noSpicy ?? false, difficulty: options.difficulty)
+            else {
+                return nil
+            }
+            return recipe
+        }
+    }
+
+    /// 「再补一样」：差一种的菜里最常缺的食材，补上后能直接多做几道。至少多 2 道才建议，最多 limit 个。
+    /// 对应 Web 做菜页的 unlockSuggestions
+    public static func unlockSuggestions(_ matches: [RecipeMatch], limit: Int = 4) -> [UnlockSuggestion] {
+        var counts: [String: Int] = [:]
+        var order: [String] = []
+        for match in matches where match.missingStuff.count == 1 {
+            let name = match.missingStuff[0]
+            if counts[name] == nil {
+                order.append(name)
+            }
+            counts[name, default: 0] += 1
+        }
+        // 次数相同时按第一次出现的顺序，和 JS 的稳定排序一致
+        let ranked = order.map { UnlockSuggestion(name: $0, count: counts[$0] ?? 0) }
+        let indexed = ranked.enumerated().filter { $0.element.count >= 2 }
+        let sorted = indexed.sorted { a, b in
+            a.element.count != b.element.count ? a.element.count > b.element.count : a.offset < b.offset
+        }
+        return sorted.prefix(limit).map(\.element)
     }
 
     /// 只有菜谱里明确记录的食材才算要求；没选食材时不推荐

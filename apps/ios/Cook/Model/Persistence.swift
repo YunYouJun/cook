@@ -1,3 +1,4 @@
+import CookCore
 import Foundation
 import SwiftData
 
@@ -158,6 +159,67 @@ extension ModelContext {
         return first
     }
 
+    /// 合并网页版导出的收藏和浏览记录，返回新加了几个收藏、几条浏览记录。
+    /// 只加不减：App 里已有的不动；在 App 里取消收藏的时间比网页版收藏的晚时，以 App 为准
+    @discardableResult
+    func importWebData(_ data: WebUserData, recipeIdByName: [String: Int], validIds: Set<Int>, historyLimit: Int = 100) -> (favorites: Int, visits: Int) {
+        var addedFavorites = 0
+        for favorite in data.favorites where validIds.contains(favorite.recipeId) {
+            let existing = favorites(for: favorite.recipeId)
+            if existing.contains(where: { $0.deletedAt == nil }) {
+                continue
+            }
+            if let removedAt = existing.compactMap(\.deletedAt).max(), removedAt >= favorite.time {
+                continue
+            }
+            if let revived = existing.first {
+                revived.deletedAt = nil
+                revived.createdAt = favorite.time
+                revived.updatedAt = Date()
+            } else {
+                let created = Favorite(recipeId: favorite.recipeId, at: favorite.time)
+                created.updatedAt = Date()
+                insert(created)
+            }
+            addedFavorites += 1
+        }
+
+        var addedVisits = 0
+        for visit in data.visits {
+            guard let recipeId = recipeIdByName[visit.name] else {
+                continue
+            }
+            let descriptor = FetchDescriptor<HistoryEntry>(predicate: #Predicate<HistoryEntry> { $0.recipeId == recipeId })
+            let existing = (try? fetch(descriptor)) ?? []
+            if let entry = existing.first {
+                // 在 App 里删过、或者 App 里看得更晚的，都不动
+                if let deletedAt = entry.deletedAt, deletedAt >= visit.time {
+                    continue
+                }
+                if entry.deletedAt == nil, entry.visitedAt >= visit.time {
+                    continue
+                }
+                entry.visitedAt = visit.time
+                entry.deletedAt = nil
+                entry.updatedAt = Date()
+            } else {
+                insert(HistoryEntry(recipeId: recipeId, at: visit.time))
+            }
+            addedVisits += 1
+        }
+
+        if addedVisits > 0 {
+            let all = (try? fetch(FetchDescriptor<HistoryEntry>(sortBy: [SortDescriptor(\.visitedAt, order: .reverse)]))) ?? []
+            let now = Date()
+            for entry in all.filter({ $0.deletedAt == nil }).dropFirst(historyLimit) {
+                entry.deletedAt = now
+                entry.updatedAt = now
+            }
+        }
+        try? save()
+        return (addedFavorites, addedVisits)
+    }
+
     private func favorites(for recipeId: Int) -> [Favorite] {
         let descriptor = FetchDescriptor<Favorite>(predicate: #Predicate<Favorite> { $0.recipeId == recipeId })
         return (try? fetch(descriptor)) ?? []
@@ -176,4 +238,68 @@ extension ModelContext {
 func uniqueRecipeIds(_ ids: [Int]) -> [Int] {
     var seen = Set<Int>()
     return ids.filter { seen.insert($0).inserted }
+}
+
+extension WebUserData {
+    /// 把 App 里的收藏和浏览记录（含软删除的）导出成网页版能导入的 JSON：
+    /// 收藏按 id，浏览记录带上菜谱信息（网页版按菜名认）
+    static func export(favorites: [Favorite], visits: [HistoryEntry], recipesById: [Int: Recipe], now: Date = Date()) -> String {
+        var active: [Int: Date] = [:]
+        var removed: [Int: Date] = [:]
+        for favorite in favorites {
+            if let deletedAt = favorite.deletedAt {
+                removed[favorite.recipeId] = max(removed[favorite.recipeId] ?? .distantPast, deletedAt)
+            } else {
+                active[favorite.recipeId] = min(active[favorite.recipeId] ?? .distantFuture, favorite.createdAt)
+            }
+        }
+        removed = removed.filter { active[$0.key] == nil }
+
+        var exportedVisits: [(recipe: [String: Any], time: Date)] = []
+        var visitRemovals: [(name: String, time: Date)] = []
+        for entry in visits.sorted(by: { $0.visitedAt < $1.visitedAt }) {
+            guard let recipe = recipesById[entry.recipeId] else {
+                continue
+            }
+            if entry.deletedAt == nil {
+                exportedVisits.append((recipe.webExport, entry.visitedAt))
+            } else {
+                visitRemovals.append((recipe.name, entry.visitedAt))
+            }
+        }
+
+        return export(
+            favorites: active.map { (recipeId: $0.key, time: $0.value) }.sorted { ($0.time, $0.recipeId) < ($1.time, $1.recipeId) },
+            favoriteRemovals: removed.map { (recipeId: $0.key, time: $0.value) }.sorted { ($0.time, $0.recipeId) < ($1.time, $1.recipeId) },
+            visits: exportedVisits,
+            visitRemovals: visitRemovals,
+            now: now
+        )
+    }
+}
+
+extension Recipe {
+    /// 网页版浏览记录里存的菜谱字段（apps/web/app/utils/userData.ts 的 readRecipe）
+    var webExport: [String: Any] {
+        var object: [String: Any] = ["id": id, "name": name, "stuff": stuff, "tools": tools, "tags": tags, "methods": methods]
+        if let link, !link.isEmpty {
+            object["link"] = link
+        }
+        if let bv, !bv.isEmpty {
+            object["bv"] = bv
+        }
+        if let difficulty, !difficulty.isEmpty {
+            object["difficulty"] = difficulty
+        }
+        if let emojis {
+            object["emojis"] = emojis
+        }
+        return object
+    }
+}
+
+/// 去重，保留第一次出现的顺序
+func uniqueStrings(_ names: [String]) -> [String] {
+    var seen = Set<String>()
+    return names.filter { seen.insert($0).inserted }
 }

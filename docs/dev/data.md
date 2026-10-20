@@ -12,13 +12,14 @@
 
 ## 数据规则
 
-列为 `name,stuff,bv,difficulty,tags,methods,tools,id`。
+列为 `name,stuff,bv,difficulty,tags,methods,tools,id,link`。`link` 是可选的最后一列，没有图文做法的行可以只写到 `id`。
 
 | 字段          | 规则                                                                                          |
 | ------------- | --------------------------------------------------------------------------------------------- |
 | name          | 必填                                                                                          |
 | stuff         | 必填；只能使用 `packages/data/food.json` 里的食材名，别名（如「虾仁」）要写成标准名（「虾」） |
 | bv            | B 站 BV 号或 av 号                                                                            |
+| link          | 图文做法的网址，`https://` 开头；可以和 `bv` 同时存在，详情页会多一个「看图文做法」入口       |
 | difficulty    | 简单 / 普通 / 困难，或留空                                                                    |
 | methods、tags | 自由填写                                                                                      |
 | tools         | 只能使用 `packages/data/food.json` 里的厨具名                                                 |
@@ -35,8 +36,21 @@ pnpm validate          # 有错误时退出码为 1，CI 中会在对应行标�
 pnpm validate --json   # 输出 JSON，供 AI / 脚本使用
 ```
 
-错误会让 CI 失败：缺 id 或 id 重复、未知食材或厨具、分隔符错误、难度取值不对、视频号格式不对。
-警告只做提示：同名菜谱、完全重复的行。同时会统计缺难度、缺做法的比例。
+错误会让 CI 失败：缺 id 或 id 重复、未知食材或厨具、分隔符错误、难度取值不对、视频号格式不对、图文链接不是 `https://` 网址。
+警告只做提示：同名菜谱、完全重复的行（没有视频的按图文链接比较）。同时会统计缺难度、缺做法、视频和图文都没有的比例。
+
+### 图文做法
+
+每道菜至少要有视频或图文中的一个，详情页优先打开 B 站视频，两者都有时多一个「看图文做法」。目前的图文来自 [HowToCook](https://github.com/Anduin2017/HowToCook)（Unlicense），链接指向它在 GitHub 上的 Markdown 页面。网页点「看图文做法」跳转到这个链接；云食册内置 `packages/data/recipe-text.json` 里的正文，在 App 里离线显示，也可以打开原文。增删 HowToCook 的菜后重新生成正文：
+
+```bash
+git clone --depth 1 https://github.com/Anduin2017/HowToCook.git ../HowToCook
+pnpm howtocook ../HowToCook
+```
+
+配图不进仓库：`pnpm howtocook` 把原文配图压成 webp 写到 `.cache/recipe-images`，合并到 main 后由 `Recipe Images` 工作流上传到 COS。桶、上传权限和换地址的做法见 [图文做法配图](/dev/recipe-images)。
+
+导入规则和取舍见 [方案记录 0009](/decisions/0009-text-recipes)。
 
 PR 上 CI 还会运行 `pnpm validate --base <目标分支>`：同一个 id 的菜名和视频都变了（像是把 id 挪给了另一道菜）或复用了已删除的 id 会报错，删除菜谱会给出警告。
 

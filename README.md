@@ -109,6 +109,8 @@ docker stop cook
 - 晴方啾
 - 课代表阿伟
 
+部分图文做法来自 [Anduin2017/HowToCook](https://github.com/Anduin2017/HowToCook)（Unlicense），感谢所有贡献者。
+
 ## [Sponsors](https://sponsors.yunyoujun.cn)
 
 感谢至今以来的所有赞助者们！因为你们的支持让我更有动力去做各种尝试。

@@ -1,7 +1,7 @@
 import XCTest
 
 /// 按 VoiceOver 读到的名字走一遍主流程：选食材 → 筛选 → 看看能做什么 → 打开菜谱 → 收藏。
-/// 这里只用无障碍标签找控件，标签不对或控件读不到，这个用例就会失败。
+/// 这里只用无障碍标签找控件，标签不对或控件读不到，这个用例就会失败。CI 在 iPhone 和 iPad 模拟器上各跑一遍，覆盖窄屏和宽屏两种布局。
 final class CookUITests: XCTestCase {
     override func setUp() {
         continueAfterFailure = false
@@ -27,10 +27,15 @@ final class CookUITests: XCTestCase {
         XCTAssertTrue(stirFry.isSelected)
         app.buttons["完成"].tap()
 
+        // 宽屏（iPad、折叠屏展开）左边选食材、右边直接出结果，没有底部按钮；窄屏点底部按钮进结果页
         let showResults = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "看看能做什么")).firstMatch
-        XCTAssertTrue(showResults.waitForExistence(timeout: 5))
-        XCTAssertTrue(showResults.isEnabled)
-        showResults.tap()
+        if app.windows.firstMatch.horizontalSizeClass == .regular {
+            XCTAssertFalse(showResults.exists)
+        } else {
+            XCTAssertTrue(showResults.waitForExistence(timeout: 5))
+            XCTAssertTrue(showResults.isEnabled)
+            showResults.tap()
+        }
 
         // 结果行合成一个元素，读出菜名和厨具难度
         let recipe = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch

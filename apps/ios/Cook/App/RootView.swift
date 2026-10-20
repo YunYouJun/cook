@@ -26,6 +26,7 @@ struct RootView: View {
                 .tabItem { Label("我的", systemImage: "person.crop.circle") }
                 .tag(AppTab.settings)
         }
+        .minimizesTabBarOnScroll()
     }
 }
 

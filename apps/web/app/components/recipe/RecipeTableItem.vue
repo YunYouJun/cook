@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { RecipeItem } from '~/types'
+import { getRecipeLink } from '~/utils/recipe'
 
 defineProps<{
   index: number
@@ -15,7 +16,7 @@ defineProps<{
     <td>
       <a
         class="text-blue-500" font-bold
-        :href="recipe.link || `https://www.bilibili.com/video/${recipe.bv}`"
+        :href="getRecipeLink(recipe)"
         target="_blank"
       >
         {{ recipe.name }}
