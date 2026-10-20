@@ -39,7 +39,14 @@ struct ResultsView: View {
         let favoriteIds = Set(favorites.map(\.recipeId))
 
         Group {
-            if session.selectedStuff.isEmpty, let tool = session.tool {
+            // 宽屏时结果常驻在右栏，还没选东西就先给个提示
+            if !session.hasSelection {
+                ContentUnavailableView(
+                    "先选几样食材",
+                    systemImage: "frying.pan",
+                    description: Text("在左边选食材或厨具，能做的菜会出现在这里。")
+                )
+            } else if session.selectedStuff.isEmpty, let tool = session.tool {
                 toolList(tool, favoriteIds: favoriteIds)
             } else {
                 recommendList(favoriteIds: favoriteIds)
