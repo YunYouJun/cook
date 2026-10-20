@@ -20,3 +20,4 @@
 | [0006](./0006-ios-bundle-id)         | iOS App 使用 `fun.yunle.cook`        | 已采纳 |
 | [0007](./0007-ai-and-sentence-input) | AI 能力：先做整句识别，AI 只负责听懂 | 已采纳 |
 | [0008](./0008-ios-analytics)         | iOS App 的数据统计与反馈             | 已采纳 |
+| [0009](./0009-text-recipes)          | 支持图文做法，首批来自 HowToCook     | 提议中 |

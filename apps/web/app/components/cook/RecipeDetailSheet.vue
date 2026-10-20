@@ -10,7 +10,7 @@ import { trackCookEvent } from '~/utils/analytics'
 import { isCustomRecipe } from '~/utils/customRecipe'
 import { promptText } from '~/utils/dialog'
 import { feedbackKinds } from '~/utils/feedback'
-import { getRecipeFeedbackLink, getRecipeLink, openRecipe } from '~/utils/recipe'
+import { getRecipeFeedbackLink, getRecipeLink, getRecipeTextLink, openRecipe } from '~/utils/recipe'
 import { yunleHaptic } from '~/utils/yunleHost'
 
 /**
@@ -44,7 +44,13 @@ const groups = computed(() => {
 
 const custom = computed(() => props.recipe && isCustomRecipe(props.recipe) ? props.recipe : undefined)
 const link = computed(() => props.recipe ? getRecipeLink(props.recipe) : '')
-const linkLabel = computed(() => props.recipe?.bv || link.value.includes('bilibili.com') ? '去 B 站看做法' : '看做法')
+const textLink = computed(() => props.recipe ? getRecipeTextLink(props.recipe) : '')
+const linkLabel = computed(() => {
+  if (props.recipe?.bv || link.value.includes('bilibili.com'))
+    return '去 B 站看做法'
+  // 收录的菜没有视频时，链接就是图文做法
+  return custom.value ? '看做法' : '看图文做法'
+})
 
 const canFavorite = computed(() => typeof (props.recipe as { id?: number } | undefined)?.id === 'number')
 const favorited = computed(() => props.recipe ? isFavorited(props.recipe) : false)
@@ -115,6 +121,14 @@ function watchVideo() {
   openRecipe(props.recipe)
 }
 
+function readText() {
+  if (!props.recipe || !textLink.value)
+    return
+  addRecipeHistory(props.recipe)
+  trackCookEvent('click_dish')
+  window.open(textLink.value, '_blank')
+}
+
 function onPresented() {
   if (open.value && props.recipe)
     trackCookEvent('view_recipe_detail')
@@ -141,8 +155,11 @@ function onPresented() {
 
       <div class="recipe-detail-actions">
         <ion-button v-if="link" expand="block" class="recipe-detail-primary" @click="watchVideo">
-          <ion-icon slot="start" :icon="ioniconsPlayCircle" />
+          <ion-icon slot="start" :icon="linkLabel === '看图文做法' ? ioniconsDocumentTextOutline : ioniconsPlayCircle" />
           {{ linkLabel }}
+        </ion-button>
+        <ion-button v-if="textLink" fill="clear" class="recipe-detail-fav" aria-label="看图文做法" title="看图文做法" @click="readText">
+          <ion-icon slot="icon-only" :icon="ioniconsDocumentTextOutline" />
         </ion-button>
         <ion-button
           v-if="custom"
@@ -186,9 +203,9 @@ function onPresented() {
           这是你自己添加的菜谱，只保存在这台设备上。
         </template>
         <template v-else>
-          食材来自菜谱记录，用量和调味以视频为准。
+          食材来自菜谱记录，用量和调味以{{ recipe.bv ? '视频' : '做法原文' }}为准。
           <button type="button" class="recipe-detail-feedback" @click="onFeedback">
-            视频打不开或信息不对？反馈一下
+            {{ recipe.bv ? '视频' : '链接' }}打不开或信息不对？反馈一下
           </button>
         </template>
       </p>

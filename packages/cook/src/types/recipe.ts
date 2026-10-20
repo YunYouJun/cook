@@ -10,7 +10,7 @@ export interface RecipeItem {
    */
   name: string
   /**
-   * 链接
+   * 图文做法链接；自己添加的菜谱也用它记录非 B 站的做法链接
    */
   link?: string
   /**

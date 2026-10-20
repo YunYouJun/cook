@@ -2,7 +2,7 @@ import CookCore
 import SwiftData
 import SwiftUI
 
-/// 菜谱详情：已有、还缺、常备分开列出，可以收藏、分享、去 B 站看做法
+/// 菜谱详情：已有、还缺、常备分开列出，可以收藏、分享、去 B 站或图文页看做法
 struct RecipeDetailView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
@@ -54,12 +54,15 @@ struct RecipeDetailView: View {
         ].filter { !$0.items.isEmpty }
     }
 
-    /// 视频网页：优先用记录的链接，其次 B 站视频号
+    /// 做法网页：优先用 B 站视频，没有视频时用图文做法链接
     private var webURL: URL? {
-        if let link = recipe.link, !link.isEmpty {
-            return URL(string: link)
-        }
-        return recipe.videoURL
+        recipe.videoURL ?? textURL
+    }
+
+    /// 图文做法链接（recipe.csv 的 link 列）
+    private var textURL: URL? {
+        guard let link = recipe.link, !link.isEmpty else { return nil }
+        return URL(string: link)
     }
 
     private var feedbackURL: URL {
@@ -109,9 +112,23 @@ struct RecipeDetailView: View {
             }
 
             Section {
-                if webURL != nil {
+                if recipe.videoURL != nil {
                     Button(action: openVideo) {
-                        Label(recipe.bv == nil ? "看做法" : "去 B 站看做法", systemImage: "play.rectangle")
+                        Label("去 B 站看做法", systemImage: "play.rectangle")
+                    }
+                }
+                // 有内置正文时在 App 里看，不用等 GitHub 打开；正文页里也能打开原文
+                if let text = store.text(for: recipe) {
+                    NavigationLink {
+                        RecipeTextView(recipe: recipe, text: text)
+                    } label: {
+                        Label("看图文做法", systemImage: "doc.text")
+                    }
+                } else if let textURL {
+                    Button {
+                        openURL(textURL)
+                    } label: {
+                        Label("看图文做法", systemImage: "doc.text")
                     }
                 }
                 Button {
@@ -201,7 +218,7 @@ struct RecipeDetailView: View {
         guard let webURL else {
             return
         }
-        guard let bv = recipe.bv, !bv.isEmpty, recipe.link?.isEmpty ?? true,
+        guard let bv = recipe.bv, !bv.isEmpty,
               let appURL = URL(string: "bilibili://video/\(bv)")
         else {
             openURL(webURL)

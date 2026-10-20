@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { setCookEventTracker } from '../apps/web/app/utils/analytics'
-import { getRecipeFeedbackLink, getRecipeLink, openRecipe } from '../apps/web/app/utils/recipe'
+import { getRecipeFeedbackLink, getRecipeLink, getRecipeTextLink, openRecipe } from '../apps/web/app/utils/recipe'
 
 describe('getRecipeLink', () => {
   it('records the video click before leaving, and analytics failures never block navigation', () => {
@@ -27,8 +27,15 @@ describe('getRecipeLink', () => {
     open.mockRestore()
   })
 
-  it('prefers the recorded link', () => {
-    expect(getRecipeLink({ link: 'https://example.com/recipe', bv: 'BV1xx' })).toBe('https://example.com/recipe')
+  it('prefers the bilibili video and keeps the text recipe as a second entry', () => {
+    const recipe = { link: 'https://example.com/recipe', bv: 'BV1xx' }
+    expect(getRecipeLink(recipe)).toBe('https://www.bilibili.com/video/BV1xx')
+    expect(getRecipeTextLink(recipe)).toBe('https://example.com/recipe')
+  })
+
+  it('uses the recorded link when there is no video', () => {
+    expect(getRecipeLink({ link: 'https://example.com/recipe' })).toBe('https://example.com/recipe')
+    expect(getRecipeTextLink({ link: 'https://example.com/recipe' })).toBe('')
   })
 
   it('falls back to the bilibili video', () => {

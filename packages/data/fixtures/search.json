@@ -1,6 +1,6 @@
 {
   "description": "由 pnpm fixtures 生成，勿手改。Web（test/fixtures.test.ts）和 iOS（CookCore）都要和它一致。",
-  "recipeCount": 663,
+  "recipeCount": 858,
   "search": [
     {
       "input": {
@@ -14,12 +14,12 @@
         {"id":248,"matched":["番茄","鸡蛋"],"missing":[]},
         {"id":250,"matched":["番茄","鸡蛋"],"missing":[]},
         {"id":425,"matched":["番茄","鸡蛋"],"missing":[]},
+        {"id":807,"matched":["番茄","鸡蛋"],"missing":[]},
         {"id":251,"matched":["番茄","鸡蛋"],"missing":["米"]},
         {"id":275,"matched":["番茄","鸡蛋"],"missing":["面食"]},
         {"id":276,"matched":["番茄","鸡蛋"],"missing":["面食"]},
         {"id":333,"matched":["鸡蛋","番茄"],"missing":["西葫芦"]},
-        {"id":419,"matched":["番茄","鸡蛋"],"missing":["方便面"]},
-        {"id":420,"matched":["番茄","鸡蛋"],"missing":["面食"]}
+        {"id":419,"matched":["番茄","鸡蛋"],"missing":["方便面"]}
       ],
       "warnings": []
     },
@@ -36,7 +36,7 @@
         {"id":248,"matched":["番茄","鸡蛋"],"missing":[]},
         {"id":250,"matched":["番茄","鸡蛋"],"missing":[]},
         {"id":425,"matched":["番茄","鸡蛋"],"missing":[]},
-        {"id":251,"matched":["番茄","鸡蛋"],"missing":["米"]}
+        {"id":807,"matched":["番茄","鸡蛋"],"missing":[]}
       ],
       "warnings": []
     },
@@ -95,6 +95,9 @@
         {"id":73,"matched":["鸡肉"],"missing":[]},
         {"id":77,"matched":["鸡肉"],"missing":[]},
         {"id":98,"matched":["鸡肉"],"missing":[]},
+        {"id":709,"matched":["鸡肉"],"missing":[]},
+        {"id":720,"matched":["鸡肉"],"missing":[]},
+        {"id":732,"matched":["鸡肉"],"missing":[]},
         {"id":50,"matched":["鸡肉"],"missing":["土豆"]},
         {"id":68,"matched":["鸡肉"],"missing":["土豆"]},
         {"id":66,"matched":["鸡肉"],"missing":["番茄","土豆"]},
@@ -129,7 +132,9 @@
         {"id":633,"matched":[],"missing":["菠菜","豆腐"]},
         {"id":640,"matched":[],"missing":["玉米","骨头"]},
         {"id":652,"matched":[],"missing":["鸭肉","白萝卜"]},
-        {"id":662,"matched":[],"missing":["羊肉","白萝卜"]}
+        {"id":662,"matched":[],"missing":["羊肉","白萝卜"]},
+        {"id":695,"matched":[],"missing":["土豆","番茄"]},
+        {"id":798,"matched":[],"missing":["鸡肉"]}
       ],
       "warnings": []
     },

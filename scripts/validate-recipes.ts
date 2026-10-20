@@ -65,7 +65,7 @@ else {
     `| 警告 | ${warnings.length} |`,
     `| 缺难度 | ${percent(stats.missingDifficulty)} |`,
     `| 缺做法 | ${percent(stats.missingMethods)} |`,
-    `| 缺视频 | ${percent(stats.missingVideo)} |`,
+    `| 缺视频和图文 | ${percent(stats.missingVideo)} |`,
     '',
   ].join('\n')
   console.log(`\n${summary}`)
