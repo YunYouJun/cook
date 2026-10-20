@@ -32,7 +32,7 @@
 - `recipe.csv` 增加最后一列 `link`（可选，`https://` 开头），`pnpm validate` 校验格式。
 - 详情页优先打开 B 站视频；只有图文时按钮叫「看图文做法」；两者都有时多一个图文入口。Web 和 iOS 一致。
 - 正文：`pnpm howtocook <HowToCook 目录>` 把链接到 HowToCook 的菜的 Markdown 转成段落（标题、正文、列表），生成 `packages/data/recipe-text.json`。云食册内置这份数据，「看图文做法」在 App 里离线显示，右上角和页底可以「打开原文」；网页仍然跳转到 `link`。
-- 配图：导入时压成 webp（最宽 1080），文件名取原图内容哈希，写到 `.cache/recipe-images`，正文里记相对路径和宽高。`pnpm images:upload` 上传到腾讯云 COS（已有的跳过、不删旧图），`Recipe Images` 工作流在 `recipe-text.json` 变化后自动上传。App 用 `imageBase + src` 加载，加载前按比例占位，失败就隐藏。桶复用云乐坊放公开素材的 `yunlefun-cos-1253292018`，对象放在 `cook/` 前缀下，见 [图文做法配图](/dev/recipe-images)。
+- 配图：导入时压成 webp（最宽 1080），文件名取原图内容哈希，写到 `.cache/recipe-images`，正文里记相对路径和宽高。`pnpm images:upload` 上传到腾讯云 COS（已有的跳过、不删旧图），`Recipe Images` 工作流在 `recipe-text.json` 变化后自动上传。App 用 `imageBase + src` 加载，加载前按比例占位，失败就隐藏。桶用云乐坊各项目共用的素材桶 `yunlefun-assets-prod-1325586649`，对象放在 `cook/` 前缀下，见 [图文做法配图](/dev/recipe-images)。
 - 首批从 HowToCook 导入：和已有菜同名的只补 `link`，其余新增一行（id 照常递增）。
 - 导入时只取能对应到食材词典的主料，难度按 HowToCook 的星级换算（1～2 星简单、3 星普通、4～5 星困难）。
 

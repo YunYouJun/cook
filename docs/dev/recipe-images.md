@@ -2,21 +2,23 @@
 
 云食册的图文做法正文打包在 App 里（`packages/data/recipe-text.json`），配图放在腾讯云 COS 上按需加载，仓库里不放图片。
 
-- 桶：`yunlefun-cos-1253292018`（ap-shanghai，公有读）
+- 桶：`yunlefun-assets-prod-1325586649`（ap-shanghai）
 - 前缀：`cook/howtocook/`
-- 访问地址：`https://yunlefun-cos-1253292018.cos.ap-shanghai.myqcloud.com/cook/`（`recipe-text.json` 的 `imageBase`）
+- 访问地址：`https://yunlefun-assets-prod-1325586649.cos.ap-shanghai.myqcloud.com/cook/`（`recipe-text.json` 的 `imageBase`）
+
+App 直接用这个地址加载，桶要允许公开读（私有写公有读，或者只给 `cook/*` 开公开读）。
 
 ## 为什么用这个桶
 
-云乐坊各项目的公开素材都放在这个桶里，按项目分前缀，直接用 COS 默认域名访问：
+`yunlefun-assets-prod-1325586649` 是云乐坊各项目共用的公开素材桶，每个项目占一个前缀，Cook 用 `cook/`。同一账号（APPID 1325586649）下的其他桶，用途见 [YunLeFun/www.yunle.fun](https://github.com/YunLeFun/www.yunle.fun) 的 `cloudbaserc.json`，都不适合放 App 配图：
 
-| 前缀                 | 用途                                  | 参考                                                                                 |
-| -------------------- | ------------------------------------- | ------------------------------------------------------------------------------------ |
-| `desktop/app-icons/` | 应用图标（含 Cook 的 `v2/cook.webp`） | [YunLeFun/icons](https://github.com/YunLeFun/icons) `assets/catalog/app-assets.json` |
-| `saier/app-icons/`   | 赛尔网站图标                          | 同上                                                                                 |
-| `cook/`              | Cook 图文做法配图                     | 本文                                                                                 |
+| 桶                                 | 用途                                                |
+| ---------------------------------- | --------------------------------------------------- |
+| `yunlefun-private-1325586649`      | 用户上传的私有文件                                  |
+| `yunlefun-drive-prod-1325586649`   | 云盘私有存储                                        |
+| `yunyoujun-assets-prod-1325586649` | 云盘公开分享的文件（`https://assets.yunyoujun.cn`） |
 
-[YunLeFun/www.yunle.fun](https://github.com/YunLeFun/www.yunle.fun) 的 `cloudbaserc.json` 里还有几个桶，都不适合放公开素材：`yunlefun-private-1325586649`、`yunlefun-drive-prod-1325586649` 是私有存储，`yunyoujun-assets-prod-1325586649`（`https://assets.yunyoujun.cn`）是云盘的公开分享文件。
+另一个账号的 `yunlefun-cos-1253292018` 放着 [YunLeFun/icons](https://github.com/YunLeFun/icons) 的应用图标（`desktop/app-icons/`），也没有用。
 
 ## 配图怎么生成
 
@@ -58,7 +60,7 @@
     {
       "effect": "allow",
       "action": ["name/cos:PutObject", "name/cos:HeadObject"],
-      "resource": ["qcs::cos:ap-shanghai:uid/1253292018:yunlefun-cos-1253292018/cook/*"]
+      "resource": ["qcs::cos:ap-shanghai:uid/1325586649:yunlefun-assets-prod-1325586649/cook/*"]
     }
   ]
 }

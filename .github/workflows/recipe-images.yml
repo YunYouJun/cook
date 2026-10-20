@@ -20,7 +20,7 @@ permissions:
 
 # 桶和前缀见 docs/dev/recipe-images.md；换桶时在仓库 Variables 里覆盖
 env:
-  COS_BUCKET: ${{ vars.COS_BUCKET || 'yunlefun-cos-1253292018' }}
+  COS_BUCKET: ${{ vars.COS_BUCKET || 'yunlefun-assets-prod-1325586649' }}
   COS_REGION: ${{ vars.COS_REGION || 'ap-shanghai' }}
   COS_PREFIX: ${{ vars.COS_PREFIX || 'cook/' }}
 

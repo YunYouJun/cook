@@ -5,7 +5,7 @@
     "license": "Unlicense",
     "commit": "f6da4528c4cb55fe0fbb5c3db17d76202b9f6ad9"
   },
-  "imageBase": "https://yunlefun-cos-1253292018.cos.ap-shanghai.myqcloud.com/cook/",
+  "imageBase": "https://yunlefun-assets-prod-1325586649.cos.ap-shanghai.myqcloud.com/cook/",
   "recipes": {
     "218": {
       "blocks": [
