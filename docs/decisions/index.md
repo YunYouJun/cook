@@ -22,3 +22,4 @@
 | [0008](./0008-ios-analytics)         | iOS App 的数据统计与反馈             | 已采纳 |
 | [0009](./0009-text-recipes)          | 支持图文做法，首批来自 HowToCook     | 提议中 |
 | [0010](./0010-recipe-quality-score)  | 用视频质量分决定同组菜谱的先后       | 已采纳 |
+| [0011](./0011-fridge-reminders)      | 冰箱食材与临期提醒                   | 已采纳 |

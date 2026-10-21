@@ -106,6 +106,27 @@ public struct Pantry: Codable, Hashable, Sendable {
     public var defaults: [String]
 }
 
+/// 食材冷藏大约能放几天（shelf-life.json）。冰箱里按它给默认到期日，只是参考，用户可以改
+public struct ShelfLife: Codable, Hashable, Sendable {
+    /// 没列出的食材（比如自己输入的）按这个天数估
+    public var defaultDays: Int
+    public var items: [String: Int]
+
+    enum CodingKeys: String, CodingKey {
+        case defaultDays = "default"
+        case items
+    }
+
+    public init(defaultDays: Int, items: [String: Int]) {
+        self.defaultDays = defaultDays
+        self.items = items
+    }
+
+    public func days(for name: String) -> Int {
+        items[name] ?? defaultDays
+    }
+}
+
 /// 菜谱数据的元信息（recipe-meta.json）
 public struct RecipeMeta: Codable, Hashable, Sendable {
     public struct Chunk: Codable, Hashable, Sendable {

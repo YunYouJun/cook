@@ -49,7 +49,14 @@ struct SettingsView: View {
                 } header: {
                     Text("做菜偏好")
                 } footer: {
-                    Text("登录 iCloud 后，收藏、浏览记录和做菜偏好会在你的设备间同步。")
+                    Text("登录 iCloud 后，收藏、浏览记录、做菜偏好和冰箱里的食材会在你的设备间同步。")
+                }
+                Section {
+                    FridgeReminderRows()
+                } header: {
+                    Text("冰箱")
+                } footer: {
+                    Text("冰箱里的食材到期前一天和当天提醒一次。提醒只在这台设备上排，不经过服务器。")
                 }
                 Section {
                     ShareLink(
