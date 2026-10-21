@@ -12,6 +12,8 @@ struct CookView: View {
     @Environment(FeedbackClient.self) private var feedback
     @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }, sort: \FridgeItem.expiresAt) private var fridgeItems: [FridgeItem]
     @State private var showingFilters = false
+    /// 冰箱快捷入口按它判断哪些过期了，跨过零点时刷新
+    @State private var now = Date()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var basket = BasketAnimator()
     @State private var input = ""
@@ -58,6 +60,7 @@ struct CookView: View {
         .overlay {
             BasketFlightLayer(animator: basket)
         }
+        .refreshesAtMidnight($now)
         .sensoryFeedback(.selection, trigger: session.selectedStuff)
         .sensoryFeedback(trigger: notice) { _, notice in
             switch notice?.kind {
@@ -173,7 +176,6 @@ struct CookView: View {
     /// 冰箱里有没过期的食材时，一键都加上；快过期的写在说明里
     @ViewBuilder
     private var fridgeShortcut: some View {
-        let now = Date()
         let usable = fridgeItems.filter { !Freshness(expiresAt: $0.expiresAt, now: now).isExpired }
         let names = uniqueStrings(usable.map(\.name))
         let urgent = uniqueStrings(usable.filter { Freshness(expiresAt: $0.expiresAt, now: now).needsAttention }.map(\.name))

@@ -8,15 +8,16 @@ struct FridgeView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
     @Environment(\.modelContext) private var context
+    @Environment(AppRouter.self) private var router
     @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }, sort: \FridgeItem.expiresAt) private var items: [FridgeItem]
     @AppStorage(FridgeReminder.enabledKey) private var remindersEnabled = false
     @AppStorage(FridgeReminder.promptDismissedKey) private var promptDismissed = false
     @State private var path = NavigationPath()
     @State private var adding = false
     @State private var editing: FridgeItem?
+    @State private var now = Date()
 
     var body: some View {
-        let now = Date()
         let groups = Dictionary(grouping: items) { item -> Int in
             let freshness = Freshness(expiresAt: item.expiresAt, now: now)
             return freshness.isExpired ? 2 : freshness.needsAttention ? 0 : 1
@@ -116,6 +117,13 @@ struct FridgeView: View {
             }
         }
         .sensoryFeedback(.success, trigger: items.count) { old, new in new > old }
+        .refreshesAtMidnight($now)
+        // 点开临期通知：不管之前点进了哪里，都回到冰箱首页看临期列表
+        .onChange(of: router.fridgeHomeRequests) {
+            path = NavigationPath()
+            adding = false
+            editing = nil
+        }
     }
 
     private func rows(_ list: [FridgeItem], now: Date) -> some View {
@@ -245,7 +253,7 @@ struct FridgeReminderRows: View {
 
     private var time: Binding<Date> {
         Binding {
-            Calendar.current.date(byAdding: .minute, value: minutes, to: Calendar.current.startOfDay(for: Date())) ?? Date()
+            Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: Date()) ?? Date()
         } set: { date in
             let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
             minutes = (parts.hour ?? 9) * 60 + (parts.minute ?? 0)
@@ -264,6 +272,30 @@ struct FridgeReminderRows: View {
                 denied = true
             }
         }
+    }
+}
+
+extension View {
+    /// 页面开着跨过零点、改了时区或回到前台时更新「现在」，到期天数和分组跟着变
+    func refreshesAtMidnight(_ now: Binding<Date>) -> some View {
+        modifier(MidnightRefresh(now: now))
+    }
+}
+
+private struct MidnightRefresh: ViewModifier {
+    @Binding var now: Date
+    @Environment(\.scenePhase) private var scenePhase
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                now = Date()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    now = Date()
+                }
+            }
     }
 }
 

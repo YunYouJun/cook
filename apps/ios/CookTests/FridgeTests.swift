@@ -44,6 +44,19 @@ final class FridgeTests: XCTestCase {
         XCTAssertEqual(plans[1].body, "番茄今天到期，看看能做什么吧。")
     }
 
+    func testReminderPlanKeepsLocalTimeAcrossDaylightSaving() {
+        var newYork = Calendar(identifier: .gregorian)
+        newYork.timeZone = TimeZone(identifier: "America/New_York")!
+        // 2026-03-08 和 11-01 是美国夏令时开始和结束的日子
+        for (month, day) in [(3, 8), (11, 1)] {
+            let expiry = newYork.date(from: DateComponents(year: 2026, month: month, day: day))!
+            let plans = FridgeReminder.plan([.init(name: "鸡蛋", expiresAt: expiry)], now: newYork.date(byAdding: .day, value: -3, to: expiry)!, minutes: 9 * 60, calendar: newYork)
+            let fire = plans.last!.fireDate
+            XCTAssertEqual(newYork.component(.hour, from: fire), 9, "\(month) 月 \(day) 日")
+            XCTAssertEqual(newYork.component(.minute, from: fire), 0)
+        }
+    }
+
     func testReminderPlanRespectsLimitAndShortensLongLists() {
         let now = day(10, 1)
         let entries = (2 ... 28).map { FridgeReminder.Entry(name: "第\($0)天", expiresAt: day(10, $0)) }

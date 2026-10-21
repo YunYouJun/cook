@@ -38,12 +38,12 @@ struct RootView: View {
         }
         .minimizesTabBarOnScroll()
         // 冰箱里的食材（包括其他设备同步过来的）或提醒设置一变，就重排临期通知；回到前台时也排一次，过了一天也不会漏
-        .task(id: reminderSignature) {
-            await FridgeReminder.reschedule(reminderEntries)
+        .onChange(of: reminderSignature, initial: true) {
+            FridgeReminder.reschedule(reminderEntries)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                Task { await FridgeReminder.reschedule(reminderEntries) }
+                FridgeReminder.reschedule(reminderEntries)
             }
         }
     }

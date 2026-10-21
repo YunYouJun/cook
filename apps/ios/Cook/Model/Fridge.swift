@@ -96,7 +96,8 @@ enum FridgeReminder {
 
         var plans: [Plan] = []
         for day in days.sorted() {
-            guard let fireDate = calendar.date(byAdding: .minute, value: minutes, to: day), fireDate > now else {
+            // 按当天的时和分算，不是 0 点加几分钟：夏令时切换那天两者差一小时
+            guard let fireDate = calendar.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: day), fireDate > now else {
                 continue
             }
             let today = uniqueStrings(byExpiryDay[day] ?? [])
@@ -140,8 +141,25 @@ enum FridgeReminder {
         }
     }
 
-    /// 冰箱里的食材或提醒设置变了就整份重排：先清掉之前排的，再按现在的食材排
-    static func reschedule(_ entries: [Entry], defaults: UserDefaults = .standard, now: Date = Date()) async {
+    /// 正在进行的重排；新的一次要等它停下再开始，免得旧的在新的清空之后又把过时的提醒加回去
+    @MainActor private static var running: Task<Void, Never>?
+
+    /// 冰箱里的食材或提醒设置变了就整份重排：先清掉之前排的，再按现在的食材排。
+    /// 连续触发时取消上一次、排队执行，最后留下的总是最新的一份
+    @MainActor
+    static func reschedule(_ entries: [Entry], defaults: UserDefaults = .standard) {
+        let previous = running
+        previous?.cancel()
+        running = Task {
+            await previous?.value
+            guard !Task.isCancelled else {
+                return
+            }
+            await apply(entries, defaults: defaults, now: Date())
+        }
+    }
+
+    private static func apply(_ entries: [Entry], defaults: UserDefaults, now: Date) async {
         let center = UNUserNotificationCenter.current()
         let pending = await center.pendingNotificationRequests()
         center.removePendingNotificationRequests(withIdentifiers: pending.map(\.identifier).filter { $0.hasPrefix(identifierPrefix) })
@@ -149,12 +167,15 @@ enum FridgeReminder {
             return
         }
         let status = await center.notificationSettings().authorizationStatus
-        guard status == .authorized || status == .provisional || status == .ephemeral else {
+        guard status == .authorized || status == .provisional || status == .ephemeral, !Task.isCancelled else {
             return
         }
         let minutes = defaults.object(forKey: timeKey) as? Int ?? defaultMinutes
         let calendar = Calendar.current
         for plan in plan(entries, now: now, minutes: minutes, calendar: calendar) {
+            guard !Task.isCancelled else {
+                return
+            }
             let content = UNMutableNotificationContent()
             content.title = plan.title
             content.body = plan.body
@@ -168,10 +189,17 @@ enum FridgeReminder {
     }
 }
 
-/// 当前在哪个 Tab；冰箱页「用这些做菜」和点开临期通知时切过去
+/// 当前在哪个 Tab；点开临期通知时切到冰箱，并退回冰箱首页
 @Observable
 final class AppRouter {
     var tab: AppTab = .cook
+    /// 每次要显示冰箱首页时加一，冰箱页看到变化就清掉已经点进去的页面和 sheet
+    private(set) var fridgeHomeRequests = 0
+
+    func showFridgeHome() {
+        tab = .fridge
+        fridgeHomeRequests += 1
+    }
 }
 
 /// App 在前台时也显示临期通知，点开通知进冰箱页
@@ -191,7 +219,7 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             return
         }
         await MainActor.run {
-            router.tab = .fridge
+            router.showFridgeHome()
         }
     }
 }
