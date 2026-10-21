@@ -50,6 +50,8 @@ struct RecipeImageViewer: View {
     @Binding var selection: Int
     @Environment(\.dismiss) private var dismiss
     @State private var chromeHidden = false
+    /// 放大时下滑是拖动图片看上面的部分，不收起大图
+    @State private var isZoomed = false
 
     private var index: Int? {
         photos.firstIndex { $0.id == selection }
@@ -62,6 +64,8 @@ struct RecipeImageViewer: View {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         chromeHidden.toggle()
                     }
+                } onZoom: { zoomed in
+                    isZoomed = zoomed
                 }
                 .tag(photo.id)
             }
@@ -91,6 +95,7 @@ struct RecipeImageViewer: View {
         .statusBarHidden()
         // 隐藏按钮时连 Home 指示条一起淡掉，只留图片
         .persistentSystemOverlays(chromeHidden ? .hidden : .automatic)
+        .interactiveDismissDisabled(isZoomed)
         // VoiceOver 双指搓擦（Z 字）关闭
         .accessibilityAction(.escape) {
             dismiss()
@@ -102,32 +107,16 @@ struct RecipeImageViewer: View {
             Button {
                 dismiss()
             } label: {
-                Image(systemName: "xmark")
-                    .font(.body.weight(.semibold))
-                    .frame(width: 44, height: 44)
-                    .floatingGlass(in: Circle(), interactive: true)
-                    .contentShape(Circle())
+                ViewerButtonLabel(systemImage: "xmark")
             }
             .buttonStyle(.plain)
             .accessibilityLabel("关闭")
 
             Spacer()
 
-            // 分享或存到相册，和系统相册一样放在右上角
-            if let index, let image = RecipeImageCache.cached(photos[index].url) {
-                let photo = photos[index]
-                ShareLink(
-                    item: Image(uiImage: image),
-                    preview: SharePreview(photo.caption ?? photo.accessibilityLabel, image: Image(uiImage: image))
-                ) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.body.weight(.semibold))
-                        .frame(width: 44, height: 44)
-                        .floatingGlass(in: Circle(), interactive: true)
-                        .contentShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("分享")
+            if let index {
+                ShareImageButton(photo: photos[index])
+                    .id(photos[index].id)
             }
         }
         .overlay {
@@ -146,25 +135,74 @@ struct RecipeImageViewer: View {
     }
 }
 
-/// 大图里的一页：先用正文里已经加载好的图，没有再下载
-private struct ZoomablePhoto: View {
-    let photo: RecipeTextPhoto
-    let isCurrent: Bool
-    let onTap: () -> Void
-    @State private var image: UIImage?
-    @State private var failed = false
+/// 大图上的圆形按钮，跟着字号放大，至少 44pt 方便点
+private struct ViewerButtonLabel: View {
+    let systemImage: String
+    @ScaledMetric(relativeTo: .body) private var size: CGFloat = 44
 
-    init(photo: RecipeTextPhoto, isCurrent: Bool, onTap: @escaping () -> Void) {
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.body.weight(.semibold))
+            .frame(width: size, height: size)
+            .floatingGlass(in: Circle(), interactive: true)
+            .contentShape(Circle())
+    }
+}
+
+/// 分享或存到相册，和系统相册一样放在右上角。图片加载好才出现，翻到还在加载的图时等它加载完
+private struct ShareImageButton: View {
+    let photo: RecipeTextPhoto
+    @State private var image: UIImage?
+
+    init(photo: RecipeTextPhoto) {
         self.photo = photo
-        self.isCurrent = isCurrent
-        self.onTap = onTap
         _image = State(initialValue: RecipeImageCache.cached(photo.url))
     }
 
     var body: some View {
         Group {
             if let image {
-                ZoomableImageView(image: image, isCurrent: isCurrent, onTap: onTap)
+                ShareLink(
+                    item: Image(uiImage: image),
+                    preview: SharePreview(photo.caption ?? photo.accessibilityLabel, image: Image(uiImage: image))
+                ) {
+                    ViewerButtonLabel(systemImage: "square.and.arrow.up")
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("分享")
+                .transition(.opacity)
+            }
+        }
+        .task {
+            guard image == nil, let loaded = try? await RecipeImageCache.load(photo.url) else { return }
+            withAnimation(.easeOut(duration: 0.2)) {
+                image = loaded
+            }
+        }
+    }
+}
+
+/// 大图里的一页：先用正文里已经加载好的图，没有再下载
+private struct ZoomablePhoto: View {
+    let photo: RecipeTextPhoto
+    let isCurrent: Bool
+    let onTap: () -> Void
+    let onZoom: (Bool) -> Void
+    @State private var image: UIImage?
+    @State private var failed = false
+
+    init(photo: RecipeTextPhoto, isCurrent: Bool, onTap: @escaping () -> Void, onZoom: @escaping (Bool) -> Void) {
+        self.photo = photo
+        self.isCurrent = isCurrent
+        self.onTap = onTap
+        self.onZoom = onZoom
+        _image = State(initialValue: RecipeImageCache.cached(photo.url))
+    }
+
+    var body: some View {
+        Group {
+            if let image {
+                ZoomableImageView(image: image, isCurrent: isCurrent, onTap: onTap, onZoom: onZoom)
                     .accessibilityElement()
                     .accessibilityLabel(photo.accessibilityLabel)
                     .accessibilityAddTraits(.isImage)
@@ -199,9 +237,11 @@ private struct ZoomableImageView: UIViewRepresentable {
     /// 翻到别的图后把这一张缩回原样，翻回来时和系统相册一样从整张图看起
     let isCurrent: Bool
     let onTap: () -> Void
+    /// 放大或缩回原样时告诉外面
+    let onZoom: (Bool) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onTap: onTap)
+        Coordinator(onTap: onTap, onZoom: onZoom)
     }
 
     func makeUIView(context: Context) -> ZoomingScrollView {
@@ -221,6 +261,7 @@ private struct ZoomableImageView: UIViewRepresentable {
 
     func updateUIView(_ scrollView: ZoomingScrollView, context: Context) {
         context.coordinator.onTap = onTap
+        context.coordinator.onZoom = onZoom
         if scrollView.imageView.image !== image {
             scrollView.imageView.image = image
             scrollView.resetZoom()
@@ -231,9 +272,12 @@ private struct ZoomableImageView: UIViewRepresentable {
 
     final class Coordinator: NSObject, UIScrollViewDelegate {
         var onTap: () -> Void
+        var onZoom: (Bool) -> Void
+        private var isZoomed = false
 
-        init(onTap: @escaping () -> Void) {
+        init(onTap: @escaping () -> Void, onZoom: @escaping (Bool) -> Void) {
             self.onTap = onTap
+            self.onZoom = onZoom
         }
 
         func viewForZooming(in scrollView: UIScrollView) -> UIView? {
@@ -242,6 +286,13 @@ private struct ZoomableImageView: UIViewRepresentable {
 
         func scrollViewDidZoom(_ scrollView: UIScrollView) {
             (scrollView as? ZoomingScrollView)?.centerImage()
+            let zoomed = scrollView.zoomScale > scrollView.minimumZoomScale + 0.01
+            if zoomed != isZoomed {
+                isZoomed = zoomed
+                // 缩回原样可能发生在 SwiftUI 更新视图时（翻页后复位），放到下一轮再改状态
+                let onZoom = onZoom
+                DispatchQueue.main.async { onZoom(zoomed) }
+            }
         }
 
         @objc func tapped() {
