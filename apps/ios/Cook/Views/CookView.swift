@@ -17,6 +17,8 @@ struct CookView: View {
     @State private var notice: InputNotice?
     /// 宽屏时一打开就并排显示两栏，不等用户点开侧栏
     @State private var columns: NavigationSplitViewVisibility = .all
+    /// 展开了「更多」的分组标题，用逗号连起来存，下次打开保持原样
+    @AppStorage("cook.food.moreExpanded") private var moreExpanded = ""
 
     var body: some View {
         let toolOnly = session.selectedStuff.isEmpty && session.tool != nil
@@ -284,8 +286,12 @@ struct CookView: View {
     @ViewBuilder
     private func stuffSection(_ title: String, _ items: [StuffItem]) -> some View {
         let count = items.filter { session.selectedStuff.contains($0.name) }.count
+        let isExpanded = moreExpanded.split(separator: ",").contains(Substring(title))
+        // 不常用的食材默认收起，但已选中的始终显示，免得选了却看不到
+        let visible = isExpanded ? items : items.filter { $0.more != true || session.selectedStuff.contains($0.name) }
+        let hidden = items.count - visible.count
         ChipSection(title: title, note: count > 0 ? "已选 \(count) 种" : nil) {
-            ForEach(items, id: \.name) { item in
+            ForEach(visible, id: \.name) { item in
                 Chip(
                     title: item.name,
                     emoji: item.emoji,
@@ -295,6 +301,23 @@ struct CookView: View {
                     session.toggleStuff(item.name)
                 }
             }
+            if isExpanded || hidden > 0 {
+                MoreChip(isExpanded: isExpanded, hidden: hidden) {
+                    toggleMore(title)
+                }
+            }
+        }
+    }
+
+    private func toggleMore(_ title: String) {
+        var groups = moreExpanded.split(separator: ",").map(String.init)
+        if let index = groups.firstIndex(of: title) {
+            groups.remove(at: index)
+        } else {
+            groups.append(title)
+        }
+        withAnimation(reduceMotion ? nil : .default) {
+            moreExpanded = groups.joined(separator: ",")
         }
     }
 }

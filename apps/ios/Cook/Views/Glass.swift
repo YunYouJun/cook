@@ -20,6 +20,16 @@ extension View {
         modifier(BottomActionBar(bar: bar))
     }
 
+    /// 浮在图片上的小控件（关闭按钮、页码、图片说明）。iOS 26 用玻璃，能点的加上按压反馈；旧系统用磨砂材质
+    @ViewBuilder
+    func floatingGlass(in shape: some Shape, interactive: Bool = false) -> some View {
+        if #available(iOS 26.0, *) {
+            glassEffect(interactive ? .regular.interactive() : .regular, in: shape)
+        } else {
+            background(.ultraThinMaterial, in: shape)
+        }
+    }
+
     /// iOS 26 起在下滑时把 Tab 栏收小，给内容多留地方
     @ViewBuilder
     func minimizesTabBarOnScroll() -> some View {
