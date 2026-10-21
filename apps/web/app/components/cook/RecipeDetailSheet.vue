@@ -9,7 +9,7 @@ import { getEmojisFromStuff } from '~/utils'
 import { trackCookEvent } from '~/utils/analytics'
 import { isCustomRecipe } from '~/utils/customRecipe'
 import { promptText } from '~/utils/dialog'
-import { feedbackKinds } from '~/utils/feedback'
+import { buildFeedbackMail, feedbackKinds } from '~/utils/feedback'
 import { getRecipeFeedbackLink, getRecipeLink, getRecipeTextLink, openRecipe } from '~/utils/recipe'
 import { yunleHaptic } from '~/utils/yunleHost'
 
@@ -64,7 +64,7 @@ function onFavorite() {
 
 const feedback = useRecipeFeedback()
 
-/** 选择问题类型后直接提交；提交不了时引导去 GitHub 填表 */
+/** 选择问题类型后直接提交；提交不了时引导发邮件或去 GitHub 填表（菜名和视频已预填） */
 async function onFeedback() {
   const recipe = props.recipe
   if (!recipe)
@@ -101,12 +101,21 @@ async function onFeedback() {
     await toast.present()
   }
   catch {
+    const mail = buildFeedbackMail({
+      topic: recipe.name,
+      lines: [
+        `菜谱：${recipe.name}（#${recipe.id}）`,
+        `问题：${feedbackKinds.find(item => item.kind === kind)?.label ?? kind}`,
+        note,
+      ],
+    })
     const alert = await alertController.create({
       header: '暂时没能提交',
-      message: '可以到 GitHub 填写反馈表单，菜名和视频已经帮你填好。',
+      message: '可以发邮件给我们，或者到 GitHub 填写反馈表单，菜名和视频都已经帮你填好。',
       buttons: [
         { text: '取消', role: 'cancel' },
-        { text: '去填写', handler: () => { window.open(getRecipeFeedbackLink(recipe), '_blank') } },
+        { text: '去 GitHub', handler: () => { window.open(getRecipeFeedbackLink(recipe), '_blank') } },
+        { text: '发邮件', handler: () => { window.location.href = mail } },
       ],
     })
     await alert.present()

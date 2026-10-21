@@ -58,8 +58,8 @@ PR 上 CI 还会运行 `pnpm validate --base <目标分支>`：同一个 id 的�
 
 ## 反馈闭环
 
-1. **用户反馈**：菜谱详情底部点「反馈一下」，选问题类型（视频打不开、食材或厨具不对、难度或做法不对、其他）即可提交，不需要 GitHub，也不强制登录。数据进 CloudBase 的 `cook-feedback` 云函数；提交失败时引导用户去 GitHub Issue 表单（`.github/ISSUE_TEMPLATE/recipe.yml`，已预填菜名和视频）。
-   「我的 → 问题反馈」是不针对某道菜的意见反馈：选类型（用着有问题、功能建议、想要的菜没有、其他），写几句，可以留邮箱或微信，同样不用登录，提交失败时引导去 GitHub Issues。
+1. **用户反馈**：菜谱详情底部点「反馈一下」，选问题类型（视频打不开、食材或厨具不对、难度或做法不对、其他）即可提交，不需要 GitHub，也不强制登录。数据进 CloudBase 的 `cook-feedback` 云函数；提交失败时引导用户发邮件（预填菜名、id 和问题）或去 GitHub Issue 表单（`.github/ISSUE_TEMPLATE/recipe.yml`，已预填菜名和视频）。
+   「我的 → 问题反馈」是不针对某道菜的意见反馈：选类型（用着有问题、功能建议、想要的菜没有、其他），写几句，可以留邮箱或微信，同样不用登录，提交失败时复制内容，引导发邮件到 `kf@yunle.fun` 或去 GitHub Issues。「菜谱投稿」打开同一个表单并预选「想要的菜没有」。渠道分流见 [0010](/decisions/0010-feedback-channels)。
    iOS App（云食册）没有 CloudBase SDK，用 `POST` 把同样的请求体发到云函数的 HTTP 访问地址，和 Web 共用设备限额和数据集合。三类请求都带 `platform`（`web` 或 `ios`）和 `version`（iOS 为 App 版本号），没有 `platform` 的旧数据算作 web。筛选信号按端分开累计（Web 的记录键不变，iOS 的另起一组），`summary.md` 里菜谱反馈、意见反馈和筛选信号都按端分开统计；`search-eval.json` 把两端合在一起评测排序。
 2. **筛选信号**：应用匿名记录两类聚合数据，只有食材组合、厨具、模式和菜谱 id，不含账号：
    - 停在一组食材上却没有任何结果（说明缺这类菜，或别名没对上）；
@@ -120,7 +120,7 @@ pnpm eval:search     # 用真实信号评估当前排序：前 10 命中率、MR
 1. 在 CloudBase 控制台新建四个集合，权限都设为「仅管理端可读写」：`cook_recipe_feedback`、`cook_search_signals`、`cook_feedback_quota`、`cook_app_feedback`（意见反馈）。
 2. 部署云函数：`tcb fn deploy cook-feedback`（配置见 `cloudbaserc.json`）。
 3. 给 `cook-feedback` 设置环境变量 `COOK_FEEDBACK_EXPORT_TOKEN`（一串足够长的随机字符），并开启 HTTP 访问服务，得到一个访问地址。同一个地址有两种用法：带 `x-cook-token` 的 `GET` 导出全部数据；不带口令的 `POST`（JSON 请求体，`action` 为 `report`、`signal` 或 `feedback`）供 iOS App 提交，iOS 构建时把这个地址填进 `COOK_FEEDBACK_URL`。
-4. 让未登录用户也能调用 `cook-feedback`：在控制台开启匿名登录或允许未登录访问该函数。否则只有登录用户能提交，未登录用户会被引导去 GitHub。
+4. 让未登录用户也能调用 `cook-feedback`：在控制台开启匿名登录或允许未登录访问该函数。否则只有登录用户能提交，未登录用户会被引导发邮件或去 GitHub。
 5. 本机 `.env` 填 `COOK_FEEDBACK_URL`（第 3 步的地址）和 `COOK_FEEDBACK_TOKEN`（同一个口令），之后就能 `pnpm feedback:pull`。
 
 云函数对每个设备（或账号）每天最多接受 200 次提交；同一个人对同一道菜的同一类问题每天只记一次，同一段意见反馈每天只记一次。意见反馈最多 500 字，联系方式最多 100 字，只出现在导出的 `export.json` 里，`summary.md` 只标记有没有留。

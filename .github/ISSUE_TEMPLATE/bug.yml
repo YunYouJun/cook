@@ -1,0 +1,39 @@
+name: Bug 反馈
+description: 能复现的问题：功能用不了、显示错误、闪退
+title: '[Bug] '
+labels: [bug]
+body:
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 平台
+      options:
+        - 网页版（浏览器）
+        - 网页版（云乐坊 App 内）
+        - 云食册（iOS App）
+        - 其他
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: 网页版填浏览器和系统；云食册在「我的 → 关于」里看版本号
+      placeholder: Safari / iOS 18，或 云食册 1.0.0（12）
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 选了 番茄、鸡蛋
+        2. 点开第一道菜
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望和实际
+      description: 期望看到什么，实际看到了什么；截图可以直接粘贴
+    validations:
+      required: true

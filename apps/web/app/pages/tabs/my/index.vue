@@ -1,9 +1,6 @@
 <script lang="ts" setup>
-import { actionSheetController, alertController, toastController } from '@ionic/vue'
 import dayjs from 'dayjs'
 import { customRecipes } from '~/composables/store/customRecipe'
-import { links } from '~/constants'
-import { appFeedbackCategories } from '~/utils/feedback'
 
 definePageMeta({
   alias: ['/my'],
@@ -54,57 +51,7 @@ async function handleSignOut(): Promise<void> {
   await signOut()
 }
 
-const feedback = useRecipeFeedback()
-
-/** 选类型、写几句，直接提交到 cook-feedback；提交不了时引导去 GitHub */
-async function handleAppFeedback(): Promise<void> {
-  const sheet = await actionSheetController.create({
-    header: '想反馈什么？',
-    buttons: [
-      ...appFeedbackCategories.map(item => ({ text: item.label, data: item.category })),
-      { text: '取消', role: 'cancel' },
-    ],
-  })
-  await sheet.present()
-  const { data: category, role } = await sheet.onDidDismiss()
-  if (role === 'cancel' || !category)
-    return
-
-  const alert = await alertController.create({
-    header: appFeedbackCategories.find(item => item.category === category)?.label,
-    message: '不用登录。留下联系方式的话，我们处理后可以告诉你。',
-    inputs: [
-      { name: 'note', type: 'textarea', placeholder: '说说具体情况', attributes: { maxlength: 500 } },
-      { name: 'contact', type: 'text', placeholder: '邮箱或微信（可选）', attributes: { maxlength: 100 } },
-    ],
-    buttons: [
-      { text: '取消', role: 'cancel' },
-      { text: '提交', role: 'confirm' },
-    ],
-  })
-  await alert.present()
-  const result = await alert.onDidDismiss<{ values: { note?: string, contact?: string } }>()
-  const note = result.data?.values.note?.trim() ?? ''
-  if (result.role !== 'confirm' || !note)
-    return
-
-  try {
-    await feedback.sendFeedback({ category, note, contact: result.data?.values.contact?.trim() || undefined })
-    const toast = await toastController.create({ message: '收到了，谢谢反馈', duration: 1800, position: 'top' })
-    await toast.present()
-  }
-  catch {
-    const fallback = await alertController.create({
-      header: '暂时没能提交',
-      message: '可以到 GitHub 提一个 issue。',
-      buttons: [
-        { text: '取消', role: 'cancel' },
-        { text: '去 GitHub', handler: () => { window.open(links.githubIssue, '_blank') } },
-      ],
-    })
-    await fallback.present()
-  }
-}
+const { openAppFeedback } = useAppFeedback()
 </script>
 
 <template>
@@ -197,15 +144,11 @@ async function handleAppFeedback(): Promise<void> {
       </ion-list>
 
       <ion-list :inset="true">
-        <ion-item button :detail="true" @click="handleAppFeedback">
+        <ion-item button :detail="true" @click="openAppFeedback()">
           <CookListIcon slot="start" :icon="ioniconsChatbubbleEllipsesOutline" color="#34c759" />
           <ion-label>问题反馈</ion-label>
         </ion-item>
-        <ion-item :href="links.githubDiscussions" target="_blank" :detail-icon="ioniconsOpenOutline">
-          <CookListIcon slot="start" :icon="ioniconsChatbubblesOutline" color="#30b0c7" />
-          <ion-label>参与讨论</ion-label>
-        </ion-item>
-        <ion-item :href="links.contribute" target="_blank" :detail-icon="ioniconsOpenOutline">
+        <ion-item button :detail="true" @click="openAppFeedback('recipe')">
           <CookListIcon slot="start" :icon="ioniconsMailOutline" color="#ff2d55" />
           <ion-label>菜谱投稿</ion-label>
         </ion-item>

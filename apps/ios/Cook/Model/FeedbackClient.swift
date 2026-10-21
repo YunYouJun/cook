@@ -36,6 +36,15 @@ final class FeedbackClient {
             case .other: return "其他"
             }
         }
+
+        var placeholder: String {
+            switch self {
+            case .bug: return "在哪个页面、做了什么、看到了什么"
+            case .idea: return "想要什么功能，用在什么时候"
+            case .recipe: return "菜名；有 B 站视频的话贴上链接"
+            case .other: return "说说具体情况"
+            }
+        }
     }
 
     enum SendError: Error {
@@ -49,6 +58,8 @@ final class FeedbackClient {
     nonisolated static let signalsKey = "shareSearchSignals"
     nonisolated static let maxNote = 500
     nonisolated static let maxContact = 100
+    /// 提交不了时的兜底邮箱，和 Web 的 links.supportEmail、云乐坊的「问题反馈」邮箱一致（docs/decisions/0010-feedback-channels.md）
+    nonisolated static let supportEmail = "kf@yunle.fun"
 
     /// 每次启动随机生成，只放在内存里，云函数用它按设备限额；不写盘，也不读 IDFV
     let reporter = UUID().uuidString
@@ -157,9 +168,22 @@ final class FeedbackClient {
         }
     }
 
+    // MARK: 邮件兜底
+
+    /// 预填好的反馈邮件，云函数连不上或没配置时用；不需要账号，比 GitHub 门槛低。格式和 Web 的 buildFeedbackMail 一致
+    nonisolated static func mailURL(topic: String, lines: [String], version: String = FeedbackClient.bundledVersion) -> URL {
+        let body = (lines.filter { !$0.isEmpty } + ["", "---", "来自 云食册（iOS \(version)）"]).joined(separator: "\n")
+        // URLQueryItem 不转义 & 和 +，正文里有这些字符会被截断，所以手动转义
+        let allowed = CharacterSet.urlQueryAllowed.subtracting(CharacterSet(charactersIn: "&=+?#"))
+        func encode(_ text: String) -> String {
+            text.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+        }
+        return URL(string: "mailto:\(supportEmail)?subject=\(encode("【云食册反馈】\(topic)"))&body=\(encode(body))")!
+    }
+
     // MARK: 构建配置
 
-    /// 构建时由 COOK_FEEDBACK_URL 写进 Info.plist；没填时反馈入口改成跳 GitHub
+    /// 构建时由 COOK_FEEDBACK_URL 写进 Info.plist；没填时意见反馈改成发邮件，菜谱反馈改成跳 GitHub
     nonisolated static var bundledEndpoint: URL? {
         guard let value = Bundle.main.object(forInfoDictionaryKey: "CookFeedbackURL") as? String,
               let url = URL(string: value.trimmingCharacters(in: .whitespaces)),

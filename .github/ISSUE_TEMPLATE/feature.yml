@@ -1,0 +1,28 @@
+name: 功能建议
+description: 想要的新功能或改进
+title: '[建议] '
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: 提交前先搜一下有没有人提过，有的话点个 👍 就好，我们按点赞数排优先级。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 遇到了什么问题
+      description: 在什么场景下、想做什么、现在为什么做不到
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: 希望怎么解决
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 涉及平台
+      multiple: true
+      options:
+        - 网页版
+        - 云食册（iOS App）
+        - 菜谱数据

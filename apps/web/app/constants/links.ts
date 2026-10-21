@@ -2,13 +2,10 @@ export const links = {
   cook: 'https://cook.yunyoujun.cn',
 
   /**
-   * 菜谱投稿链接
+   * 应用内反馈提交不了时的兜底邮箱，和云乐坊的「问题反馈」邮箱一致
+   * @see docs/decisions/0010-feedback-channels.md
    */
-  contribute: 'https://docs.qq.com/form/page/DWk9GWW9oTmlXZU9V',
-  /**
-   * 兔小巢反馈
-   */
-  feedback: 'https://support.qq.com/product/507827',
+  supportEmail: 'kf@yunle.fun',
   githubIssue: 'https://github.com/YunYouJun/cook/issues',
   githubDiscussions: 'https://github.com/YunYouJun/cook/discussions',
 

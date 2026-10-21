@@ -14,6 +14,8 @@ struct RecipeDetailView: View {
     @State private var note = ""
     @State private var showingSent = false
     @State private var showingFailed = false
+    /// 提交失败时记下这次反馈，邮件兜底用
+    @State private var failedIssue: FeedbackClient.RecipeIssue = .other
     @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }) private var favorites: [Favorite]
     let route: RecipeRoute
 
@@ -74,6 +76,13 @@ struct RecipeDetailView: View {
             URLQueryItem(name: "video", value: webURL?.absoluteString ?? ""),
         ]
         return components.url!
+    }
+
+    private var failedMailURL: URL {
+        FeedbackClient.mailURL(
+            topic: recipe.name,
+            lines: ["菜谱：\(recipe.name)（#\(recipe.id)）", "问题：\(failedIssue.label)", failedIssue == .other ? note : "", webURL?.absoluteString ?? ""]
+        )
     }
 
     var body: some View {
@@ -166,8 +175,9 @@ struct RecipeDetailView: View {
         .alert("暂时没能提交", isPresented: $showingFailed) {
             Button("取消", role: .cancel) {}
             Button("去 GitHub 填写") { openURL(feedbackURL) }
+            Button("发邮件") { openURL(failedMailURL) }
         } message: {
-            Text("可以到 GitHub 填写反馈表单，菜名和视频已经帮你填好。")
+            Text("可以发邮件给我们，或者到 GitHub 填写反馈表单，菜名和视频都已经帮你填好。")
         }
         // 菜名只放在大标题里，滚动后收进导航栏，不在页面里再写一遍
         .navigationTitle(recipe.name)
@@ -208,6 +218,7 @@ struct RecipeDetailView: View {
                 try await feedback.report(recipe, issue: issue, note: note)
                 showingSent = true
             } catch {
+                failedIssue = issue
                 showingFailed = true
             }
         }

@@ -56,6 +56,7 @@ export default defineConfig({
             { text: '0007 AI 与整句识别', link: '/decisions/0007-ai-and-sentence-input' },
             { text: '0008 iOS 统计与反馈', link: '/decisions/0008-ios-analytics' },
             { text: '0009 图文做法', link: '/decisions/0009-text-recipes' },
+            { text: '0010 反馈渠道分流', link: '/decisions/0010-feedback-channels' },
           ],
         },
       ],

@@ -124,4 +124,15 @@ final class FeedbackClientTests: XCTestCase {
             XCTFail("没配置地址时应该报错")
         } catch {}
     }
+
+    func testMailURLPrefillsSupportMailboxAndEscapesBody() throws {
+        let url = FeedbackClient.mailURL(topic: "功能建议", lines: ["番茄 & 鸡蛋 + 葱", ""], version: "2.0.0")
+        let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        XCTAssertEqual(components.scheme, "mailto")
+        XCTAssertEqual(components.path, FeedbackClient.supportEmail)
+        let query = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value ?? "") })
+        XCTAssertEqual(query.count, 2, "正文里的 & 不能拆出多余的参数")
+        XCTAssertEqual(query["subject"], "【云食册反馈】功能建议")
+        XCTAssertEqual(query["body"], "番茄 & 鸡蛋 + 葱\n\n---\n来自 云食册（iOS 2.0.0）", "空行去掉，+ 不能变成空格")
+    }
 }
