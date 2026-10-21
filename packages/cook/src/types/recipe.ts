@@ -70,4 +70,8 @@ export interface StuffItem {
    * 显示标签
    */
   label?: string
+  /**
+   * 不常用：选择页默认收进「更多」，已选中时照常显示
+   */
+  more?: boolean
 }
