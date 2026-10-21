@@ -4,6 +4,8 @@ import process from 'node:process'
 import Ajv from 'ajv'
 import { describe, expect, it } from 'vitest'
 import { parseIncompatibleFoodsCsv, parseRecipeCsv } from '../packages/cook/src/utils/csv'
+import { applyRecipeScores } from '../packages/cook/src/utils/score'
+import { readVideoStats } from '../packages/cook/src/utils/video-stats'
 
 const dataDir = resolve(process.cwd(), 'packages/data')
 const readJson = (file: string) => JSON.parse(readFileSync(resolve(dataDir, file), 'utf8'))
@@ -17,7 +19,7 @@ function validate(schemaFile: string, data: unknown) {
 // Web 和 iOS 读同一份 JSON，结构变化必须同时改 schema、DATA_SCHEMA_VERSION 和 CookCore
 describe('packages/data matches its JSON Schema', () => {
   it('recipes parsed from recipe.csv', () => {
-    const recipes = parseRecipeCsv(readFileSync(resolve(dataDir, 'recipe.csv'), 'utf8'))
+    const recipes = applyRecipeScores(parseRecipeCsv(readFileSync(resolve(dataDir, 'recipe.csv'), 'utf8')), readVideoStats())
     expect(validate('recipe.schema.json', JSON.parse(JSON.stringify(recipes)))).toEqual([])
   })
 
@@ -35,6 +37,10 @@ describe('packages/data matches its JSON Schema', () => {
     ['shelf-life.json', 'shelf-life.schema.json'],
   ])('%s', (file, schema) => {
     expect(validate(schema, readJson(file))).toEqual([])
+  })
+
+  it.runIf(existsSync(resolve(dataDir, 'video-stats.json')))('video-stats.json', () => {
+    expect(validate('video-stats.schema.json', readJson('video-stats.json'))).toEqual([])
   })
 
   // 冰箱按它给默认到期日，词典里的食材都要有

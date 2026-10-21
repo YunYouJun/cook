@@ -10,15 +10,22 @@
     },
     {
       "name": "花菜",
+      "emoji": "🌼",
+      "more": true
+    },
+    {
+      "name": "西兰花",
       "emoji": "🥦"
     },
     {
       "name": "白萝卜",
-      "emoji": "🥣"
+      "emoji": "🥣",
+      "more": true
     },
     {
       "name": "西葫芦",
-      "emoji": "🥒"
+      "emoji": "🥒",
+      "more": true
     },
     {
       "name": "番茄",
@@ -27,7 +34,8 @@
     },
     {
       "name": "芹菜",
-      "emoji": "🥬"
+      "emoji": "🥬",
+      "more": true
     },
     {
       "name": "黄瓜",
@@ -38,8 +46,13 @@
       "emoji": "🧅"
     },
     {
+      "name": "青椒",
+      "emoji": "🫑"
+    },
+    {
       "name": "莴笋",
-      "emoji": "🎍"
+      "emoji": "🎍",
+      "more": true
     },
     {
       "name": "菌菇",
@@ -63,25 +76,60 @@
     },
     {
       "name": "菠菜",
-      "emoji": "🥬"
+      "emoji": "🥬",
+      "more": true
     },
     {
       "name": "空心菜",
-      "emoji": "🌿"
+      "emoji": "🌿",
+      "more": true
     },
     {
       "name": "玉米",
-      "emoji": "🌽"
+      "emoji": "🌽",
+      "more": true
     },
     {
       "name": "苦瓜",
-      "emoji": "🥒"
+      "emoji": "🥒",
+      "more": true
+    },
+    {
+      "name": "辣椒",
+      "emoji": "🌶️",
+      "more": true
+    },
+    {
+      "name": "豆角",
+      "emoji": "🫛",
+      "more": true
+    },
+    {
+      "name": "冬瓜",
+      "emoji": "🍈",
+      "more": true
+    },
+    {
+      "name": "生菜",
+      "emoji": "🥬",
+      "more": true
+    },
+    {
+      "name": "豆芽",
+      "emoji": "🌱",
+      "more": true
+    },
+    {
+      "name": "青菜",
+      "emoji": "🥬",
+      "more": true
     }
   ],
   "meat": [
     {
       "name": "午餐肉",
-      "emoji": "🥓"
+      "emoji": "🥓",
+      "more": true
     },
     {
       "name": "香肠",
@@ -89,7 +137,8 @@
     },
     {
       "name": "腊肠",
-      "emoji": "🌭"
+      "emoji": "🌭",
+      "more": true
     },
     {
       "name": "鸡肉",
@@ -113,7 +162,8 @@
     },
     {
       "name": "骨头",
-      "emoji": "🦴"
+      "emoji": "🦴",
+      "more": true
     },
     {
       "name": "鱼",
@@ -121,11 +171,13 @@
     },
     {
       "name": "鸭肉",
-      "emoji": "🦆"
+      "emoji": "🦆",
+      "more": true
     },
     {
       "name": "羊肉",
-      "emoji": "🐑"
+      "emoji": "🐑",
+      "more": true
     }
   ],
   "staple": [

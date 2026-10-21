@@ -16,7 +16,8 @@
       "difficulty": { "enum": ["简单", "普通", "困难"] },
       "tags": { "type": "array", "items": { "type": "string" } },
       "methods": { "type": "array", "items": { "type": "string" } },
-      "tools": { "type": "array", "items": { "type": "string" } }
+      "tools": { "type": "array", "items": { "type": "string" } },
+      "score": { "type": "integer", "minimum": 0, "maximum": 100, "description": "视频质量分，由 pnpm convert 按 video-stats.json 算出；只决定同组先后" }
     }
   }
 }

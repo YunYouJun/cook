@@ -41,6 +41,11 @@ export interface RecipeItem {
    * 工具
    */
   tools: string[]
+  /**
+   * 视频质量分 0～100，`pnpm convert` 按 packages/data/video-stats.json 算好写入；
+   * 没有时按 DEFAULT_RECIPE_SCORE。只在缺的食材、用上的食材都一样时决定先后
+   */
+  score?: number
 }
 
 export type Recipes = RecipeItem[]
@@ -70,4 +75,8 @@ export interface StuffItem {
    * 显示标签
    */
   label?: string
+  /**
+   * 不常用：选择页默认收进「更多」，已选中时照常显示
+   */
+  more?: boolean
 }

@@ -1,6 +1,6 @@
 {
   "description": "由 pnpm fixtures 生成，勿手改。Web（test/fixtures.test.ts）和 iOS（CookCore）都要和它一致。",
-  "recipeCount": 858,
+  "recipeCount": 877,
   "search": [
     {
       "input": {
@@ -128,12 +128,12 @@
         {"id":228,"matched":[],"missing":["白萝卜"]},
         {"id":295,"matched":[],"missing":["白萝卜"]},
         {"id":300,"matched":[],"missing":["菌菇"]},
-        {"id":453,"matched":[],"missing":["花菜","豆腐","鸡蛋"]},
+        {"id":453,"matched":[],"missing":["西兰花","豆腐","鸡蛋"]},
         {"id":633,"matched":[],"missing":["菠菜","豆腐"]},
         {"id":640,"matched":[],"missing":["玉米","骨头"]},
         {"id":652,"matched":[],"missing":["鸭肉","白萝卜"]},
         {"id":662,"matched":[],"missing":["羊肉","白萝卜"]},
-        {"id":695,"matched":[],"missing":["土豆","番茄"]},
+        {"id":695,"matched":[],"missing":["豆角","土豆","番茄"]},
         {"id":798,"matched":[],"missing":["鸡肉"]}
       ],
       "warnings": []
