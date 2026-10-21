@@ -75,6 +75,8 @@ public struct MethodGroup: Hashable, Sendable {
 /// 按已有食材推荐菜谱，移植自 packages/cook/src/utils/recommend.ts。
 /// 改动规则时两边一起改，并用 `pnpm fixtures` 重新生成共享用例。
 public struct Recommender: Sendable {
+    /// 没有质量分的菜按中间分排，和 TS 的 DEFAULT_RECIPE_SCORE 一致
+    public static let defaultScore = 50
     /// 兜底大杂烩（火锅、炸万物等）列的是「能放什么」而不是「必须有什么」，数据里都在 10 种食材以上
     public static let catchAllMinStuff = 10
     /// 大杂烩至少要用上这么多种已选食材才推荐
@@ -276,6 +278,12 @@ public struct Recommender: Sendable {
             }
             if a.matchedStuff.count != b.matchedStuff.count {
                 return a.matchedStuff.count > b.matchedStuff.count
+            }
+            // 同组里视频质量高的在前，见 docs/decisions/0010-recipe-quality-score.md
+            let aScore = a.recipe.score ?? Self.defaultScore
+            let bScore = b.recipe.score ?? Self.defaultScore
+            if aScore != bScore {
+                return aScore > bScore
             }
             return a.sourceIndex < b.sourceIndex
         }

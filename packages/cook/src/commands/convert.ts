@@ -15,6 +15,8 @@ import {
   sharedDataFiles,
 } from '../utils/config.js'
 import { parseIncompatibleFoodsCsv, parseRecipeCsv } from '../utils/csv.js'
+import { applyRecipeScores } from '../utils/score.js'
+import { readVideoStats } from '../utils/video-stats.js'
 
 // 正则表达式预编译,避免每次调用时重新编译
 const DATE_SLASH_REGEX = /\//g
@@ -48,7 +50,8 @@ function convertRecipes() {
   consola.info('Converting recipe data...')
 
   const csvData = fs.readFileSync(recipeCsvFile, 'utf-8')
-  const recipes = parseRecipeCsv(csvData)
+  // 质量分在这里算好写进 JSON，Web 和 iOS 只读 score 字段
+  const recipes = applyRecipeScores(parseRecipeCsv(csvData), readVideoStats())
 
   if (recipes.length === 0) {
     consola.warn('No recipes parsed, skipping JSON generation')
