@@ -56,7 +56,8 @@ final class FridgeItem {
     var name: String = ""
     /// 放进冰箱的那天
     var addedAt: Date = Date()
-    /// 最后一天能吃（当天 0 点），默认按 shelf-life.json 估
+    /// 最后一天能吃，默认按 shelf-life.json 估。只代表日期，存成那天的 UTC 0 点（见 FridgeDay），
+    /// 换了时区或同步到别的时区的设备也还是同一天；用的时候取 expiryDay(in:)
     var expiresAt: Date = Date()
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
@@ -68,6 +69,11 @@ final class FridgeItem {
         self.expiresAt = expiresAt
         createdAt = addedAt
         updatedAt = addedAt
+    }
+
+    /// 到期那天在当前时区的 0 点，算剩几天、排提醒和选日期都用它
+    func expiryDay(in calendar: Calendar = .current) -> Date {
+        FridgeDay.local(expiresAt, calendar: calendar)
     }
 }
 
@@ -242,8 +248,8 @@ extension ModelContext {
     @discardableResult
     func addToFridge(_ name: String, days: Int, at date: Date = Date(), calendar: Calendar = .current) -> FridgeItem {
         let today = calendar.startOfDay(for: date)
-        let expiresAt = calendar.date(byAdding: .day, value: days, to: today) ?? today
-        let item = FridgeItem(name: name, addedAt: date, expiresAt: expiresAt)
+        let expiryDay = calendar.date(byAdding: .day, value: days, to: today) ?? today
+        let item = FridgeItem(name: name, addedAt: date, expiresAt: FridgeDay.stored(expiryDay, calendar: calendar))
         insert(item)
         try? save()
         return item
@@ -260,7 +266,7 @@ extension ModelContext {
     }
 
     func setExpiry(_ item: FridgeItem, to date: Date, calendar: Calendar = .current) {
-        item.expiresAt = calendar.startOfDay(for: date)
+        item.expiresAt = FridgeDay.stored(date, calendar: calendar)
         item.updatedAt = Date()
         try? save()
     }

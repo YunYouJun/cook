@@ -11,14 +11,14 @@ enum AppTab: Hashable {
 }
 
 struct RootView: View {
-    @Environment(AppRouter.self) private var router
+    /// 每个窗口自己的 Tab，不跟别的窗口联动
+    @State private var router = AppRouter()
     @Environment(\.scenePhase) private var scenePhase
     @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }) private var fridgeItems: [FridgeItem]
     @AppStorage(FridgeReminder.enabledKey) private var remindersEnabled = false
     @AppStorage(FridgeReminder.timeKey) private var reminderMinutes = FridgeReminder.defaultMinutes
 
     var body: some View {
-        @Bindable var router = router
         TabView(selection: $router.tab) {
             CookView()
                 .tabItem { Label("做菜", systemImage: "frying.pan") }
@@ -37,6 +37,10 @@ struct RootView: View {
                 .tag(AppTab.settings)
         }
         .minimizesTabBarOnScroll()
+        .environment(router)
+        .onReceive(NotificationCenter.default.publisher(for: .showFridgeHome)) { _ in
+            router.showFridgeHome()
+        }
         // 冰箱里的食材（包括其他设备同步过来的）或提醒设置一变，就重排临期通知；回到前台时也排一次，过了一天也不会漏
         .onChange(of: reminderSignature, initial: true) {
             FridgeReminder.reschedule(reminderEntries)
@@ -49,7 +53,7 @@ struct RootView: View {
     }
 
     private var reminderEntries: [FridgeReminder.Entry] {
-        fridgeItems.map { FridgeReminder.Entry(name: $0.name, expiresAt: $0.expiresAt) }
+        fridgeItems.map { FridgeReminder.Entry(name: $0.name, expiresAt: $0.expiryDay()) }
     }
 
     private var reminderSignature: String {

@@ -68,7 +68,12 @@ final class FridgeTests: XCTestCase {
         let container = Persistence.makeContainer(inMemory: true)
         let context = container.mainContext
         let item = context.addToFridge("鸡蛋", days: 30, at: day(10, 20, hour: 18), calendar: calendar)
-        XCTAssertEqual(item.expiresAt, day(11, 19))
+        XCTAssertEqual(item.expiryDay(in: calendar), day(11, 19))
+        // 同步到洛杉矶的设备上，还是 11 月 19 日到期
+        var losAngeles = Calendar(identifier: .gregorian)
+        losAngeles.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        let there = losAngeles.dateComponents([.year, .month, .day, .hour], from: item.expiryDay(in: losAngeles))
+        XCTAssertEqual([there.year, there.month, there.day, there.hour], [2026, 11, 19, 0])
 
         context.removeFromFridge([item], at: day(10, 21))
         let active = try context.fetch(FetchDescriptor<FridgeItem>(predicate: #Predicate { $0.deletedAt == nil }))

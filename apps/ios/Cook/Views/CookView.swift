@@ -176,9 +176,9 @@ struct CookView: View {
     /// 冰箱里有没过期的食材时，一键都加上；快过期的写在说明里
     @ViewBuilder
     private var fridgeShortcut: some View {
-        let usable = fridgeItems.filter { !Freshness(expiresAt: $0.expiresAt, now: now).isExpired }
+        let usable = fridgeItems.filter { !Freshness(expiresAt: $0.expiryDay(), now: now).isExpired }
         let names = uniqueStrings(usable.map(\.name))
-        let urgent = uniqueStrings(usable.filter { Freshness(expiresAt: $0.expiresAt, now: now).needsAttention }.map(\.name))
+        let urgent = uniqueStrings(usable.filter { Freshness(expiresAt: $0.expiryDay(), now: now).needsAttention }.map(\.name))
         if !names.isEmpty {
             let added = names.allSatisfy(session.selectedStuff.contains)
             Section {

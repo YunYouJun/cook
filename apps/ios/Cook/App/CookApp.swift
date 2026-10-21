@@ -12,7 +12,6 @@ struct CookApp: App {
     @State private var loadResult: Result<RecipeStore, Error>
     @State private var session: CookSession
     @State private var feedback = FeedbackClient()
-    @State private var router: AppRouter
     private let container: ModelContainer
     /// 通知中心只弱引用代理，这里留着
     private let notificationDelegate: NotificationDelegate
@@ -28,10 +27,8 @@ struct CookApp: App {
         _loadResult = State(initialValue: result)
         _session = State(initialValue: CookSession(defaultPantry: defaultPantry, context: container.mainContext))
         self.container = container
-        let router = AppRouter()
-        _router = State(initialValue: router)
         // 点开通知会在启动完成前回调，代理要在这里就设好
-        notificationDelegate = NotificationDelegate(router: router)
+        notificationDelegate = NotificationDelegate()
         UNUserNotificationCenter.current().delegate = notificationDelegate
     }
 
@@ -43,7 +40,6 @@ struct CookApp: App {
                     .environment(store)
                     .environment(session)
                     .environment(feedback)
-                    .environment(router)
             case let .failure(error):
                 ContentUnavailableView(
                     "菜谱数据加载失败",

@@ -19,7 +19,7 @@ struct FridgeView: View {
 
     var body: some View {
         let groups = Dictionary(grouping: items) { item -> Int in
-            let freshness = Freshness(expiresAt: item.expiresAt, now: now)
+            let freshness = Freshness(expiresAt: item.expiryDay(), now: now)
             return freshness.isExpired ? 2 : freshness.needsAttention ? 0 : 1
         }
         let soon = groups[0] ?? []
@@ -131,7 +131,7 @@ struct FridgeView: View {
             Button {
                 editing = item
             } label: {
-                FridgeRow(item: item, emoji: emoji(for: item.name), freshness: Freshness(expiresAt: item.expiresAt, now: now))
+                FridgeRow(item: item, emoji: emoji(for: item.name), freshness: Freshness(expiresAt: item.expiryDay(), now: now))
             }
             .swipeActions(edge: .trailing) {
                 Button("吃完了", systemImage: "checkmark") {
@@ -442,7 +442,7 @@ private struct FridgeItemSheet: View {
                     }
                 }
             }
-            .onAppear { expiresAt = item.expiresAt }
+            .onAppear { expiresAt = item.expiryDay() }
         }
     }
 }

@@ -2,6 +2,33 @@ import Foundation
 import Observation
 import UserNotifications
 
+/// 冰箱里的日期只记年月日：存成那天的 UTC 0 点，用的时候换成当地那天的 0 点。
+/// 直接存当地 0 点的话，同步到别的时区（或者人出了国）会差一天
+enum FridgeDay {
+    private static let utc: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar
+    }()
+
+    /// 当地的某一天 → 存储用的日期
+    static func stored(_ day: Date, calendar: Calendar = .current) -> Date {
+        utc.date(from: gregorian(calendar).dateComponents([.year, .month, .day], from: day)) ?? day
+    }
+
+    /// 存储的日期 → 当地那天的 0 点
+    static func local(_ stored: Date, calendar: Calendar = .current) -> Date {
+        gregorian(calendar).date(from: utc.dateComponents([.year, .month, .day], from: stored)) ?? stored
+    }
+
+    /// 用户的日历可能是和历、佛历，年月日统一按公历换算，只取它的时区
+    private static func gregorian(_ calendar: Calendar) -> Calendar {
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = calendar.timeZone
+        return gregorian
+    }
+}
+
 /// 离到期还有几天，按自然日算：0 是今天到期，负数是过期了几天
 enum Freshness: Equatable {
     case expired(days: Int)
@@ -189,7 +216,12 @@ enum FridgeReminder {
     }
 }
 
-/// 当前在哪个 Tab；点开临期通知时切到冰箱，并退回冰箱首页
+extension Notification.Name {
+    /// 点开了临期通知，各个窗口切到冰箱首页
+    static let showFridgeHome = Notification.Name("fridge.showHome")
+}
+
+/// 一个窗口当前在哪个 Tab；iPad 上每个窗口各有一份。点开临期通知时切到冰箱，并退回冰箱首页
 @Observable
 final class AppRouter {
     var tab: AppTab = .cook
@@ -204,12 +236,6 @@ final class AppRouter {
 
 /// App 在前台时也显示临期通知，点开通知进冰箱页
 final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
-    private let router: AppRouter
-
-    init(router: AppRouter) {
-        self.router = router
-    }
-
     func userNotificationCenter(_: UNUserNotificationCenter, willPresent _: UNNotification) async -> UNNotificationPresentationOptions {
         [.banner, .list, .sound]
     }
@@ -219,7 +245,7 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             return
         }
         await MainActor.run {
-            router.showFridgeHome()
+            NotificationCenter.default.post(name: .showFridgeHome, object: nil)
         }
     }
 }
