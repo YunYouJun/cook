@@ -16,6 +16,8 @@ public struct Recipe: Codable, Hashable, Sendable, Identifiable {
     public var tags: [String]
     public var methods: [String]
     public var tools: [String]
+    /// 视频质量分 0～100，`pnpm convert` 算好写入；没有时按 Recommender.defaultScore，只决定同组先后
+    public var score: Int?
 
     public init(
         id: Int,
@@ -27,7 +29,8 @@ public struct Recipe: Codable, Hashable, Sendable, Identifiable {
         difficulty: String? = nil,
         tags: [String] = [],
         methods: [String] = [],
-        tools: [String] = []
+        tools: [String] = [],
+        score: Int? = nil
     ) {
         self.id = id
         self.name = name
@@ -39,6 +42,7 @@ public struct Recipe: Codable, Hashable, Sendable, Identifiable {
         self.tags = tags
         self.methods = methods
         self.tools = tools
+        self.score = score
     }
 
     public init(from decoder: Decoder) throws {
@@ -53,6 +57,7 @@ public struct Recipe: Codable, Hashable, Sendable, Identifiable {
         tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
         methods = try container.decodeIfPresent([String].self, forKey: .methods) ?? []
         tools = try container.decodeIfPresent([String].self, forKey: .tools) ?? []
+        score = try container.decodeIfPresent(Int.self, forKey: .score)
     }
 
     /// B 站视频页
