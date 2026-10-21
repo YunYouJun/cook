@@ -27,6 +27,18 @@ final class FridgeTests: XCTestCase {
         XCTAssertEqual(Freshness.expired(days: 2).label, "过期 2 天")
     }
 
+    func testFreshnessOnDayWithoutMidnight() {
+        var santiago = Calendar(identifier: .gregorian)
+        santiago.timeZone = TimeZone(identifier: "America/Santiago")!
+        // 智利 2026-09-06 从 1 点开始，这天只有 23 小时
+        let now = santiago.date(from: DateComponents(year: 2026, month: 9, day: 6, hour: 12))!
+        let days = (6 ... 10).map { day -> Int in
+            let expiry = santiago.startOfDay(for: santiago.date(from: DateComponents(year: 2026, month: 9, day: day, hour: 12))!)
+            return FridgeDay.days(from: now, to: expiry, calendar: santiago)
+        }
+        XCTAssertEqual(days, [0, 1, 2, 3, 4])
+    }
+
     func testReminderPlanMergesSameDayAndSkipsPast() {
         // 10 月 20 日上午 10 点，已经过了今天 9 点的提醒
         let now = day(10, 20, hour: 10)

@@ -21,6 +21,11 @@ enum FridgeDay {
         gregorian(calendar).date(from: utc.dateComponents([.year, .month, .day], from: stored)) ?? stored
     }
 
+    /// 两个当地日期之间差几个自然日；按 UTC 的年月日算，不受夏令时那天只有 23 或 25 小时影响
+    static func days(from start: Date, to end: Date, calendar: Calendar = .current) -> Int {
+        utc.dateComponents([.day], from: stored(start, calendar: calendar), to: stored(end, calendar: calendar)).day ?? 0
+    }
+
     /// 用户的日历可能是和历、佛历，年月日统一按公历换算，只取它的时区
     private static func gregorian(_ calendar: Calendar) -> Calendar {
         var gregorian = Calendar(identifier: .gregorian)
@@ -40,7 +45,7 @@ enum Freshness: Equatable {
     static let soonDays = 2
 
     init(expiresAt: Date, now: Date = Date(), calendar: Calendar = .current) {
-        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: expiresAt)).day ?? 0
+        let days = FridgeDay.days(from: now, to: expiresAt, calendar: calendar)
         if days < 0 {
             self = .expired(days: -days)
         } else if days == 0 {
