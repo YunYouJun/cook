@@ -1,6 +1,6 @@
 {
   "description": "由 pnpm fixtures 生成，勿手改。Web（test/fixtures.test.ts）和 iOS（CookCore）都要和它一致。",
-  "recipeCount": 864,
+  "recipeCount": 870,
   "search": [
     {
       "input": {

@@ -1,6 +1,6 @@
 {
   "description": "由 pnpm fixtures 生成，勿手改。Web（test/fixtures.test.ts）和 iOS（CookCore）都要和它一致。",
-  "recipeCount": 864,
+  "recipeCount": 870,
   "normalize": [
     {
       "input": [
@@ -209,6 +209,8 @@
         {"id":827,"matched":["鸡蛋"],"pantry":[],"missing":["方便面"],"optional":[]},
         {"id":848,"matched":["鸡蛋"],"pantry":[],"missing":["面食"],"optional":[]},
         {"id":857,"matched":["鸡蛋"],"pantry":[],"missing":["面包"],"optional":[]},
+        {"id":869,"matched":["鸡蛋"],"pantry":[],"missing":["青椒"],"optional":[]},
+        {"id":870,"matched":["鸡蛋"],"pantry":[],"missing":["生菜"],"optional":[]},
         {"id":421,"matched":["番茄","鸡蛋"],"pantry":[],"missing":["面食","香肠"],"optional":[]},
         {"id":3,"matched":["番茄"],"pantry":[],"missing":["牛肉","米"],"optional":[]},
         {"id":13,"matched":["鸡蛋"],"pantry":[],"missing":["鸡肉","米"],"optional":[]},
@@ -441,6 +443,8 @@
         {"id":827,"matched":["鸡蛋"],"pantry":[],"missing":["方便面"],"optional":[]},
         {"id":848,"matched":["鸡蛋"],"pantry":[],"missing":["面食"],"optional":[]},
         {"id":857,"matched":["鸡蛋"],"pantry":[],"missing":["面包"],"optional":[]},
+        {"id":869,"matched":["鸡蛋"],"pantry":[],"missing":["青椒"],"optional":[]},
+        {"id":870,"matched":["鸡蛋"],"pantry":[],"missing":["生菜"],"optional":[]},
         {"id":421,"matched":["番茄","鸡蛋"],"pantry":[],"missing":["面食","香肠"],"optional":[]},
         {"id":3,"matched":["番茄"],"pantry":[],"missing":["牛肉","米"],"optional":[]},
         {"id":13,"matched":["鸡蛋"],"pantry":[],"missing":["鸡肉","米"],"optional":[]},
@@ -1196,6 +1200,8 @@
         {"id":807,"matched":["鸡蛋"],"pantry":[],"missing":["番茄"],"optional":[]},
         {"id":827,"matched":["鸡蛋"],"pantry":[],"missing":["方便面"],"optional":[]},
         {"id":857,"matched":["鸡蛋"],"pantry":[],"missing":["面包"],"optional":[]},
+        {"id":869,"matched":["鸡蛋"],"pantry":[],"missing":["青椒"],"optional":[]},
+        {"id":870,"matched":["鸡蛋"],"pantry":[],"missing":["生菜"],"optional":[]},
         {"id":37,"matched":["鸡蛋"],"pantry":[],"missing":["牛肉","米"],"optional":[]},
         {"id":122,"matched":["鸡蛋"],"pantry":[],"missing":["豆腐","猪肉"],"optional":[]},
         {"id":174,"matched":["鸡蛋"],"pantry":[],"missing":["方便面","香肠"],"optional":[]},
@@ -1462,6 +1468,7 @@
         {"id":824,"matched":["猪肉"],"pantry":[],"missing":["面食"],"optional":[]},
         {"id":825,"matched":["猪肉"],"pantry":[],"missing":["面食"],"optional":[]},
         {"id":843,"matched":["白菜"],"pantry":[],"missing":["面食"],"optional":[]},
+        {"id":866,"matched":["猪肉"],"pantry":[],"missing":["豆芽"],"optional":[]},
         {"id":371,"matched":["白菜","菌菇"],"pantry":[],"missing":["胡萝卜","香肠"],"optional":[]},
         {"id":1,"matched":["菌菇"],"pantry":[],"missing":["鸡肉","洋葱"],"optional":[]},
         {"id":19,"matched":["猪肉"],"pantry":[],"missing":["番茄","米"],"optional":[]},

@@ -13,7 +13,7 @@ export const iosAppName = '云食册'
 export const appStoreId = ''
 
 export const namespace = 'cook'
-export const lastDbUpdated = '2026-10-21 18:21:40'
+export const lastDbUpdated = '2026-10-21 18:36:49'
 
 export const icp = '苏ICP备17038157号'
 

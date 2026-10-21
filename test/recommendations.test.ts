@@ -8,7 +8,7 @@ import { CATCH_ALL_MIN_STUFF, createRecipeRecommender, hasAvoidedStuff, matchesT
 // Use tracked CSV so this regression test does not depend on generated JSON files.
 const recipes = parseRecipeCsv(readFileSync(resolve(process.cwd(), 'packages/data/recipe.csv'), 'utf8'))
 const cases = [
-  { stuff: ['番茄', '鸡蛋'], counts: [57, 98, 63], first: '微波炉版番茄鸡蛋汤', partial: '番茄鸡蛋', missing: ['米'] },
+  { stuff: ['番茄', '鸡蛋'], counts: [57, 100, 63], first: '微波炉版番茄鸡蛋汤', partial: '番茄鸡蛋', missing: ['米'] },
   { stuff: ['土豆'], counts: [31, 34, 26], first: '烤箱版M记同款薯条', partial: '电饭煲版焖鸡腿土豆', missing: ['鸡肉'] },
   { stuff: ['腊肠', '米'], counts: [7, 39, 30], first: '电饭煲版广式腊肠煲饭', partial: '电饭煲版胡萝卜腊肠饭', missing: ['胡萝卜'] },
   { stuff: ['鸡肉', '洋葱', '菌菇'], counts: [83, 48, 29], first: '电饭煲版烧鸡', partial: '电饭煲版南瓜鸡腿焖饭', missing: ['米'] },
