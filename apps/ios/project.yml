@@ -45,6 +45,8 @@ targets:
         # cook-feedback 云函数的 HTTP 访问地址（docs/dev/data.md），生成工程前 export COOK_FEEDBACK_URL=…；不填时反馈入口改成跳 GitHub，也不发筛选信号
         CookFeedbackURL: ${COOK_FEEDBACK_URL}
         LSApplicationQueriesSchemes: [bilibili]
+        # 大图里的分享按钮可以把配图存到相册
+        NSPhotoLibraryAddUsageDescription: 把菜谱配图存到相册。
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: true
         UIBackgroundModes: [remote-notification]

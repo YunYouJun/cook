@@ -43,7 +43,7 @@ enum RecipeImageCache {
     }
 }
 
-/// 全屏看配图：左右滑动切换，双指或双击放大，轻点隐藏按钮。
+/// 全屏看配图：左右滑动切换，双指或双击放大，轻点隐藏按钮，右上角分享或存到相册。
 /// iOS 18 起从正文里的那张图放大展开，下滑收回原处
 struct RecipeImageViewer: View {
     let photos: [RecipeTextPhoto]
@@ -113,6 +113,24 @@ struct RecipeImageViewer: View {
 
             Spacer()
 
+            // 分享或存到相册，和系统相册一样放在右上角
+            if let index, let image = RecipeImageCache.cached(photos[index].url) {
+                let photo = photos[index]
+                ShareLink(
+                    item: Image(uiImage: image),
+                    preview: SharePreview(photo.caption ?? photo.accessibilityLabel, image: Image(uiImage: image))
+                ) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.body.weight(.semibold))
+                        .frame(width: 44, height: 44)
+                        .floatingGlass(in: Circle(), interactive: true)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("分享")
+            }
+        }
+        .overlay {
             if photos.count > 1, let index {
                 Text("\(index + 1) / \(photos.count)")
                     .font(.subheadline.monospacedDigit())

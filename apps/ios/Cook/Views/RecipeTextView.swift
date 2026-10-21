@@ -99,22 +99,37 @@ struct RecipeTextView: View {
 
     private func makePhoto(at offset: Int, src: String, width: Int, height: Int, alt: String?) -> RecipeTextPhoto? {
         guard let url = store.textImageURL(src) else { return nil }
-        let caption = displayCaption(alt)
+        let description = meaningfulAlt(alt)
+        // 和上一段正文重复的说明（「碗 1」「改刀」）不再显示在图下，只留给旁白
+        let caption = description.flatMap { precedingText(offset).contains($0) ? nil : $0 }
         return RecipeTextPhoto(
             id: offset,
             url: url,
             aspectRatio: CGFloat(width) / CGFloat(max(height, 1)),
             caption: caption,
-            accessibilityLabel: caption ?? "\(recipe.name)的配图"
+            accessibilityLabel: description ?? "\(recipe.name)的配图"
         )
     }
 
-    /// 原文的图片说明。「XX-预览图-1」「红烧肉成品」这种只是文件名或菜名，英文的多是图片来源，都不显示
-    private func displayCaption(_ alt: String?) -> String? {
+    /// 原文的图片说明。「XX-预览图-1」「红烧肉成品」这种只是文件名或菜名，英文的多是图片来源，都不算
+    private func meaningfulAlt(_ alt: String?) -> String? {
         guard let alt = alt?.trimmingCharacters(in: .whitespaces), !alt.isEmpty else { return nil }
         let isChinese = alt.unicodeScalars.contains { (0x4E00 ... 0x9FFF).contains($0.value) }
         guard isChinese, !alt.contains("预览图"), !alt.hasSuffix("成品"), !alt.contains(recipe.name) else { return nil }
         return alt
+    }
+
+    /// 配图前面紧挨着的那段文字
+    private func precedingText(_ offset: Int) -> String {
+        guard offset > 0 else { return "" }
+        switch text.blocks[offset - 1] {
+        case let .heading(string), let .paragraph(string):
+            return string
+        case let .list(_, _, items):
+            return items.joined(separator: "\n")
+        case .image:
+            return ""
+        }
     }
 
     private var footer: some View {
