@@ -1,9 +1,11 @@
 <script lang="ts" setup>
 import type { MaybeElementRef } from '@vueuse/core'
 import type { StuffItem } from '~/types'
+import { useStorage } from '@vueuse/core'
 import { DIFFICULTY_LEVELS, METHOD_GROUPS } from '@yunyoujun/cook/recommend'
 import { useEmojiAnimation } from '~/composables/animation'
 import { useIncompatibleFoods } from '~/composables/incompatible-foods'
+import { namespace } from '~/constants'
 import { meat, staple, tools, vegetable } from '~/data/food'
 import { trackCookEvent } from '~/utils/analytics'
 import { yunleHaptic } from '~/utils/yunleHost'
@@ -33,6 +35,26 @@ const sections = [
   { title: '肉和蛋', category: 'meat', items: meat },
   { title: '主食（可选）', category: 'staple', items: staple },
 ]
+
+/** 展开了「更多」的分组，记住用户的选择 */
+const expanded = useStorage<string[]>(`${namespace}:food-more-expanded`, [])
+
+/** 不常用的食材默认收起，但已选中的始终显示，免得选了却看不到 */
+function visibleItems(items: StuffItem[], category: string) {
+  if (expanded.value.includes(category))
+    return items
+  return items.filter(item => !item.more || selected.value.includes(item.name))
+}
+
+function hiddenCount(items: StuffItem[], category: string) {
+  return items.length - visibleItems(items, category).length
+}
+
+function toggleMore(category: string) {
+  expanded.value = expanded.value.includes(category)
+    ? expanded.value.filter(c => c !== category)
+    : [...expanded.value, category]
+}
 
 function selectedNote(items: StuffItem[]) {
   const count = items.filter(item => selected.value.includes(item.name)).length
@@ -69,12 +91,23 @@ function clickTool(item: StuffItem) {
 
     <IngredientSection v-for="section in sections" :key="section.category" :title="section.title" :note="selectedNote(section.items)">
       <IngredientChip
-        v-for="item in section.items"
+        v-for="item in visibleItems(section.items, section.category)"
         :key="item.name"
         :label="item.name"
         :emoji="item.emoji"
         :selected="selected.includes(item.name)"
         @click="toggleStuff(item, section.category, $event)"
+      />
+      <!-- 展开按钮不是可选项，去掉 aria-pressed，改用 aria-expanded -->
+      <IngredientChip
+        v-if="expanded.includes(section.category) || hiddenCount(section.items, section.category) > 0"
+        :label="expanded.includes(section.category) ? '收起' : `更多 ${hiddenCount(section.items, section.category)} 种`"
+        :icon="expanded.includes(section.category) ? 'i-ri-arrow-up-s-line' : 'i-ri-arrow-down-s-line'"
+        :selected="false"
+        :aria-pressed="undefined"
+        :aria-expanded="expanded.includes(section.category)"
+        class="choose-food-more"
+        @click="toggleMore(section.category)"
       />
     </IngredientSection>
 
@@ -161,6 +194,10 @@ function clickTool(item: StuffItem) {
 <style scoped>
 .choose-food {
   padding-bottom: 24px;
+}
+.choose-food-more {
+  background: transparent;
+  color: var(--ion-color-primary);
 }
 .choose-food-pantry-value {
   max-width: 60vw;

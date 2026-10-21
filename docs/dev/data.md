@@ -54,7 +54,7 @@ pnpm howtocook ../HowToCook
 
 PR 上 CI 还会运行 `pnpm validate --base <目标分支>`：同一个 id 的菜名和视频都变了（像是把 id 挪给了另一道菜）或复用了已删除的 id 会报错，删除菜谱会给出警告。
 
-想用新的食材，先在 `packages/data/food.json` 里加上，再在菜谱里使用。
+想用新的食材，先在 `packages/data/food.json` 里加上，再在菜谱里使用。不常用的食材加上 `"more": true`，Web 和 App 的选择页会把它收进「更多」，避免挤占常用食材；已选中的食材始终显示。
 
 ## 反馈闭环
 

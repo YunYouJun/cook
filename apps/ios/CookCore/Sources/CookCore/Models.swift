@@ -83,6 +83,8 @@ public struct StuffItem: Codable, Hashable, Sendable {
     public var alias: String?
     public var icon: String?
     public var label: String?
+    /// 不常用：选择页默认收进「更多」，已选中时照常显示
+    public var more: Bool?
 }
 
 /// 食材和厨具词典（food.json）
