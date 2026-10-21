@@ -8,6 +8,8 @@ const VIDEO_ID_RE = /^(?:BV[0-9A-Za-z]{10}|av\d+)$/
 const LINK_RE = /^https:\/\/\S+$/
 /** 单元格内应使用顿号分隔，出现这些字符通常是录入错误 */
 const BAD_SEP_RE = /[,，/／]/
+/** 菜名里不该出现的侮辱性用词（用户投诉过），换成中性的叫法 */
+const BAD_NAME_RE = /[娼妓婊屌]|傻[逼屄]|贱人/
 
 export interface RecipeDictionary {
   /** 食材标准名 */
@@ -65,6 +67,8 @@ export function validateRecipes(recipes: RecipeItem[], dict: RecipeDictionary, o
 
     if (!name)
       error('缺少菜名')
+    else if (BAD_NAME_RE.test(name))
+      error('菜名含侮辱性用词，请换成中性的叫法')
 
     if (recipe.id === undefined) {
       error(`缺少 id，新菜谱请用 ${maxId + 1}（当前最大 id + 1）`)
