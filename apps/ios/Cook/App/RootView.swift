@@ -39,7 +39,13 @@ struct RootView: View {
         .minimizesTabBarOnScroll()
         .environment(router)
         .onReceive(NotificationCenter.default.publisher(for: .showFridgeHome)) { _ in
+            PendingFridgeHome.requested = false
             router.showFridgeHome()
+        }
+        .onAppear {
+            if PendingFridgeHome.take() {
+                router.showFridgeHome()
+            }
         }
         // 冰箱里的食材（包括其他设备同步过来的）或提醒设置一变，就重排临期通知；回到前台时也排一次，过了一天也不会漏
         .onChange(of: reminderSignature, initial: true) {

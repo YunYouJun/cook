@@ -57,6 +57,16 @@ final class FridgeTests: XCTestCase {
         }
     }
 
+    func testReminderPlanFindsTomorrowWhenMidnightIsSkipped() {
+        var santiago = Calendar(identifier: .gregorian)
+        santiago.timeZone = TimeZone(identifier: "America/Santiago")!
+        // 智利 2026-09-06 零点直接跳到 1 点，这天没有 0 点
+        let expiry = santiago.startOfDay(for: santiago.date(from: DateComponents(year: 2026, month: 9, day: 7, hour: 12))!)
+        let now = santiago.date(from: DateComponents(year: 2026, month: 9, day: 4))!
+        let plans = FridgeReminder.plan([.init(name: "鸡蛋", expiresAt: expiry)], now: now, minutes: 9 * 60, calendar: santiago)
+        XCTAssertEqual(plans.map(\.body), ["鸡蛋明天到期，看看能做什么吧。", "鸡蛋今天到期，看看能做什么吧。"])
+    }
+
     func testReminderPlanRespectsLimitAndShortensLongLists() {
         let now = day(10, 1)
         let entries = (2 ... 28).map { FridgeReminder.Entry(name: "第\($0)天", expiresAt: day(10, $0)) }

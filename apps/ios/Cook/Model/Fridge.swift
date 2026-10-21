@@ -111,8 +111,9 @@ enum FridgeReminder {
         var days = Set<Date>()
         for expiryDay in byExpiryDay.keys {
             days.insert(expiryDay)
+            // 加减一天后再取当天 0 点：零点切夏令时的地区（比如智利）那天是从 1 点开始的
             if let dayBefore = calendar.date(byAdding: .day, value: -1, to: expiryDay) {
-                days.insert(dayBefore)
+                days.insert(calendar.startOfDay(for: dayBefore))
             }
         }
 
@@ -128,7 +129,7 @@ enum FridgeReminder {
                 continue
             }
             let today = uniqueStrings(byExpiryDay[day] ?? [])
-            let tomorrow = calendar.date(byAdding: .day, value: 1, to: day).flatMap { byExpiryDay[$0] }.map(uniqueStrings) ?? []
+            let tomorrow = calendar.date(byAdding: .day, value: 1, to: day).flatMap { byExpiryDay[calendar.startOfDay(for: $0)] }.map(uniqueStrings) ?? []
             var parts: [String] = []
             if !today.isEmpty {
                 parts.append("\(names(today))今天到期")
@@ -221,6 +222,18 @@ extension Notification.Name {
     static let showFridgeHome = Notification.Name("fridge.showHome")
 }
 
+/// 点通知冷启动时，回调可能比窗口先到，广播没人收；先记下来，窗口出现时再取
+@MainActor
+enum PendingFridgeHome {
+    static var requested = false
+
+    /// 有没处理的请求就返回 true，并清掉
+    static func take() -> Bool {
+        defer { requested = false }
+        return requested
+    }
+}
+
 /// 一个窗口当前在哪个 Tab；iPad 上每个窗口各有一份。点开临期通知时切到冰箱，并退回冰箱首页
 @Observable
 final class AppRouter {
@@ -245,6 +258,7 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             return
         }
         await MainActor.run {
+            PendingFridgeHome.requested = true
             NotificationCenter.default.post(name: .showFridgeHome, object: nil)
         }
     }
