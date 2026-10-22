@@ -119,6 +119,10 @@ jobs:
   # 云食册 iOS App：XcodeGen 生成工程，在 iPhone 和 iPad 模拟器上编译并跑测试（窄屏和宽屏两种布局）
   ios:
     runs-on: macos-26
+    env:
+      # The image includes Xcode 26.5 and iOS 26.5. Pin the matching toolchain:
+      # the default 26.6 intermittently reports only simulator placeholders.
+      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -135,6 +139,8 @@ jobs:
       - run: xcodebuild -version
       - name: Build and test
         run: |
+          xcrun simctl list runtimes
+          xcrun simctl list devices available
           # simctl may list runtimes that the selected Xcode cannot use. Ask the scheme.
           xcodebuild -showdestinations -project apps/ios/Cook.xcodeproj -scheme Cook \
             -destination-timeout 180 > "$RUNNER_TEMP/cook-destinations.txt"
