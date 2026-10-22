@@ -45,6 +45,9 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 Section {
+                    NavigationLink("我的菜谱") { PrivateRecipesView() }
+                }
+                Section {
                     PreferenceRows()
                 } header: {
                     Text("做菜偏好")

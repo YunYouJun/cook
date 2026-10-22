@@ -78,7 +78,7 @@ final class FridgeItem {
 }
 
 enum Persistence {
-    static let models: [any PersistentModel.Type] = [Favorite.self, HistoryEntry.self, Preferences.self, FridgeItem.self]
+    static let models: [any PersistentModel.Type] = [Favorite.self, HistoryEntry.self, Preferences.self, FridgeItem.self, PrivateRecipeRecord.self]
 
     /// 软删除的记录保留多久，过期后真正删掉
     static let tombstoneLifetime: TimeInterval = 30 * 24 * 60 * 60

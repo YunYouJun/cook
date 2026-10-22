@@ -37,6 +37,7 @@ export default defineConfig({
             { text: 'Cook CLI', link: '/dev/cli' },
             { text: '移动应用', link: '/dev/app' },
             { text: '菜谱数据', link: '/dev/data' },
+            { text: '私人菜谱与文件迁移', link: '/dev/private-recipes' },
             { text: '图文做法配图', link: '/dev/recipe-images' },
             { text: 'iOS App 打磨目标', link: '/dev/ios-roadmap' },
           ],
