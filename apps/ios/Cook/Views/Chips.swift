@@ -67,6 +67,34 @@ private struct SelectBounce: ViewModifier {
     }
 }
 
+/// 分组末尾的「更多 / 收起」，和标签一样大，用主色文字区分
+struct MoreChip: View {
+    let isExpanded: Bool
+    let hidden: Int
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .imageScale(.small)
+                    .accessibilityHidden(true)
+                Text(isExpanded ? "收起" : "更多 \(hidden) 种")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .font(.subheadline)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            .foregroundStyle(.tint)
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isExpanded ? "收起不常用的食材" : "展开更多 \(hidden) 种食材")
+    }
+}
+
 /// 一组标签，标题下面可以带一行说明
 struct ChipSection<Content: View>: View {
     let title: String

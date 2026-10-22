@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cook.yunyoujun.cn/schema/shelf-life.schema.json",
+  "title": "食材冷藏大约能放几天（shelf-life.json），冰箱估到期日用，只是参考",
+  "type": "object",
+  "required": ["default", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "default": { "type": "integer", "minimum": 1, "description": "词典里没列出的食材按这个天数估" },
+    "items": {
+      "type": "object",
+      "propertyNames": { "minLength": 1 },
+      "additionalProperties": { "type": "integer", "minimum": 1 }
+    }
+  }
+}

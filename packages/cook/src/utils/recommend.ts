@@ -1,5 +1,6 @@
 import type { Difficulty, RecipeItem } from '../types/recipe'
 import { normalizeStuff } from './alias'
+import { DEFAULT_RECIPE_SCORE } from './score'
 
 // 整句识别跟着推荐入口一起导出，Web 只引 @yunyoujun/cook/recommend
 export { isEmptyCookQuery, parseCookQuery } from './query'
@@ -154,6 +155,8 @@ export function createRecipeRecommender(recipes: RecipeItem[]) {
       // 大杂烩是兜底选项，排在同组的正经菜后面
       || Number(isCatchAll(a.requiredStuff)) - Number(isCatchAll(b.requiredStuff))
       || b.matchedStuff.length - a.matchedStuff.length
+      // 同组里视频质量高的在前，见 docs/decisions/0010-recipe-quality-score.md
+      || (b.recipe.score ?? DEFAULT_RECIPE_SCORE) - (a.recipe.score ?? DEFAULT_RECIPE_SCORE)
       || a.sourceIndex - b.sourceIndex,
     )
   }

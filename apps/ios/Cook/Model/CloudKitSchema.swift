@@ -11,7 +11,8 @@
         /// 和 project.yml 里的 iCloud 容器一致
         static let containerIdentifier = "iCloud.fun.yunle.cook"
         /// 模型结构变了就加一，开发版下次启动会重新建一次
-        static let version = 1
+        // 版本 2 新增 FridgeItem；已初始化版本 1 的开发设备需要重新建结构。
+        static let version = 2
         /// 成功后记下 version。要强制重建（比如在 Console 里 Reset 了 Development），启动参数加 `-cloudkit.schemaInitialized 0`
         static let doneKey = "cloudkit.schemaInitialized"
         /// UI 测试在真机上跑时设置这个环境变量，跳过初始化

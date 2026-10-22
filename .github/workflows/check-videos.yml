@@ -30,6 +30,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh label create dead-video --color d73a4a --description '菜谱视频失效' --force
+          gh label create recipe-data --color 0e8a16 --description '菜谱数据' --force
           number=$(gh issue list --label dead-video --state open --json number --jq '.[0].number')
           if [ -n "$number" ]; then
             gh issue edit "$number" --body-file report.md

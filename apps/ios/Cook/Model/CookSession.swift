@@ -72,6 +72,13 @@ final class CookSession {
         !selectedStuff.isEmpty || tool != nil
     }
 
+    /// 冰箱页「用这些做菜」：换成这几样食材，厨具和菜名搜索清掉，免得结果莫名变少
+    func use(_ stuff: [String]) {
+        selectedStuff = uniqueStrings(stuff)
+        tool = nil
+        keyword = ""
+    }
+
     /// 清空做菜页：已选的食材和厨具
     func clearStuff() {
         selectedStuff = []

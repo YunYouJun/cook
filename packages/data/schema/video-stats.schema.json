@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cook.yunyoujun.cn/schema/video-stats.schema.json",
+  "title": "菜谱视频的 B 站数据（video-stats.json），由 pnpm check:videos --stats 生成",
+  "type": "object",
+  "required": ["updatedAt", "videos"],
+  "additionalProperties": false,
+  "properties": {
+    "updatedAt": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "videos": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["view", "like", "favorite", "coin", "duration"],
+            "additionalProperties": false,
+            "properties": {
+              "view": { "type": "integer", "minimum": 0 },
+              "like": { "type": "integer", "minimum": 0 },
+              "favorite": { "type": "integer", "minimum": 0 },
+              "coin": { "type": "integer", "minimum": 0 },
+              "duration": { "type": "integer", "minimum": 0, "description": "秒" }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["dead"],
+            "additionalProperties": false,
+            "properties": { "dead": { "const": true } }
+          }
+        ]
+      }
+    }
+  }
+}
