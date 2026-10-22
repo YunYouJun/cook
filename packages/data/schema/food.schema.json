@@ -23,7 +23,8 @@
           "image": { "type": "string" },
           "alias": { "type": "string" },
           "icon": { "type": "string" },
-          "label": { "type": "string" }
+          "label": { "type": "string" },
+          "more": { "type": "boolean", "description": "不常用，选择页默认收进「更多」" }
         }
       }
     }

@@ -16,6 +16,8 @@ public struct Recipe: Codable, Hashable, Sendable, Identifiable {
     public var tags: [String]
     public var methods: [String]
     public var tools: [String]
+    /// 视频质量分 0～100，`pnpm convert` 算好写入；没有时按 Recommender.defaultScore，只决定同组先后
+    public var score: Int?
 
     public init(
         id: Int,
@@ -27,7 +29,8 @@ public struct Recipe: Codable, Hashable, Sendable, Identifiable {
         difficulty: String? = nil,
         tags: [String] = [],
         methods: [String] = [],
-        tools: [String] = []
+        tools: [String] = [],
+        score: Int? = nil
     ) {
         self.id = id
         self.name = name
@@ -39,6 +42,7 @@ public struct Recipe: Codable, Hashable, Sendable, Identifiable {
         self.tags = tags
         self.methods = methods
         self.tools = tools
+        self.score = score
     }
 
     public init(from decoder: Decoder) throws {
@@ -53,6 +57,7 @@ public struct Recipe: Codable, Hashable, Sendable, Identifiable {
         tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
         methods = try container.decodeIfPresent([String].self, forKey: .methods) ?? []
         tools = try container.decodeIfPresent([String].self, forKey: .tools) ?? []
+        score = try container.decodeIfPresent(Int.self, forKey: .score)
     }
 
     /// B 站视频页
@@ -83,6 +88,8 @@ public struct StuffItem: Codable, Hashable, Sendable {
     public var alias: String?
     public var icon: String?
     public var label: String?
+    /// 不常用：选择页默认收进「更多」，已选中时照常显示
+    public var more: Bool?
 }
 
 /// 食材和厨具词典（food.json）
@@ -97,6 +104,27 @@ public struct FoodCatalog: Codable, Hashable, Sendable {
 public struct Pantry: Codable, Hashable, Sendable {
     public var options: [String]
     public var defaults: [String]
+}
+
+/// 食材冷藏大约能放几天（shelf-life.json）。冰箱里按它给默认到期日，只是参考，用户可以改
+public struct ShelfLife: Codable, Hashable, Sendable {
+    /// 没列出的食材（比如自己输入的）按这个天数估
+    public var defaultDays: Int
+    public var items: [String: Int]
+
+    enum CodingKeys: String, CodingKey {
+        case defaultDays = "default"
+        case items
+    }
+
+    public init(defaultDays: Int, items: [String: Int]) {
+        self.defaultDays = defaultDays
+        self.items = items
+    }
+
+    public func days(for name: String) -> Int {
+        items[name] ?? defaultDays
+    }
 }
 
 /// 菜谱数据的元信息（recipe-meta.json）

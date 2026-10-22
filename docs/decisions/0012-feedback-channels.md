@@ -1,4 +1,4 @@
-# 0010 反馈渠道分流
+# 0012 反馈渠道分流
 
 - 状态：已采纳（第一步）
 - 日期：2026-10-21
@@ -31,7 +31,7 @@
 - 提交失败时，网页版先复制内容，再给「发邮件」（预填类型、内容、联系方式和平台，发到 `kf@yunle.fun`）和「去 GitHub」。菜谱反馈的邮件带菜名、id 和问题类型。iOS 没配置 `COOK_FEEDBACK_URL` 的构建，意见反馈直接发邮件，不再隐藏入口；没有邮件 App 时复制邮箱和内容。
 - GitHub 新增 Bug 和功能建议模板，关闭空白 issue，`contact_links` 指向网页版「我的」和 Discussions。
 - 兔小巢不再续费。停用前回复一轮高赞帖，置顶说明反馈已搬到 App 内；README 里的链接到时一起改。
-- 下一步做需求墙：`cook-feedback` 加投票动作和两张集合（条目、投票），条目只有管理员能写，投票按哈希设备 id 或账号去重。成熟后和意见反馈一起抽到云乐坊共享的云函数，按 `appId` 区分，供其他 App 复用。
+- 下一步做需求墙，放在云乐坊统一支持中心 [YunLeFun/support](https://github.com/YunLeFun/support)（support.yunle.fun）里：它的领域模型已经有公开反馈、投票和路线图，只是首发没开放。cook 作为一个产品接入，App 里的入口打开 `support.yunle.fun` 对应页面，不在 `cook-feedback` 里另做投票。
 
 ## 影响
 

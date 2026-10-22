@@ -37,6 +37,10 @@ describe('validateRecipes', () => {
     expect(errors).toHaveLength(3)
   })
 
+  it('flags insulting words in recipe names', () => {
+    expect(messages([recipe({ name: '娼妇意面' })])[0]).toContain('侮辱性')
+  })
+
   it('accepts legacy av ids', () => {
     expect(messages([recipe({ bv: 'av895289430' })])).toEqual([])
   })

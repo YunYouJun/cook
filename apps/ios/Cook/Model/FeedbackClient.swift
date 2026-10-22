@@ -58,7 +58,7 @@ final class FeedbackClient {
     nonisolated static let signalsKey = "shareSearchSignals"
     nonisolated static let maxNote = 500
     nonisolated static let maxContact = 100
-    /// 提交不了时的兜底邮箱，和 Web 的 links.supportEmail、云乐坊的「问题反馈」邮箱一致（docs/decisions/0010-feedback-channels.md）
+    /// 提交不了时的兜底邮箱，和 Web 的 links.supportEmail、云乐坊的「问题反馈」邮箱一致（docs/decisions/0012-feedback-channels.md）
     nonisolated static let supportEmail = "kf@yunle.fun"
 
     /// 每次启动随机生成，只放在内存里，云函数用它按设备限额；不写盘，也不读 IDFV

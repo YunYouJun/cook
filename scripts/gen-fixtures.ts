@@ -6,11 +6,14 @@
 import fs from 'node:fs'
 import { incompatibleFoodsCsvFile, recipeCsvFile } from '../packages/cook/src/utils/config'
 import { parseIncompatibleFoodsCsv, parseRecipeCsv } from '../packages/cook/src/utils/csv'
+import { applyRecipeScores } from '../packages/cook/src/utils/score'
+import { readVideoStats } from '../packages/cook/src/utils/video-stats'
 import { buildFixtures } from './lib/fixtures'
 
 export const fixturesDir = new URL('../packages/data/fixtures/', import.meta.url)
 
-const recipes = parseRecipeCsv(fs.readFileSync(recipeCsvFile, 'utf-8'))
+// 和 pnpm convert 一样带上质量分，用例里的排序才和 App 里一致
+const recipes = applyRecipeScores(parseRecipeCsv(fs.readFileSync(recipeCsvFile, 'utf-8')), readVideoStats())
 const rules = parseIncompatibleFoodsCsv(fs.readFileSync(incompatibleFoodsCsvFile, 'utf-8'))
 for (const [name, content] of Object.entries(buildFixtures(recipes, rules))) {
   // 每条结果占一行，文件小一些，diff 也好读

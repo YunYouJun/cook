@@ -87,6 +87,14 @@ final class SharedFixtureTests: XCTestCase {
         XCTAssertFalse(data.pantry.defaults.isEmpty)
     }
 
+    func testShelfLifeCoversCatalog() throws {
+        let data = try Self.loadData()
+        let names = (data.food.vegetable + data.food.meat + data.food.staple).map(\.name)
+        XCTAssertEqual(names.filter { data.shelfLife.items[$0] == nil }, [], "词典里的食材都要有默认保质期")
+        XCTAssertEqual(data.shelfLife.days(for: "鸡蛋"), 30)
+        XCTAssertEqual(data.shelfLife.days(for: "秋葵"), data.shelfLife.defaultDays, "没列出的按默认天数")
+    }
+
     func testNormalize() throws {
         let data = try Self.loadData()
         let fixtures = try Self.fixture(RecommendFixtures.self, "recommend.json")

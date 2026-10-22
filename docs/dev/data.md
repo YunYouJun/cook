@@ -54,17 +54,17 @@ pnpm howtocook ../HowToCook
 
 PR 上 CI 还会运行 `pnpm validate --base <目标分支>`：同一个 id 的菜名和视频都变了（像是把 id 挪给了另一道菜）或复用了已删除的 id 会报错，删除菜谱会给出警告。
 
-想用新的食材，先在 `packages/data/food.json` 里加上，再在菜谱里使用。
+想用新的食材，先在 `packages/data/food.json` 里加上，再在菜谱里使用。不常用的食材加上 `"more": true`，Web 和 App 的选择页会把它收进「更多」，避免挤占常用食材；已选中的食材始终显示。
 
 ## 反馈闭环
 
 1. **用户反馈**：菜谱详情底部点「反馈一下」，选问题类型（视频打不开、食材或厨具不对、难度或做法不对、其他）即可提交，不需要 GitHub，也不强制登录。数据进 CloudBase 的 `cook-feedback` 云函数；提交失败时引导用户发邮件（预填菜名、id 和问题）或去 GitHub Issue 表单（`.github/ISSUE_TEMPLATE/recipe.yml`，已预填菜名和视频）。
-   「我的 → 问题反馈」是不针对某道菜的意见反馈：选类型（用着有问题、功能建议、想要的菜没有、其他），写几句，可以留邮箱或微信，同样不用登录，提交失败时复制内容，引导发邮件到 `kf@yunle.fun` 或去 GitHub Issues。「菜谱投稿」打开同一个表单并预选「想要的菜没有」。渠道分流见 [0010](/decisions/0010-feedback-channels)。
+   「我的 → 问题反馈」是不针对某道菜的意见反馈：选类型（用着有问题、功能建议、想要的菜没有、其他），写几句，可以留邮箱或微信，同样不用登录，提交失败时复制内容，引导发邮件到 `kf@yunle.fun` 或去 GitHub Issues。「菜谱投稿」打开同一个表单并预选「想要的菜没有」。渠道分流见 [0012](/decisions/0012-feedback-channels)。
    iOS App（云食册）没有 CloudBase SDK，用 `POST` 把同样的请求体发到云函数的 HTTP 访问地址，和 Web 共用设备限额和数据集合。三类请求都带 `platform`（`web` 或 `ios`）和 `version`（iOS 为 App 版本号），没有 `platform` 的旧数据算作 web。筛选信号按端分开累计（Web 的记录键不变，iOS 的另起一组），`summary.md` 里菜谱反馈、意见反馈和筛选信号都按端分开统计；`search-eval.json` 把两端合在一起评测排序。
 2. **筛选信号**：应用匿名记录两类聚合数据，只有食材组合、厨具、模式和菜谱 id，不含账号：
    - 停在一组食材上却没有任何结果（说明缺这类菜，或别名没对上）；
    - 在某组食材下点开了第几个结果（排得太靠后说明排序可以改进）。
-3. **失效巡检**：`Check Videos` workflow 每周一调用 B 站接口检查全部视频，把失效列表写进带 `dead-video` 标签的 issue（已有就更新）。本地可运行 `pnpm check:videos`。
+3. **失效巡检**：`Check Videos` workflow 每周一调用 B 站接口检查全部视频，把失效列表写进带 `dead-video` 标签的 issue（已有就更新）。本地可运行 `pnpm check:videos`；加 `--stats` 会同时更新 `packages/data/video-stats.json`，再运行 `pnpm convert && pnpm fixtures` 就会刷新菜谱的质量分（同组菜按它排先后，见 [0010](../decisions/0010-recipe-quality-score)）。
 4. **AI 定期审查**：仓库里的 `recipe-data-review` skill（`skills/recipe-data-review/SKILL.md`）描述了完整流程：拉取应用内反馈和筛选信号、处理 `recipe-data` / `dead-video` issue、补全缺失字段、按评测结果优化筛选，跑校验，最后开一个 PR。它不绑定模型，Codex、Claude Code 或接了 DeepSeek 的 Agent 都能跑，在本地按计划执行即可，见下方「本地定时运行」。
 5. **按主题补充**：`recipe-sourcing` skill（`skills/recipe-sourcing/SKILL.md`）描述了从 B 站、小红书等平台按主题搜罗菜谱的流程：网页搜索找 BV 号、逐个打开视频页核对、按数据规则追加并开 PR。
 6. **合并发布**：维护者审核 PR，合并后照常构建发布，`Closes #n` 自动关闭 issue。

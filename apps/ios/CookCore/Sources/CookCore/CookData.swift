@@ -19,6 +19,8 @@ public struct CookData: Sendable {
     public var pantry: Pantry
     /// 整句识别的词表
     public var query: QueryRules
+    /// 食材冷藏大约能放几天，冰箱估到期日用
+    public var shelfLife = ShelfLife(defaultDays: 5, items: [:])
 
     public var normalizer: StuffNormalizer {
         StuffNormalizer(aliases: aliases)
@@ -29,7 +31,8 @@ public struct CookData: Sendable {
         CookQueryParser(rules: query, food: food, aliases: aliases)
     }
 
-    /// 从目录读取：recipe-meta.json、recipe.json 或 recipe-chunk-*.json、incompatible-foods.json、aliases.json、food.json、pantry.json、query.json
+    /// 从目录读取：recipe-meta.json、recipe.json 或 recipe-chunk-*.json、incompatible-foods.json、aliases.json、food.json、pantry.json、query.json，
+    /// 以及可选的 shelf-life.json（之前的数据目录里没有，缺了就按默认天数估）
     public static func load(from directory: URL) throws -> CookData {
         let decoder = JSONDecoder()
         func read<T: Decodable>(_ type: T.Type, _ name: String) throws -> T {
@@ -55,7 +58,7 @@ public struct CookData: Sendable {
         let pantry = try read(Pantry.self, "pantry.json")
         let query = try read(QueryRules.self, "query.json")
 
-        return CookData(
+        var data = CookData(
             meta: meta,
             recipes: recipes,
             incompatibleRules: incompatibleRules,
@@ -64,5 +67,9 @@ public struct CookData: Sendable {
             pantry: pantry,
             query: query
         )
+        if FileManager.default.fileExists(atPath: directory.appendingPathComponent("shelf-life.json").path) {
+            data.shelfLife = try read(ShelfLife.self, "shelf-life.json")
+        }
+        return data
     }
 }

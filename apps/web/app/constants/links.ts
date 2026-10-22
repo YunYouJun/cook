@@ -3,7 +3,7 @@ export const links = {
 
   /**
    * 应用内反馈提交不了时的兜底邮箱，和云乐坊的「问题反馈」邮箱一致
-   * @see docs/decisions/0010-feedback-channels.md
+   * @see docs/decisions/0012-feedback-channels.md
    */
   supportEmail: 'kf@yunle.fun',
   githubIssue: 'https://github.com/YunYouJun/cook/issues',

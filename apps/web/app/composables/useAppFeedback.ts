@@ -5,7 +5,7 @@ import { appFeedbackCategories, buildFeedbackMail, copyFeedbackText } from '~/ut
 
 /**
  * 意见反馈（不针对某道菜）的弹窗流程，「我的」和「应用」页共用
- * @see docs/decisions/0010-feedback-channels.md
+ * @see docs/decisions/0012-feedback-channels.md
  */
 export function useAppFeedback() {
   const feedback = useRecipeFeedback()
