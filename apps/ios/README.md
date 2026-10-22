@@ -23,3 +23,5 @@ open apps/ios/Cook.xcodeproj
 ```bash
 swift test --package-path apps/ios/CookCore   # 只跑核心逻辑
 ```
+
+CI 的 `ios` job 在 iPhone 和 iPad 模拟器上先后跑单元测试和 UI 测试。失败时 `Show test failures` 一步会写出失败原因，完整结果包（截图、每一步的操作记录）在这次运行的 Artifacts 里，名为 `ios-xcresult`，下载后用 Xcode 打开。
