@@ -40,7 +40,16 @@ final class PrivateRecipesUITests: XCTestCase {
         app.buttons["保存"].tap()
         XCTAssertTrue(app.navigationBars[name + "新"].waitForExistence(timeout: 10))
         app.buttons["删除菜谱"].tap()
-        app.buttons["删除"].tap()
+        // The dialog can enter the accessibility tree before presentation finishes
+        // on a loaded runner. Do not send the destructive tap until it is hittable.
+        let confirmation = app.sheets["删除这道私人菜谱？"]
+        XCTAssertTrue(confirmation.waitForExistence(timeout: 10))
+        let confirmDelete = confirmation.buttons["删除"]
+        let confirmationReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: confirmDelete)
+        XCTAssertEqual(XCTWaiter().wait(for: [confirmationReady], timeout: 30), .completed)
+        confirmDelete.tap()
+        let confirmationClosed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: confirmation)
+        XCTAssertEqual(XCTWaiter().wait(for: [confirmationClosed], timeout: 10), .completed, "Deletion must dismiss its confirmation before returning to the library")
         XCTAssertTrue(app.navigationBars["我的菜谱"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", name)).firstMatch.exists)
     }

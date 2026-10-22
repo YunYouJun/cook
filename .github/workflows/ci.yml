@@ -135,27 +135,48 @@ jobs:
       - run: xcodebuild -version
       - name: Build and test
         run: |
+          # simctl may list runtimes that the selected Xcode cannot use. Ask the scheme.
+          xcodebuild -showdestinations -project apps/ios/Cook.xcodeproj -scheme Cook \
+            -destination-timeout 180 > "$RUNNER_TEMP/cook-destinations.txt"
+          cat "$RUNNER_TEMP/cook-destinations.txt"
           pick() {
-            xcrun simctl list devices available -j | python3 -c '
-          import json, sys
-          devices = json.load(sys.stdin)["devices"]
-          print(next(d["udid"] for runtime in sorted(devices, reverse=True) if "iOS" in runtime for d in devices[runtime] if d["name"].startswith(sys.argv[1])))
-          ' "$1"
+            python3 - "$RUNNER_TEMP/cook-destinations.txt" "$1" <<'PY'
+          import re, sys
+          candidates = []
+          for line in open(sys.argv[1]):
+              fields = dict(re.findall(r'(platform|id|OS|name):([^,}]+)', line))
+              fields = {key: value.strip() for key, value in fields.items()}
+              if fields.get("platform") == "iOS Simulator" and fields.get("name", "").startswith(sys.argv[2]):
+                  version = tuple(map(int, fields["OS"].split(".")))
+                  candidates.append((version, fields["id"]))
+          if not candidates:
+              sys.exit(f"No compatible {sys.argv[2]} destination for this Xcode and scheme")
+          print(max(candidates)[1])
+          PY
           }
           IPHONE=$(pick iPhone)
           IPAD=$(pick iPad)
-          # 先把两台模拟器开好机，开机时间不算进 UI 测试的等待
-          xcrun simctl bootstatus "$IPHONE" -b
-          xcrun simctl bootstatus "$IPAD" -b
-          # 两台模拟器同时跑时机器很吃紧，UI 测试会从 1 分钟拖到十几分钟、偶发超时，所以一台跑完再跑另一台
-          xcodebuild test -project apps/ios/Cook.xcodeproj -scheme Cook -destination "id=$IPHONE" -destination "id=$IPAD" \
-            -disable-concurrent-destination-testing -resultBundlePath "$RUNNER_TEMP/xcresult/Cook.xcresult" CODE_SIGNING_ALLOWED=NO
+          # 连启动也串行；关掉第一台再启动第二台，不让两台同时争用 runner。
+          # 即使第一台失败也跑第二台，保留两份结果；任一失败都会让检查失败。
+          result=0
+          for device in "$IPHONE" "$IPAD"; do
+            if xcrun simctl bootstatus "$device" -b; then
+              xcodebuild test -project apps/ios/Cook.xcodeproj -scheme Cook -destination "id=$device" \
+                -destination-timeout 180 -parallel-testing-enabled NO \
+                -resultBundlePath "$RUNNER_TEMP/xcresult/$device.xcresult" CODE_SIGNING_ALLOWED=NO || result=1
+            else
+              result=1
+            fi
+            xcrun simctl shutdown "$device" || result=1
+          done
+          exit "$result"
       # 跑多个设备时 xcodebuild 的日志里只有失败的用例名，没有原因，从结果包里读出来
       - name: Show test failures
         if: failure()
         run: |
-          [ -d "$RUNNER_TEMP/xcresult/Cook.xcresult" ] || exit 0
-          xcrun xcresulttool get test-results summary --path "$RUNNER_TEMP/xcresult/Cook.xcresult" | python3 -c '
+          for bundle in "$RUNNER_TEMP"/xcresult/*.xcresult; do
+          [ -d "$bundle" ] || continue
+          xcrun xcresulttool get test-results summary --path "$bundle" | python3 -c '
           import json, sys
           for failure in json.load(sys.stdin).get("testFailures", []):
               name = failure.get("testName", "")
@@ -163,6 +184,7 @@ jobs:
               print(f"::error title={name}::{text}")
               print(json.dumps(failure, ensure_ascii=False, indent=2))
           '
+          done
       # 截图和每一步的操作记录都在结果包里，下载后用 Xcode 打开
       - name: Upload test results
         if: failure()
