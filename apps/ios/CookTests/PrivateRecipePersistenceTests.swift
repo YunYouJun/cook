@@ -1,4 +1,5 @@
 import CookCore
+import CoreData
 import SwiftData
 import XCTest
 @testable import Cook
@@ -66,6 +67,14 @@ final class PrivateRecipePersistenceTests: XCTestCase {
     }
 
     func testAddingModelMigratesExistingStoreWithoutChangingBuiltInReferences() throws {
+        try checkMigration(throughCoreData: false)
+    }
+
+    func testSchemaInitializerModelMigratesOldStoreBeforeSwiftDataOpensIt() throws {
+        try checkMigration(throughCoreData: true)
+    }
+
+    private func checkMigration(throughCoreData: Bool) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -81,6 +90,25 @@ final class PrivateRecipePersistenceTests: XCTestCase {
             context.insert(Preferences(pantry: ["盐"]))
             context.insert(FridgeItem(name: "鸡蛋", addedAt: Date(), expiresAt: Date()))
             try context.save()
+        }
+        if throughCoreData {
+            // The Debug initializer opens this old store with Core Data before SwiftData.
+            // Exercise that extra migration/unload path without contacting iCloud.
+            try autoreleasepool {
+                let model = try XCTUnwrap(NSManagedObjectModel.makeManagedObjectModel(for: Persistence.models))
+                XCTAssertEqual(Set(model.entities.compactMap(\.name)), ["Favorite", "HistoryEntry", "Preferences", "FridgeItem", "PrivateRecipeRecord"])
+                let description = NSPersistentStoreDescription(url: url)
+                description.shouldAddStoreAsynchronously = false
+                description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+                let bridge = NSPersistentContainer(name: "Cook", managedObjectModel: model)
+                bridge.persistentStoreDescriptions = [description]
+                var loadError: Error?
+                bridge.loadPersistentStores { _, error in loadError = error }
+                if let loadError { throw loadError }
+                for store in bridge.persistentStoreCoordinator.persistentStores {
+                    try bridge.persistentStoreCoordinator.remove(store)
+                }
+            }
         }
         let schema = Schema(Persistence.models)
         let config = ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)

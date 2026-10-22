@@ -24,6 +24,6 @@ Web 的「我的 → 我的菜谱」保存在本机。导出私人菜谱，再�
 
 删除保留 tombstone，旧文件遇到同一编号只可明确另存副本；文件导出不包含 tombstone。文件导入整批验证再保存，失败不提交一部分；Web 保存前读取最新本地存储，配额不足不报告成功。
 
-依赖 #112 的 CloudKit 初始化机制（schema 2 含 FridgeItem）。新增模型需要将该机制的版本升到 3；需维护者在 Development 验证后另行决定 Production schema 部署。本功能的代码和模拟器测试不能证明生产 iCloud 已经可用。
+已整合 #112 的 CloudKit 初始化机制（schema 2 含 FridgeItem），版本已升到 3，新增 PrivateRecipeRecord。需维护者在 Development 验证后另行决定 Production schema 部署。本功能的代码和模拟器测试不能证明生产 iCloud 已经可用。
 
 合并/发布前验收：同 Apple 账号两台真实设备新建、修改、删除、离线编辑后重连；未登录/退出 iCloud 的本地数据保留；另一 Apple 账号隔离；Development/Production schema 匹配。当前实现不含 Web 云同步、公共投稿、全局私人食材/厨具词典，以及 iOS 私人菜谱参与内置推荐、收藏或历史；Web 原有参与推荐/随机选菜的行为保留。

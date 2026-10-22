@@ -7,7 +7,9 @@ final class PrivateRecipesUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launch()
-        let mine = app.buttons["我的"]
+        // iPad's floating tab bar exposes both its wrapper and child as the same button.
+        // Select the first matching tab, then verify navigation by waiting for the library.
+        let mine = app.buttons.matching(identifier: "我的").firstMatch
         XCTAssertTrue(mine.waitForExistence(timeout: 30))
         mine.tap()
         let library = app.buttons["我的菜谱"]
