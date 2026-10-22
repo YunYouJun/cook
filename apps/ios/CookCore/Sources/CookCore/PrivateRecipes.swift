@@ -139,8 +139,10 @@ public struct PrivateRecipeImport: Sendable {
     public var additions: [PrivateRecipe] = []
     public var conflicts: [PrivateRecipe] = []
     public var duplicates: [PrivateRecipe] = []
+    private let currentCount: Int
 
     public init(current: [PrivateRecipe], incoming: [PrivateRecipe], deletedIDs: Set<String> = []) {
+        currentCount = current.count
         for recipe in incoming {
             let previous = current.first { $0.customId == recipe.customId }
             let copied = current.contains { $0.copiedFrom == recipe.customId && $0.hasSameContent(as: recipe) }
@@ -168,7 +170,8 @@ public struct PrivateRecipeImport: Sendable {
                 ids.insert(copy.customId)
             }
         }
-        guard ids.count <= PrivateRecipeFile.recipeLimit else { throw PrivateRecipeFileError.tooMany }
+        // Deleted identities reserve IDs, but only live recipes consume capacity.
+        guard currentCount + records.count <= PrivateRecipeFile.recipeLimit else { throw PrivateRecipeFileError.tooMany }
         return records
     }
 }

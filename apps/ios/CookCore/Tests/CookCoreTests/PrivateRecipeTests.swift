@@ -67,9 +67,45 @@ final class PrivateRecipeTests: XCTestCase {
 
     func testDeletedIdentityBecomesConflictAndNamesAreNotIDs() throws {
         let recipe = try fixture().recipes[0]
-        XCTAssertEqual(PrivateRecipeImport(current: [], incoming: [recipe], deletedIDs: [recipe.customId]).conflicts.count, 1)
+        let plan = PrivateRecipeImport(current: [], incoming: [recipe], deletedIDs: [recipe.customId])
+        XCTAssertEqual(plan.conflicts.count, 1)
+        XCTAssertEqual(try plan.recordsToInsert(keepCopies: false, currentIDs: [recipe.customId]), [])
+        XCTAssertThrowsError(try plan.recordsToInsert(keepCopies: true, currentIDs: [recipe.customId], createID: { recipe.customId }))
+        let copies = try plan.recordsToInsert(keepCopies: true, currentIDs: [recipe.customId], createID: { "custom-restored-copy" })
+        XCTAssertEqual(copies.first?.customId, "custom-restored-copy")
+        XCTAssertEqual(copies.first?.copiedFrom, recipe.customId)
         var another = recipe
         another.customId = "custom-another"
         XCTAssertEqual(PrivateRecipeImport(current: [recipe], incoming: [another]).additions.count, 1)
+    }
+
+    func testDeletedIdentitiesDoNotConsumeRecipeCapacity() throws {
+        let recipe = try fixture().recipes[0]
+        let deletedIDs = Set((0..<PrivateRecipeFile.recipeLimit).map { "custom-deleted-\($0)" })
+        let plan = PrivateRecipeImport(current: [], incoming: [recipe], deletedIDs: deletedIDs)
+        XCTAssertEqual(try plan.recordsToInsert(keepCopies: false, currentIDs: deletedIDs), [recipe])
+    }
+
+    func testCapacityIncludesActiveRecipesAndConflictCopies() throws {
+        let recipe = try fixture().recipes[0]
+        let current = (0..<PrivateRecipeFile.recipeLimit - 1).map { index in
+            var item = recipe
+            item.customId = "custom-active-\(index)"
+            return item
+        }
+        let currentIDs = Set(current.map(\.customId)).union([recipe.customId])
+        let plan = PrivateRecipeImport(current: current, incoming: [recipe], deletedIDs: [recipe.customId])
+        let copies = try plan.recordsToInsert(keepCopies: true, currentIDs: currentIDs, createID: { "custom-copy" })
+        XCTAssertEqual(current.count + copies.count, PrivateRecipeFile.recipeLimit)
+        var another = recipe
+        another.customId = "custom-extra"
+        let full = current + copies
+        let fullIDs = Set(full.map(\.customId)).union([recipe.customId])
+        let overflow = PrivateRecipeImport(current: full, incoming: [another])
+        XCTAssertThrowsError(try overflow.recordsToInsert(keepCopies: false, currentIDs: fullIDs)) { error in
+            guard case PrivateRecipeFileError.tooMany = error else { return XCTFail("Unexpected error: \(error)") }
+        }
+        let duplicate = PrivateRecipeImport(current: full, incoming: [recipe])
+        XCTAssertEqual(try duplicate.recordsToInsert(keepCopies: true, currentIDs: fullIDs), [])
     }
 }
