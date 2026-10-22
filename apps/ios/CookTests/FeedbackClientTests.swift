@@ -135,4 +135,9 @@ final class FeedbackClientTests: XCTestCase {
         XCTAssertEqual(query["subject"], "【云食册反馈】功能建议")
         XCTAssertEqual(query["body"], "番茄 & 鸡蛋 + 葱\n\n---\n来自 云食册（iOS 2.0.0）", "空行去掉，+ 不能变成空格")
     }
+
+    func testCopiedMailPreservesCategoryContactAndPlatform() {
+        let text = FeedbackClient.mailText(topic: "想要的菜没有", lines: ["番茄 & 鸡蛋 + 葱", "联系方式：cook+test@example.com"], version: "2.0.0")
+        XCTAssertEqual(text, "收件人：kf@yunle.fun\n主题：【云食册反馈】想要的菜没有\n\n番茄 & 鸡蛋 + 葱\n联系方式：cook+test@example.com\n\n---\n来自 云食册（iOS 2.0.0）")
+    }
 }

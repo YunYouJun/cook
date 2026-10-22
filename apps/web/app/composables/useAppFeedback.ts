@@ -1,7 +1,7 @@
 import type { AppFeedbackCategory } from '~/adapters/feedback'
 import { actionSheetController, alertController, toastController } from '@ionic/vue'
 import { links } from '~/constants'
-import { appFeedbackCategories, buildFeedbackMail, copyFeedbackText } from '~/utils/feedback'
+import { appFeedbackCategories, buildFeedbackMail, buildFeedbackText, copyFeedbackText } from '~/utils/feedback'
 
 /**
  * 意见反馈（不针对某道菜）的弹窗流程，「我的」和「应用」页共用
@@ -54,18 +54,27 @@ export function useAppFeedback() {
       await toast.present()
     }
     catch {
-      const copied = await copyFeedbackText(note)
-      const mail = buildFeedbackMail({
+      const message = {
         topic: item?.label ?? '意见反馈',
         lines: [note, contact ? `联系方式：${contact}` : ''],
-      })
+      }
+      const text = buildFeedbackText(message)
+      const copied = await copyFeedbackText(text)
+      const mail = buildFeedbackMail(message)
       const fallback = await alertController.create({
         header: '暂时没能提交',
-        message: `${copied ? '内容已经复制。' : ''}可以发邮件给我们，或者到 GitHub 提一个 issue。`,
+        message: `${copied ? '内容已经复制。' : '可以长按或选中下方内容复制。'}可以发邮件给我们，或者到 GitHub 提一个 issue。`,
+        inputs: [{ type: 'textarea', value: text, attributes: { 'readonly': true, 'aria-label': '完整反馈内容' } }],
         buttons: [
           { text: '取消', role: 'cancel' },
           { text: '去 GitHub', handler: () => { window.open(links.githubIssue, '_blank') } },
-          { text: '发邮件', handler: () => { window.location.href = mail } },
+          {
+            text: '发邮件',
+            handler: () => {
+              window.location.href = mail
+              return false
+            },
+          },
         ],
       })
       await fallback.present()

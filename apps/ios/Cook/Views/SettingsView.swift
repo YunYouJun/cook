@@ -218,6 +218,13 @@ struct AppFeedbackView: View {
         )
     }
 
+    private var mailText: String {
+        FeedbackClient.mailText(
+            topic: category.label,
+            lines: [trimmedNote, trimmedContact.isEmpty ? "" : "联系方式：\(trimmedContact)"]
+        )
+    }
+
     var body: some View {
         Form {
             Picker("类型", selection: $category) {
@@ -291,7 +298,7 @@ struct AppFeedbackView: View {
                 try await feedback.send(category, note: note, contact: trimmedContact)
                 showingSent = true
             } catch {
-                UIPasteboard.general.string = trimmedNote
+                UIPasteboard.general.string = mailText
                 showingFailed = true
             }
         }
@@ -301,7 +308,7 @@ struct AppFeedbackView: View {
     private func sendMail() {
         openURL(mailURL) { accepted in
             if !accepted {
-                UIPasteboard.general.string = "\(FeedbackClient.supportEmail)\n\n\(trimmedNote)"
+                UIPasteboard.general.string = mailText
                 showingNoMail = true
             }
         }

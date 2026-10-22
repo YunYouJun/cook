@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { links } from '../apps/web/app/constants'
-import { appFeedbackCategories, buildFeedbackMail } from '../apps/web/app/utils/feedback'
+import { appFeedbackCategories, buildFeedbackMail, buildFeedbackText, copyFeedbackText } from '../apps/web/app/utils/feedback'
+
+afterEach(() => vi.unstubAllGlobals())
 
 describe('buildFeedbackMail', () => {
   it('prefills subject and body for the support mailbox, skipping empty lines', () => {
@@ -15,6 +17,24 @@ describe('buildFeedbackMail', () => {
     const mail = buildFeedbackMail({ topic: 'a b', lines: ['c & d'] })
     expect(mail).not.toContain('+')
     expect(mail).toContain('a%20b')
+  })
+})
+
+describe('feedback fallback text', () => {
+  it('preserves the recipient, category, contact and platform without a mail app', () => {
+    const text = buildFeedbackText({ topic: '想要的菜没有', lines: ['番茄 & 鸡蛋 + 葱', '联系方式：cook+test@example.com'] })
+    expect(text).toBe('收件人：kf@yunle.fun\n主题：【食用手册反馈】想要的菜没有\n\n番茄 & 鸡蛋 + 葱\n联系方式：cook+test@example.com\n\n---\n来自 食用手册（web）')
+  })
+
+  it('reports unavailable or denied clipboard access without losing the fallback', async () => {
+    vi.stubGlobal('navigator', {})
+    expect(await copyFeedbackText('反馈')).toBe(false)
+    const writeText = vi.fn().mockRejectedValue(new Error('Permission denied'))
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+    expect(await copyFeedbackText('反馈')).toBe(false)
+    writeText.mockResolvedValue(undefined)
+    expect(await copyFeedbackText('反馈')).toBe(true)
+    expect(writeText).toHaveBeenLastCalledWith('反馈')
   })
 })
 

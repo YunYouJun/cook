@@ -170,6 +170,15 @@ final class FeedbackClient {
 
     // MARK: 邮件兜底
 
+    /// 邮件无法打开时仍能保留收件人、类型、联系方式和平台信息。
+    nonisolated static func mailText(topic: String, lines: [String], version: String = FeedbackClient.bundledVersion) -> String {
+        let url = mailURL(topic: topic, lines: lines, version: version)
+        let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let subject = query.first { $0.name == "subject" }?.value ?? ""
+        let body = query.first { $0.name == "body" }?.value ?? ""
+        return "收件人：\(supportEmail)\n主题：\(subject)\n\n\(body)"
+    }
+
     /// 预填好的反馈邮件，云函数连不上或没配置时用；不需要账号，比 GitHub 门槛低。格式和 Web 的 buildFeedbackMail 一致
     nonisolated static func mailURL(topic: String, lines: [String], version: String = FeedbackClient.bundledVersion) -> URL {
         let body = (lines.filter { !$0.isEmpty } + ["", "---", "来自 云食册（iOS \(version)）"]).joined(separator: "\n")

@@ -9,7 +9,7 @@ import { getEmojisFromStuff } from '~/utils'
 import { trackCookEvent } from '~/utils/analytics'
 import { isCustomRecipe } from '~/utils/customRecipe'
 import { promptText } from '~/utils/dialog'
-import { buildFeedbackMail, feedbackKinds } from '~/utils/feedback'
+import { buildFeedbackMail, buildFeedbackText, copyFeedbackText, feedbackKinds } from '~/utils/feedback'
 import { getRecipeFeedbackLink, getRecipeLink, getRecipeTextLink, openRecipe } from '~/utils/recipe'
 import { yunleHaptic } from '~/utils/yunleHost'
 
@@ -101,21 +101,32 @@ async function onFeedback() {
     await toast.present()
   }
   catch {
-    const mail = buildFeedbackMail({
+    const message = {
       topic: recipe.name,
       lines: [
         `菜谱：${recipe.name}（#${recipe.id}）`,
         `问题：${feedbackKinds.find(item => item.kind === kind)?.label ?? kind}`,
         note,
+        getRecipeLink(recipe),
       ],
-    })
+    }
+    const text = buildFeedbackText(message)
+    const copied = await copyFeedbackText(text)
+    const mail = buildFeedbackMail(message)
     const alert = await alertController.create({
       header: '暂时没能提交',
-      message: '可以发邮件给我们，或者到 GitHub 填写反馈表单，菜名和视频都已经帮你填好。',
+      message: `${copied ? '内容已经复制。' : '可以长按或选中下方内容复制。'}可以发邮件给我们，或者到 GitHub 填写反馈表单。`,
+      inputs: [{ type: 'textarea', value: text, attributes: { 'readonly': true, 'aria-label': '完整反馈内容' } }],
       buttons: [
         { text: '取消', role: 'cancel' },
         { text: '去 GitHub', handler: () => { window.open(getRecipeFeedbackLink(recipe), '_blank') } },
-        { text: '发邮件', handler: () => { window.location.href = mail } },
+        {
+          text: '发邮件',
+          handler: () => {
+            window.location.href = mail
+            return false
+          },
+        },
       ],
     })
     await alert.present()

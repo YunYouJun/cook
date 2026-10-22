@@ -52,6 +52,12 @@ export function buildFeedbackMail(options: { topic: string, lines: string[], pla
   return `mailto:${links.supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 }
 
+/** Keep the same complete message available when a mail app or clipboard is unavailable. */
+export function buildFeedbackText(options: { topic: string, lines: string[], platform?: string }): string {
+  const mail = new URL(buildFeedbackMail(options))
+  return `收件人：${links.supportEmail}\n主题：${mail.searchParams.get('subject')}\n\n${mail.searchParams.get('body')}`
+}
+
 /** Best effort: a failed write (no permission, insecure context) just means nothing was copied. */
 export async function copyFeedbackText(text: string): Promise<boolean> {
   try {
