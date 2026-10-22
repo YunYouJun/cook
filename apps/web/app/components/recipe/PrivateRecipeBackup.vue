@@ -113,7 +113,7 @@ async function confirm() {
       </p>
       <ion-list v-if="preview.conflicts.length" :inset="true">
         <ion-item>
-          <ion-toggle v-model:checked="copies">
+          <ion-toggle v-model="copies">
             冲突菜谱另存副本
           </ion-toggle>
         </ion-item>
