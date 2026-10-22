@@ -32,6 +32,11 @@ final class PrivateRecipesUITests: XCTestCase {
         XCTAssertTrue(nameField.waitForExistence(timeout: 10))
         nameField.tap()
         nameField.typeText("新")
+        // On iPad the keyboard moves the sheet after typing. Submit the single-line
+        // field and wait for it to close before XCTest resolves the Save button's frame.
+        nameField.typeText("\n")
+        let keyboardHidden = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
+        XCTAssertEqual(XCTWaiter().wait(for: [keyboardHidden], timeout: 30), .completed)
         app.buttons["保存"].tap()
         XCTAssertTrue(app.navigationBars[name + "新"].waitForExistence(timeout: 10))
         app.buttons["删除菜谱"].tap()
