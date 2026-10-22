@@ -69,7 +69,7 @@ watchDebounced(
 
 <template>
   <ion-page>
-    <ion-header :translucent="true" :class="{ 'workbench-header': cookingStyle === 'workbench' }">
+    <ion-header :key="cookingStyle" :translucent="true" :class="{ 'workbench-header': cookingStyle === 'workbench' }">
       <ion-toolbar>
         <ion-title>做菜</ion-title>
         <ion-buttons slot="end">
@@ -81,7 +81,7 @@ watchDebounced(
     </ion-header>
 
     <ion-content ref="contentRef" :fullscreen="true" :class="{ 'workbench-content': cookingStyle === 'workbench' }" :style="{ '--padding-bottom': `${cookingStyle === 'classic' ? panelInset + 16 : 16}px` }">
-      <ion-header v-show="cookingStyle === 'classic'" collapse="condense">
+      <ion-header v-show="cookingStyle === 'classic'" :collapse="cookingStyle === 'classic' ? 'condense' : undefined">
         <ion-toolbar>
           <ion-title size="large">
             做菜
@@ -106,7 +106,7 @@ watchDebounced(
 .workbench-header ion-toolbar {
   --opacity-scale: 1;
 }
-.workbench-header ion-toolbar.in-toolbar ion-title {
+ion-header.workbench-header ion-toolbar.in-toolbar ion-title {
   opacity: 1;
   pointer-events: auto;
 }

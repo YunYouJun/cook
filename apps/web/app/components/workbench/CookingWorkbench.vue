@@ -99,7 +99,7 @@ function addUnlisted() {
 </script>
 
 <template>
-  <main class="cooking-workbench">
+  <div class="cooking-workbench">
     <header class="wb-intro">
       <h1>料理工作台</h1>
       <p>把手边的食材放上来，发现有据可查的搭配。</p>
@@ -276,7 +276,7 @@ function addUnlisted() {
       </section>
     </div>
     <AvoidSheet v-model:open="avoidOpen" :selected="rStore.selectedAvoid" @toggle="rStore.toggleAvoid" @clear="rStore.clearAvoid" />
-  </main>
+  </div>
 </template>
 
 <style scoped>
