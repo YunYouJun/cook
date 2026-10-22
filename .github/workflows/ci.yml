@@ -130,4 +130,31 @@ jobs:
           }
           IPHONE=$(pick iPhone)
           IPAD=$(pick iPad)
-          xcodebuild test -project apps/ios/Cook.xcodeproj -scheme Cook -destination "id=$IPHONE" -destination "id=$IPAD" CODE_SIGNING_ALLOWED=NO
+          # 先把两台模拟器开好机，开机时间不算进 UI 测试的等待
+          xcrun simctl bootstatus "$IPHONE" -b
+          xcrun simctl bootstatus "$IPAD" -b
+          # 两台模拟器同时跑时机器很吃紧，UI 测试会从 1 分钟拖到十几分钟、偶发超时，所以一台跑完再跑另一台
+          xcodebuild test -project apps/ios/Cook.xcodeproj -scheme Cook -destination "id=$IPHONE" -destination "id=$IPAD" \
+            -disable-concurrent-destination-testing -resultBundlePath "$RUNNER_TEMP/xcresult/Cook.xcresult" CODE_SIGNING_ALLOWED=NO
+      # 跑多个设备时 xcodebuild 的日志里只有失败的用例名，没有原因，从结果包里读出来
+      - name: Show test failures
+        if: failure()
+        run: |
+          [ -d "$RUNNER_TEMP/xcresult/Cook.xcresult" ] || exit 0
+          xcrun xcresulttool get test-results summary --path "$RUNNER_TEMP/xcresult/Cook.xcresult" | python3 -c '
+          import json, sys
+          for failure in json.load(sys.stdin).get("testFailures", []):
+              name = failure.get("testName", "")
+              text = failure.get("failureText", "")
+              print(f"::error title={name}::{text}")
+              print(json.dumps(failure, ensure_ascii=False, indent=2))
+          '
+      # 截图和每一步的操作记录都在结果包里，下载后用 Xcode 打开
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-xcresult
+          path: ${{ runner.temp }}/xcresult/
+          if-no-files-found: ignore
+          retention-days: 7

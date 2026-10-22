@@ -90,6 +90,9 @@ enum Persistence {
             // 首次启动时 Application Support 还不存在，先建好再让 SwiftData 建库
             try? FileManager.default.createDirectory(at: .applicationSupportDirectory, withIntermediateDirectories: true)
             let cloud = ModelConfiguration(schema: schema, cloudKitDatabase: .automatic)
+            #if DEBUG
+                CloudKitSchema.initializeIfNeeded(models: models, storeURL: cloud.url)
+            #endif
             if let container = try? ModelContainer(for: schema, configurations: cloud) {
                 return container
             }
