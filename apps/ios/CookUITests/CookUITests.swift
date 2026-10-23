@@ -73,8 +73,22 @@ final class CookUITests: XCTestCase {
         XCTAssertEqual(result, .completed, "等了 \(Int(timeout)) 秒，\(element.description) 仍不满足 \(condition)", file: file, line: line)
     }
 
+    /// SwiftUI 把带标签的整行也暴露成 Switch；真正的系统开关是行内另一个无障碍元素。
+    /// 按实际边界找到它，避免在大屏上按整行宽度计算点击位置时点到空白处。
     @MainActor
-    func testPrivacyPolicyAndConsentChoicesSurviveRelaunch() {
+    private func tapSwitch(_ row: XCUIElement, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) throws {
+        wait(row, "isHittable == true", file: file, line: line)
+        let bounds = row.frame
+        let control = app.switches.allElementsBoundByIndex.first { element in
+            let frame = element.frame
+            return frame.width > 0 && frame.width < bounds.width && bounds.contains(frame)
+        }
+        let target = try XCTUnwrap(control, "未找到开关行内的系统开关", file: file, line: line)
+        tap(target, file: file, line: line)
+    }
+
+    @MainActor
+    func testPrivacyPolicyAndConsentChoicesSurviveRelaunch() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_LEGACY_CONSENT"] = "1"
@@ -90,8 +104,7 @@ final class CookUITests: XCTestCase {
         let share = app.switches["privacy.shareSignals"]
         XCTAssertTrue(share.waitForExistence(timeout: timeout))
         wait(share, "value == '0'")
-        // SwiftUI 的无障碍 Switch 包含整行；点右侧开关，避免只点到文字区域。
-        share.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        try tapSwitch(share, in: app)
         wait(share, "value == '1'")
 
         app.terminate()
@@ -103,7 +116,7 @@ final class CookUITests: XCTestCase {
         tap(app.buttons["我的"].firstMatch)
         app.swipeUp()
         wait(share, "value == '1'")
-        share.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        try tapSwitch(share, in: app)
         wait(share, "value == '0'")
         tap(app.buttons["隐私政策"])
         XCTAssertTrue(app.staticTexts["云食册隐私政策"].waitForExistence(timeout: timeout))
