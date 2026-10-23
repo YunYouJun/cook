@@ -8,7 +8,6 @@ struct SettingsView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(FeedbackClient.self) private var feedback
     @Environment(\.modelContext) private var context
-    @AppStorage(FeedbackClient.signalsKey) private var shareSignals = true
     // 导出要带上软删除的记录，网页版合并时才知道哪些被取消了
     @Query private var allFavorites: [Favorite]
     @Query private var allVisits: [HistoryEntry]
@@ -18,11 +17,13 @@ struct SettingsView: View {
     private enum ImportResult: Identifiable {
         case done(favorites: Int, visits: Int)
         case failed
+        case saveFailed
 
         var id: String {
             switch self {
             case let .done(favorites, visits): return "done-\(favorites)-\(visits)"
             case .failed: return "failed"
+            case .saveFailed: return "saveFailed"
             }
         }
     }
@@ -30,6 +31,7 @@ struct SettingsView: View {
     private var importTitle: String {
         switch importResult {
         case .failed?: return "导入失败"
+        case .saveFailed?: return "导入未能保存"
         default: return "导入完成"
         }
     }
@@ -93,15 +95,20 @@ struct SettingsView: View {
                     Link("在 GitHub 上反馈", destination: URL(string: "https://github.com/YunYouJun/cook/issues")!)
                     Link("参与讨论", destination: URL(string: "https://github.com/YunYouJun/cook/discussions")!)
                     Link("菜谱投稿", destination: URL(string: "https://docs.qq.com/form/page/DWk9GWW9oTmlXZU9V")!)
-                    // 没配置反馈地址的构建不会发筛选信号，开关也就不显示
-                    if feedback.isConfigured {
-                        Toggle("帮助改进推荐", isOn: $shareSignals)
-                    }
                 } header: {
                     Text("反馈")
+                }
+                Section {
+                    NavigationLink("隐私政策") { PrivacyPolicyView() }
+                    if feedback.isConfigured {
+                        Toggle("帮助改进推荐", isOn: Binding(get: { feedback.signalsEnabled }, set: { feedback.setSignalConsent($0) }))
+                            .accessibilityIdentifier("privacy.shareSignals")
+                    }
+                } header: {
+                    Text("隐私")
                 } footer: {
                     if feedback.isConfigured {
-                        Text("匿名发送选过的食材组合和点开了哪道菜，用来补菜和调整排序，不含账号和设备信息。")
+                        Text("默认关闭。开启表示同意向腾讯云 CloudBase 分享后续的食材组合、厨具、推荐方式和菜谱点击情况，以及 App 版本和每次启动的随机标识，用来补菜、调整排序和限制请求次数。不含输入原文、账号或设备硬件标识符。关闭不影响使用。详见隐私政策。")
                     }
                 }
                 Section("关于") {
@@ -137,13 +144,15 @@ struct SettingsView: View {
                     Text(favorites + visits == 0 ? "没有新的内容，App 里已经都有了。" : "新加了 \(favorites) 个收藏、\(visits) 条浏览记录。")
                 case .failed:
                     Text("没能识别这份数据，请确认它来自食用手册网页版的导出。")
+                case .saveFailed:
+                    Text("数据已识别，但没能保存到设备。原有收藏和浏览记录已保留，请检查可用储存空间后重新导入。")
                 }
             }
             .sensoryFeedback(trigger: importResult?.id) { _, id in
                 guard let id else {
                     return nil
                 }
-                return id == "failed" ? .error : .success
+                return id == "failed" || id == "saveFailed" ? .error : .success
             }
         }
     }
@@ -153,8 +162,12 @@ struct SettingsView: View {
             importResult = .failed
             return
         }
-        let added = context.importWebData(data, recipeIdByName: store.recipeIdByName, validIds: Set(store.recipesById.keys))
-        importResult = .done(favorites: added.favorites, visits: added.visits)
+        do {
+            let added = try context.importWebData(data, recipeIdByName: store.recipeIdByName, validIds: Set(store.recipesById.keys))
+            importResult = .done(favorites: added.favorites, visits: added.visits)
+        } catch {
+            importResult = .saveFailed
+        }
     }
 }
 
@@ -214,7 +227,12 @@ struct AppFeedbackView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
             } footer: {
-                Text("留下联系方式的话，我们处理后可以告诉你。")
+                Text("留下联系方式的话，我们处理后可以告诉你；这条反馈可能因此与你关联。")
+            }
+            Section {
+                NavigationLink("隐私政策") { PrivacyPolicyView() }
+            } footer: {
+                Text("点按发送会将反馈内容、你填写的联系方式、App 版本和本次启动的随机标识发送至腾讯云 CloudBase，用于处理问题和回复。")
             }
         }
         .navigationTitle("意见反馈")

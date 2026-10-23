@@ -45,10 +45,17 @@ final class FeedbackClient {
 
     typealias Transport = @Sendable (URLRequest) async throws -> (Data, URLResponse)
 
-    /// 设置里「帮助改进推荐」开关存在 UserDefaults 的键，默认开
+    /// 旧版开关默认开启，不能把它当成用户主动同意。新流程只读取独立的同意记录。
     nonisolated static let signalsKey = "shareSearchSignals"
+    nonisolated static let consentKey = "searchSignalConsent.v1"
     nonisolated static let maxNote = 500
     nonisolated static let maxContact = 100
+
+    enum SignalConsent: String {
+        case allowed, declined
+    }
+
+    private(set) var signalConsent: SignalConsent?
 
     /// 每次启动随机生成，只放在内存里，云函数用它按设备限额；不写盘，也不读 IDFV
     let reporter = UUID().uuidString
@@ -60,6 +67,7 @@ final class FeedbackClient {
     private let defaults: UserDefaults
     private let transport: Transport
     @ObservationIgnored private var sentSignals = Set<String>()
+    @ObservationIgnored private var signalTasks: [UUID: Task<Void, Never>] = [:]
 
     /// Debug 构建默认不发筛选信号，免得开发时的点击混进评测数据；菜谱反馈和意见反馈照常提交，方便联调
     init(
@@ -74,6 +82,7 @@ final class FeedbackClient {
         self.sendsSignals = sendsSignals
         self.defaults = defaults
         self.transport = transport
+        signalConsent = defaults.string(forKey: Self.consentKey).flatMap(SignalConsent.init(rawValue:))
     }
 
     // MARK: 筛选信号
@@ -103,11 +112,34 @@ final class FeedbackClient {
         }
         var body = body
         body["action"] = "signal"
-        return Task { _ = try? await self.post(body) }
+        let id = UUID()
+        let task = Task { [weak self] in
+            guard let self else { return }
+            defer { self.signalTasks[id] = nil }
+            // 排队期间用户可能已撤回同意；不补发同意前或关闭期间的操作。
+            guard self.signalsEnabled, !Task.isCancelled else { return }
+            _ = try? await self.post(body)
+        }
+        signalTasks[id] = task
+        return task
     }
 
     var signalsEnabled: Bool {
-        defaults.object(forKey: Self.signalsKey) as? Bool ?? true
+        signalConsent == .allowed
+    }
+
+    var needsSignalConsent: Bool {
+        isConfigured && signalConsent == nil
+    }
+
+    func setSignalConsent(_ enabled: Bool) {
+        signalConsent = enabled ? .allowed : .declined
+        defaults.set(signalConsent?.rawValue, forKey: Self.consentKey)
+        defaults.removeObject(forKey: Self.signalsKey)
+        if !enabled {
+            signalTasks.values.forEach { $0.cancel() }
+            signalTasks.removeAll()
+        }
     }
 
     static func signalKey(_ body: [String: Any]) -> String {
@@ -150,6 +182,7 @@ final class FeedbackClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        try Task.checkCancellation()
         let (data, response) = try await transport(request)
         let result = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         guard (response as? HTTPURLResponse)?.statusCode == 200, result?["ok"] as? Bool == true else {

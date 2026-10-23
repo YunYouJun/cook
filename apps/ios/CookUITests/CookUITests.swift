@@ -14,6 +14,8 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testCookFlowByAccessibilityLabels() {
         let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         // 真机上跑时不去建 CloudKit 结构（见 CloudKitSchema），免得首屏多等几秒
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launch()
@@ -45,7 +47,7 @@ final class CookUITests: XCTestCase {
         // 结果行合成一个元素，读出菜名和厨具难度
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch)
 
-        // 收藏存在本机数据库里，同一台模拟器上次跑完可能已经收藏过：先等详情页的收藏按钮出来（两种状态都算），收藏过就先取消
+        // 检查收藏按钮及保存后的状态；UI 测试使用独立的内存数据库。
         let favorite = app.buttons["收藏"]
         let unfavorite = app.buttons["取消收藏"]
         wait(app.buttons.matching(NSPredicate(format: "label IN %@", ["收藏", "取消收藏"])).firstMatch, "exists == true")
@@ -69,5 +71,91 @@ final class CookUITests: XCTestCase {
         let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: condition), object: element)
         let result = XCTWaiter().wait(for: [expectation], timeout: timeout)
         XCTAssertEqual(result, .completed, "等了 \(Int(timeout)) 秒，\(element.description) 仍不满足 \(condition)", file: file, line: line)
+    }
+
+    @MainActor
+    func testPrivacyPolicyAndConsentChoicesSurviveRelaunch() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_LEGACY_CONSENT"] = "1"
+        app.launch()
+        let decline = app.buttons["consent.decline"]
+        XCTAssertTrue(decline.waitForExistence(timeout: timeout), "旧版默认开关也需要重新选择")
+        tap(app.buttons["隐私政策"])
+        XCTAssertTrue(app.staticTexts["云食册隐私政策"].waitForExistence(timeout: timeout))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tap(decline)
+        tap(app.buttons["我的"].firstMatch)
+        app.swipeUp()
+        let share = app.switches["privacy.shareSignals"]
+        XCTAssertTrue(share.waitForExistence(timeout: timeout))
+        wait(share, "value == '0'")
+        // SwiftUI 的无障碍 Switch 包含整行；点右侧开关，避免只点到文字区域。
+        share.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        wait(share, "value == '1'")
+
+        app.terminate()
+        app.launchArguments = ["-ui-testing"]
+        app.launchEnvironment.removeValue(forKey: "COOK_UI_TEST_LEGACY_CONSENT")
+        app.launch()
+        XCTAssertTrue(app.buttons["我的"].firstMatch.waitForExistence(timeout: timeout))
+        XCTAssertFalse(decline.exists, "明确选择后不再弹出")
+        tap(app.buttons["我的"].firstMatch)
+        app.swipeUp()
+        wait(share, "value == '1'")
+        share.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        wait(share, "value == '0'")
+        tap(app.buttons["隐私政策"])
+        XCTAssertTrue(app.staticTexts["云食册隐私政策"].waitForExistence(timeout: timeout))
+    }
+
+    @MainActor
+    func testFavoriteFailureCanBeRetriedWithoutLosingState() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launchEnvironment["COOK_UI_TEST_FAVORITE_FAILURES"] = "2"
+        app.launch()
+        XCTAssertTrue(app.buttons["番茄"].waitForExistence(timeout: timeout))
+        tap(app.buttons["番茄"])
+        wait(app.buttons["番茄"], "isSelected == true")
+        tap(app.buttons["鸡蛋"])
+        wait(app.buttons["鸡蛋"], "isSelected == true")
+        let showResults = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "看看能做什么")).firstMatch
+        if app.windows.firstMatch.horizontalSizeClass != .regular { tap(showResults) }
+        let recipe = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch
+        XCTAssertTrue(recipe.waitForExistence(timeout: timeout))
+        tap(recipe)
+        let favorite = app.navigationBars.buttons["收藏"]
+        XCTAssertTrue(favorite.waitForExistence(timeout: timeout))
+        tap(favorite)
+        let failure = app.alerts["收藏未能保存"]
+        XCTAssertTrue(failure.waitForExistence(timeout: timeout))
+        tap(failure.buttons["重试"])
+        XCTAssertTrue(failure.waitForExistence(timeout: timeout), "连续失败时仍能显示错误")
+        tap(failure.buttons["重试"])
+        XCTAssertTrue(app.buttons["取消收藏"].waitForExistence(timeout: timeout))
+        XCTAssertFalse(failure.exists)
+    }
+
+    @MainActor
+    func testFridgeRemainsUsableAfterDecliningStatistics() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launch()
+        tap(app.buttons["consent.decline"])
+        wait(app.buttons["consent.decline"], "exists == false")
+        tap(app.buttons["冰箱"].firstMatch)
+        tap(app.buttons["放点食材"])
+        let tomato = app.buttons["番茄"]
+        tap(tomato)
+        wait(tomato, "isSelected == true")
+        tap(app.buttons["放进去（1）"])
+        wait(app.buttons["放进去（1）"], "exists == false")
+        wait(app.switches["临期提醒"], "exists == true")
+        let item = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄")).firstMatch
+        tap(item)
+        tap(app.buttons["吃完了，移出冰箱"])
+        wait(app.staticTexts["冰箱是空的"], "exists == true")
     }
 }

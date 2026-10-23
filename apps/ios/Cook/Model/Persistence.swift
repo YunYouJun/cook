@@ -107,26 +107,48 @@ enum Persistence {
 }
 
 extension ModelContext {
-    func isFavorite(_ recipeId: Int) -> Bool {
-        favorites(for: recipeId).contains { $0.deletedAt == nil }
+    func isFavorite(_ recipeId: Int) throws -> Bool {
+        try favorites(for: recipeId).contains { $0.deletedAt == nil }
     }
 
-    func toggleFavorite(_ recipeId: Int, at date: Date = Date()) {
-        let existing = favorites(for: recipeId)
-        let active = existing.filter { $0.deletedAt == nil }
-        if !active.isEmpty {
-            for favorite in active {
-                favorite.deletedAt = date
-                favorite.updatedAt = date
+    func toggleFavorite(_ recipeId: Int, at date: Date = Date()) throws {
+        try setFavorite(recipeId, isFavorite: !isFavorite(recipeId), at: date)
+    }
+
+    /// 明确保存目标状态，失败后重试不会把「收藏」误变成「取消收藏」。
+    func setFavorite(_ recipeId: Int, isFavorite: Bool, at date: Date = Date(), save: (ModelContext) throws -> Void = { try $0.save() }) throws {
+        try saveUserChange(save: save) {
+            let existing = try favorites(for: recipeId)
+            let active = existing.filter { $0.deletedAt == nil }
+            if !isFavorite {
+                for favorite in active {
+                    favorite.deletedAt = date
+                    favorite.updatedAt = date
+                }
+            } else if active.isEmpty {
+                if let revived = existing.first {
+                    revived.deletedAt = nil
+                    revived.createdAt = date
+                    revived.updatedAt = date
+                } else {
+                    insert(Favorite(recipeId: recipeId, at: date))
+                }
             }
-        } else if let revived = existing.first {
-            revived.deletedAt = nil
-            revived.createdAt = date
-            revived.updatedAt = date
-        } else {
-            insert(Favorite(recipeId: recipeId, at: date))
         }
-        try? save()
+    }
+
+    /// 先保存已有修改，确保失败回滚只撤销本次操作，不抹掉其他页面的待保存数据。
+    /// 读取和保存错误均交给调用方显示；不得把读取失败当成「没有收藏」。
+    private func saveUserChange<T>(save: (ModelContext) throws -> Void, _ change: () throws -> T) throws -> T {
+        if hasChanges { try save(self) }
+        do {
+            let result = try change()
+            try save(self)
+            return result
+        } catch {
+            rollback()
+            throw error
+        }
     }
 
     /// 记一次浏览，只保留最近 limit 道菜
@@ -189,10 +211,16 @@ extension ModelContext {
     /// 合并网页版导出的收藏和浏览记录，返回新加了几个收藏、几条浏览记录。
     /// 只加不减：App 里已有的不动；在 App 里取消收藏的时间比网页版收藏的晚时，以 App 为准
     @discardableResult
-    func importWebData(_ data: WebUserData, recipeIdByName: [String: Int], validIds: Set<Int>, historyLimit: Int = 100) -> (favorites: Int, visits: Int) {
+    func importWebData(_ data: WebUserData, recipeIdByName: [String: Int], validIds: Set<Int>, historyLimit: Int = 100, save: (ModelContext) throws -> Void = { try $0.save() }) throws -> (favorites: Int, visits: Int) {
+        try saveUserChange(save: save) {
+            try mergeWebData(data, recipeIdByName: recipeIdByName, validIds: validIds, historyLimit: historyLimit)
+        }
+    }
+
+    private func mergeWebData(_ data: WebUserData, recipeIdByName: [String: Int], validIds: Set<Int>, historyLimit: Int) throws -> (favorites: Int, visits: Int) {
         var addedFavorites = 0
         for favorite in data.favorites where validIds.contains(favorite.recipeId) {
-            let existing = favorites(for: favorite.recipeId)
+            let existing = try favorites(for: favorite.recipeId)
             if existing.contains(where: { $0.deletedAt == nil }) {
                 continue
             }
@@ -217,7 +245,7 @@ extension ModelContext {
                 continue
             }
             let descriptor = FetchDescriptor<HistoryEntry>(predicate: #Predicate<HistoryEntry> { $0.recipeId == recipeId })
-            let existing = (try? fetch(descriptor)) ?? []
+            let existing = try fetch(descriptor)
             if let entry = existing.first {
                 // 在 App 里删过、或者 App 里看得更晚的，都不动
                 if let deletedAt = entry.deletedAt, deletedAt >= visit.time {
@@ -236,14 +264,13 @@ extension ModelContext {
         }
 
         if addedVisits > 0 {
-            let all = (try? fetch(FetchDescriptor<HistoryEntry>(sortBy: [SortDescriptor(\.visitedAt, order: .reverse)]))) ?? []
+            let all = try fetch(FetchDescriptor<HistoryEntry>(sortBy: [SortDescriptor(\.visitedAt, order: .reverse)]))
             let now = Date()
             for entry in all.filter({ $0.deletedAt == nil }).dropFirst(historyLimit) {
                 entry.deletedAt = now
                 entry.updatedAt = now
             }
         }
-        try? save()
         return (addedFavorites, addedVisits)
     }
 
@@ -283,9 +310,9 @@ extension ModelContext {
         }
     }
 
-    private func favorites(for recipeId: Int) -> [Favorite] {
+    private func favorites(for recipeId: Int) throws -> [Favorite] {
         let descriptor = FetchDescriptor<Favorite>(predicate: #Predicate<Favorite> { $0.recipeId == recipeId })
-        return (try? fetch(descriptor)) ?? []
+        return try fetch(descriptor)
     }
 
     private func purgeTombstones(_ entries: [HistoryEntry], now: Date) {
