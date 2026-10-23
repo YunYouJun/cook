@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { links } from '~/constants'
-
 definePageMeta({
   alias: ['/apps'],
 })
@@ -34,7 +32,7 @@ useHead({
       </ion-list>
 
       <ion-list :inset="true">
-        <ion-item :href="links.githubIssue" target="_blank" :detail-icon="ioniconsOpenOutline">
+        <ion-item router-link="/feedback?category=idea" :detail="true">
           <CookListIcon slot="start" :icon="ioniconsBulbOutline" color="#34c759" />
           <ion-label>新功能建议</ion-label>
         </ion-item>

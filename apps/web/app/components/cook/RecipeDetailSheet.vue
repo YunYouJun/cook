@@ -5,11 +5,12 @@ import { actionSheetController, alertController, toastController } from '@ionic/
 import { uniqueStuff } from '@yunyoujun/cook/recommend'
 import { isFavorited, toggleFavorite } from '~/composables/store/favorite'
 import { addRecipeHistory } from '~/composables/store/history'
+import { links } from '~/constants'
 import { getEmojisFromStuff } from '~/utils'
 import { trackCookEvent } from '~/utils/analytics'
 import { isCustomRecipe } from '~/utils/customRecipe'
 import { promptText } from '~/utils/dialog'
-import { feedbackKinds } from '~/utils/feedback'
+import { buildFeedbackMail, buildFeedbackText, copyFeedbackText, feedbackKinds } from '~/utils/feedback'
 import { getRecipeFeedbackLink, getRecipeLink, getRecipeTextLink, openRecipe } from '~/utils/recipe'
 import { yunleHaptic } from '~/utils/yunleHost'
 
@@ -64,7 +65,7 @@ function onFavorite() {
 
 const feedback = useRecipeFeedback()
 
-/** 选择问题类型后直接提交；提交不了时引导去 GitHub 填表 */
+/** 选择问题类型后直接提交；提交不了时引导发邮件或去 GitHub 填表（菜名和视频已预填） */
 async function onFeedback() {
   const recipe = props.recipe
   if (!recipe)
@@ -101,12 +102,33 @@ async function onFeedback() {
     await toast.present()
   }
   catch {
+    const message = {
+      topic: recipe.name,
+      lines: [
+        `菜谱：${recipe.name}（#${recipe.id}）`,
+        `问题：${feedbackKinds.find(item => item.kind === kind)?.label ?? kind}`,
+        note,
+        getRecipeLink(recipe),
+      ],
+    }
+    const text = buildFeedbackText(message)
+    const copied = await copyFeedbackText(text)
+    const mail = buildFeedbackMail(message)
     const alert = await alertController.create({
       header: '暂时没能提交',
-      message: '可以到 GitHub 填写反馈表单，菜名和视频已经帮你填好。',
+      message: `${copied ? '内容已经复制。' : '可以长按或选中下方内容复制。'}可以发邮件给我们，或者到 GitHub 填写反馈表单。`,
+      inputs: [{ type: 'textarea', value: text, attributes: { 'readonly': true, 'aria-label': '完整反馈内容' } }],
       buttons: [
         { text: '取消', role: 'cancel' },
-        { text: '去填写', handler: () => { window.open(getRecipeFeedbackLink(recipe), '_blank') } },
+        { text: '支持中心', handler: () => { window.open(links.feedback, '_blank', 'noopener,noreferrer') } },
+        { text: '去 GitHub', handler: () => { window.open(getRecipeFeedbackLink(recipe), '_blank') } },
+        {
+          text: '发邮件',
+          handler: () => {
+            window.location.href = mail
+            return false
+          },
+        },
       ],
     })
     await alert.present()
