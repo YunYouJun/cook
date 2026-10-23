@@ -1,14 +1,20 @@
-# APP
+# App 开发
 
-考虑到跨平台和开发效率，计划使用：
+原生 iOS「云食册」位于 `apps/ios`，使用 SwiftUI、SwiftData 和 CloudKit，Bundle ID 为 `fun.yunle.cook`。构建和测试见 [iOS README](https://github.com/YunYouJun/cook/blob/main/apps/ios/README.md)，实施与验收见 [iOS App 打磨目标](./ios-roadmap)。Capacitor 版未在 App Store 上架，原生版以新 App 提交，决定见 [0006](../decisions/0006-ios-bundle-id)。
+
+Web 位于 `apps/web`，同时服务浏览器和云乐坊容器。收藏和历史的文件导出 / 导入已支持 Web 与原生 iOS 之间的手动迁移；CloudKit 仅用于 Apple 设备，原生版接入云乐坊账号和 CloudBase 跨平台同步仍待实现。
+
+## 历史 Capacitor 外壳
+
+仓库暂时保留以下跨平台方案及 `ios/`、`android/`，待原生版上架与 Android 去留决定后清理（[#98](https://github.com/YunYouJun/cook/issues/98)）：
 
 - [Capacitor](https://capacitorjs.com/)
 - [Ionic](https://ionicframework.com/)
 - [Nuxt Ionic](https://ionic.nuxtjs.org/)
 
-## 云乐坊 SSO 回调
+### Capacitor 的云乐坊 SSO 回调
 
-移动端使用系统浏览器打开云乐坊授权页，并通过已验证的 HTTPS Universal Links / App Links
+以下配置属于历史 Capacitor 外壳，不表示原生 SwiftUI App 已接入 SSO。该外壳使用系统浏览器打开云乐坊授权页，并通过已验证的 HTTPS Universal Links / App Links
 返回 `https://cook.yunyoujun.cn/auth/callback?platform=native`。不要改用自定义 URL Scheme；
 PKCE 能阻止授权码被旁路窃取，但不能阻止恶意 App 主动冒充公开客户端发起授权。
 
