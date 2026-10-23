@@ -65,7 +65,7 @@ final class CookUITests: XCTestCase {
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launch()
-        tap(app.tabBars.buttons["我的"])
+        tap(app.buttons["我的"].firstMatch)
         let contribution = app.buttons["菜谱投稿"]
         for _ in 0..<5 where !contribution.isHittable { app.swipeUp() }
         tap(contribution)
