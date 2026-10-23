@@ -6,7 +6,7 @@
 
 ## M0 仓库改成 monorepo
 
-- [x] 把 Nuxt 应用搬到 `apps/web`、菜谱 CSV 和生成的 JSON 搬到 `packages/data`，只改路径不改逻辑。根目录的 `pnpm build` 仍然输出到 `dist/`，CI、EdgeOne、Netlify、Vercel、Docker、Capacitor 不用改配置。
+- [x] 把 Nuxt 应用搬到 `apps/web`、菜谱 CSV 和生成的 JSON 搬到 `packages/data`，只改路径不改逻辑。根目录的 `pnpm build` 仍然输出到 `dist/`，CI、EdgeOne、Vercel、Docker、Capacitor 不用改配置。
 - [x] 食材词典、常备调料、别名改成 `packages/data` 里的 JSON（`food.json`、`pantry.json`、`aliases.json`），Web 和 iOS 读同一份。
 - [x] 两端共用的推荐用例 `packages/data/fixtures/recommend.json`，`pnpm fixtures` 生成，`pnpm test` 检查是否过期。`packages/cook` 的推荐逻辑本身不依赖 Vue / Node，不再单独拆 `packages/core`。
 
