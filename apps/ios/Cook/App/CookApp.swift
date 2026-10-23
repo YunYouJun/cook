@@ -27,7 +27,7 @@ struct CookApp: App {
             let inMemory = false
         #endif
         let result = launchSignposter.withIntervalSignpost("加载菜谱数据") {
-            Result { try RecipeStore.loadBundled() }
+            Result { try RecipeStore.loadBundled(inMemory: inMemory) }
         }
         let container = launchSignposter.withIntervalSignpost("打开本地数据库") {
             Persistence.makeContainer(inMemory: inMemory)

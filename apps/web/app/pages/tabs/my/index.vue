@@ -133,6 +133,9 @@ async function handleSignOut(): Promise<void> {
           <CookListIcon slot="start" :icon="ioniconsStarOutline" color="#ff9500" />
           <ion-label>我的收藏</ion-label>
         </ion-item>
+        <ion-item :button="true" router-link="/catalog">
+          <ion-label>食材和厨具</ion-label>
+        </ion-item>
         <ion-item router-link="/recipes/mine">
           <CookListIcon slot="start" :icon="ioniconsBookOutline" color="#a2845e" />
           <ion-label>我的菜谱</ion-label>

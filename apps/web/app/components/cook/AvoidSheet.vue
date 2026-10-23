@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { meat, staple, vegetable } from '~/data/food'
-
 /**
  * 忌口：底部弹层里勾选，用到这些食材的菜不再推荐（大杂烩只是不再建议加）
  */
@@ -8,11 +6,7 @@ defineProps<{ selected: string[] }>()
 const emit = defineEmits<{ toggle: [name: string], clear: [] }>()
 const open = defineModel<boolean>('open', { required: true })
 
-const sections = [
-  { title: '蔬菜', items: vegetable },
-  { title: '肉和蛋', items: meat },
-  { title: '主食', items: staple },
-]
+const { sections } = usePersonalCatalog()
 </script>
 
 <template>
@@ -33,6 +27,9 @@ const sections = [
       </ion-toolbar>
     </ion-header>
     <ion-content>
+      <IngredientSection v-if="selected.length" title="已选忌口">
+        <IngredientChip v-for="name in selected" :key="name" :label="name" :selected="true" @click="emit('toggle', name)" />
+      </IngredientSection>
       <template v-for="section in sections" :key="section.title">
         <h2 class="cook-group-header">
           {{ section.title }}

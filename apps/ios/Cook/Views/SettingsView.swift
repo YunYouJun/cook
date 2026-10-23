@@ -48,6 +48,7 @@ struct SettingsView: View {
             List {
                 Section {
                     NavigationLink("我的菜谱") { PrivateRecipesView() }
+                    NavigationLink("食材和厨具") { PersonalCatalogView() }
                 }
                 Section {
                     PreferenceRows()

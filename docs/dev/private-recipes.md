@@ -14,7 +14,7 @@ Web 的「我的 → 我的菜谱」保存在本机。导出私人菜谱，再�
 - 来源为合法 BV 号或 HTTP(S) URL，不接受脚本、文件 URL 或带用户名密码的链接。
 - 私人数据不进入 Web CloudBase 收藏/历史协议，不自动上传到云乐坊。iOS 使用同一 Apple 账号的 iCloud 私有库，不等于 Web 账号同步。
 - 文件导出只含当前有效菜谱，导入不是镜像同步，不会根据文件缺少的条目删除本机菜谱。iOS 遇到已删除的同一编号时作为冲突处理，可显式另存副本。
-- 库中有无法识别的数据时应保留原始存储并报告错误，不静默丢弃。首版是文本和链接，不含图片/视频附件和公共投稿。
+- 库中有无法识别的数据时应保留原始存储并报告错误，不静默丢弃。菜谱 JSON 是文本和链接，不含图片/视频附件和公共投稿。本机视频单独添加、导出、移除。
 
 实现：`packages/cook/src/utils/custom-recipes.ts` 和 `CookCore/PrivateRecipes.swift`；共享样例为 `packages/data/fixtures/private-recipes.json`。`bash scripts/test-private-recipe-roundtrip.sh` 实际执行 Web 导出 → Swift 解析/导出 → Web 比较，并运行冲突、去重、坏文件用例。所有测试使用合成数据。
 
@@ -26,4 +26,14 @@ Web 的「我的 → 我的菜谱」保存在本机。导出私人菜谱，再�
 
 已整合 #112 的 CloudKit 初始化机制（schema 2 含 FridgeItem），版本已升到 3，新增 PrivateRecipeRecord。需维护者在 Development 验证后另行决定 Production schema 部署。本功能的代码和模拟器测试不能证明生产 iCloud 已经可用。
 
-合并/发布前验收：同 Apple 账号两台真实设备新建、修改、删除、离线编辑后重连；未登录/退出 iCloud 的本地数据保留；另一 Apple 账号隔离；Development/Production schema 匹配。当前实现不含 Web 云同步、公共投稿、全局私人食材/厨具词典，以及 iOS 私人菜谱参与内置推荐、收藏或历史；Web 原有参与推荐/随机选菜的行为保留。
+合并/发布前验收：同 Apple 账号两台真实设备新建、修改、删除、离线编辑后重连；未登录/退出 iCloud 的本地数据保留；另一 Apple 账号隔离；Development/Production schema 匹配。当前实现不含 Web 云同步、公共投稿，以及 iOS 私人菜谱参与内置推荐、收藏或历史；Web 原有参与推荐/随机选菜的行为保留。
+
+## 个人食材、厨具与本机视频
+
+「我的 → 食材和厨具」支持按类别添加、删除自定义名称，以及隐藏和恢复内置条目。配置会用于做菜选择、输入联想和私人菜谱编辑；iOS 冰箱选择器也共用配置。隐藏只影响候选列表，已选食材/厨具仍有取消入口，忌口独立保留。新标签不会凭空生成新的公共菜谱，网页版会用它们匹配自己的菜谱。
+
+个人配置的备份为独立 JSON：`{ app: "cook", kind: "personal-catalog", version: 1, items, hidden }`，每项 `{ category, name }`。类别为 `vegetable/meat/staple/tools`，每列最多 500 项，名称 1–30 UTF-16 单元，文件最多 256 KB。导入确认后合并，重复名称保留本机类别。iOS 原子文件、Web localStorage 都先验证后保存；出错保留原文件，不修改菜谱 v1 或 CloudKit schema。共享用例 `packages/data/fixtures/personal-catalog.json`，`bash scripts/test-personal-catalog-roundtrip.sh` 执行两端真实导出器的往返测试。
+
+有来源链接的私人菜谱点击名称会直接打开 B 站或用户的网页；「详情」保留备注、编辑和本机视频入口。没有链接时点击名称进入详情。
+
+保存菜谱后可添加本机视频（每条一份，最多 200 MB）。Web 接受 MP4/MOV/WebM，播放能力依浏览器；iOS 接受可播放的 MP4/MOV。视频仅保存在当前浏览器 IndexedDB 或 App 文件目录，替换失败保留旧视频，可单独导出。它不在菜谱 JSON 或 CloudKit 中；另一台设备需要重新添加，iOS 不导入 WebM。删除菜谱不自动删除本机视频，避免丢失唯一素材；「我的菜谱 → 本机视频」列出全部附件，便于导出或清理。卸载 App/清理浏览器数据会移除本地附件。

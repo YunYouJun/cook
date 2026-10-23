@@ -2,6 +2,7 @@
 import type { CustomRecipe } from '~/composables/store/customRecipe'
 import { customRecipes, removeCustomRecipe } from '~/composables/store/customRecipe'
 import { showAlert } from '~/utils/dialog'
+import { getRecipeLink, openRecipe } from '~/utils/recipe'
 import { yunleHaptic } from '~/utils/yunleHost'
 
 definePageMeta({
@@ -10,9 +11,22 @@ definePageMeta({
 })
 
 /**
- * 自己添加的菜谱：点一下编辑，左滑删除
+ * 有来源时直接打开；详情入口保留本机视频、备注和编辑。
  */
+const detail = shallowRef<CustomRecipe>()
+const detailOpen = ref(false)
 const sorted = computed(() => [...customRecipes.value].sort((a, b) => b.updatedAt - a.updatedAt))
+
+function showDetails(recipe: CustomRecipe) {
+  detail.value = recipe
+  detailOpen.value = true
+}
+function open(recipe: CustomRecipe) {
+  if (getRecipeLink(recipe))
+    openRecipe(recipe)
+  else
+    showDetails(recipe)
+}
 
 async function remove(recipe: CustomRecipe) {
   try {
@@ -43,14 +57,20 @@ async function remove(recipe: CustomRecipe) {
 
     <ion-content :fullscreen="true">
       <PrivateRecipeBackup />
+      <ion-button fill="clear" router-link="/videos">
+        管理本机视频
+      </ion-button>
       <ion-list v-if="sorted.length">
         <TransitionGroup name="cook-row" tag="div" class="cook-row-group">
           <ion-item-sliding v-for="recipe in sorted" :key="recipe.customId">
-            <ion-item :router-link="`/recipes/new?id=${recipe.customId}`">
+            <ion-item :button="true" @click="open(recipe)">
               <ion-label>
                 <h3>{{ recipe.name }}</h3>
                 <p>{{ recipe.stuff.join(' · ') }}</p>
               </ion-label>
+              <ion-button slot="end" fill="clear" :aria-label="`查看${recipe.name}详情`" @click.stop="showDetails(recipe)">
+                详情
+              </ion-button>
             </ion-item>
 
             <ion-item-options side="end" @ion-swipe="remove(recipe)">
@@ -70,6 +90,7 @@ async function remove(recipe: CustomRecipe) {
           添加菜谱
         </ion-button>
       </div>
+      <RecipeDetailSheet v-model:open="detailOpen" :recipe="detail" />
     </ion-content>
   </ion-page>
 </template>

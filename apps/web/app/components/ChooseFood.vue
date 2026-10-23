@@ -6,7 +6,6 @@ import { DIFFICULTY_LEVELS, METHOD_GROUPS } from '@yunyoujun/cook/recommend'
 import { useEmojiAnimation } from '~/composables/animation'
 import { useIncompatibleFoods } from '~/composables/incompatible-foods'
 import { namespace } from '~/constants'
-import { meat, staple, tools, vegetable } from '~/data/food'
 import { trackCookEvent } from '~/utils/analytics'
 import { yunleHaptic } from '~/utils/yunleHost'
 
@@ -30,11 +29,13 @@ onMounted(() => {
 
 const { playAnimation } = useEmojiAnimation(computed(() => unref(props.flightTarget)))
 
-const sections = [
-  { title: '蔬菜', category: 'vegetable', items: vegetable },
-  { title: '肉和蛋', category: 'meat', items: meat },
-  { title: '主食（可选）', category: 'staple', items: staple },
-]
+const { sections, food } = usePersonalCatalog()
+const tools = computed<StuffItem[]>(() => {
+  const visible = food.value.tools
+  return rStore.curTool && !visible.some(item => item.name === rStore.curTool)
+    ? [...visible, { name: rStore.curTool, emoji: '🍳' }]
+    : visible
+})
 
 /** 展开了「更多」的分组，记住用户的选择 */
 const expanded = useStorage<string[]>(`${namespace}:food-more-expanded`, [])
@@ -111,6 +112,9 @@ function clickTool(item: StuffItem) {
       />
     </IngredientSection>
 
+    <ion-button fill="clear" router-link="/catalog">
+      管理食材和厨具
+    </ion-button>
     <IngredientSection title="厨具（可选）" :note="rStore.curTool ? '只看用它做的菜' : ''">
       <IngredientChip
         v-for="item in tools"

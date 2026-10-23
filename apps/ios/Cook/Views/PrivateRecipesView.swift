@@ -19,6 +19,7 @@ struct PrivateRecipesView: View {
     var body: some View {
         List {
             Section {
+                NavigationLink("本机视频") { LocalVideoLibraryView() }
                 Button("新建菜谱", systemImage: "plus") { editor = RecipeEditorItem(recipe: nil) }
                 Button("导出私人菜谱", systemImage: "square.and.arrow.up", action: export)
                 Button("从文件导入", systemImage: "folder") { importing = true }
@@ -32,13 +33,17 @@ struct PrivateRecipesView: View {
             case let .success(data):
                 Section("我的菜谱 · \(data.recipes.count)") {
                     ForEach(data.recipes.filter { query.isEmpty || $0.name.contains(query) || $0.stuff.contains(where: { $0.contains(query) }) }) { recipe in
-                        NavigationLink {
-                            PrivateRecipeDetailView(customId: recipe.customId)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(recipe.name)
-                                Text(recipe.stuff.joined(separator: "、")).font(.caption).foregroundStyle(.secondary)
+                        if let source = recipe.sourceURL {
+                            HStack {
+                                Link(destination: source) { recipeLabel(recipe) }
+                                    .buttonStyle(.borderless)
+                                Spacer()
+                                NavigationLink("详情") { PrivateRecipeDetailView(customId: recipe.customId) }
+                                    .fixedSize()
+                                    .accessibilityLabel("查看\(recipe.name)详情")
                             }
+                        } else {
+                            NavigationLink { PrivateRecipeDetailView(customId: recipe.customId) } label: { recipeLabel(recipe) }
                         }
                     }
                     if data.recipes.isEmpty { Text("记下自己的做法，或导入网页版备份。给菜谱添加的食材和厨具只属于这道菜谱。").foregroundStyle(.secondary) }
@@ -70,6 +75,13 @@ struct PrivateRecipesView: View {
         .alert("私人菜谱", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
             Button("好", role: .cancel) {}
         } message: { Text(message ?? "") }
+    }
+
+    private func recipeLabel(_ recipe: PrivateRecipe) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(recipe.name)
+            Text(recipe.stuff.joined(separator: "、")).font(.caption).foregroundStyle(.secondary)
+        }
     }
 
     private func read(_ text: String) {
@@ -123,6 +135,7 @@ private struct PrivateRecipeDetailView: View {
                 List {
                     Section("食材") { Text(recipe.stuff.joined(separator: "、")) }
                     Section("厨具") { Text(recipe.tools.isEmpty ? "未记录" : recipe.tools.joined(separator: "、")) }
+                    LocalRecipeVideoSection(customId: customId, recipeName: recipe.name)
                     if let url = recipe.sourceURL { Section("来源") { Link(destination: url) { Label(recipe.bv ?? recipe.link ?? "打开来源", systemImage: "arrow.up.right.square") } } }
                     if let note = recipe.note, !note.isEmpty { Section("做法与备注") { Text(note).textSelection(.enabled) } }
                     Section {
@@ -136,7 +149,7 @@ private struct PrivateRecipeDetailView: View {
                         do { try PrivateRecipePersistence.remove(recipe, in: context.container); dismiss() }
                         catch { self.error = error.localizedDescription }
                     }
-                } message: { Text("删除会通过 iCloud 同步到你的其他 Apple 设备。导出的备份文件不受影响。") }
+                } message: { Text("删除会通过 iCloud 同步到你的其他 Apple 设备。导出的备份文件不受影响。本机视频保留，可在本机视频页单独移除。") }
             } else { ContentUnavailableView("菜谱暂不可用", systemImage: "doc", description: Text("可能已在其他设备删除，或数据暂时无法读取。")) }
         }
         .sheet(item: $editor) { item in PrivateRecipeEditor(original: item.recipe) }
@@ -146,6 +159,7 @@ private struct PrivateRecipeDetailView: View {
 
 private struct PrivateRecipeEditor: View {
     let original: PrivateRecipe?
+    @Environment(RecipeStore.self) private var store
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
@@ -168,8 +182,22 @@ private struct PrivateRecipeEditor: View {
         NavigationStack {
             Form {
                 Section { TextField("菜名（最多 30 字）", text: $name) }
-                Section { TextField("鸡蛋、丝瓜", text: $stuff, axis: .vertical) } header: { Text("食材") } footer: { Text("用顿号、逗号或换行分隔，至少一种。") }
-                Section { TextField("电蒸锅", text: $tools, axis: .vertical) } header: { Text("厨具（可选）") } footer: { Text("可填写自己的食材和厨具名称，不会修改公共词典。") }
+                Section {
+                    TextField("鸡蛋、丝瓜", text: $stuff, axis: .vertical)
+                    Menu("从食材列表添加") {
+                        ForEach(store.stuffItems, id: \.name) { item in
+                            Button(item.name) { stuff = store.data.normalizer.unique(list(stuff) + [item.name]).joined(separator: "、") }
+                        }
+                    }
+                } header: { Text("食材") } footer: { Text("用顿号、逗号或换行分隔，至少一种。") }
+                Section {
+                    TextField("电蒸锅", text: $tools, axis: .vertical)
+                    Menu("从厨具列表添加") {
+                        ForEach(store.food.tools, id: \.name) { item in
+                            Button(item.name) { tools = uniqueStrings(list(tools) + [item.name]).joined(separator: "、") }
+                        }
+                    }
+                } header: { Text("厨具（可选）") } footer: { Text("可填写自己的食材和厨具名称，不会修改公共词典。") }
                 Section("来源（可选）") {
                     TextField("BV 号或 http(s) 网页地址", text: $source).textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
                 }
