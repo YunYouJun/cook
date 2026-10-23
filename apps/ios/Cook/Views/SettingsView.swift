@@ -89,7 +89,8 @@ struct SettingsView: View {
                 Section {
                     NavigationLink("意见反馈") { AppFeedbackView() }
                     NavigationLink("菜谱投稿") { AppFeedbackView(category: .recipe) }
-                    Link("支持中心与需求墙", destination: URL(string: "https://support.yunle.fun/?product=cook")!)
+                    Link("需求墙", destination: URL(string: "https://support.yunle.fun/feedback?product=cook")!)
+                    Link("支持中心", destination: URL(string: "https://support.yunle.fun/?product=cook")!)
                 } header: {
                     Text("反馈")
                 }
