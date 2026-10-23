@@ -6,8 +6,6 @@ definePageMeta({
 useHead({
   title: '发现',
 })
-
-const { openAppFeedback } = useAppFeedback()
 </script>
 
 <template>
@@ -34,7 +32,7 @@ const { openAppFeedback } = useAppFeedback()
       </ion-list>
 
       <ion-list :inset="true">
-        <ion-item button :detail="true" @click="openAppFeedback('idea')">
+        <ion-item router-link="/feedback?category=idea" :detail="true">
           <CookListIcon slot="start" :icon="ioniconsBulbOutline" color="#34c759" />
           <ion-label>新功能建议</ion-label>
         </ion-item>

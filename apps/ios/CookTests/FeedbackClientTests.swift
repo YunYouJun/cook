@@ -48,6 +48,7 @@ final class FeedbackClientTests: XCTestCase {
     func testSignalsAreSentOncePerSelection() async {
         let transport = FakeTransport()
         let client = makeClient(transport)
+        client.setSignalConsent(true)
 
         await client.signalOpen(stuff: ["鸡蛋", "番茄"], tool: nil, mode: .loose, recipeId: 3, rank: 1)?.value
         XCTAssertNil(client.signalOpen(stuff: ["番茄", "鸡蛋"], tool: nil, mode: .loose, recipeId: 3, rank: 1), "顺序不同也算同一组")
@@ -71,12 +72,77 @@ final class FeedbackClientTests: XCTestCase {
 
     func testSignalsRespectTheSettingAndBuild() {
         let transport = FakeTransport()
-        defaults.set(false, forKey: FeedbackClient.signalsKey)
+        makeClient(transport).setSignalConsent(false)
         XCTAssertNil(makeClient(transport).signalEmpty(stuff: ["羊肉"], tool: nil, mode: .loose), "关掉「帮助改进推荐」后不报")
 
-        defaults.set(true, forKey: FeedbackClient.signalsKey)
+        makeClient(transport).setSignalConsent(true)
         XCTAssertNil(makeClient(transport, sendsSignals: false).signalEmpty(stuff: ["羊肉"], tool: nil, mode: .loose), "Debug 构建不报")
         XCTAssertTrue(transport.sent.isEmpty)
+    }
+
+    func testFreshInstallAndLegacySettingsDoNotGrantConsent() {
+        let transport = FakeTransport()
+        for legacy in [nil, true, false] as [Bool?] {
+            defaults.removeObject(forKey: FeedbackClient.signalsKey)
+            if let legacy { defaults.set(legacy, forKey: FeedbackClient.signalsKey) }
+            let client = makeClient(transport)
+            XCTAssertFalse(client.signalsEnabled)
+            XCTAssertTrue(client.needsSignalConsent)
+            XCTAssertNil(client.signalOpen(stuff: ["鸡蛋"], tool: nil, mode: .loose, recipeId: 3, rank: 0))
+            XCTAssertNil(client.signalEmpty(stuff: ["鸡蛋"], tool: nil, mode: .loose))
+        }
+        XCTAssertTrue(transport.sent.isEmpty)
+    }
+
+    func testConsentSurvivesRelaunchAndDoesNotReplayEarlierActions() async {
+        let transport = FakeTransport()
+        let client = makeClient(transport)
+        XCTAssertNil(client.signalEmpty(stuff: ["羊肉"], tool: nil, mode: .loose))
+        client.setSignalConsent(true)
+        XCTAssertTrue(transport.sent.isEmpty, "同意前的操作不补报")
+        let relaunched = makeClient(transport)
+        XCTAssertTrue(relaunched.signalsEnabled)
+        XCTAssertFalse(relaunched.needsSignalConsent)
+        await relaunched.signalEmpty(stuff: ["羊肉"], tool: nil, mode: .loose)?.value
+        XCTAssertEqual(transport.sent.count, 1)
+
+        relaunched.setSignalConsent(false)
+        let declined = makeClient(transport)
+        XCTAssertFalse(declined.signalsEnabled)
+        XCTAssertFalse(declined.needsSignalConsent)
+        XCTAssertNil(declined.signalEmpty(stuff: ["鸡蛋"], tool: nil, mode: .loose))
+    }
+
+    func testWithdrawingConsentCancelsQueuedSignals() async {
+        let transport = FakeTransport()
+        let client = makeClient(transport)
+        client.setSignalConsent(true)
+        let queued = client.signalEmpty(stuff: ["羊肉"], tool: nil, mode: .loose)
+        client.setSignalConsent(false)
+        await queued?.value
+        XCTAssertTrue(transport.sent.isEmpty)
+    }
+
+    func testWithdrawingConsentCancelsInFlightSignals() async {
+        let started = expectation(description: "请求已开始")
+        let cancelled = expectation(description: "请求收到取消")
+        let client = FeedbackClient(endpoint: endpoint, sendsSignals: true, defaults: defaults) { _ in
+            started.fulfill()
+            do {
+                try await Task.sleep(for: .seconds(5))
+                XCTFail("撤回同意后请求应被取消")
+            } catch {
+                cancelled.fulfill()
+                throw error
+            }
+            throw URLError(.timedOut)
+        }
+        client.setSignalConsent(true)
+        let task = client.signalEmpty(stuff: ["羊肉"], tool: nil, mode: .loose)
+        await fulfillment(of: [started], timeout: 2)
+        client.setSignalConsent(false)
+        await task?.value
+        await fulfillment(of: [cancelled], timeout: 1)
     }
 
     func testReporterIsRandomPerLaunch() {
@@ -88,6 +154,7 @@ final class FeedbackClientTests: XCTestCase {
         let transport = FakeTransport()
         let client = makeClient(transport)
         let recipe = try RecipeStore.loadBundled().recipes[0]
+        client.setSignalConsent(false)
 
         try await client.report(recipe, issue: .video, note: "  视频没了 ")
         try await client.send(.idea, note: "希望能按季节推荐", contact: " cook@example.com ")

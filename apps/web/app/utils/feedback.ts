@@ -15,6 +15,11 @@ export const appFeedbackCategories: { category: AppFeedbackCategory, label: stri
   { category: 'other', label: '其他', placeholder: '说说具体情况' },
 ]
 
+/** Only the known categories can be preselected by a feedback deep link. */
+export function parseAppFeedbackCategory(value: unknown): AppFeedbackCategory {
+  return appFeedbackCategories.find(item => item.category === value)?.category ?? 'bug'
+}
+
 const DEVICE_ID_KEY = 'cook:device-id'
 
 /** A random id for deduplicating anonymous feedback; it identifies nothing else. */

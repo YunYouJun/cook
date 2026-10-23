@@ -5,7 +5,7 @@ labels: [enhancement]
 body:
   - type: markdown
     attributes:
-      value: 提交前先搜一下有没有人提过，有的话点个 👍 就好，我们按点赞数排优先级。
+      value: 提交前先搜一下有没有人提过，有的话点个 👍 或补充使用场景。请不要在公开 Issue 中填写联系方式等个人信息。
   - type: textarea
     id: problem
     attributes:

@@ -67,15 +67,15 @@ final class CookTests: XCTestCase {
         let container = Persistence.makeContainer(inMemory: true)
         let context = container.mainContext
 
-        context.toggleFavorite(1)
-        XCTAssertTrue(context.isFavorite(1))
-        context.toggleFavorite(1)
-        XCTAssertFalse(context.isFavorite(1))
+        try context.toggleFavorite(1)
+        XCTAssertTrue(try context.isFavorite(1))
+        try context.toggleFavorite(1)
+        XCTAssertFalse(try context.isFavorite(1))
         let favorites = try context.fetch(FetchDescriptor<Favorite>())
         XCTAssertEqual(favorites.count, 1, "取消收藏是软删除，记录还在")
         XCTAssertNotNil(favorites.first?.deletedAt)
-        context.toggleFavorite(1)
-        XCTAssertTrue(context.isFavorite(1), "再收藏一次会恢复同一条记录")
+        try context.toggleFavorite(1)
+        XCTAssertTrue(try context.isFavorite(1), "再收藏一次会恢复同一条记录")
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<Favorite>()), 1)
 
         let start = Date(timeIntervalSince1970: 0)
@@ -147,8 +147,8 @@ final class CookTests: XCTestCase {
         let second = store.recipes[1]
 
         // App 里先收藏了第二道菜，又取消了；之后才在网页版收藏的第一道菜要加进来
-        context.toggleFavorite(second.id, at: Date(timeIntervalSince1970: 100))
-        context.toggleFavorite(second.id, at: Date(timeIntervalSince1970: 200))
+        try context.toggleFavorite(second.id, at: Date(timeIntervalSince1970: 100))
+        try context.toggleFavorite(second.id, at: Date(timeIntervalSince1970: 200))
         let text = """
         {"app":"cook","version":1,"exportedAt":0,
          "favorites":[{"id":\(first.id),"time":150000},{"id":\(second.id),"time":150000},{"id":999999,"time":1}],
@@ -157,14 +157,14 @@ final class CookTests: XCTestCase {
          "historyRemovals":[],"historyClearedAt":0}
         """
         let data = try XCTUnwrap(WebUserData.parse(text))
-        let added = context.importWebData(data, recipeIdByName: store.recipeIdByName, validIds: Set(store.recipesById.keys))
+        let added = try context.importWebData(data, recipeIdByName: store.recipeIdByName, validIds: Set(store.recipesById.keys))
         XCTAssertEqual(added.favorites, 1, "App 里取消得更晚的不加回来，不认识的 id 跳过")
         XCTAssertEqual(added.visits, 1)
-        XCTAssertTrue(context.isFavorite(first.id))
-        XCTAssertFalse(context.isFavorite(second.id))
+        XCTAssertTrue(try context.isFavorite(first.id))
+        XCTAssertFalse(try context.isFavorite(second.id))
         XCTAssertEqual(try activeVisits(context), [first.id])
 
-        let again = context.importWebData(data, recipeIdByName: store.recipeIdByName, validIds: Set(store.recipesById.keys))
+        let again = try context.importWebData(data, recipeIdByName: store.recipeIdByName, validIds: Set(store.recipesById.keys))
         XCTAssertEqual(again.favorites + again.visits, 0, "重复导入不会再加")
 
         let exported = WebUserData.export(

@@ -28,6 +28,9 @@ targets:
       - path: Cook/Resources/AppIcon.icon
         type: file
         buildPhase: resources
+      - path: ../../docs/privacy.md
+        type: file
+        buildPhase: resources
     dependencies:
       - package: CookCore
     preBuildScripts:
@@ -42,7 +45,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         ITSAppUsesNonExemptEncryption: false
-        # cook-feedback 云函数的 HTTP 访问地址（docs/dev/data.md），生成工程前 export COOK_FEEDBACK_URL=…；不填时反馈入口改成跳 GitHub，也不发筛选信号
+        # cook-feedback 云函数的 HTTP 访问地址（docs/dev/data.md），生成工程前 export COOK_FEEDBACK_URL=…；不填时保留支持中心和邮件草稿入口，不发筛选信号
         CookFeedbackURL: ${COOK_FEEDBACK_URL}
         LSApplicationQueriesSchemes: [bilibili]
         # 大图里的分享按钮可以把配图存到相册

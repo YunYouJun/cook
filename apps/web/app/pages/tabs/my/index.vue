@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import dayjs from 'dayjs'
 import { customRecipes } from '~/composables/store/customRecipe'
+import { links } from '~/constants'
 
 definePageMeta({
   alias: ['/my'],
@@ -50,8 +51,6 @@ async function handleSignIn(): Promise<void> {
 async function handleSignOut(): Promise<void> {
   await signOut()
 }
-
-const { openAppFeedback } = useAppFeedback()
 </script>
 
 <template>
@@ -144,11 +143,15 @@ const { openAppFeedback } = useAppFeedback()
       </ion-list>
 
       <ion-list :inset="true">
-        <ion-item button :detail="true" @click="openAppFeedback()">
+        <ion-item router-link="/feedback" :detail="true">
           <CookListIcon slot="start" :icon="ioniconsChatbubbleEllipsesOutline" color="#34c759" />
-          <ion-label>问题反馈</ion-label>
+          <ion-label><h2>问题反馈</h2><p>私密发送给云乐坊团队</p></ion-label>
         </ion-item>
-        <ion-item button :detail="true" @click="openAppFeedback('recipe')">
+        <ion-item :href="links.support" target="_blank" rel="noopener noreferrer" :detail-icon="ioniconsOpenOutline">
+          <CookListIcon slot="start" :icon="ioniconsHelpCircleOutline" color="#007aff" />
+          <ion-label>支持中心与需求墙</ion-label>
+        </ion-item>
+        <ion-item router-link="/feedback?category=recipe" :detail="true">
           <CookListIcon slot="start" :icon="ioniconsMailOutline" color="#ff2d55" />
           <ion-label>菜谱投稿</ion-label>
         </ion-item>

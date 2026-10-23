@@ -1,7 +1,6 @@
 import CoreTransferable
 import SwiftData
 import SwiftUI
-import UIKit
 import UniformTypeIdentifiers
 
 /// 我的：做菜偏好、和网页版互通数据、反馈和关于
@@ -9,7 +8,6 @@ struct SettingsView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(FeedbackClient.self) private var feedback
     @Environment(\.modelContext) private var context
-    @AppStorage(FeedbackClient.signalsKey) private var shareSignals = true
     // 导出要带上软删除的记录，网页版合并时才知道哪些被取消了
     @Query private var allFavorites: [Favorite]
     @Query private var allVisits: [HistoryEntry]
@@ -19,11 +17,13 @@ struct SettingsView: View {
     private enum ImportResult: Identifiable {
         case done(favorites: Int, visits: Int)
         case failed
+        case saveFailed
 
         var id: String {
             switch self {
             case let .done(favorites, visits): return "done-\(favorites)-\(visits)"
             case .failed: return "failed"
+            case .saveFailed: return "saveFailed"
             }
         }
     }
@@ -31,6 +31,7 @@ struct SettingsView: View {
     private var importTitle: String {
         switch importResult {
         case .failed?: return "导入失败"
+        case .saveFailed?: return "导入未能保存"
         default: return "导入完成"
         }
     }
@@ -86,23 +87,28 @@ struct SettingsView: View {
                     Text("网页版在「我的 → 设置 → 收藏和历史」里导出或复制，再到这里导入。导入只会添加，不会覆盖 App 里已有的收藏和浏览记录。")
                 }
                 Section {
-                    // 没配置反馈地址的构建也保留入口，提交时改成发邮件
-                    NavigationLink("意见反馈") {
-                        AppFeedbackView()
-                    }
-                    NavigationLink("菜谱投稿") {
-                        AppFeedbackView(category: .recipe)
-                    }
-                    // 没配置反馈地址的构建不会发筛选信号，开关也就不显示
-                    if feedback.isConfigured {
-                        Toggle("帮助改进推荐", isOn: $shareSignals)
-                    }
+                    NavigationLink("意见反馈") { AppFeedbackView() }
+                    NavigationLink("菜谱投稿") { AppFeedbackView(category: .recipe) }
+                    Link("支持中心与需求墙", destination: URL(string: "https://support.yunle.fun/?product=cook")!)
                 } header: {
                     Text("反馈")
+                }
+                Section {
+                    NavigationLink("隐私政策") { PrivacyPolicyView() }
+                    if feedback.isConfigured {
+                        Toggle("帮助改进推荐", isOn: Binding(get: { feedback.signalsEnabled }, set: { feedback.setSignalConsent($0) }))
+                            .accessibilityIdentifier("privacy.shareSignals")
+                    }
+                } header: {
+                    Text("隐私")
                 } footer: {
                     if feedback.isConfigured {
-                        Text("匿名发送选过的食材组合和点开了哪道菜，用来补菜和调整排序，不含账号和设备信息。")
+                        Text("默认关闭。开启表示同意向腾讯云 CloudBase 分享后续的食材组合、厨具、推荐方式和菜谱点击情况，以及 App 版本和每次启动的随机标识，用来补菜、调整排序和限制请求次数。不含输入原文、账号或设备硬件标识符。关闭不影响使用。详见隐私政策。")
                     }
+                }
+                Section("开发者") {
+                    Link("在 GitHub 上反馈", destination: URL(string: "https://github.com/YunYouJun/cook/issues")!)
+                    Link("参与讨论", destination: URL(string: "https://github.com/YunYouJun/cook/discussions")!)
                 }
                 Section("关于") {
                     LabeledContent("版本", value: appVersion)
@@ -110,14 +116,6 @@ struct SettingsView: View {
                     LabeledContent("数据版本", value: store.data.meta.dataVersion)
                     Link("更新日志", destination: URL(string: "https://docs.yunyoujun.cn/projects/cook/changelog")!)
                     Link("网页版：食用手册", destination: URL(string: "https://cook.yunyoujun.cn")!)
-                }
-                Section {
-                    Link("在 GitHub 上提 Issue", destination: URL(string: "https://github.com/YunYouJun/cook/issues")!)
-                    Link("参与讨论", destination: URL(string: "https://github.com/YunYouJun/cook/discussions")!)
-                } header: {
-                    Text("开发者")
-                } footer: {
-                    Text("能复现的问题和代码相关的建议可以在 GitHub 上提；其他反馈用上面的「意见反馈」就好。")
                 }
             }
             .navigationTitle("我的")
@@ -145,13 +143,15 @@ struct SettingsView: View {
                     Text(favorites + visits == 0 ? "没有新的内容，App 里已经都有了。" : "新加了 \(favorites) 个收藏、\(visits) 条浏览记录。")
                 case .failed:
                     Text("没能识别这份数据，请确认它来自食用手册网页版的导出。")
+                case .saveFailed:
+                    Text("数据已识别，但没能保存到设备。原有收藏和浏览记录已保留，请检查可用储存空间后重新导入。")
                 }
             }
             .sensoryFeedback(trigger: importResult?.id) { _, id in
                 guard let id else {
                     return nil
                 }
-                return id == "failed" ? .error : .success
+                return id == "failed" || id == "saveFailed" ? .error : .success
             }
         }
     }
@@ -161,8 +161,12 @@ struct SettingsView: View {
             importResult = .failed
             return
         }
-        let added = context.importWebData(data, recipeIdByName: store.recipeIdByName, validIds: Set(store.recipesById.keys))
-        importResult = .done(favorites: added.favorites, visits: added.visits)
+        do {
+            let added = try context.importWebData(data, recipeIdByName: store.recipeIdByName, validIds: Set(store.recipesById.keys))
+            importResult = .done(favorites: added.favorites, visits: added.visits)
+        } catch {
+            importResult = .saveFailed
+        }
     }
 }
 
@@ -179,138 +183,5 @@ struct WebExportFile: Transferable {
             return SentTransferredFile(url)
         }
         ProxyRepresentation(exporting: \.text)
-    }
-}
-
-/// 意见反馈：不针对某道菜，不用登录，可以留联系方式。没配置反馈地址或提交失败时改成发邮件
-struct AppFeedbackView: View {
-    @Environment(FeedbackClient.self) private var feedback
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
-    @State private var category: FeedbackClient.Category
-    @State private var note = ""
-    @State private var contact = ""
-    @State private var sending = false
-    @State private var showingSent = false
-    @State private var showingFailed = false
-    @State private var showingNoMail = false
-
-    init(category: FeedbackClient.Category = .bug) {
-        _category = State(initialValue: category)
-    }
-
-    private var canSend: Bool {
-        !sending && !trimmedNote.isEmpty
-    }
-
-    private var trimmedNote: String {
-        note.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var trimmedContact: String {
-        String(contact.trimmingCharacters(in: .whitespacesAndNewlines).prefix(FeedbackClient.maxContact))
-    }
-
-    private var mailURL: URL {
-        FeedbackClient.mailURL(
-            topic: category.label,
-            lines: [trimmedNote, trimmedContact.isEmpty ? "" : "联系方式：\(trimmedContact)"]
-        )
-    }
-
-    private var mailText: String {
-        FeedbackClient.mailText(
-            topic: category.label,
-            lines: [trimmedNote, trimmedContact.isEmpty ? "" : "联系方式：\(trimmedContact)"]
-        )
-    }
-
-    var body: some View {
-        Form {
-            Picker("类型", selection: $category) {
-                ForEach(FeedbackClient.Category.allCases) { item in
-                    Text(item.label).tag(item)
-                }
-            }
-            Section {
-                TextField(category.placeholder, text: $note, axis: .vertical)
-                    .lineLimit(5 ... 12)
-                    .onChange(of: note) { _, value in
-                        if value.count > FeedbackClient.maxNote {
-                            note = String(value.prefix(FeedbackClient.maxNote))
-                        }
-                    }
-            } footer: {
-                Text("\(note.count)/\(FeedbackClient.maxNote)")
-            }
-            Section {
-                TextField("邮箱或微信（可选）", text: $contact)
-                    .textContentType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-            } footer: {
-                if feedback.isConfigured {
-                    Text("留下联系方式的话，我们处理后可以告诉你。")
-                } else {
-                    Text("会打开邮件 App，把内容发到 \(FeedbackClient.supportEmail)。")
-                }
-            }
-        }
-        .navigationTitle(category == .recipe ? "菜谱投稿" : "意见反馈")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                if sending {
-                    ProgressView()
-                } else {
-                    Button("发送", action: send)
-                        .disabled(!canSend)
-                }
-            }
-        }
-        .alert("收到了，谢谢反馈", isPresented: $showingSent) {
-            Button("好", role: .cancel) { dismiss() }
-        }
-        .alert("暂时没能提交", isPresented: $showingFailed) {
-            Button("取消", role: .cancel) {}
-            Button("去 GitHub") { openURL(URL(string: "https://github.com/YunYouJun/cook/issues/new/choose")!) }
-            Button("发邮件") { sendMail() }
-        } message: {
-            Text("内容已经复制。可以发邮件给我们，或者到 GitHub 提一个 issue。")
-        }
-        .alert("没有找到邮件 App", isPresented: $showingNoMail) {
-            Button("好", role: .cancel) {}
-        } message: {
-            Text("邮箱 \(FeedbackClient.supportEmail) 和反馈内容都已复制，可以用其他邮箱发给我们。")
-        }
-        .sensoryFeedback(.success, trigger: showingSent) { _, sent in sent }
-    }
-
-    private func send() {
-        guard feedback.isConfigured else {
-            sendMail()
-            return
-        }
-        sending = true
-        Task {
-            defer { sending = false }
-            do {
-                try await feedback.send(category, note: note, contact: trimmedContact)
-                showingSent = true
-            } catch {
-                UIPasteboard.general.string = mailText
-                showingFailed = true
-            }
-        }
-    }
-
-    /// 没装或没设置邮件 App 时 openURL 不会成功，这时把邮箱和内容复制下来
-    private func sendMail() {
-        openURL(mailURL) { accepted in
-            if !accepted {
-                UIPasteboard.general.string = mailText
-                showingNoMail = true
-            }
-        }
     }
 }

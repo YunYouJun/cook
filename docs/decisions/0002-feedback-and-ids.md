@@ -28,7 +28,7 @@
 ## 决定
 
 - `recipe.csv` 新增 `id` 列。已发布的 id 不能修改或复用，新菜谱用最大 id + 1；CI 用 `pnpm validate --base` 对比目标分支。
-- 菜谱详情页一键反馈，写入 `cook-feedback` 云函数；提交失败时退回 GitHub Issue 表单（已由 [0012](./0012-feedback-channels) 改为邮件优先）。
+- 菜谱详情页一键反馈，写入 `cook-feedback` 云函数；提交失败时退回 GitHub Issue 表单（现按 [0012](./0012-feedback-channels) 保留内容，提供支持中心、可选邮件及 GitHub 入口）。
 - 应用匿名记录「无结果的食材组合」和「点开了第几个结果」两类聚合信号，不含账号信息。
 - `pnpm feedback:pull` 汇总反馈并生成评测样例 `test/fixtures/search-eval.json`，`pnpm eval:search` 评估排序。`recipe-data-review` skill 据此改数据、别名和排序，修改前后的评测指标写进 PR。
 - 反馈功能是普通网页代码，浏览器和云乐坊容器里都能用，不依赖 Capacitor，与 #98 下线独立 App 的计划一致。

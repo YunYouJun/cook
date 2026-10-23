@@ -2,6 +2,7 @@
 import type { RecipeMatch } from '@yunyoujun/cook'
 import type { RecipeItem } from '~/types'
 import { onIonViewDidEnter, onIonViewWillLeave } from '@ionic/vue'
+import { useCookingStyle } from '~/composables/useCookingStyle'
 import { yunleHaptic } from '~/utils/yunleHost'
 
 definePageMeta({
@@ -13,6 +14,7 @@ useHead({
 })
 
 const rStore = useRecipeStore()
+const { style: cookingStyle, pantry: workbenchPantry, canPersist } = useCookingStyle()
 const active = shallowRef(false)
 onIonViewDidEnter(() => {
   active.value = true
@@ -58,7 +60,7 @@ function openDetail(recipe: RecipeItem, match?: RecipeMatch) {
 watchDebounced(
   () => [rStore.isSearching, rStore.recipesLength, rStore.selectedStuff.join('、'), rStore.curTool, rStore.curMode, rStore.keyword, rStore.recipeMatches.length],
   () => {
-    if (!rStore.isSearching && rStore.recipesLength && rStore.selectedStuff.length && !rStore.keyword && !rStore.recipeMatches.length)
+    if (cookingStyle.value === 'classic' && !rStore.isSearching && rStore.recipesLength && rStore.selectedStuff.length && !rStore.keyword && !rStore.recipeMatches.length)
       feedback.signal({ type: 'empty', ...selection() })
   },
   { debounce: 3000 },
@@ -67,7 +69,7 @@ watchDebounced(
 
 <template>
   <ion-page>
-    <ion-header :translucent="true">
+    <ion-header :key="cookingStyle" :translucent="true" :class="{ 'workbench-header': cookingStyle === 'workbench' }">
       <ion-toolbar>
         <ion-title>做菜</ion-title>
         <ion-buttons slot="end">
@@ -78,8 +80,8 @@ watchDebounced(
       </ion-toolbar>
     </ion-header>
 
-    <ion-content ref="contentRef" :fullscreen="true" :style="{ '--padding-bottom': `${panelInset + 16}px` }">
-      <ion-header collapse="condense">
+    <ion-content ref="contentRef" :fullscreen="true" :class="{ 'workbench-content': cookingStyle === 'workbench' }" :style="{ '--padding-bottom': `${cookingStyle === 'classic' ? panelInset + 16 : 16}px` }">
+      <ion-header v-show="cookingStyle === 'classic'" :collapse="cookingStyle === 'classic' ? 'condense' : undefined">
         <ion-toolbar>
           <ion-title size="large">
             做菜
@@ -87,10 +89,36 @@ watchDebounced(
         </ion-toolbar>
       </ion-header>
 
-      <ChooseFood :flight-target="flightTarget" />
+      <CookingStyleSwitch v-model="cookingStyle" />
+      <p v-if="!canPersist" class="style-storage-note" role="status">
+        浏览器暂时无法保存样式偏好，本次仍可切换使用。
+      </p>
+      <CookingWorkbench v-if="cookingStyle === 'workbench'" v-model:pantry="workbenchPantry" @detail="openDetail" />
+      <ChooseFood v-else :flight-target="flightTarget" />
     </ion-content>
 
-    <ResultsPanel ref="panelRef" v-model:inset="panelInset" :active="active" @scroll-top="scrollTop" @detail="openDetail" />
+    <ResultsPanel v-if="cookingStyle === 'classic'" ref="panelRef" v-model:inset="panelInset" :active="active" @scroll-top="scrollTop" @detail="openDetail" />
     <RecipeDetailSheet v-model:open="detailOpen" :recipe="detail?.recipe" :match="detail?.match" />
   </ion-page>
 </template>
+
+<style scoped>
+.workbench-header ion-toolbar {
+  --opacity-scale: 1;
+}
+ion-header.workbench-header ion-toolbar.in-toolbar ion-title {
+  opacity: 1;
+  pointer-events: auto;
+}
+.workbench-content {
+  --background: #faf8f3;
+}
+:global(.ion-palette-dark .workbench-content) {
+  --background: #1e2722;
+}
+.style-storage-note {
+  margin: 12px 20px;
+  font-size: 14px;
+  text-align: center;
+}
+</style>

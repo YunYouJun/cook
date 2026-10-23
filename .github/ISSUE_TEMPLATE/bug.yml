@@ -3,6 +3,9 @@ description: 能复现的问题：功能用不了、显示错误、闪退
 title: '[Bug] '
 labels: [bug]
 body:
+  - type: markdown
+    attributes:
+      value: 此 Issue 会公开。联系方式、账号和其他个人信息请通过应用内私密反馈提交。
   - type: dropdown
     id: platform
     attributes:

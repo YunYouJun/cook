@@ -5,6 +5,7 @@ import { actionSheetController, alertController, toastController } from '@ionic/
 import { uniqueStuff } from '@yunyoujun/cook/recommend'
 import { isFavorited, toggleFavorite } from '~/composables/store/favorite'
 import { addRecipeHistory } from '~/composables/store/history'
+import { links } from '~/constants'
 import { getEmojisFromStuff } from '~/utils'
 import { trackCookEvent } from '~/utils/analytics'
 import { isCustomRecipe } from '~/utils/customRecipe'
@@ -119,6 +120,7 @@ async function onFeedback() {
       inputs: [{ type: 'textarea', value: text, attributes: { 'readonly': true, 'aria-label': '完整反馈内容' } }],
       buttons: [
         { text: '取消', role: 'cancel' },
+        { text: '支持中心', handler: () => { window.open(links.feedback, '_blank', 'noopener,noreferrer') } },
         { text: '去 GitHub', handler: () => { window.open(getRecipeFeedbackLink(recipe), '_blank') } },
         {
           text: '发邮件',

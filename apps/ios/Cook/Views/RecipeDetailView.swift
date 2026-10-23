@@ -8,6 +8,7 @@ struct RecipeDetailView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
     @Environment(FeedbackClient.self) private var feedback
+    @Environment(FavoriteActions.self) private var favoriteActions
     @Environment(\.modelContext) private var context
     @Environment(\.openURL) private var openURL
     @State private var choosingIssue = false
@@ -184,6 +185,7 @@ struct RecipeDetailView: View {
         }
         .alert("暂时没能提交", isPresented: $showingFailed) {
             Button("取消", role: .cancel) {}
+            Button("去支持中心") { openURL(URL(string: "https://support.yunle.fun/contact?product=cook&source=cook-ios&intent=feedback")!) }
             Button("去 GitHub 填写") { openURL(feedbackURL) }
             Button("发邮件") {
                 openURL(failedMailURL) { accepted in
@@ -207,7 +209,7 @@ struct RecipeDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    context.toggleFavorite(recipe.id)
+                    favoriteActions.set(recipe.id, isFavorite: !isFavorite)
                 } label: {
                     Label(isFavorite ? "取消收藏" : "收藏", systemImage: isFavorite ? "heart.fill" : "heart")
                         .contentTransition(.symbolEffect(.replace))
@@ -222,7 +224,6 @@ struct RecipeDetailView: View {
                 }
             }
         }
-        .sensoryFeedback(.success, trigger: isFavorite)
         // iPad 分栏里换一道菜时视图不会重建，按菜谱 id 记浏览
         .task(id: recipe.id) {
             context.recordVisit(recipe.id)

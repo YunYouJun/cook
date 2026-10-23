@@ -1,63 +1,82 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useAppFeedback } from '../apps/web/app/composables/useAppFeedback'
+import { effectScope } from 'vue'
+import { FeedbackError } from '../apps/web/app/adapters/feedback'
+import { useAppFeedbackForm } from '../apps/web/app/composables/useAppFeedbackForm'
+import { parseAppFeedbackCategory } from '../apps/web/app/utils/feedback'
 
-const { createAlert, createToast, createSheet } = vi.hoisted(() => ({
-  createAlert: vi.fn(),
-  createToast: vi.fn(),
-  createSheet: vi.fn(),
-}))
-vi.mock('@ionic/vue', () => ({
-  alertController: { create: createAlert },
-  toastController: { create: createToast },
-  actionSheetController: { create: createSheet },
-}))
-
+const receipt = { id: 'support-123', productId: 'cook' as const, status: 'received' as const, createdAt: '2026-10-24T00:00:00Z' }
+const scopes: ReturnType<typeof effectScope>[] = []
+function setup(initial: 'bug' | 'recipe' | 'idea' = 'bug') {
+  const send = vi.fn().mockResolvedValue(receipt)
+  const scope = effectScope()
+  scopes.push(scope)
+  return { send, form: scope.run(() => useAppFeedbackForm(send, initial))! }
+}
 afterEach(() => {
-  vi.resetAllMocks()
-  vi.unstubAllGlobals()
+  scopes.splice(0).forEach(scope => scope.stop())
 })
 
-function setup(fails: boolean, role = 'confirm') {
-  const sendFeedback = fails ? vi.fn().mockRejectedValue(new Error('offline')) : vi.fn().mockResolvedValue(undefined)
-  vi.stubGlobal('useRecipeFeedback', () => ({ sendFeedback }))
-  vi.stubGlobal('navigator', {}) // Clipboard unavailable: the visible message must preserve the draft.
-  createAlert.mockResolvedValueOnce({
-    present: vi.fn(),
-    onDidDismiss: vi.fn().mockResolvedValue({ role, data: { values: { note: '  番茄 & 鸡蛋  ', contact: ' cook+qa@example.com ' } } }),
-  }).mockResolvedValue({ present: vi.fn() })
-  createToast.mockResolvedValue({ present: vi.fn() })
-  return sendFeedback
-}
-
-describe('app feedback flow', () => {
-  it('retains the complete failed recipe submission in a selectable fallback', async () => {
-    const send = setup(true)
-    await useAppFeedback().openAppFeedback('recipe')
-    expect(createSheet).not.toHaveBeenCalled()
-    expect(send).toHaveBeenCalledWith({ category: 'recipe', note: '番茄 & 鸡蛋', contact: 'cook+qa@example.com' })
-    const fallback = createAlert.mock.calls[1][0]
-    expect(fallback.message).toContain('选中下方内容复制')
-    expect(fallback.inputs[0].value).toContain('想要的菜没有')
-    expect(fallback.inputs[0].value).toContain('联系方式：cook+qa@example.com')
-    expect(fallback.inputs[0].value).toContain('kf@yunle.fun')
-    expect(fallback.inputs[0].attributes.readonly).toBe(true)
-    const location = { href: '' }
-    vi.stubGlobal('window', { location })
-    expect(fallback.buttons.find((button: { text: string }) => button.text === '发邮件').handler()).toBe(false)
-    expect(new URL(location.href).searchParams.get('body')).toContain('cook+qa@example.com')
-    expect(createToast).not.toHaveBeenCalled()
+describe('support app feedback form', () => {
+  it('preselects recipe submissions and preserves complete failed drafts for retry and email', async () => {
+    const { send, form } = setup('recipe')
+    send.mockRejectedValueOnce(new Error('offline'))
+    form.note.value = '  番茄 & 鸡蛋 + 葱  '
+    form.contact.value = ' cook+qa@example.com '
+    await form.submit()
+    expect(form.receipt.value).toBeUndefined()
+    expect(form.error.value).toContain('支持中心')
+    expect(form.note.value).toBe('  番茄 & 鸡蛋 + 葱  ')
+    expect(form.contact.value).toBe(' cook+qa@example.com ')
+    expect(form.mailMessage.value).toEqual({ topic: '想要的菜没有', lines: ['番茄 & 鸡蛋 + 葱', '联系方式：cook+qa@example.com'] })
+    const firstSubmission = send.mock.calls[0][0]
+    expect(firstSubmission).toEqual({ category: 'recipe', note: '番茄 & 鸡蛋 + 葱', contact: 'cook+qa@example.com', submissionId: expect.any(String) })
+    await form.submit()
+    expect(send.mock.calls[1][0]).toEqual(firstSubmission)
+    expect(form.receipt.value).toEqual(receipt)
+    expect(form.note.value).toBe('')
+    expect(form.contact.value).toBe('')
+    expect(form.error.value).toBe('')
   })
 
-  it('shows success only after the backend accepts the submission', async () => {
-    setup(false)
-    await useAppFeedback().openAppFeedback('idea')
-    expect(createAlert).toHaveBeenCalledTimes(1)
-    expect(createToast).toHaveBeenCalledWith(expect.objectContaining({ message: '收到了，谢谢反馈' }))
+  it.each(['note', 'contact', 'category'] as const)('uses a new retry key after editing %s', async (field) => {
+    const { send, form } = setup()
+    send.mockRejectedValue(new FeedbackError('RATE_LIMITED'))
+    form.note.value = '初次反馈'
+    await form.submit()
+    expect(form.error.value).toContain('稍后再试')
+    if (field === 'category')
+      form.category.value = 'idea'
+    else
+      form[field].value = '新内容'
+    await form.submit()
+    expect(send.mock.calls[1][0].submissionId).not.toBe(send.mock.calls[0][0].submissionId)
   })
 
-  it('does not send a canceled draft', async () => {
-    const send = setup(false, 'cancel')
-    await useAppFeedback().openAppFeedback('bug')
+  it('blocks empty drafts, repeated clicks while sending and resubmission of an accepted receipt', async () => {
+    const { send, form } = setup('idea')
+    form.note.value = '   '
+    await form.submit()
     expect(send).not.toHaveBeenCalled()
+    form.note.value = '希望能按季节推荐'
+    let finish!: (value: typeof receipt) => void
+    send.mockReturnValueOnce(new Promise((resolve) => {
+      finish = resolve
+    }))
+    const first = form.submit()
+    expect(form.pending.value).toBe(true)
+    await form.submit()
+    expect(send).toHaveBeenCalledTimes(1)
+    finish(receipt)
+    await first
+    expect(form.pending.value).toBe(false)
+    await form.submit()
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('accepts only supported deep-link categories', () => {
+    expect(parseAppFeedbackCategory('recipe')).toBe('recipe')
+    expect(parseAppFeedbackCategory('idea')).toBe('idea')
+    for (const value of [undefined, null, ['recipe'], 'invalid', '<script>'])
+      expect(parseAppFeedbackCategory(value)).toBe('bug')
   })
 })

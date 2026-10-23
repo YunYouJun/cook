@@ -101,6 +101,7 @@ export default defineNuxtConfig({
 
   css: [
     '@unocss/reset/tailwind.css',
+    '@yunlefun/ui/css',
     '~/styles/css-vars.scss',
     '~/styles/index.scss',
     '~/styles/index.ts',
@@ -163,7 +164,7 @@ export default defineNuxtConfig({
     },
     prerender: {
       crawlLinks: false,
-      routes: ['/', '/random', '/help', '/user', '/404', '/settings', '/auth/callback'],
+      routes: ['/', '/random', '/help', '/feedback', '/user', '/404', '/settings', '/auth/callback'],
       ignore: ['/hi'],
     },
   },

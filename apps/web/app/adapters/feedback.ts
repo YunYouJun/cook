@@ -23,15 +23,47 @@ export interface SearchSignal {
 export type AppFeedbackCategory = 'bug' | 'idea' | 'recipe' | 'other'
 
 /** Feedback about the app itself, not one recipe. */
+export interface FeedbackReceipt {
+  id: string
+  productId: 'cook'
+  status: 'received' | 'reviewing' | 'resolved'
+  createdAt: string
+}
+
+export class FeedbackError extends Error {
+  constructor(readonly code: string) {
+    super(code)
+    this.name = 'FeedbackError'
+  }
+}
+
 export interface AppFeedback {
   category: AppFeedbackCategory
   note: string
   contact?: string
+  submissionId?: string
 }
 
 interface FunctionResult {
   code?: string
   ok?: boolean
+  receipt?: unknown
+}
+
+/** Use the existing native HTTP entry for signed-out feedback; never send cookies or a claimed UID. */
+export async function callGuestFeedback(data: Record<string, unknown>, fetcher: typeof fetch = fetch): Promise<unknown> {
+  const response = await fetcher('https://api.yunle.fun/cook-feedback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'omit',
+    redirect: 'error',
+    signal: AbortSignal.timeout(15000),
+    body: JSON.stringify(data),
+  })
+  const result: unknown = await response.json()
+  if (!response.ok && (!result || typeof result !== 'object' || !('ok' in result) || result.ok !== false))
+    throw new FeedbackError('UNAVAILABLE')
+  return result
 }
 
 /**
@@ -39,15 +71,25 @@ interface FunctionResult {
  * function falls back to the random device id to deduplicate and rate limit.
  */
 export function createFeedbackRemote(callFunction: CloudbaseFunctionCaller, deviceId: string) {
-  async function call(data: Record<string, unknown>): Promise<void> {
+  async function call(data: Record<string, unknown>): Promise<FunctionResult> {
     const result = await callFunction(FEEDBACK_FUNCTION, { ...data, deviceId }) as FunctionResult | null
     if (!result || result.ok !== true)
-      throw new Error(`${FEEDBACK_FUNCTION} failed: ${result?.code ?? 'unknown'}`)
+      throw new FeedbackError(result?.code ?? 'UNKNOWN_ERROR')
+    return result
   }
 
   return {
     report: (report: RecipeReport) => call({ action: 'report', platform: 'web', ...report }),
     signal: (signal: SearchSignal) => call({ action: 'signal', platform: 'web', ...signal }),
-    feedback: (feedback: AppFeedback) => call({ action: 'feedback', platform: 'web', ...feedback }),
+    feedback: async (feedback: AppFeedback): Promise<FeedbackReceipt> => {
+      const result = await call({ action: 'feedback', platform: 'web', ...feedback })
+      const receipt = result.receipt
+      if (!receipt || typeof receipt !== 'object')
+        throw new FeedbackError('INVALID_RECEIPT')
+      const value = receipt as Record<string, unknown>
+      if (typeof value.id !== 'string' || value.productId !== 'cook' || typeof value.createdAt !== 'string' || (value.status !== 'received' && value.status !== 'reviewing' && value.status !== 'resolved'))
+        throw new FeedbackError('INVALID_RECEIPT')
+      return { id: value.id, productId: 'cook', createdAt: value.createdAt, status: value.status as FeedbackReceipt['status'] }
+    },
   }
 }
