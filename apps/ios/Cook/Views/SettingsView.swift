@@ -90,6 +90,7 @@ struct SettingsView: View {
                             AppFeedbackView()
                         }
                     }
+                    Link("支持中心与需求墙", destination: URL(string: "https://support.yunle.fun/?product=cook")!)
                     Link("在 GitHub 上反馈", destination: URL(string: "https://github.com/YunYouJun/cook/issues")!)
                     Link("参与讨论", destination: URL(string: "https://github.com/YunYouJun/cook/discussions")!)
                     Link("菜谱投稿", destination: URL(string: "https://docs.qq.com/form/page/DWk9GWW9oTmlXZU9V")!)
@@ -214,7 +215,7 @@ struct AppFeedbackView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
             } footer: {
-                Text("留下联系方式的话，我们处理后可以告诉你。")
+                Text("反馈私密发送至云乐坊支持中心，仅团队可见。联系方式选填，不会自动公开到需求墙。")
             }
         }
         .navigationTitle("意见反馈")
@@ -234,9 +235,9 @@ struct AppFeedbackView: View {
         }
         .alert("暂时没能提交", isPresented: $showingFailed) {
             Button("取消", role: .cancel) {}
-            Button("去 GitHub") { openURL(URL(string: "https://github.com/YunYouJun/cook/issues/new")!) }
+            Button("去支持中心") { openURL(URL(string: "https://support.yunle.fun/contact?product=cook&source=cook-ios&intent=feedback")!) }
         } message: {
-            Text("可以稍后再试，或者到 GitHub 提一个 issue。")
+            Text("内容已保留，可以稍后重试，或前往支持中心提交私密反馈。")
         }
         .sensoryFeedback(.success, trigger: showingSent) { _, sent in sent }
     }

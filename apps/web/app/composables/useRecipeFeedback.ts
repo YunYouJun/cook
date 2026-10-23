@@ -1,4 +1,4 @@
-import type { AppFeedback, RecipeReport, SearchSignal } from '~/adapters/feedback'
+import type { AppFeedback, FeedbackReceipt, RecipeReport, SearchSignal } from '~/adapters/feedback'
 import { createFeedbackRemote } from '~/adapters/feedback'
 import { getDeviceId, signalKey } from '~/utils/feedback'
 
@@ -27,8 +27,8 @@ export function useRecipeFeedback() {
     remote().signal(input).catch(() => {})
   }
 
-  async function sendFeedback(input: AppFeedback): Promise<void> {
-    await remote().feedback(input)
+  async function sendFeedback(input: AppFeedback): Promise<FeedbackReceipt> {
+    return remote().feedback(input)
   }
 
   return { report, signal, sendFeedback }
