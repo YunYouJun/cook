@@ -20,6 +20,7 @@
 ## 身份与私密性
 
 云函数通过 Support SDK 0.2.0 的 Node 入口签名。签名账号只取 CloudBase 的可信调用上下文；
+未登录 Web 与原生客户端复用现有 HTTP 入口（不携带 Cookie），已登录 Web 继续使用 CloudBase 会话调用。
 HTTP 入口一律视为访客，不接受请求正文/请求头自报的 UID。匿名设备标识只在 Cook 服务端派生摘要，
 Support 再按应用隔离并标记为 guest，不能成为账号或管理凭证。公钥注册只允许 cook 和 feedback:submit，
 显式开启 allowGuests；私钥只在云函数环境变量中。

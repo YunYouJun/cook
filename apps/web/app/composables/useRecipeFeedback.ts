@@ -1,5 +1,5 @@
 import type { AppFeedback, FeedbackReceipt, RecipeReport, SearchSignal } from '~/adapters/feedback'
-import { createFeedbackRemote } from '~/adapters/feedback'
+import { callGuestFeedback, createFeedbackRemote } from '~/adapters/feedback'
 import { getDeviceId, signalKey } from '~/utils/feedback'
 
 const sentSignals = new Set<string>()
@@ -10,7 +10,10 @@ const sentSignals = new Set<string>()
  */
 export function useRecipeFeedback() {
   const auth = useYunlefunAuth()
-  const remote = () => createFeedbackRemote(auth.callFunction, getDeviceId())
+  const remote = () => createFeedbackRemote(async (name, data) => {
+    await auth.initialize()
+    return auth.isAuthenticated.value ? auth.callFunction(name, data) : callGuestFeedback(data)
+  }, getDeviceId())
 
   async function report(input: RecipeReport): Promise<void> {
     await remote().report(input)

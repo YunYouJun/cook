@@ -50,6 +50,22 @@ interface FunctionResult {
   receipt?: unknown
 }
 
+/** Use the existing native HTTP entry for signed-out feedback; never send cookies or a claimed UID. */
+export async function callGuestFeedback(data: Record<string, unknown>, fetcher: typeof fetch = fetch): Promise<unknown> {
+  const response = await fetcher('https://api.yunle.fun/cook-feedback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'omit',
+    redirect: 'error',
+    signal: AbortSignal.timeout(15000),
+    body: JSON.stringify(data),
+  })
+  const result: unknown = await response.json()
+  if (!response.ok && (!result || typeof result !== 'object' || !('ok' in result) || result.ok !== false))
+    throw new FeedbackError('UNAVAILABLE')
+  return result
+}
+
 /**
  * Talks to the `cook-feedback` cloud function. Signing in is optional: the
  * function falls back to the random device id to deduplicate and rate limit.
@@ -71,7 +87,7 @@ export function createFeedbackRemote(callFunction: CloudbaseFunctionCaller, devi
       if (!receipt || typeof receipt !== 'object')
         throw new FeedbackError('INVALID_RECEIPT')
       const value = receipt as Record<string, unknown>
-      if (typeof value.id !== 'string' || value.productId !== 'cook' || typeof value.createdAt !== 'string' || !['received', 'reviewing', 'resolved'].includes(String(value.status)))
+      if (typeof value.id !== 'string' || value.productId !== 'cook' || typeof value.createdAt !== 'string' || (value.status !== 'received' && value.status !== 'reviewing' && value.status !== 'resolved'))
         throw new FeedbackError('INVALID_RECEIPT')
       return { id: value.id, productId: 'cook', createdAt: value.createdAt, status: value.status as FeedbackReceipt['status'] }
     },
