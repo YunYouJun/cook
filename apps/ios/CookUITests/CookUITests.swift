@@ -69,7 +69,8 @@ final class CookUITests: XCTestCase {
         let contribution = app.buttons["菜谱投稿"]
         for _ in 0..<5 where !contribution.isHittable { app.swipeUp() }
         tap(contribution)
-        let note = app.textViews["feedback.note"]
+        // SwiftUI exposes the vertical TextField's accessibility type differently across OS versions.
+        let note = app.descendants(matching: .any).matching(identifier: "feedback.note").firstMatch
         wait(note, "exists == true")
         XCTAssertTrue(app.staticTexts["想要的菜没有"].exists)
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "反馈私密发送至云乐坊支持中心")).firstMatch.exists)
