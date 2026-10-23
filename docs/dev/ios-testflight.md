@@ -13,7 +13,7 @@
 | 隐私清单     | `apps/ios/Cook/Resources/PrivacyInfo.xcprivacy`                           |
 | 正式反馈地址 | `https://api.yunle.fun/cook-feedback`                                     |
 
-2026-10-24 查询到现有 `2.0.0 (1)` 已在内部测试，下一构建号为 `2`，包括上传中构建查询。每次发布都重新查询，不能复用已占用的构建号。
+2026-10-24 查询到现有 `2.0.0 (1)` 已在内部测试，候选构建 `2` 的 Xcode 导出创建了待上传记录，尚未分发。本轮整合 #133 的需求墙入口使用构建 `3`。每次发布都重新查询已处理和上传中构建，不能复用已占用的构建号。
 
 ## 资源与反馈配置
 
@@ -29,7 +29,7 @@ xcodegen generate --spec apps/ios/project.yml
 
 发布前核对归档和最终 IPA 中的 `CookFeedbackURL` 与表中地址完全一致，不能把无配置的降级入口当成应用内反馈验收通过。不要把 CloudBase 导出令牌、Support 私钥或飞书凭据写入 Info.plist。
 
-「我的 → 意见反馈」通过既有 `cook-feedback` HTTP 协议提交，由云函数复用 Support SDK 进入统一私密队列；支持中心跳转保留。菜谱纠错、搜索信号与应用意见按 action 分流，不重复写入。反馈管理地址为 `https://support.yunle.fun/manage?product=cook`；飞书主动通知尚未启用。
+「我的 → 意见反馈」通过既有 `cook-feedback` HTTP 协议提交，由云函数复用 Support SDK 进入统一私密队列；「需求墙」直达 `/feedback?product=cook`，独立的「支持中心」跳转保留。菜谱纠错、搜索信号与应用意见按 action 分流，不重复写入。反馈管理地址为 `https://support.yunle.fun/manage?product=cook`；飞书主动通知尚未启用。
 
 ## 分发验收
 
@@ -38,3 +38,7 @@ xcodegen generate --spec apps/ios/project.yml
 - 实测意见反馈入口、发送成功、失败保留内容、支持中心跳转，以及后台仅团队可见。保留测试回执并清理明确的验收数据。
 - 最新 main 还包含冰箱等既有功能，CloudKit 生产结构和双设备同步按 [P0 验收记录](./ios-p0-validation.md) 单独核对；模拟器和打包成功不代表生产同步已验证。
 - 归档、dSYM、IPA、源码提交、哈希与脱敏发布回执保存在仓库外的版本化发布目录；清理临时 DerivedData、解包目录和本次临时模拟器。没有要求安装手机时不覆盖真机 App。
+
+## 本轮内测的已知待验收项
+
+维护者于 2026-10-24 明确同意将 CloudKit 登录与生产同步验收后置，不阻塞本轮反馈入口的 TestFlight 内测。测试说明必须标记「iCloud 同步待验收」；`CD_FridgeItem` 生产结构及双设备同步仍按 P0 记录跟进，不能记为通过。正式发布前补齐。#133 的实际分发构建复验也须单独记录，模拟器结果不能替代 TestFlight 真机验收。
