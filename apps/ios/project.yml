@@ -28,6 +28,9 @@ targets:
       - path: Cook/Resources/AppIcon.icon
         type: file
         buildPhase: resources
+      - path: ../../docs/privacy.md
+        type: file
+        buildPhase: resources
     dependencies:
       - package: CookCore
     preBuildScripts:

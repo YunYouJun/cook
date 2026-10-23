@@ -17,6 +17,7 @@ export default defineConfig({
       { text: '使用指南', link: '/guide/getting-started' },
       { text: '开发文档', link: '/dev/cli' },
       { text: '方案记录', link: '/decisions/' },
+      { text: 'iOS 隐私政策', link: '/privacy' },
       { text: '应用', link: 'https://cook.yunyoujun.cn' },
     ],
 

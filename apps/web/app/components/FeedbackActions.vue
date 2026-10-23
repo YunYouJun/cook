@@ -13,14 +13,10 @@ import { links } from '~/constants'
       立即投稿
     </a>
 
-    <a
-      m="2"
-      class="feedback-button"
-      :href="links.feedback" target="_blank"
-      alt="通过兔小巢反馈"
-    >
+    <NuxtLink m="2" class="feedback-button" to="/feedback">
       立即反馈
-    </a>
+    </NuxtLink>
+    <a m="2" class="feedback-button" :href="links.support" target="_blank" rel="noopener noreferrer">支持中心 ↗</a>
   </div>
 </template>
 

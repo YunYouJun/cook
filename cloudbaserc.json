@@ -16,7 +16,7 @@
     },
     {
       "name": "cook-feedback",
-      "timeout": 10,
+      "timeout": 30,
       "runtime": "Nodejs18.15",
       "memorySize": 256,
       "installDependency": true,

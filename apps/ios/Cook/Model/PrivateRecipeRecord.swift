@@ -83,10 +83,12 @@ enum PrivateRecipePersistence {
         guard snapshot.recipes.first(where: { $0.customId == recipe.customId }) == recipe else { throw EditError.changed }
         let now = Date(timeIntervalSince1970: max(Date().timeIntervalSince1970, Double(recipe.updatedAt + 1) / 1000))
         for record in records where record.customId == recipe.customId {
+            // A tombstone needs only identity and time; do not retain the user's recipe text.
+            record.payload = ""
             record.deletedAt = now
             record.updatedAt = now
         }
-        // Keep tombstones: an old file must not silently resurrect a deleted identity.
+        // Keep identity-only tombstones: an old file must not silently resurrect a deleted identity.
         try context.save()
     }
 

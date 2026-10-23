@@ -17,6 +17,9 @@ struct RootView: View {
     @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }) private var fridgeItems: [FridgeItem]
     @AppStorage(FridgeReminder.enabledKey) private var remindersEnabled = false
     @AppStorage(FridgeReminder.timeKey) private var reminderMinutes = FridgeReminder.defaultMinutes
+    @Environment(FeedbackClient.self) private var feedback
+    @Environment(FavoriteActions.self) private var favoriteActions
+    @State private var showingSignalConsent = false
 
     var body: some View {
         TabView(selection: $router.tab) {
@@ -56,6 +59,32 @@ struct RootView: View {
                 FridgeReminder.reschedule(reminderEntries)
             }
         }
+        .task {
+            showingSignalConsent = feedback.needsSignalConsent
+        }
+        .sheet(isPresented: $showingSignalConsent, onDismiss: {
+            // 下滑关闭也保持统计关闭，之后仍可在设置里主动开启。
+            if feedback.needsSignalConsent { feedback.setSignalConsent(false) }
+        }) {
+            SignalConsentView()
+        }
+        .alert(
+            favoriteActions.failure?.title ?? "收藏未能保存",
+            isPresented: Binding(get: { favoriteActions.failure != nil }, set: { if !$0 { favoriteActions.failure = nil } }),
+            presenting: favoriteActions.failure
+        ) { failure in
+            Button("取消", role: .cancel) {}
+            Button("重试") {
+                // 等旧弹窗关闭后再尝试，连续失败时也能重新显示提示。
+                Task { @MainActor in
+                    await Task.yield()
+                    favoriteActions.retry(failure)
+                }
+            }
+        } message: { _ in
+            Text("已保留原来的收藏状态。请检查设备的可用储存空间，然后重试。")
+        }
+        .sensoryFeedback(.success, trigger: favoriteActions.savedCount)
     }
 
     private var reminderEntries: [FridgeReminder.Entry] {

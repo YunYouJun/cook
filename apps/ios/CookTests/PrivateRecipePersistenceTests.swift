@@ -58,6 +58,26 @@ final class PrivateRecipePersistenceTests: XCTestCase {
         XCTAssertEqual(restored[0].copiedFrom, original.customId)
     }
 
+    func testDeletionRemovesPrivateTextFromEveryDuplicateButRetainsIdentity() throws {
+        let container = Persistence.makeContainer(inMemory: true)
+        let original = recipe()
+        let context = ModelContext(container)
+        context.insert(try PrivateRecipeRecord(original))
+        context.insert(try PrivateRecipeRecord(original))
+        try context.save()
+
+        try PrivateRecipePersistence.remove(original, in: container)
+
+        let check = ModelContext(container)
+        let records = try check.fetch(FetchDescriptor<PrivateRecipeRecord>())
+        XCTAssertEqual(records.count, 2)
+        XCTAssertTrue(records.allSatisfy { $0.payload.isEmpty && $0.deletedAt != nil && $0.customId == original.customId })
+        let snapshot = try PrivateRecipeSnapshot(records)
+        XCTAssertTrue(snapshot.recipes.isEmpty)
+        XCTAssertEqual(snapshot.deletedIDs, [original.customId])
+        XCTAssertEqual(try PrivateRecipePersistence.importRecipes([original], keepCopies: false, in: container), 0)
+    }
+
     func testDuplicateCloudRowsHaveDeterministicDeletionPrecedence() throws {
         let first = try PrivateRecipeRecord(recipe())
         let second = try PrivateRecipeRecord(recipe())

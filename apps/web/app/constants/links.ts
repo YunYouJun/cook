@@ -6,9 +6,11 @@ export const links = {
    */
   contribute: 'https://docs.qq.com/form/page/DWk9GWW9oTmlXZU9V',
   /**
-   * 兔小巢反馈
+   * 私密反馈与公开需求墙
    */
-  feedback: 'https://support.qq.com/product/507827',
+  feedback: 'https://support.yunle.fun/contact?product=cook&source=cook-web&intent=feedback',
+  support: 'https://support.yunle.fun/?product=cook',
+  feedbackBoard: 'https://support.yunle.fun/feedback?product=cook',
   githubIssue: 'https://github.com/YunYouJun/cook/issues',
   githubDiscussions: 'https://github.com/YunYouJun/cook/discussions',
 
