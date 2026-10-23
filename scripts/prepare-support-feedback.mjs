@@ -8,7 +8,7 @@ import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 const VERSION = '0.2.0'
-const SHA256 = '2ac5e8b1adec0d6e80116b2e439cde2318d550d16012b9b6dd30ed9c70daaa1c'
+const SHA256 = '3a5bb6e1375f98ec6d737142ad83422ad2b93989936b15064ed8fa495260311d'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const [output, localSdk] = process.argv.slice(2)
 if (!output || !path.isAbsolute(output))
