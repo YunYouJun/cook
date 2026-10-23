@@ -101,6 +101,7 @@ export default defineNuxtConfig({
 
   css: [
     '@unocss/reset/tailwind.css',
+    '@yunlefun/ui/css',
     '~/styles/css-vars.scss',
     '~/styles/index.scss',
     '~/styles/index.ts',
