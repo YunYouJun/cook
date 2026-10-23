@@ -153,17 +153,21 @@ export const useRecipeStore = defineStore('recipe', () => {
   const allRecipes = computed<RecipeItem[]>(() => [...customRecipes.value, ...recipes.value])
 
   const recommend = computed(() => createRecipeRecommender(allRecipes.value))
-  const recipeMatches = computed(() => recommend.value({
-    stuff: selectedStuff.value,
-    pantry: selectedPantry.value,
-    tool: curTool.value,
-    keyword: keyword.value,
-    mode: curMode.value,
-    avoid: selectedAvoid.value,
-    methodGroups: methodGroups.value,
-    noSpicy: noSpicy.value,
-    difficulty: difficulty.value,
-  }))
+  // 同一推荐入口允许工作台传入「用户明确确认」的调料，不继承经典模式的默认油盐。
+  function recommendWithPantry(confirmedPantry: string[]) {
+    return recommend.value({
+      stuff: selectedStuff.value,
+      pantry: confirmedPantry,
+      tool: curTool.value,
+      keyword: keyword.value,
+      mode: curMode.value,
+      avoid: selectedAvoid.value,
+      methodGroups: methodGroups.value,
+      noSpicy: noSpicy.value,
+      difficulty: difficulty.value,
+    })
+  }
+  const recipeMatches = computed(() => recommendWithPantry(selectedPantry.value))
   /** 只选了厨具、还没选食材时，列出用这个厨具能做的菜（保留原来经典视图的用法） */
   const toolRecipes = computed(() => {
     if (selectedStuff.value.length || !curTool.value)
@@ -235,6 +239,7 @@ export const useRecipeStore = defineStore('recipe', () => {
     parseText,
     applyQuery,
     recipeMatches,
+    recommendWithPantry,
     toolRecipes,
     randomPool,
     unlockSuggestions,
