@@ -11,7 +11,7 @@ definePageMeta({
 })
 
 /**
- * 有来源时直接打开；详情入口保留本机视频、备注和编辑。
+ * 有来源时直接打开；详情入口保留备注和编辑。
  */
 const detail = shallowRef<CustomRecipe>()
 const detailOpen = ref(false)
@@ -57,9 +57,6 @@ async function remove(recipe: CustomRecipe) {
 
     <ion-content :fullscreen="true">
       <PrivateRecipeBackup />
-      <ion-button fill="clear" router-link="/videos">
-        管理本机视频
-      </ion-button>
       <ion-list v-if="sorted.length">
         <TransitionGroup name="cook-row" tag="div" class="cook-row-group">
           <ion-item-sliding v-for="recipe in sorted" :key="recipe.customId">

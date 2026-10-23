@@ -189,7 +189,6 @@ function onPresented() {
         </div>
       </section>
 
-      <LocalRecipeVideo v-if="open && custom" :key="custom.customId" :custom-id="custom.customId" :recipe-name="custom.name" />
       <section v-if="custom?.note" aria-label="做法备注">
         <h3 class="cook-group-header">
           做法备注

@@ -211,10 +211,6 @@ async function remove() {
       <p v-if="error" class="cook-group-footer custom-recipe-error" role="alert">
         {{ error }}
       </p>
-      <LocalRecipeVideo v-if="existing" :key="existing.customId" :custom-id="existing.customId" :recipe-name="existing.name" editable />
-      <p v-else class="cook-group-footer">
-        保存菜谱后，可再次编辑并添加本机视频。
-      </p>
       <p class="cook-group-footer">
         自己添加的菜谱只保存在这台设备上，会和收录的菜谱一起参与搭配推荐和「吃什么」。
       </p>
