@@ -34,12 +34,12 @@
 				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 			</array>
 		</dict>
-		<!-- 菜谱反馈和意见反馈里写的内容 -->
+		<!-- 反馈内容可与用户自愿填写的联系方式出现在同一条记录中 -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<false/>
+			<true/>
 			<key>NSPrivacyCollectedDataTypeTracking</key>
 			<false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key>
@@ -47,7 +47,20 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- 意见反馈里自愿留下的邮箱或微信，用来回复 -->
+		<!-- 意见反馈里自愿留下的邮箱，用来回复 -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- 意见反馈里自愿留下的微信等其他联系方式，用来回复 -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeOtherUserContactInfo</string>
@@ -63,7 +76,7 @@
 	</array>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
-		<!-- @AppStorage 存「帮助改进推荐」开关，只在本 App 内读写 -->
+		<!-- UserDefaults 存推荐统计同意、临期提醒设置和开发版 schema 版本，只在本 App 内读写 -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>

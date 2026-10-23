@@ -7,7 +7,7 @@ import SwiftUI
 struct ResultsView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
-    @Environment(\.modelContext) private var context
+    @Environment(FavoriteActions.self) private var favoriteActions
     @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }) private var favorites: [Favorite]
 
     static let modes: [RecommendationMode] = [.loose, .strict, .survival]
@@ -103,7 +103,7 @@ struct ResultsView: View {
                                 RecipeRow(recipe: match.recipe, match: match)
                             }
                             .recipeActions(match.recipe, isFavorite: favoriteIds.contains(match.recipe.id), store: store) {
-                                context.toggleFavorite(match.recipe.id)
+                                favoriteActions.set(match.recipe.id, isFavorite: !favoriteIds.contains(match.recipe.id))
                             }
                         }
                     } header: {
@@ -136,7 +136,7 @@ struct ResultsView: View {
                         RecipeRow(recipe: recipe)
                     }
                     .recipeActions(recipe, isFavorite: favoriteIds.contains(recipe.id), store: store) {
-                        context.toggleFavorite(recipe.id)
+                        favoriteActions.set(recipe.id, isFavorite: !favoriteIds.contains(recipe.id))
                     }
                 }
             } header: {
@@ -245,7 +245,6 @@ extension View {
         } preview: {
             RecipePreviewCard(thumbnail: store.thumbnail(for: recipe), name: recipe.name, meta: store.meta(for: recipe), stuff: recipe.stuff)
         }
-        .sensoryFeedback(.success, trigger: isFavorite) { old, new in !old && new }
     }
 }
 

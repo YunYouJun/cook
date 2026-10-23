@@ -16,6 +16,7 @@ struct LibraryView: View {
 
     @Environment(RecipeStore.self) private var store
     @Environment(\.modelContext) private var context
+    @Environment(FavoriteActions.self) private var favoriteActions
     @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }, sort: \Favorite.createdAt, order: .reverse)
     private var favorites: [Favorite]
     @Query(filter: #Predicate<HistoryEntry> { $0.deletedAt == nil }, sort: \HistoryEntry.visitedAt, order: .reverse)
@@ -61,7 +62,7 @@ struct LibraryView: View {
                         RecipeRow(recipe: recipe)
                     }
                     .recipeActions(recipe, isFavorite: favoriteIds.contains(recipe.id), store: store) {
-                        withAnimation(.snappy) { context.toggleFavorite(recipe.id) }
+                        withAnimation(.snappy) { favoriteActions.set(recipe.id, isFavorite: !favoriteIds.contains(recipe.id)) }
                     }
                 }
             }
