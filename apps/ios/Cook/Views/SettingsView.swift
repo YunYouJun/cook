@@ -92,7 +92,8 @@ struct SettingsView: View {
                             AppFeedbackView()
                         }
                     }
-                    Link("支持中心与需求墙", destination: URL(string: "https://support.yunle.fun/?product=cook")!)
+                    Link("需求墙", destination: URL(string: "https://support.yunle.fun/feedback?product=cook")!)
+                    Link("支持中心", destination: URL(string: "https://support.yunle.fun/?product=cook")!)
                     Link("在 GitHub 上反馈", destination: URL(string: "https://github.com/YunYouJun/cook/issues")!)
                     Link("参与讨论", destination: URL(string: "https://github.com/YunYouJun/cook/discussions")!)
                     Link("菜谱投稿", destination: URL(string: "https://docs.qq.com/form/page/DWk9GWW9oTmlXZU9V")!)
