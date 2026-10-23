@@ -5,8 +5,8 @@
  *   Signing in is optional; anonymous reports are keyed by a random device id.
  * - `signal`: anonymous, aggregated search signals (a selection with no
  *   results, or which result was opened at which rank) used to tune filtering.
- * - `feedback`: general feedback about the app (a bug, an idea, a missing
- *   recipe), with an optional way to reach the user.
+ * - `feedback`: private app feedback delegated to Support through its SDK.
+ *   Existing Web/iOS callers keep the same protocol; no new local feedback rows.
  * - `export`: maintainers pull everything for the recipe-data-review skill.
  *   Only over the HTTP trigger (GET) with the COOK_FEEDBACK_EXPORT_TOKEN header.
  *
@@ -23,6 +23,7 @@
 const { Buffer } = require('node:buffer')
 const crypto = require('node:crypto')
 const process = require('node:process')
+const { submitAppFeedback } = require('./support')
 
 const FEEDBACK = 'cook_recipe_feedback'
 const SIGNALS = 'cook_search_signals'
@@ -91,8 +92,8 @@ function isIndex(value, max) {
 }
 
 /** Who is calling: the account when signed in, otherwise the device. */
-function readReporter(event) {
-  const uid = callerUid()
+function readReporter(event, anonymousOnly = false) {
+  const uid = anonymousOnly ? '' : callerUid()
   if (uid)
     return { key: hash(`uid:${uid}`), uid }
   if (typeof event.deviceId === 'string' && DEVICE_ID_RE.test(event.deviceId))
@@ -160,20 +161,10 @@ async function appFeedback(event, reporter, now) {
   if (!await takeQuota(reporter, now))
     return fail('RATE_LIMITED')
 
-  // Sending the same text twice in a day (a double tap, a retry) keeps one row.
-  const day = today(now)
-  const id = hash(`${reporter.key}|${day}|${note}`)
-  await getApp().database().collection(APP_FEEDBACK).doc(id).set({
-    category,
-    note,
-    contact,
-    ...source,
-    reporter: reporter.key,
-    uid: reporter.uid,
-    day,
-    createdAt: now,
-  })
-  return { ok: true }
+  const submissionId = event.submissionId
+  if (submissionId !== undefined && (typeof submissionId !== 'string' || !/^[\w-]{8,128}$/.test(submissionId)))
+    return fail('INVALID_FEEDBACK')
+  return submitAppFeedback({ category, note, contact, source, reporter, day: today(now), submissionId })
 }
 
 function readSelection(event) {
@@ -246,8 +237,8 @@ async function exportAll(since) {
   }
 }
 
-async function handleAction(event) {
-  const reporter = readReporter(event)
+async function handleAction(event, anonymousOnly = false) {
+  const reporter = readReporter(event, anonymousOnly)
   if (!reporter)
     return fail('REPORTER_REQUIRED')
   const now = Date.now()
@@ -296,8 +287,9 @@ async function handleHttp(event) {
     const data = readBody(event)
     if (!data || !PUBLIC_ACTIONS.has(data.action))
       return respond(400, fail('INVALID_BODY'))
-    const result = await handleAction(data)
-    const status = result.ok ? 200 : result.code === 'RATE_LIMITED' ? 429 : 400
+    // This HTTP endpoint has no authenticated session. Never adopt a body/header UID.
+    const result = await handleAction(data, true)
+    const status = result.ok ? 200 : result.code === 'RATE_LIMITED' ? 429 : result.code === 'SUPPORT_UNAVAILABLE' ? 503 : result.code === 'SUBMISSION_CONFLICT' ? 409 : 400
     return respond(status, result)
   }
   const headers = event.headers || {}

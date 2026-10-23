@@ -222,11 +222,11 @@ importers:
         specifier: ^14.4.0
         version: 14.4.0(magic-string@1.1.0)(magicast@0.5.4)(nuxt@4.5.2(0f4a3527db7795df392b465c3de4796e))(oxc-parser@0.140.0)(rolldown@1.2.3)(unplugin@3.3.0(esbuild@0.28.2)(rolldown@1.2.3)(rollup@4.62.4)(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.2)(tsx@4.23.12)(yaml@2.9.0)))(vue@3.5.41(typescript@5.9.3))
       '@yunlefun/ui':
-        specifier: 0.0.6
-        version: 0.0.6(sass@1.102.0)
+        specifier: 0.0.7
+        version: 0.0.7(sass@1.102.0)
       '@yunlefun/vue':
-        specifier: 0.4.2
-        version: 0.4.2(nuxt@4.5.2(0f4a3527db7795df392b465c3de4796e))(sass@1.102.0)(vue@3.5.41(typescript@5.9.3))
+        specifier: 0.6.0
+        version: 0.6.0(nuxt@4.5.2(0f4a3527db7795df392b465c3de4796e))(sass@1.102.0)(vue@3.5.41(typescript@5.9.3))
       dexie:
         specifier: ^4.4.4
         version: 4.4.4
@@ -1593,8 +1593,10 @@ packages:
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
-  '@floating-ui/vue@1.1.11':
-    resolution: {integrity: sha512-HzHKCNVxnGS35r9fCHBc3+uCnjw9IWIlCPL683cGgM9Kgj2BiAl8x1mS7vtvP6F9S/e/q4O6MApwSHj8hNLGfw==}
+  '@floating-ui/vue@2.0.1':
+    resolution: {integrity: sha512-043dyEKD9TDSfz080YH2vobubgg+NIo/9Fw4RAl7sEMpD8Am1DNrrSTl/GpMBjyGHoD/FbJY2QLawY+HSQsEIA==}
+    peerDependencies:
+      vue: '>=3.3.0'
 
   '@gerrit0/mini-shiki@3.23.0':
     resolution: {integrity: sha512-bEMORlG0cqdjVyCEuU0cDQbORWX+kYCeo0kV1lbxF5bt4r7SID2l9bqsxJEM0zndaxpOUT7riCyIVEuqq/Ynxg==}
@@ -3850,24 +3852,30 @@ packages:
     engines: {node: '>=14.6'}
     deprecated: this version has critical issues, please update to the latest version
 
+  '@yunlefun/icons@0.3.1':
+    resolution: {integrity: sha512-X+Ut79gegUVAK8T48AYxkK6lkOgHuFPbxUTr+CXDZRTqEFEofZuf4fFlDKR0PX67GoYyV2d5HOZbtLONQjzRAw==}
+
   '@yunlefun/sso@0.7.0':
     resolution: {integrity: sha512-8Omjc/4ASVJLJDiPiUtP11PI6fygTnUdLPtuv7txNzV6jtbjBnorF/eFJ7cB4ivh2m2O3GbLVqX/q1teK9OH+Q==}
 
-  '@yunlefun/ui@0.0.6':
-    resolution: {integrity: sha512-XWvfNpKbTlF+0FA+dJg9koGbdx8/0QuXXQetB9GmCBT9kKZsreBMf89m5WpzML4DHxStBRxyb3GOBegl6TNidQ==}
+  '@yunlefun/ui@0.0.7':
+    resolution: {integrity: sha512-YWV04EDTA5LS0Tr4ervVBEEgotCZC7n71hiG84zRToc/HL8o35ie2VeR13mP1qjJnqFvgA8QWN8m5/y5Ax1ZEw==}
     peerDependencies:
       sass: ^1.101.0
     peerDependenciesMeta:
       sass:
         optional: true
 
-  '@yunlefun/vue@0.4.2':
-    resolution: {integrity: sha512-UkIaMOpmNCTl4tfYynzGdDt8Oz7cpfx+vkt71qSG2xdMe2eRjXx1xMNRbY71xaUCNqPSRMKHJBNY/ALEJbw1Pw==}
+  '@yunlefun/vue@0.6.0':
+    resolution: {integrity: sha512-mYYkGvOZOmPUhp0E9lyh8CbPHYTG4IOmfpH+9wvrcjmmPhnwvIKjcXYOuhHrW6+77m7qC20kR3Oebtekxz5l8A==}
     peerDependencies:
+      '@ag-ui/client': ^1.0.1
       nuxt: ^4.0.0
       sass: ^1.101.0
       vue: ^3.5.0
     peerDependenciesMeta:
+      '@ag-ui/client':
+        optional: true
       nuxt:
         optional: true
 
@@ -7615,8 +7623,8 @@ packages:
     resolution: {integrity: sha512-NgRBy2Nx/bE+9F27nVHnqcN5HjyLmecqsqx2PJHu3/IEtADD4WuxuXIVExD5PoSDFVrl78dOonfcOe5O+5nbzQ==}
     hasBin: true
 
-  reka-ui@2.10.5:
-    resolution: {integrity: sha512-/8o0y9BThE0hcHKFg+3770tWcJh3qKdOEFxLOPb9HIajXeFoH/J530cZH62jUJunbqwBgpSBL9v7nB8LJ5pDXA==}
+  reka-ui@2.11.0:
+    resolution: {integrity: sha512-ilkpm4bIAol4jwzm4tpm3WVcffyGOpqksNZL1k1qO9QmIwAA+q8jroxjkUGLEn/GddfdExFfvofWfQiKZszUeQ==}
     peerDependencies:
       vue: '>= 3.4.0'
 
@@ -8957,17 +8965,6 @@ packages:
 
   vue-component-type-helpers@3.3.9:
     resolution: {integrity: sha512-3c/UfMe0SqyEfcGTyH7mfshHagJ9QTCbppCb0/uGpHZpFug7+If3GeGZN7I0YheKEExemx3xldQPoO7PQSOLQg==}
-
-  vue-demi@0.14.10:
-    resolution: {integrity: sha512-nMZBOwuzabUO0nLgIcc6rycZEebF6eeUfaiQx9+WSk8e29IbLvPU9feI6tqW4kTo3hvoYAJkMh8n8D0fuISphg==}
-    engines: {node: '>=12'}
-    hasBin: true
-    peerDependencies:
-      '@vue/composition-api': ^1.0.0-rc.1
-      vue: ^3.0.0-0 || ^2.6.0
-    peerDependenciesMeta:
-      '@vue/composition-api':
-        optional: true
 
   vue-devtools-stub@0.1.0:
     resolution: {integrity: sha512-RutnB7X8c5hjq39NceArgXg28WZtZpGc3+J16ljMiYnFhKvd8hITxSWQSQ5bvldxMDU6gG5mkxl1MTQLXckVSQ==}
@@ -10585,14 +10582,11 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
-  '@floating-ui/vue@1.1.11(vue@3.5.41(typescript@5.9.3))':
+  '@floating-ui/vue@2.0.1(vue@3.5.41(typescript@5.9.3))':
     dependencies:
       '@floating-ui/dom': 1.8.0
       '@floating-ui/utils': 0.2.12
-      vue-demi: 0.14.10(vue@3.5.41(typescript@5.9.3))
-    transitivePeerDependencies:
-      - '@vue/composition-api'
-      - vue
+      vue: 3.5.41(typescript@5.9.3)
 
   '@gerrit0/mini-shiki@3.23.0':
     dependencies:
@@ -13202,23 +13196,26 @@ snapshots:
 
   '@xmldom/xmldom@0.9.10': {}
 
+  '@yunlefun/icons@0.3.1':
+    dependencies:
+      '@iconify/types': 2.0.0
+
   '@yunlefun/sso@0.7.0':
     dependencies:
       jose: 6.2.8
 
-  '@yunlefun/ui@0.0.6(sass@1.102.0)':
+  '@yunlefun/ui@0.0.7(sass@1.102.0)':
     optionalDependencies:
       sass: 1.102.0
 
-  '@yunlefun/vue@0.4.2(nuxt@4.5.2(0f4a3527db7795df392b465c3de4796e))(sass@1.102.0)(vue@3.5.41(typescript@5.9.3))':
+  '@yunlefun/vue@0.6.0(nuxt@4.5.2(0f4a3527db7795df392b465c3de4796e))(sass@1.102.0)(vue@3.5.41(typescript@5.9.3))':
     dependencies:
-      reka-ui: 2.10.5(vue@3.5.41(typescript@5.9.3))
+      '@yunlefun/icons': 0.3.1
+      reka-ui: 2.11.0(vue@3.5.41(typescript@5.9.3))
       sass: 1.102.0
       vue: 3.5.41(typescript@5.9.3)
     optionalDependencies:
       nuxt: 4.5.2(0f4a3527db7795df392b465c3de4796e)
-    transitivePeerDependencies:
-      - '@vue/composition-api'
 
   '@yunyoujun/docs@0.1.14(vite@8.2.1(@types/node@25.9.5)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.2)(tsx@4.23.12)(yaml@2.9.0))':
     dependencies:
@@ -17678,10 +17675,9 @@ snapshots:
     dependencies:
       jsesc: 3.1.0
 
-  reka-ui@2.10.5(vue@3.5.41(typescript@5.9.3)):
+  reka-ui@2.11.0(vue@3.5.41(typescript@5.9.3)):
     dependencies:
-      '@floating-ui/dom': 1.8.0
-      '@floating-ui/vue': 1.1.11(vue@3.5.41(typescript@5.9.3))
+      '@floating-ui/vue': 2.0.1(vue@3.5.41(typescript@5.9.3))
       '@internationalized/date': 3.12.4
       '@internationalized/number': 3.6.8
       '@tanstack/vue-virtual': 3.13.35(vue@3.5.41(typescript@5.9.3))
@@ -17691,8 +17687,6 @@ snapshots:
       defu: 6.1.7
       ohash: 2.0.11
       vue: 3.5.41(typescript@5.9.3)
-    transitivePeerDependencies:
-      - '@vue/composition-api'
 
   require-from-string@2.0.2: {}
 
@@ -19309,10 +19303,6 @@ snapshots:
       ufo: 1.6.4
 
   vue-component-type-helpers@3.3.9: {}
-
-  vue-demi@0.14.10(vue@3.5.41(typescript@5.9.3)):
-    dependencies:
-      vue: 3.5.41(typescript@5.9.3)
 
   vue-devtools-stub@0.1.0: {}
 

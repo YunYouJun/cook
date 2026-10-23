@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer'
 import { createRequire } from 'node:module'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 interface FunctionModule {
   main: (event?: Record<string, unknown>) => Promise<Record<string, any>>
@@ -16,6 +16,11 @@ interface FunctionModule {
 
 const require = createRequire(import.meta.url)
 const fn = require('../cloudfunctions/cook-feedback/index.js') as FunctionModule
+const bridge = require('../cloudfunctions/cook-feedback/support.js') as { setClientLoaderForTest: (loader: () => Promise<unknown>) => void }
+
+const receipt = { id: 'fb_test-receipt', productId: 'cook', status: 'received', createdAt: '2026-10-23T00:00:00.000Z' }
+const submit = vi.fn(async (_input: unknown, _key: string) => receipt)
+const createClient = vi.fn((_options: Record<string, unknown>) => ({ submitFeedback: submit }))
 
 type Doc = Record<string, any>
 
@@ -82,6 +87,11 @@ const report = { action: 'report', deviceId, recipeId: 3, recipeName: '番茄炒
 describe('cook-feedback function', () => {
   beforeEach(() => {
     delete process.env.COOK_FEEDBACK_EXPORT_TOKEN
+    process.env.COOK_SUPPORT_PRIVATE_KEY = 'test-key-not-a-real-secret'
+    process.env.COOK_SUPPORT_KEY_ID = 'test-key'
+    submit.mockReset().mockResolvedValue(receipt)
+    createClient.mockClear()
+    bridge.setClientLoaderForTest(async () => ({ createSupportServerClient: createClient }))
   })
 
   it('stores anonymous reports keyed by device, once per recipe and kind per day', async () => {
@@ -174,16 +184,48 @@ describe('cook-feedback function', () => {
     expect(body.appFeedback).toEqual([])
   })
 
-  it('stores general app feedback with an optional contact', async () => {
+  it('sends app feedback once to Support without a second local inbox', async () => {
     const { table } = createApp()
     const message = { action: 'feedback', deviceId, category: 'idea', note: ' 希望能按季节推荐 ', contact: 'wx: cook', platform: 'ios', version: '2.0.0' }
-    expect(await fn.main(message)).toEqual({ ok: true })
-    expect(await fn.main(message)).toEqual({ ok: true })
-    const rows = [...table(fn._internal.APP_FEEDBACK).values()]
-    expect(rows).toHaveLength(1)
-    expect(rows[0]).toMatchObject({ category: 'idea', note: '希望能按季节推荐', contact: 'wx: cook', platform: 'ios', version: '2.0.0', uid: '' })
-    expect(await fn.main({ action: 'feedback', deviceId, category: 'bug', note: '闪退' })).toEqual({ ok: true })
-    expect([...table(fn._internal.APP_FEEDBACK).values()].find(r => r.note === '闪退')).toMatchObject({ platform: 'web', contact: '' })
+    expect(await fn.main(message)).toEqual({ ok: true, receipt })
+    expect(await fn.main(message)).toEqual({ ok: true, receipt })
+    expect(table(fn._internal.APP_FEEDBACK).size).toBe(0)
+    expect(submit.mock.calls[0]).toEqual(submit.mock.calls[1])
+    expect(submit.mock.calls[0]![0]).toEqual({ productId: 'cook', category: 'suggestion', description: '【功能建议】\n\n希望能按季节推荐\n\n联系方式：wx: cook', context: { source: 'cook-ios', version: '2.0.0' } })
+    expect(createClient.mock.calls[0]![0]).toMatchObject({ clientId: 'cook-server', guestId: expect.any(String) })
+    expect(JSON.stringify(createClient.mock.calls)).not.toContain(deviceId)
+    await fn.main({ ...message, contact: 'new contact' })
+    expect(submit.mock.calls[2]![1]).not.toEqual(submit.mock.calls[0]![1])
+  })
+
+  it('uses verified function identity and keeps raw HTTP callers anonymous', async () => {
+    createApp('verified-account')
+    const message = { action: 'feedback', deviceId, category: 'bug', note: '打不开', uid: 'forged-account', userId: 'forged-account', submissionId: 'stable-submission-123' }
+    await fn.main(message)
+    expect(createClient.mock.calls[0]![0]).toMatchObject({ userId: 'verified-account' })
+    expect(submit.mock.calls[0]![1]).toBe('stable-submission-123')
+    await fn.main({ httpMethod: 'POST', body: JSON.stringify(message), headers: {} })
+    expect(createClient.mock.calls[1]![0]).toMatchObject({ guestId: expect.any(String) })
+    expect(createClient.mock.calls[1]![0]).not.toHaveProperty('userId')
+  })
+
+  it('fails closed and preserves historical app feedback when Support is unavailable', async () => {
+    const { table } = createApp()
+    table(fn._internal.APP_FEEDBACK).set('historic', { note: 'historical' })
+    const message = { action: 'feedback', deviceId, category: 'bug', note: '打不开' }
+    delete process.env.COOK_SUPPORT_PRIVATE_KEY
+    expect(await fn.main(message)).toEqual({ ok: false, code: 'SUPPORT_UNAVAILABLE' })
+    expect(submit).not.toHaveBeenCalled()
+    process.env.COOK_SUPPORT_PRIVATE_KEY = 'test'
+    submit.mockRejectedValueOnce(new Error('network failure'))
+    const response = await fn.main({ httpMethod: 'POST', headers: {}, body: JSON.stringify(message) })
+    expect(response.statusCode).toBe(503)
+    expect(table(fn._internal.APP_FEEDBACK).size).toBe(1)
+    expect(table(fn._internal.APP_FEEDBACK).get('historic')).toEqual({ note: 'historical' })
+    submit.mockRejectedValueOnce({ code: 'RATE_LIMITED' })
+    expect(await fn.main(message)).toEqual({ ok: false, code: 'RATE_LIMITED' })
+    submit.mockRejectedValueOnce({ code: 'STATE_CONFLICT' })
+    expect(await fn.main(message)).toEqual({ ok: false, code: 'SUBMISSION_CONFLICT' })
   })
 
   it('rejects empty or oversized app feedback', async () => {
