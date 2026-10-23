@@ -118,7 +118,7 @@ pnpm eval:search     # 用真实信号评估当前排序：前 10 命中率、MR
 ### CloudBase 配置（一次性）
 
 1. 在 CloudBase 控制台新建四个集合，权限都设为「仅管理端可读写」：`cook_recipe_feedback`、`cook_search_signals`、`cook_feedback_quota`、`cook_app_feedback`（意见反馈）。
-2. 部署云函数：`tcb fn deploy cook-feedback`（配置见 `cloudbaserc.json`）。
+2. 更新现有云函数：先运行 `node scripts/prepare-support-feedback.mjs /absolute/task-temp/functions`，再进入生成目录运行 `tcb fn code update cook-feedback -e yunlefun-8g7ybcxc7345c490`。脚本校验私有 SDK 并安装依赖，部署配置关闭云端重复安装；不要直接部署源码目录。
 3. 给 `cook-feedback` 设置环境变量 `COOK_FEEDBACK_EXPORT_TOKEN`（一串足够长的随机字符），并开启 HTTP 访问服务，得到一个访问地址。应用意见接入 Support 后，请使用 `node scripts/prepare-support-feedback.mjs /absolute/task-temp/functions` 准备带校验 SDK 的部署包，不直接部署源码目录。同一个地址有两种用法：带 `x-cook-token` 的 `GET` 导出全部数据；不带口令的 `POST`（JSON 请求体，`action` 为 `report`、`signal` 或 `feedback`）供 iOS App 提交，iOS 构建时把这个地址填进 `COOK_FEEDBACK_URL`。
 4. 让未登录用户也能调用 `cook-feedback`：在控制台开启匿名登录或允许未登录访问该函数。否则只有登录用户能提交，未登录用户会被引导去 GitHub。
 5. 本机 `.env` 填 `COOK_FEEDBACK_URL`（第 3 步的地址）和 `COOK_FEEDBACK_TOKEN`（同一个口令），之后就能 `pnpm feedback:pull`。
