@@ -144,6 +144,13 @@ private struct PrivateRecipeDetailView: View {
     }
 }
 
+enum PrivateRecipeEditorInput {
+    static func list(_ text: String, preserving original: [String]?) -> [String] {
+        if let original, text == original.joined(separator: "、") { return original }
+        return uniqueStrings(text.components(separatedBy: CharacterSet(charactersIn: "、,，\n")).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
+    }
+}
+
 private struct PrivateRecipeEditor: View {
     let original: PrivateRecipe?
     @Environment(\.modelContext) private var context
@@ -184,17 +191,13 @@ private struct PrivateRecipeEditor: View {
         }
     }
 
-    private func list(_ text: String) -> [String] {
-        uniqueStrings(text.components(separatedBy: CharacterSet(charactersIn: "、,，\n")).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
-    }
-
     private func save() {
         do {
             let now = max(Int64(Date().timeIntervalSince1970 * 1000), (original?.updatedAt ?? 0) + 1)
             var recipe = original ?? PrivateRecipe(customId: "custom-" + UUID().uuidString.lowercased(), name: "", stuff: [], tools: [], createdAt: now, updatedAt: now)
             recipe.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            recipe.stuff = list(stuff)
-            recipe.tools = list(tools)
+            recipe.stuff = PrivateRecipeEditorInput.list(stuff, preserving: original?.stuff)
+            recipe.tools = PrivateRecipeEditorInput.list(tools, preserving: original?.tools)
             recipe.note = note
             recipe.updatedAt = now
             let source = source.trimmingCharacters(in: .whitespacesAndNewlines)
