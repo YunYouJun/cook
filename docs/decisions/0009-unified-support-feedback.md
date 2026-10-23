@@ -37,12 +37,15 @@ Web 表单复用 YunLeFun Design，保留 Ionic 页面导航。原生 iOS 保留
 
 ```bash
 node scripts/prepare-support-feedback.mjs /absolute/task-temp/functions
+cd /absolute/task-temp/functions
+tcb fn code update cook-feedback -e yunlefun-8g7ybcxc7345c490
 ```
 
 脚本通过已登录 GitHub CLI 下载私有 Release 的 SDK，并检查固定 SHA-256。
 也可传入第二个参数指定同一 SDK 包。准备目录不得已存在；生成物需要任务结束后回收。
 公开 Cook 仓库只记录版本和校验值，不提交私有 SDK 源码或 tarball，Web 构建不依赖私有仓库。
-部署工具的 functionRootPath 指向生成的 functions 目录，更新现有 cook-feedback，保持 Nodejs18.15。
+脚本会在隔离目录安装依赖并生成 installDependency: false 的部署配置。使用代码更新命令打包 node_modules，
+保持 Nodejs18.15，不让云端再次安装依赖；旧 MCP updateFunctionCode 无法传递该选项，会触发依赖包获取失败。
 保留所有既有环境变量，并添加 `COOK_SUPPORT_PRIVATE_KEY`（ES256 PEM）、`COOK_SUPPORT_KEY_ID`。
 函数超时设为 30 秒，SDK 出站请求设为 8 秒，兼容原生 App 现有 10 秒超时。
 

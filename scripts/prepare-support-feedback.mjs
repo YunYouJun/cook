@@ -35,6 +35,13 @@ try {
   pkg.dependencies['@yunlefun/support-client'] = `file:vendor/${name}`
   await writeFile(path.join(target, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`)
   await writeFile(path.join(target, 'vendor', name), bytes)
+  // Ship the verified private package with dependencies; cloud npm install cannot resolve it.
+  execFileSync('npm', ['install', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: target, stdio: 'inherit' })
+  await writeFile(path.join(output, 'cloudbaserc.json'), `${JSON.stringify({
+    envId: 'yunlefun-8g7ybcxc7345c490',
+    functionRoot: '.',
+    functions: [{ name: 'cook-feedback', handler: 'index.main', runtime: 'Nodejs18.15', installDependency: false, ignore: ['vendor/**'] }],
+  }, null, 2)}\n`)
   await writeFile(path.join(output, 'manifest.json'), `${JSON.stringify({ sdk: VERSION, sha256: SHA256, function: 'cook-feedback', envId: 'yunlefun-8g7ybcxc7345c490' }, null, 2)}\n`)
   console.log(`Prepared cook-feedback with verified Support SDK ${VERSION}: ${output}`)
 }
