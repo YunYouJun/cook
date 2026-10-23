@@ -59,7 +59,7 @@ PR 上 CI 还会运行 `pnpm validate --base <目标分支>`：同一个 id 的�
 ## 反馈闭环
 
 1. **用户反馈**：菜谱详情底部点「反馈一下」，选问题类型（视频打不开、食材或厨具不对、难度或做法不对、其他）即可提交，不需要 GitHub，也不强制登录。数据进 CloudBase 的 `cook-feedback` 云函数；提交失败时引导用户去 GitHub Issue 表单（`.github/ISSUE_TEMPLATE/recipe.yml`，已预填菜名和视频）。
-   「我的 → 问题反馈」是不针对某道菜的意见反馈：选类型（用着有问题、功能建议、想要的菜没有、其他），写几句，可以留邮箱或微信，同样不用登录，提交失败时引导去 GitHub Issues。
+   「我的 → 问题反馈」是不针对某道菜的意见反馈：选类型（用着有问题、功能建议、想要的菜没有、其他），写几句，可以留邮箱或微信，同样不用登录，通过云函数复用 Support SDK 私密发送至统一支持后台，成功显示回执；失败保留草稿并提供支持中心入口。详见 [统一反馈决策](../decisions/0009-unified-support-feedback.md)。
    iOS App（云食册）没有 CloudBase SDK，用 `POST` 把同样的请求体发到云函数的 HTTP 访问地址，和 Web 共用设备限额和数据集合。三类请求都带 `platform`（`web` 或 `ios`）和 `version`（iOS 为 App 版本号），没有 `platform` 的旧数据算作 web。筛选信号按端分开累计（Web 的记录键不变，iOS 的另起一组），`summary.md` 里菜谱反馈、意见反馈和筛选信号都按端分开统计；`search-eval.json` 把两端合在一起评测排序。
 2. **筛选信号**：应用匿名记录两类聚合数据，只有食材组合、厨具、模式和菜谱 id，不含账号：
    - 停在一组食材上却没有任何结果（说明缺这类菜，或别名没对上）；
@@ -118,8 +118,8 @@ pnpm eval:search     # 用真实信号评估当前排序：前 10 命中率、MR
 ### CloudBase 配置（一次性）
 
 1. 在 CloudBase 控制台新建四个集合，权限都设为「仅管理端可读写」：`cook_recipe_feedback`、`cook_search_signals`、`cook_feedback_quota`、`cook_app_feedback`（意见反馈）。
-2. 部署云函数：`tcb fn deploy cook-feedback`（配置见 `cloudbaserc.json`）。
-3. 给 `cook-feedback` 设置环境变量 `COOK_FEEDBACK_EXPORT_TOKEN`（一串足够长的随机字符），并开启 HTTP 访问服务，得到一个访问地址。同一个地址有两种用法：带 `x-cook-token` 的 `GET` 导出全部数据；不带口令的 `POST`（JSON 请求体，`action` 为 `report`、`signal` 或 `feedback`）供 iOS App 提交，iOS 构建时把这个地址填进 `COOK_FEEDBACK_URL`。
+2. 更新现有云函数：先运行 `node scripts/prepare-support-feedback.mjs /absolute/task-temp/functions`，再进入生成目录运行 `tcb fn code update cook-feedback -e yunlefun-8g7ybcxc7345c490`。脚本校验私有 SDK 并安装依赖，部署配置关闭云端重复安装；不要直接部署源码目录。
+3. 给 `cook-feedback` 设置环境变量 `COOK_FEEDBACK_EXPORT_TOKEN`（一串足够长的随机字符），并开启 HTTP 访问服务，得到一个访问地址。应用意见接入 Support 后，请使用 `node scripts/prepare-support-feedback.mjs /absolute/task-temp/functions` 准备带校验 SDK 的部署包，不直接部署源码目录。同一个地址有两种用法：带 `x-cook-token` 的 `GET` 导出全部数据；不带口令的 `POST`（JSON 请求体，`action` 为 `report`、`signal` 或 `feedback`）供 iOS App 提交，iOS 构建时把这个地址填进 `COOK_FEEDBACK_URL`。
 4. 让未登录用户也能调用 `cook-feedback`：在控制台开启匿名登录或允许未登录访问该函数。否则只有登录用户能提交，未登录用户会被引导去 GitHub。
 5. 本机 `.env` 填 `COOK_FEEDBACK_URL`（第 3 步的地址）和 `COOK_FEEDBACK_TOKEN`（同一个口令），之后就能 `pnpm feedback:pull`。
 
