@@ -181,9 +181,28 @@ final class ReleaseAcceptanceTests: XCTestCase {
         XCTAssertEqual(try container.mainContext.fetchCount(FetchDescriptor<Preferences>()), 1)
     }
 
-    func testNotificationResponseFromBackgroundCompletesOnMainAfterRouting() async {
+    func testNotificationResponseFromBackgroundCompletesOnMainAfterRouting() async throws {
         PendingFridgeHome.requested = false
-        defer { PendingFridgeHome.requested = false }
+        let container = Persistence.makeContainer(inMemory: true)
+        let router = AppRouter()
+        let appeared = expectation(description: "root is ready to receive navigation")
+        let host = UIHostingController(rootView: RootView(router: router)
+            .environment(try RecipeStore.loadBundled(inMemory: true))
+            .environment(CookSession(defaultPantry: [], context: container.mainContext))
+            .environment(FeedbackClient(endpoint: nil, sendsSignals: false))
+            .environment(FavoriteActions(context: container.mainContext))
+            .modelContainer(container)
+            .onAppear { appeared.fulfill() })
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer {
+            PendingFridgeHome.requested = false
+            window.isHidden = true
+            window.rootViewController = nil
+        }
+        await fulfillment(of: [appeared], timeout: 3)
+        XCTAssertEqual(router.tab, .cook)
         let routed = expectation(description: "fridge navigation on main")
         let completed = expectation(description: "system response completed on main")
         routed.assertForOverFulfill = true
@@ -200,7 +219,11 @@ final class ReleaseAcceptanceTests: XCTestCase {
             }
         }
         await fulfillment(of: [routed, completed], timeout: 3, enforceOrder: true)
-        XCTAssertTrue(PendingFridgeHome.requested)
+        // A mounted root consumes the pending flag while handling the broadcast.
+        // Verify the visible route, rather than expecting an unconsumed cold-launch request.
+        XCTAssertEqual(router.tab, .fridge)
+        XCTAssertEqual(router.fridgeHomeRequests, 1)
+        XCTAssertFalse(PendingFridgeHome.requested)
     }
 
     func testKitchenNotificationResponseCompletesOnMainWithoutFridgeNavigation() async {
