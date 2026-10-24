@@ -346,9 +346,9 @@ struct AddFridgeSheet: View {
                         }
                     }
                 }
-                section("蔬菜", store.data.food.vegetable)
-                section("肉和蛋", store.data.food.meat)
-                section("主食", store.data.food.staple)
+                section("蔬菜", store.food.vegetable)
+                section("肉和蛋", store.food.meat)
+                section("主食", store.food.staple)
             }
             .navigationTitle("放进冰箱")
             .navigationBarTitleDisplayMode(.inline)

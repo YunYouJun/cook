@@ -18,29 +18,33 @@ final class RecipeStore {
     let recipesById: [Int: Recipe]
     /// 网页版的浏览记录按菜名认，导入时用
     let recipeIdByName: [String: Int]
-    /// 整句识别，词表只建一次
-    let queryParser: CookQueryParser
+    /// 设备本地的个人词典；选择器和整句识别共用。
+    let catalog: PersonalCatalogStore
+    var food: FoodCatalog { catalog.value.applying(to: data.food) }
+    var queryParser: CookQueryParser {
+        CookQueryParser(rules: data.query, food: catalog.value.applying(to: data.food, includeHidden: true), aliases: data.aliases)
+    }
     private let emojiByStuff: [String: String]
     /// 内置数据目录，图文做法正文用到时才读
     @ObservationIgnored private let dataDirectory: URL?
     @ObservationIgnored private lazy var textLibrary: RecipeTextLibrary? = dataDirectory.flatMap { try? RecipeTextLibrary.load(from: $0) }
 
-    init(data: CookData, dataDirectory: URL? = nil) {
+    init(data: CookData, dataDirectory: URL? = nil, catalog: PersonalCatalogStore = PersonalCatalogStore()) {
         self.data = data
         self.dataDirectory = dataDirectory
         recommender = Recommender(recipes: data.recipes, normalizer: data.normalizer)
         recipesById = Dictionary(data.recipes.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         recipeIdByName = Dictionary(data.recipes.map { ($0.name, $0.id) }, uniquingKeysWith: { first, _ in first })
-        queryParser = data.makeQueryParser()
+        self.catalog = catalog
         let items = data.food.vegetable + data.food.meat + data.food.staple
         emojiByStuff = Dictionary(items.map { ($0.name, $0.emoji) }, uniquingKeysWith: { first, _ in first })
     }
 
-    static func loadBundled(bundle: Bundle = .main) throws -> RecipeStore {
+    static func loadBundled(bundle: Bundle = .main, inMemory: Bool = false) throws -> RecipeStore {
         guard let url = bundle.url(forResource: "CookData", withExtension: nil) else {
             throw RecipeStoreError.missingBundledData
         }
-        return RecipeStore(data: try CookData.load(from: url), dataDirectory: url)
+        return RecipeStore(data: try CookData.load(from: url), dataDirectory: url, catalog: PersonalCatalogStore(url: inMemory ? nil : PersonalCatalogStore.defaultURL))
     }
 
     /// 内置的图文做法正文（目前来自 HowToCook），没有时去原文网页看
@@ -67,7 +71,7 @@ final class RecipeStore {
     }
 
     var stuffItems: [StuffItem] {
-        data.food.vegetable + data.food.meat + data.food.staple
+        food.vegetable + food.meat + food.staple
     }
 
     func emoji(forStuff name: String) -> String? {
@@ -134,7 +138,7 @@ final class RecipeStore {
 
     /// 词典里有的食材（做菜页标签里能点到的）
     func isCatalogStuff(_ name: String) -> Bool {
-        emojiByStuff[name] != nil
+        stuffItems.contains { $0.name == name }
     }
 
     /// 识别结果写成一行，让人知道哪些说法生效了；和 Web 的 describeQuery 一致

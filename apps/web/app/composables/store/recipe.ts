@@ -6,6 +6,7 @@ import { createRecipeRecommender, hasAvoidedStuff, matchesTaste, parseCookQuery,
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { useIndexedDB } from '~/composables/db'
+import { usePersonalCatalog } from '~/composables/usePersonalCatalog'
 import { defaultPantry, pantryOptions } from '~/data/pantry'
 import { trackCookEvent } from '~/utils/analytics'
 import { db } from '../../utils/db'
@@ -16,6 +17,7 @@ const namespace = 'cook'
 export type SearchMode = RecommendationMode
 
 export const useRecipeStore = defineStore('recipe', () => {
+  const personalCatalog = usePersonalCatalog()
   const { settings } = useAppStore()
   const indexedDB = useIndexedDB()
   const keyword = shallowRef('')
@@ -79,7 +81,7 @@ export const useRecipeStore = defineStore('recipe', () => {
 
   /** 整句识别，自己添加的菜谱里用到的食材也要认 */
   function parseText(text: string) {
-    return parseCookQuery(text, customRecipes.value.flatMap(recipe => recipe.stuff))
+    return parseCookQuery(text, [...personalCatalog.ingredients.value.map(item => item.name), ...customRecipes.value.flatMap(recipe => recipe.stuff)], personalCatalog.food.value.tools.map(item => item.name))
   }
 
   /** 把一句话识别出的条件合进当前筛选；忌口和「不辣」与手动勾选一样会一直保留 */

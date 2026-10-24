@@ -14,6 +14,7 @@ export default defineConfig({
     setupFiles: ['test/setup.ts'],
 
     alias: {
+      '@yunyoujun/cook/personal-catalog': fileURLToPath(new URL('./packages/cook/src/utils/personal-catalog.ts', import.meta.url)),
       '@yunyoujun/cook/custom-recipes': fileURLToPath(new URL('./packages/cook/src/utils/custom-recipes.ts', import.meta.url)),
       '~': fileURLToPath(new URL('./apps/web/app', import.meta.url)),
       '@cook/data': fileURLToPath(new URL('./packages/data', import.meta.url)),

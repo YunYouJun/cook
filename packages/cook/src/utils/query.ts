@@ -39,7 +39,7 @@ const TAIL = /^[了的哦吧啊呀呢嘛哈~～\s]*$/
 const NOT_STUFF = /[的了吗呢吧啊呀哦嘛做吃要想能么什怎啥咋我你他她有没还都就很太些里剩用给帮看找来去在是个只点下可以会把对也再又一二两三四五六七八九十半几颗根块斤克条盒包袋瓶]/
 const UNKNOWN_STUFF = /^[\u4E00-\u9FFF]{1,6}$/
 
-function createTerms(extraStuff: string[]): Map<string, Term> {
+function createTerms(extraStuff: string[], extraTools: string[] = []): Map<string, Term> {
   const terms = new Map<string, Term>()
   // 先放优先级低的，后放的同名词覆盖前面的
   for (const name of extraStuff)
@@ -55,6 +55,8 @@ function createTerms(extraStuff: string[]): Map<string, Term> {
     for (const word of words)
       terms.set(word, { kind: 'method', value: label })
   }
+  for (const name of extraTools)
+    terms.set(name, { kind: 'tool', value: name })
   for (const item of food.tools)
     terms.set(item.name, { kind: 'tool', value: item.name })
   for (const [alias, name] of Object.entries(rules.tools))
@@ -106,9 +108,9 @@ function unknownStuff(gap: string): string[] {
  * @param text 用户输入的一句话
  * @param extraStuff 词典以外也要认的食材，比如自己添加的菜谱里用到的
  */
-export function parseCookQuery(text: string, extraStuff: string[] = []): CookQuery {
-  const terms = extraStuff.length ? createTerms(extraStuff) : defaultTerms
-  const maxLength = extraStuff.length ? longestTerm(terms) : defaultMaxLength
+export function parseCookQuery(text: string, extraStuff: string[] = [], extraTools: string[] = []): CookQuery {
+  const terms = (extraStuff.length || extraTools.length) ? createTerms(extraStuff, extraTools) : defaultTerms
+  const maxLength = (extraStuff.length || extraTools.length) ? longestTerm(terms) : defaultMaxLength
   const stuff: string[] = []
   const unknown: string[] = []
   const avoid: string[] = []

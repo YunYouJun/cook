@@ -115,6 +115,9 @@ jobs:
       - run: swift --version
       - run: swift test --package-path apps/ios/CookCore
       - run: bash scripts/test-private-recipe-roundtrip.sh
+      - run: bash scripts/test-personal-catalog-roundtrip.sh
+        env:
+          COOK_SWIFT_SCRATCH_PATH: apps/ios/CookCore/.build
 
   # 云食册 iOS App：XcodeGen 生成工程，在 iPhone 和 iPad 模拟器上编译并跑测试（窄屏和宽屏两种布局）
   ios:

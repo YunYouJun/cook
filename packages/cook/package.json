@@ -31,6 +31,10 @@
     "./custom-recipes": {
       "types": "./dist/utils/custom-recipes.d.mts",
       "import": "./dist/utils/custom-recipes.mjs"
+    },
+    "./personal-catalog": {
+      "types": "./dist/utils/personal-catalog.d.mts",
+      "import": "./dist/utils/personal-catalog.mjs"
     }
   },
   "main": "./dist/index.mjs",

@@ -2,7 +2,6 @@
 import type { IonSearchbarCustomEvent, SearchbarInputEventDetail } from '@ionic/core'
 import type { CookQuery } from '@yunyoujun/cook/recommend'
 import { isEmptyCookQuery, uniqueStuff } from '@yunyoujun/cook/recommend'
-import { meat, staple, vegetable } from '~/data/food'
 import { trackCookEvent } from '~/utils/analytics'
 import { yunleHaptic } from '~/utils/yunleHost'
 
@@ -20,13 +19,13 @@ const emit = defineEmits<{ add: [name: string], remove: [name: string], apply: [
 
 const query = ref('')
 const message = ref('')
-const foods = [...vegetable, ...meat, ...staple]
+const { ingredients: foods } = usePersonalCatalog()
 
 const suggestions = computed(() => {
   const text = query.value.trim()
   if (!text)
     return []
-  return foods
+  return foods.value
     .filter(item => !props.selected.includes(item.name) && (item.name.includes(text) || item.alias?.includes(text)))
     .slice(0, 6)
 })
