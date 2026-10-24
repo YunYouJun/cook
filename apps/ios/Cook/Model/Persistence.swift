@@ -35,7 +35,7 @@ final class HistoryEntry {
     }
 }
 
-/// 做菜偏好：家里常备、忌口、不吃辣和推荐模式。整个 App 只用一条
+/// 做菜偏好：多设备可能各有一条记录，读取最新值，不删除无法判断来源的旧记录。
 @Model
 final class Preferences {
     var pantry: [String] = []
@@ -48,6 +48,48 @@ final class Preferences {
     init(pantry: [String]) {
         self.pantry = pantry
     }
+
+    var values: PreferenceValues {
+        get { PreferenceValues(pantry: pantry, avoid: avoid, noSpicy: noSpicy, mode: mode) }
+        set {
+            pantry = newValue.pantry
+            avoid = newValue.avoid
+            noSpicy = newValue.noSpicy
+            mode = newValue.mode
+        }
+    }
+
+    var snapshot: PreferenceSnapshot {
+        PreferenceSnapshot(id: persistentModelID, createdAt: createdAt, updatedAt: updatedAt, values: values)
+    }
+
+    /// 时间相同时按创建时间、内容稳定选择；只读，不把另一条记录覆盖或删除。
+    static func latest(in records: [Preferences]) -> Preferences? {
+        records.sorted {
+            if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
+            if $0.createdAt != $1.createdAt { return $0.createdAt < $1.createdAt }
+            return $0.values.orderingKey.lexicographicallyPrecedes($1.values.orderingKey)
+        }.first
+    }
+}
+
+struct PreferenceValues: Equatable {
+    var pantry: [String]
+    var avoid: [String] = []
+    var noSpicy = false
+    var mode = "loose"
+
+    fileprivate var orderingKey: [String] {
+        [mode, noSpicy ? "1" : "0", String(pantry.count)] + pantry + [String(avoid.count)] + avoid
+    }
+}
+
+/// 给 SwiftUI 的查询桥接使用；不属于持久化模型，不改变 CloudKit schema。
+struct PreferenceSnapshot: Equatable {
+    let id: PersistentIdentifier
+    let createdAt: Date
+    let updatedAt: Date
+    let values: PreferenceValues
 }
 
 /// 冰箱里的一样食材。同一种可以放好几份（比如前天和今天各买了一盒鸡蛋），各记各的到期日
@@ -184,28 +226,34 @@ extension ModelContext {
         try? save()
     }
 
-    /// 取唯一的偏好记录；没有就按默认常备调料建一条。多台设备各建了一条时，留最早的那条，其余合并后删掉
-    func preferences(defaultPantry: [String]) -> Preferences {
-        let all = (try? fetch(FetchDescriptor<Preferences>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []
-        guard let first = all.first else {
-            let created = Preferences(pantry: defaultPantry)
-            insert(created)
-            try? save()
-            return created
+    /// 未导入云端偏好时保持空库；旧版本的默认记录无法与用户重置可靠区分，保留原始记录。
+    func latestPreferences() throws -> Preferences? {
+        try Preferences.latest(in: fetch(FetchDescriptor<Preferences>()))
+    }
+
+    /// 写前重新读取，变更只应用到当前最新值；初次明确编辑才创建记录。
+    func updatePreferences(defaults: PreferenceValues, at date: Date = Date(), _ change: (inout PreferenceValues) -> Void) throws -> Preferences? {
+        try saveUserChange(save: { try $0.save() }) {
+            let latest = try latestPreferences()
+            let original = latest?.values ?? defaults
+            var changed = original
+            change(&changed)
+            guard changed != original else { return latest }
+
+            let target: Preferences
+            if let latest {
+                target = latest
+                // 远端设备时钟可能更快；本次明确编辑必须晚于当前选中的值。
+                target.updatedAt = max(date, latest.updatedAt.addingTimeInterval(0.001))
+            } else {
+                target = Preferences(pantry: changed.pantry)
+                target.createdAt = date
+                target.updatedAt = date
+                insert(target)
+            }
+            target.values = changed
+            return target
         }
-        let duplicates = all.dropFirst()
-        if let newest = all.max(by: { $0.updatedAt < $1.updatedAt }), newest !== first {
-            first.pantry = newest.pantry
-            first.avoid = newest.avoid
-            first.noSpicy = newest.noSpicy
-            first.mode = newest.mode
-            first.updatedAt = newest.updatedAt
-        }
-        if !duplicates.isEmpty {
-            duplicates.forEach { delete($0) }
-            try? save()
-        }
-        return first
     }
 
     /// 合并网页版导出的收藏和浏览记录，返回新加了几个收藏、几条浏览记录。
