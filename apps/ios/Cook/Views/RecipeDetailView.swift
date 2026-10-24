@@ -17,6 +17,7 @@ struct RecipeDetailView: View {
     @State private var showingSent = false
     @State private var showingFailed = false
     @State private var showingNoMail = false
+    @State private var kitchenRecipe: Recipe?
     /// 提交失败时记下这次反馈，邮件兜底用
     @State private var failedIssue: FeedbackClient.RecipeIssue = .other
     @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }) private var favorites: [Favorite]
@@ -110,6 +111,15 @@ struct RecipeDetailView: View {
                 .padding(.vertical, 8)
             }
 
+            Section {
+                Button {
+                    kitchenRecipe = recipe
+                } label: {
+                    Label("厨房工作台", systemImage: "checklist")
+                }
+                .accessibilityIdentifier("recipe.openKitchen")
+            }
+
             ForEach(groups, id: \.label) { group in
                 Section(group.label) {
                     Text(group.items.map { name in
@@ -179,6 +189,9 @@ struct RecipeDetailView: View {
                     Button("提交") { submit(.other, note: note) }
                 }
             }
+        }
+        .fullScreenCover(item: $kitchenRecipe) { recipe in
+            KitchenWorkbenchView(recipe: recipe)
         }
         .alert("收到了，谢谢反馈", isPresented: $showingSent) {
             Button("好", role: .cancel) {}

@@ -12,7 +12,7 @@ fi
 
 rm -rf "${DEST}"
 mkdir -p "${DEST}"
-for file in recipe-meta.json incompatible-foods.json aliases.json food.json pantry.json query.json shelf-life.json recipe-text.json; do
+for file in recipe-meta.json incompatible-foods.json aliases.json food.json pantry.json query.json shelf-life.json recipe-text.json recipe-amounts.json; do
   cp "${DATA_DIR}/${file}" "${DEST}/"
 done
 # 菜谱多时 convert 会分片输出

@@ -2,6 +2,8 @@
 
 SwiftUI 原生 App，计划和验收标准见 [iOS App 打磨目标](../../docs/dev/ios-roadmap.md)。
 
+菜谱详情中的「厨房工作台」提供图文做法、备料清单和计时器；宽屏并排展示，窄屏分段切换。交互与保存规则见 [厨房工作台](../../docs/dev/ios-kitchen-workbench.md)。
+
 TestFlight 发布参数、正式反馈配置和内部组验收见 [原生发布流程](../../docs/dev/ios-testflight.md)。
 
 - `CookCore/`：推荐、搜索、相克判断，移植自 `packages/cook`，和 Web 跑同一份用例。

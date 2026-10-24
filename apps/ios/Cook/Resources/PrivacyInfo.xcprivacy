@@ -76,7 +76,7 @@
 	</array>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
-		<!-- UserDefaults 存推荐统计同意、临期提醒设置和开发版 schema 版本，只在本 App 内读写 -->
+		<!-- UserDefaults 存推荐统计同意、临期提醒设置、厨房工作台进度和开发版 schema 版本，只在本 App 内读写 -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>

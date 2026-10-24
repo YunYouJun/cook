@@ -128,3 +128,27 @@ pnpm eval:search     # 用真实信号评估当前排序：前 10 命中率、MR
 ## 性能
 
 筛选目前在内存里对全部菜谱逐条计算（`apps/web/app/composables/store/recipe.ts`），600 条约 1ms，上万条之内都不是瓶颈；首次加载在超过 1000 条后自动分片并按 hash 增量更新。数据量明显变大时，优先在 `convert` 阶段生成「食材 → 菜谱 id」倒排索引。
+
+### 独立的用量与投料标注
+
+`packages/data/recipe-amounts.json` 是正文以外的可选映射，结构见 `schema/recipe-amounts.schema.json`，不是新的菜谱 ID 来源。iOS 拷贝同一数据文件，`RecipeTextLibrary` 校验后附加给正文，`RecipePresentation`、`RecipeAmounts` 和 `RecipeStepUsagePlan` 实际读取；正文 `recipe-text.json` 不重写。旧包没有标注文件、schema 不支持、文件损坏或来源漂移时，应用继续展示原文与原有有限规则。
+
+- `sourceFingerprint`：正文所有块的 FNV-1a 64 指纹，用于检测漂移，不是安全签名；`evidence` 逐条保存原块/列表项及完整原句。
+- `servingEvidence` / `servingDescription`：记录原文份数口径；配方的一份可能够多人吃，不能擅自把它当作一人份。明确“按照 N 人的份量”时注明每人一份的换算口径，`referenceServings` 保留原配方基准，避免审查时把步骤原批次误判超量。
+- `quantities`：封闭运算树，支持字面量、份数、材料引用、带单位的数量引用、乘除、同维度相加及向上/向下取整。没有明确依据的固定量保留固定。`conditional` 和原文说明必须保留，可选/条件量不参与无条件扣减；近似重量说明标记为“原文基准说明”，避免把原份的数字显示成当前份数的重量。
+- `stepSections`：经核对的操作章节。既有步骤 ID 不变，新章节使用独立的 `annotated|` 身份前缀。
+- `usages`：按原始块与列表项绑定步骤，种类为 `amount`、`total`、`remaining`、`unknown`、`reference`。`reference` 只标记有依据的切配、半成品转移或已投原料引用，不再次计入消耗。已写在步骤里的固定数值可仅加入账本（`display: false`）；计算提示保留原片段，再补充本步材料与实际量。相同文字的不同步骤也分别绑定，不按完成勾选扣料。
+- `blockedIngredients`：分次、缩略指代、分支等关系不完整时，阻止把整菜总量自动填入单一步骤。前序为范围、可选、单位不兼容或超量时，不给确定余量。
+
+复现全目录审查：
+
+```bash
+pnpm amounts:check       # schema、目录 ID、原文锚点和语义校验
+pnpm audit:amounts       # 编译并调用生产 CookCore，生成中文及 JSON 全量报告
+```
+
+报告位于 `artifacts/recipe-amount-audit/`，以 `recipe.csv` 的实际 ID 集合为全集，逐块保留全部原文及定位。无正文条目全部列入缺少依据，不能从视频标题或食材词典推定份量。报告中的“至少一项可换算”不表示整菜已建立完整投料账本。
+
+导入正文后标注失配会明确报出，CI 也执行 `amounts:check`。核对变化来源后，显式运行 `pnpm amounts:annotate` 再审阅差异；它从本地正文及生产 CookCore 原规则重建确定标注，不自动获取新来源，不在导入时重签原文。编译导出使用任务独占临时目录并在 `finally` 回收。
+
+第二轮明确分配集中在 `scripts/lib/recipe-amount-followup.ts`，逐篇冻结来源指纹；整篇任一内容变化都会要求重新核对，不能在生成时自动重签。这些关系替换对应材料的阶段事件，未标注的额外使用点仍阻断余量。`pnpm audit:amounts` 同时生成 `pending-with-body.md/json`，供只处理有正文条目时使用；`followup-relations.json` 保存原句、定位、分配说明与完整性标记。条件范围的明确比例与“从前次不确定用量计算余量”分开处理，例如明确各半可保留两次相同比例范围，但不会代替用户确定实际取量。

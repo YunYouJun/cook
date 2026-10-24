@@ -13,6 +13,7 @@ struct CookApp: App {
     @State private var session: CookSession
     @State private var feedback = FeedbackClient()
     @State private var favoriteActions: FavoriteActions
+    @State private var workbench: KitchenWorkbench
     private let container: ModelContainer
     /// 通知中心只弱引用代理，这里留着
     private let notificationDelegate: NotificationDelegate
@@ -36,8 +37,14 @@ struct CookApp: App {
         _loadResult = State(initialValue: result)
         _session = State(initialValue: CookSession(defaultPantry: defaultPantry, context: container.mainContext))
         _favoriteActions = State(initialValue: FavoriteActions(context: container.mainContext))
+        _workbench = State(initialValue: KitchenWorkbench(defaults: inMemory ? nil : .standard, notifications: inMemory ? .disabled : .live))
         #if DEBUG
             if uiTesting {
+                let kitchenDefaults = UserDefaults(suiteName: "cook.kitchen.ui-tests")!
+                if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-kitchen") {
+                    kitchenDefaults.removePersistentDomain(forName: "cook.kitchen.ui-tests")
+                }
+                _workbench = State(initialValue: KitchenWorkbench(defaults: kitchenDefaults, notifications: .disabled))
                 // UI 测试隔离于用户数据库，统计请求也不会离开设备。
                 let defaults = UserDefaults(suiteName: "cook.ui-tests")!
                 let environment = ProcessInfo.processInfo.environment
@@ -77,6 +84,7 @@ struct CookApp: App {
                     .environment(session)
                     .environment(feedback)
                     .environment(favoriteActions)
+                    .environment(workbench)
             case let .failure(error):
                 ContentUnavailableView(
                     "菜谱数据加载失败",
