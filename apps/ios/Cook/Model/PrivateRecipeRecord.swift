@@ -24,6 +24,19 @@ final class PrivateRecipeRecord {
         }
         return recipe
     }
+
+    var deletionState: PrivateRecipeDeletionState {
+        PrivateRecipeDeletionState(id: persistentModelID, customId: customId, updatedAt: updatedAt, deletedAt: deletedAt, hasPayload: !payload.isEmpty)
+    }
+}
+
+/// Observe imported changes without copying recipe text into SwiftUI state.
+struct PrivateRecipeDeletionState: Equatable {
+    let id: PersistentIdentifier
+    let customId: String
+    let updatedAt: Date
+    let deletedAt: Date?
+    let hasPayload: Bool
 }
 
 struct PrivateRecipeSnapshot {
@@ -31,27 +44,58 @@ struct PrivateRecipeSnapshot {
     let deletedIDs: Set<String>
 
     init(_ records: [PrivateRecipeRecord]) throws {
+        // Deletion is final for an identity. A later offline edit/duplicate must not revive it;
+        // an explicit restore imports a copy with a new identity instead.
+        deletedIDs = Set(records.filter { $0.deletedAt != nil }.map(\.customId))
         var latest: [String: PrivateRecipeRecord] = [:]
-        for record in records {
+        for record in records where !deletedIDs.contains(record.customId) {
             if let prior = latest[record.customId] {
-                // Deterministic tie break across devices; deletion wins an equal timestamp.
+                // Deterministic tie break for active duplicates across devices.
                 if record.updatedAt < prior.updatedAt { continue }
-                if record.updatedAt == prior.updatedAt {
-                    if prior.deletedAt != nil && record.deletedAt == nil { continue }
-                    if (prior.deletedAt == nil) == (record.deletedAt == nil) && record.payload <= prior.payload { continue }
-                }
+                if record.updatedAt == prior.updatedAt && record.payload <= prior.payload { continue }
             }
             latest[record.customId] = record
         }
-        recipes = try latest.values.filter { $0.deletedAt == nil }.map { try $0.recipe() }
+        recipes = try latest.values.map { try $0.recipe() }
             .sorted { ($0.updatedAt, $0.customId) > ($1.updatedAt, $1.customId) }
-        deletedIDs = Set(latest.values.filter { $0.deletedAt != nil }.map(\.customId))
     }
 }
 
 /// A separate context makes save failures roll back only this operation, not unrelated preference edits.
 @MainActor
 enum PrivateRecipePersistence {
+    /// CloudKit may merge an offline payload into a row whose deletedAt already arrived.
+    /// Reapply the deletion to every copy, so the next export also removes that text remotely.
+    @discardableResult
+    static func reconcileDeletions(in container: ModelContainer, save: (ModelContext) throws -> Void = { try $0.save() }) throws -> Int {
+        let context = ModelContext(container)
+        context.autosaveEnabled = false
+        let records = try context.fetch(FetchDescriptor<PrivateRecipeRecord>())
+        var deletions: [String: Date] = [:]
+        for record in records {
+            if let date = record.deletedAt {
+                deletions[record.customId] = max(deletions[record.customId] ?? date, date)
+            }
+        }
+        var changed = 0
+        for record in records {
+            guard let deletion = deletions[record.customId] else { continue }
+            let updatedAt = max(record.updatedAt, deletion)
+            guard !record.payload.isEmpty || record.deletedAt != deletion || record.updatedAt != updatedAt else { continue }
+            record.payload = ""
+            record.deletedAt = deletion
+            record.updatedAt = updatedAt
+            changed += 1
+        }
+        guard changed > 0 else { return 0 }
+        do { try save(context) }
+        catch {
+            context.rollback()
+            throw error
+        }
+        return changed
+    }
+
     static func snapshot(in context: ModelContext) throws -> PrivateRecipeSnapshot {
         try PrivateRecipeSnapshot(context.fetch(FetchDescriptor<PrivateRecipeRecord>()))
     }

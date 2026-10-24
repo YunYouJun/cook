@@ -123,6 +123,7 @@ struct SettingsView: View {
                     Link("网页版：食用手册", destination: URL(string: "https://cook.yunyoujun.cn")!)
                 }
             }
+            .accessibilityIdentifier("settings.list")
             .navigationTitle("我的")
             .fileImporter(isPresented: $importingFile, allowedContentTypes: [.json, .plainText]) { result in
                 guard case let .success(url) = result else {

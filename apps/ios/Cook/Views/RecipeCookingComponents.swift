@@ -94,6 +94,7 @@ struct RecipeServingControl: View {
     let recipeID: Int
     let rows: [RecipePresentation.Quantity]
     let identifier: String
+    var compact = false
 
     private var servings: Int { workbench.state(for: recipeID).servings }
 
@@ -102,10 +103,15 @@ struct RecipeServingControl: View {
             get: { servings },
             set: { workbench.setServings($0, recipeID: recipeID, quantities: rows) }
         ), in: RecipeAmounts.servingRange) {
-            VStack(alignment: .leading, spacing: 4) {
-                Label("制作份数", systemImage: "person.2")
-                    .font(.caption).foregroundStyle(.secondary)
-                Text("\(servings) 份").font(.headline).monospacedDigit()
+            if compact {
+                Label("\(servings) 份", systemImage: "person.2")
+                    .font(.subheadline).monospacedDigit()
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("制作份数", systemImage: "person.2")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text("\(servings) 份").font(.headline).monospacedDigit()
+                }
             }
         }
         .accessibilityLabel("制作份数")
