@@ -22,7 +22,9 @@ final class CookUITests: XCTestCase {
 
         // 食材按钮只读名字，不读 emoji，选中后带「已选」状态
         for name in ["土豆", "番茄", "鸡蛋"] {
-            let stuff = app.buttons[name]
+            // 明确检查 VoiceOver label。iOS 26.5 的快捷 identifier 查询曾返回不存在，
+            // 但同一失败现场的完整无障碍树和截图均包含该按钮。
+            let stuff = app.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch
             tap(stuff)
             wait(stuff, "isSelected == true")
         }

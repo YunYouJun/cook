@@ -172,6 +172,44 @@ final class PrivateRecipePersistenceTests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(ModelContext(container).fetch(FetchDescriptor<PrivateRecipeRecord>()).first).payload.isEmpty)
     }
 
+    func testOfflineAdditionSurvivesStoreReopenAndAnotherRecipesImportedDeletion() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("offline.store")
+        func openStore() throws -> ModelContainer {
+            let schema = Schema(Persistence.models)
+            return try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none))
+        }
+        let original = recipe(id: "custom-existing")
+        let addition = recipe(id: "custom-offline-addition", name: "离线新增复测")
+        var edited = original
+        edited.stuff.append("番茄")
+        edited.updatedAt = 3000
+        try autoreleasepool {
+            let container = try openStore()
+            try PrivateRecipePersistence.save(original, replacing: nil, in: container)
+            try PrivateRecipePersistence.save(addition, replacing: nil, in: container)
+            try PrivateRecipePersistence.save(edited, replacing: original, in: container)
+            XCTAssertEqual(Set(try PrivateRecipePersistence.snapshot(in: ModelContext(container)).recipes.map(\.customId)), [original.customId, addition.customId])
+        }
+        try autoreleasepool {
+            let container = try openStore()
+            let context = ModelContext(container)
+            XCTAssertEqual(try PrivateRecipePersistence.snapshot(in: context).recipes.first { $0.customId == addition.customId }, addition, "A successful save must survive closing and reopening the disk store before reconnect")
+            // Replay only the remote deletion of the existing identity, retaining its offline payload.
+            let existing = try XCTUnwrap(context.fetch(FetchDescriptor<PrivateRecipeRecord>()).first { $0.customId == original.customId })
+            existing.deletedAt = Date(timeIntervalSince1970: 4)
+            try context.save()
+            try PrivateRecipePersistence.reconcileDeletions(in: container)
+        }
+        try autoreleasepool {
+            let snapshot = try PrivateRecipePersistence.snapshot(in: ModelContext(openStore()))
+            XCTAssertEqual(snapshot.recipes, [addition])
+            XCTAssertEqual(snapshot.deletedIDs, [original.customId])
+        }
+    }
+
     #if canImport(UIKit)
         func testRootObserverRedactsExistingTombstoneOnMount() async throws {
             try await checkAutomaticRedaction(importAfterMount: false)
