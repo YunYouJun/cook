@@ -230,6 +230,24 @@ final class CookUITests: XCTestCase {
     }
 
     @MainActor
+    private func openPrivacySettings(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
+        tap(app.buttons["我的"].firstMatch, file: file, line: line)
+        wait(app.navigationBars["我的"], "isHittable == true", file: file, line: line)
+        let list = app.collectionViews.firstMatch
+        wait(list, "isHittable == true", file: file, line: line)
+        let share = app.switches["privacy.shareSignals"]
+        // List 按需创建屏幕外的行；不同屏幕与反馈入口数量会改变隐私分区的位置。
+        // 在列表内部拖动并逐屏查找，避开导航栏与标签栏，不能假定滑动一次就能到达。
+        for _ in 0..<6 where !share.isHittable {
+            let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75))
+            let end = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+            start.press(forDuration: 0.01, thenDragTo: end)
+        }
+        wait(share, "isHittable == true", file: file, line: line)
+        return share
+    }
+
+    @MainActor
     func testPrivacyPolicyAndConsentChoicesSurviveRelaunch() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
@@ -241,10 +259,7 @@ final class CookUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["云食册隐私政策"].waitForExistence(timeout: timeout))
         app.navigationBars.buttons.element(boundBy: 0).tap()
         tap(decline)
-        tap(app.buttons["我的"].firstMatch)
-        app.swipeUp()
-        let share = app.switches["privacy.shareSignals"]
-        XCTAssertTrue(share.waitForExistence(timeout: timeout))
+        let share = openPrivacySettings(in: app)
         wait(share, "value == '0'")
         try tapSwitch(share, in: app)
         wait(share, "value == '1'")
@@ -255,11 +270,10 @@ final class CookUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.buttons["我的"].firstMatch.waitForExistence(timeout: timeout))
         XCTAssertFalse(decline.exists, "明确选择后不再弹出")
-        tap(app.buttons["我的"].firstMatch)
-        app.swipeUp()
-        wait(share, "value == '1'")
-        try tapSwitch(share, in: app)
-        wait(share, "value == '0'")
+        let restoredShare = openPrivacySettings(in: app)
+        wait(restoredShare, "value == '1'")
+        try tapSwitch(restoredShare, in: app)
+        wait(restoredShare, "value == '0'")
         tap(app.buttons["隐私政策"])
         XCTAssertTrue(app.staticTexts["云食册隐私政策"].waitForExistence(timeout: timeout))
     }
