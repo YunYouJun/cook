@@ -13,6 +13,9 @@ struct AppFeedbackView: View {
     @State private var showingSent = false
     @State private var showingFailed = false
     @State private var showingNoMail = false
+    @State private var receipt: FeedbackClient.Receipt?
+    @State private var submissionId: String?
+    @State private var submittedBody = ""
 
     init(category: FeedbackClient.Category = .bug) {
         _category = State(initialValue: category)
@@ -27,14 +30,26 @@ struct AppFeedbackView: View {
     }
 
     private var canSend: Bool {
-        !sending && !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !sending && receipt == nil && !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
         Form {
-                if feedback.isTest {
-                    Section { Text("测试模式：反馈仅进入独立测试队列，不会发送到正式支持中心。") }
+            if feedback.isTest {
+                Section { Text("测试模式：反馈仅进入独立测试队列，不会发送到正式支持中心。") }
+            }
+            if let receipt {
+                Section("反馈已收到") {
+                    Text("反馈编号：\(receipt.id)")
+                    if let url = receipt.ticketURL {
+                        Link("查看私密工单与回复", destination: url)
+                        ShareLink("保存私密工单链接", item: url)
+                        Text("请保存链接，不要转发。可在工单页补充信息和确认已读。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
+            }
             Picker("类型", selection: $category) {
                 ForEach(FeedbackClient.Category.allCases) { item in
                     Text(item.label).tag(item)
@@ -96,7 +111,7 @@ struct AppFeedbackView: View {
             }
         }
         .alert(feedback.isTest ? "测试反馈已收到" : "收到了，谢谢反馈", isPresented: $showingSent) {
-            Button("好", role: .cancel) { dismiss() }
+            Button("好", role: .cancel) { if receipt == nil { dismiss() } }
         }
         .alert("暂时没能提交", isPresented: $showingFailed) {
             Button("取消", role: .cancel) {}
@@ -123,10 +138,15 @@ struct AppFeedbackView: View {
             return
         }
         sending = true
+        let bodyKey = [category.rawValue, note, contact].joined(separator: "\u{0}")
+        if submittedBody != bodyKey || submissionId == nil {
+            submittedBody = bodyKey
+            submissionId = UUID().uuidString
+        }
         Task {
             defer { sending = false }
             do {
-                try await feedback.send(category, note: note, contact: String(contact.prefix(FeedbackClient.maxContact)))
+                receipt = try await feedback.send(category, note: note, contact: String(contact.prefix(FeedbackClient.maxContact)), submissionId: submissionId)
                 showingSent = true
             } catch {
                 showingFailed = true
