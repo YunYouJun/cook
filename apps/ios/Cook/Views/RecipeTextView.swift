@@ -3,6 +3,27 @@ import SwiftUI
 
 /// 图文做法：读 App 内置的正文离线显示，配图从对象存储加载、点开看大图，右上角可以打开原文
 struct RecipeTextView: View {
+    let recipe: Recipe
+    let text: RecipeText
+
+    var body: some View {
+        RecipeTextContent(recipe: recipe, text: text)
+            .navigationTitle(recipe.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    if let link = recipe.link, !link.isEmpty, let url = URL(string: link) {
+                        Link(destination: url) {
+                            Label("打开原文", systemImage: "safari")
+                        }
+                    }
+                }
+            }
+    }
+}
+
+/// 阅读页和厨房工作台共用正文、图片查看器与出处，不包含外层导航。
+struct RecipeTextContent: View {
     @Environment(RecipeStore.self) private var store
     let recipe: Recipe
     let text: RecipeText
@@ -49,17 +70,6 @@ struct RecipeTextView: View {
         .fullScreenCover(isPresented: $showsPhotos) {
             RecipeImageViewer(photos: photos, selection: $photoSelection)
                 .zoomTransition(sourceID: photoSelection, in: photoTransition)
-        }
-        .navigationTitle(recipe.name)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                if let originalURL {
-                    Link(destination: originalURL) {
-                        Label("打开原文", systemImage: "safari")
-                    }
-                }
-            }
         }
     }
 
