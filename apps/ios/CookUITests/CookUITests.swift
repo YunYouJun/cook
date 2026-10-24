@@ -61,6 +61,35 @@ final class CookUITests: XCTestCase {
     }
 
     @MainActor
+    func testRecipeFeedbackKeepsRecipeAndDraftOnFailure() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        app.launch()
+        tap(app.buttons["番茄"])
+        tap(app.buttons["鸡蛋"])
+        let showResults = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "看看能做什么")).firstMatch
+        if app.windows.firstMatch.horizontalSizeClass != .regular { tap(showResults) }
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch)
+        let report = app.buttons["recipe.feedback"]
+        for _ in 0..<4 where !report.isHittable { app.swipeUp() }
+        tap(report)
+        wait(app.navigationBars["反馈这道菜"], "exists == true")
+        XCTAssertTrue(app.staticTexts["番茄炒蛋"].exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已自动携带菜名、编号和做法链接")).firstMatch.exists)
+        let note = app.descendants(matching: .any).matching(identifier: "recipe-feedback.note").firstMatch
+        tap(note)
+        note.typeText("Video keeps loading")
+        let submit = app.buttons["recipe-feedback.submit"]
+        for _ in 0..<3 where !submit.isHittable { app.swipeUp() }
+        tap(submit)
+        wait(app.staticTexts["recipe-feedback.error"], "exists == true")
+        XCTAssertEqual(note.value as? String, "Video keeps loading")
+        XCTAssertTrue(submit.isEnabled)
+    }
+
+    @MainActor
     func testRecipeContributionUsesPrivateFeedbackForm() {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]

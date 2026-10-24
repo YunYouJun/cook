@@ -1,17 +1,14 @@
 <script lang="ts" setup>
 import type { RecipeMatch } from '@yunyoujun/cook'
 import type { RecipeItem } from '~/types'
-import { actionSheetController, alertController, toastController } from '@ionic/vue'
 import { uniqueStuff } from '@yunyoujun/cook/recommend'
+import RecipeFeedbackButton from '~/components/feedback/RecipeButton.vue'
 import { isFavorited, toggleFavorite } from '~/composables/store/favorite'
 import { addRecipeHistory } from '~/composables/store/history'
-import { links } from '~/constants'
 import { getEmojisFromStuff } from '~/utils'
 import { trackCookEvent } from '~/utils/analytics'
 import { isCustomRecipe } from '~/utils/customRecipe'
-import { promptText } from '~/utils/dialog'
-import { buildFeedbackMail, buildFeedbackText, copyFeedbackText, feedbackKinds } from '~/utils/feedback'
-import { getRecipeFeedbackLink, getRecipeLink, getRecipeTextLink, openRecipe } from '~/utils/recipe'
+import { getRecipeLink, getRecipeTextLink, openRecipe } from '~/utils/recipe'
 import { yunleHaptic } from '~/utils/yunleHost'
 
 /**
@@ -61,78 +58,6 @@ function onFavorite() {
     return
   toggleFavorite(props.recipe)
   void yunleHaptic(favorited.value ? 'success' : 'light')
-}
-
-const feedback = useRecipeFeedback()
-
-/** 选择问题类型后直接提交；提交不了时引导发邮件或去 GitHub 填表（菜名和视频已预填） */
-async function onFeedback() {
-  const recipe = props.recipe
-  if (!recipe)
-    return
-  if (typeof recipe.id !== 'number') {
-    window.open(getRecipeFeedbackLink(recipe), '_blank')
-    return
-  }
-
-  const sheet = await actionSheetController.create({
-    header: '这道菜有什么问题？',
-    buttons: [
-      ...feedbackKinds.map(item => ({ text: item.label, data: item.kind })),
-      { text: '取消', role: 'cancel' },
-    ],
-  })
-  await sheet.present()
-  const { data: kind, role } = await sheet.onDidDismiss()
-  if (role === 'cancel' || !kind)
-    return
-
-  let note = ''
-  if (kind === 'other') {
-    const text = await promptText({ header: '具体是什么问题？', placeholder: '比如：用量不对、步骤有误', okText: '提交' })
-    if (text === undefined)
-      return
-    note = text
-  }
-
-  try {
-    await feedback.report({ recipeId: recipe.id, recipeName: recipe.name, kind, note })
-    void yunleHaptic('success')
-    const toast = await toastController.create({ message: '收到了，谢谢反馈', duration: 1800, position: 'top' })
-    await toast.present()
-  }
-  catch {
-    const message = {
-      topic: recipe.name,
-      lines: [
-        `菜谱：${recipe.name}（#${recipe.id}）`,
-        `问题：${feedbackKinds.find(item => item.kind === kind)?.label ?? kind}`,
-        note,
-        getRecipeLink(recipe),
-      ],
-    }
-    const text = buildFeedbackText(message)
-    const copied = await copyFeedbackText(text)
-    const mail = buildFeedbackMail(message)
-    const alert = await alertController.create({
-      header: '暂时没能提交',
-      message: `${copied ? '内容已经复制。' : '可以长按或选中下方内容复制。'}可以发邮件给我们，或者到 GitHub 填写反馈表单。`,
-      inputs: [{ type: 'textarea', value: text, attributes: { 'readonly': true, 'aria-label': '完整反馈内容' } }],
-      buttons: [
-        { text: '取消', role: 'cancel' },
-        { text: '支持中心', handler: () => { window.open(links.feedback, '_blank', 'noopener,noreferrer') } },
-        { text: '去 GitHub', handler: () => { window.open(getRecipeFeedbackLink(recipe), '_blank') } },
-        {
-          text: '发邮件',
-          handler: () => {
-            window.location.href = mail
-            return false
-          },
-        },
-      ],
-    })
-    await alert.present()
-  }
 }
 
 function watchVideo() {
@@ -226,9 +151,7 @@ function onPresented() {
         </template>
         <template v-else>
           食材来自菜谱记录，用量和调味以{{ recipe.bv ? '视频' : '做法原文' }}为准。
-          <button type="button" class="recipe-detail-feedback" @click="onFeedback">
-            {{ recipe.bv ? '视频' : '链接' }}打不开或信息不对？反馈一下
-          </button>
+          <RecipeFeedbackButton :recipe="recipe" />
         </template>
       </p>
     </ion-content>
@@ -333,15 +256,6 @@ function onPresented() {
 .recipe-detail-note {
   margin-top: 8px;
   padding-bottom: 32px;
-}
-.recipe-detail-feedback {
-  display: block;
-  margin: 4px auto 0;
-  padding: 4px 8px;
-  border: 0;
-  background: none;
-  color: var(--ion-color-primary);
-  font: inherit;
 }
 @keyframes recipe-detail-pop {
   0% {

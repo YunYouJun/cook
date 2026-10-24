@@ -25,12 +25,17 @@ const crypto = require('node:crypto')
 const process = require('node:process')
 const { submitAppFeedback } = require('./support')
 
-const FEEDBACK = 'cook_recipe_feedback'
-const SIGNALS = 'cook_search_signals'
-const QUOTA = 'cook_feedback_quota'
-const APP_FEEDBACK = 'cook_app_feedback'
+// A deployment setting, never a caller-selected collection or environment.
+const ENVIRONMENT = process.env.COOK_FEEDBACK_ENVIRONMENT || 'production'
+const SUFFIX = ENVIRONMENT === 'test' ? '_test' : ''
+const FEEDBACK = `cook_recipe_feedback${SUFFIX}`
+const SIGNALS = `cook_search_signals${SUFFIX}`
+const QUOTA = `cook_feedback_quota${SUFFIX}`
+const APP_FEEDBACK = `cook_app_feedback${SUFFIX}`
+const PRODUCTION_ORIGINS = new Set(['https://cook.yunyoujun.cn', 'https://cook.yunle.fun'])
+const LINK_ISSUES = new Set(['', 'unavailable', 'loading', 'login', 'wrong-content', 'other'])
 
-const KINDS = new Set(['video', 'stuff', 'info', 'other'])
+const KINDS = new Set(['video', 'text', 'stuff', 'info', 'other'])
 const MODES = new Set(['loose', 'strict', 'survival'])
 const SIGNAL_TYPES = new Set(['empty', 'open'])
 const CATEGORIES = new Set(['bug', 'idea', 'recipe', 'other'])
@@ -122,14 +127,70 @@ function readSource(event) {
   const version = event.version ?? ''
   if (!PLATFORMS.has(platform) || (version && !isWord(version, 32)))
     return null
-  return { platform, version }
+  const context = readContext(event.context, platform)
+  if (context === null)
+    return null
+  return { platform, version, ...(context ? { context } : {}), environment: ENVIRONMENT }
+}
+
+/** Client-reported diagnostics, not identity or proof of an official client. No query strings. */
+function readContext(value, platform) {
+  if (value === undefined)
+    return undefined
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    return null
+  const { entryPoint, origin = '', path = '', build = '', recipeVersion = '' } = value
+  if (!['recipe-detail', 'app-feedback', 'search'].includes(entryPoint)
+    || typeof build !== 'string' || !/^[\w.+-]{0,64}$/.test(build)
+    || typeof recipeVersion !== 'string' || !/^[a-f0-9]{0,64}$/.test(recipeVersion)
+    || typeof path !== 'string' || path.length > 200 || (path && !/^\/[\w/%.-]*$/.test(path))) {
+    return null
+  }
+  if (typeof origin !== 'string' || origin.length > 200)
+    return null
+  if (origin) {
+    try {
+      const url = new URL(origin)
+      if (!['https:', 'http:'].includes(url.protocol) || url.origin !== origin)
+        return null
+    }
+    catch { return null }
+  }
+  if (platform === 'web' && ENVIRONMENT === 'production' && !PRODUCTION_ORIGINS.has(origin))
+    return null
+  return { entryPoint, origin, path, build, recipeVersion }
+}
+
+/** Store a bounded, inert source snapshot. Never fetch caller-provided URLs. */
+function readRecipeSources(event) {
+  if (event.sourceBv === undefined && event.sourceLink === undefined)
+    return {}
+  const sourceBv = event.sourceBv ?? ''
+  const sourceLink = event.sourceLink ?? ''
+  if (typeof sourceBv !== 'string' || (sourceBv && !/^(?:BV[0-9A-Za-z]{10}|av\d+)$/.test(sourceBv)) || typeof sourceLink !== 'string' || sourceLink.length > 2048)
+    return null
+  if (sourceLink) {
+    try {
+      const url = new URL(sourceLink)
+      if (url.protocol !== 'https:' || url.username || url.password)
+        return null
+    }
+    catch {
+      return null
+    }
+  }
+  if ((event.kind === 'video' && !sourceBv) || (event.kind === 'text' && !sourceLink))
+    return null
+  return { sourceBv, sourceLink }
 }
 
 async function report(event, reporter, now) {
   const { recipeId, recipeName, kind } = event
   const note = typeof event.note === 'string' ? event.note.trim().slice(0, MAX_NOTE) : ''
   const source = readSource(event)
-  if (!isIndex(recipeId, 1e6) || !isWord(recipeName, MAX_NAME) || !KINDS.has(kind) || !source)
+  const recipeSources = readRecipeSources(event)
+  const linkIssue = event.linkIssue ?? ''
+  if (!isIndex(recipeId, 1e6) || !isWord(recipeName, MAX_NAME) || !KINDS.has(kind) || !source || !recipeSources || !LINK_ISSUES.has(linkIssue) || (linkIssue && !['video', 'text'].includes(kind)))
     return fail('INVALID_REPORT')
   if (!await takeQuota(reporter, now))
     return fail('RATE_LIMITED')
@@ -141,8 +202,10 @@ async function report(event, reporter, now) {
     recipeId,
     recipeName: recipeName.trim(),
     kind,
+    ...(event.linkIssue !== undefined ? { linkIssue } : {}),
     note,
     ...source,
+    ...recipeSources,
     reporter: reporter.key,
     uid: reporter.uid,
     day,
@@ -164,6 +227,12 @@ async function appFeedback(event, reporter, now) {
   const submissionId = event.submissionId
   if (submissionId !== undefined && (typeof submissionId !== 'string' || !/^[\w-]{8,128}$/.test(submissionId)))
     return fail('INVALID_FEEDBACK')
+  if (ENVIRONMENT === 'test') {
+    const id = hash(`${reporter.key}|${submissionId || JSON.stringify([category, note, contact, today(now)])}`)
+    // Test app feedback is private and isolated; never forward it to real Support.
+    await getApp().database().collection(APP_FEEDBACK).doc(id).set({ category, note, contact, ...source, createdAt: now })
+    return { ok: true, receipt: { id: `test_${id}`, productId: 'cook', status: 'received', createdAt: new Date(now).toISOString() } }
+  }
   return submitAppFeedback({ category, note, contact, source, reporter, day: today(now), submissionId })
 }
 
@@ -238,6 +307,11 @@ async function exportAll(since) {
 }
 
 async function handleAction(event, anonymousOnly = false) {
+  if (!['production', 'test'].includes(ENVIRONMENT)
+    || (event.environment !== undefined && event.environment !== ENVIRONMENT)
+    || (ENVIRONMENT === 'test' && event.environment !== 'test')) {
+    return fail('ENVIRONMENT_MISMATCH')
+  }
   const reporter = readReporter(event, anonymousOnly)
   if (!reporter)
     return fail('REPORTER_REQUIRED')
@@ -287,6 +361,9 @@ async function handleHttp(event) {
     const data = readBody(event)
     if (!data || !PUBLIC_ACTIONS.has(data.action))
       return respond(400, fail('INVALID_BODY'))
+    const origin = event.headers && (event.headers.origin || event.headers.Origin)
+    if (ENVIRONMENT === 'production' && origin && !PRODUCTION_ORIGINS.has(origin))
+      return respond(400, fail('ENVIRONMENT_MISMATCH'))
     // This HTTP endpoint has no authenticated session. Never adopt a body/header UID.
     const result = await handleAction(data, true)
     const status = result.ok ? 200 : result.code === 'RATE_LIMITED' ? 429 : result.code === 'SUPPORT_UNAVAILABLE' ? 503 : result.code === 'SUBMISSION_CONFLICT' ? 409 : 400
@@ -311,6 +388,7 @@ async function main(event = {}) {
 
 exports.main = main
 exports._internal = {
+  ENVIRONMENT,
   APP_FEEDBACK,
   DAILY_QUOTA,
   FEEDBACK,
