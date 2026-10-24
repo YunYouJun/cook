@@ -30,7 +30,9 @@
 3. 用正确的 `APPLE_DEVELOPMENT_TEAM` 生成工程。`project.yml` 已声明 `webcredentials:cook.yunyoujun.cn`；如果改签名团队，必须同步修改站点 AASA。
 4. 等 Apple 的关联域名缓存更新后，真机验证系统授权窗口和 HTTPS 回调。模拟器编译、协议测试均不能替代此步骤。
 
-本轮源代码修改不等于上述 Apple 配置或站点发布已经生效。2026-10-24 实测生产 AASA 返回 HTTP 200，但尚无 `webcredentials` 项，因此真机登录回跳仍需完成上述发布。
+2026-10-24 已将 AASA 发布到 EdgeOne 生产项目 `yunyoujun-cook`（部署 `dpwz3nca44ld`）。生产域名与 Apple CDN 均返回 HTTP 200、`application/json`，内容一致且包含原生 `webcredentials`。Apple App ID `JJLY23S94L` 已回读确认开启 Associated Domains，Xcode 自动更新了开发描述文件。
+
+真机联调包为 `2.0.0 (6.1)`，由最新主线整合已发布构建 6 的私人菜谱同步修复和本次登录代码生成。使用 Release 优化、开发签名原位安装；签名权限已核验 `webcredentials:cook.yunyoujun.cn` 和原有 `iCloud.fun.yunle.cook` 的 `Production` 环境。该包用于本机联调，尚未上传 TestFlight；完整真人登录回跳与重启恢复验收仍在进行。
 
 ## 会话与数据边界
 
