@@ -83,7 +83,7 @@ watchDebounced(
     <ion-content ref="contentRef" :fullscreen="true" :class="{ 'workbench-content': cookingStyle === 'workbench' }" :style="{ '--padding-bottom': `${cookingStyle === 'classic' ? panelInset + 16 : 16}px` }">
       <ion-header v-show="cookingStyle === 'classic'" :collapse="cookingStyle === 'classic' ? 'condense' : undefined">
         <ion-toolbar>
-          <ion-title size="large">
+          <ion-title :size="cookingStyle === 'classic' ? 'large' : undefined">
             做菜
           </ion-title>
         </ion-toolbar>

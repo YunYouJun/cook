@@ -95,12 +95,16 @@ struct CookView: View {
                     }
                 }
             }
-            stuffSection("蔬菜", store.data.food.vegetable)
-            stuffSection("肉和蛋", store.data.food.meat)
-            stuffSection("主食（可选）", store.data.food.staple)
+            stuffSection("蔬菜", store.food.vegetable)
+            stuffSection("肉和蛋", store.food.meat)
+            stuffSection("主食（可选）", store.food.staple)
 
+            NavigationLink("管理食材和厨具") { PersonalCatalogView() }
             ChipSection(title: "厨具（可选）", note: toolNote) {
-                ForEach(store.data.food.tools, id: \.name) { item in
+                if let tool = session.tool, !store.food.tools.contains(where: { $0.name == tool }) {
+                    Chip(title: store.toolLabel(tool), isSelected: true) { session.toggleTool(tool) }
+                }
+                ForEach(store.food.tools, id: \.name) { item in
                     Chip(title: store.toolLabel(item.name), isSelected: session.tool == item.name) {
                         session.toggleTool(item.name)
                     }
@@ -558,9 +562,16 @@ struct AvoidPicker: View {
 
     var body: some View {
         List {
-            avoidSection("蔬菜", store.data.food.vegetable)
-            avoidSection("肉和蛋", store.data.food.meat)
-            avoidSection("主食", store.data.food.staple)
+            if !session.avoid.isEmpty {
+                Section("已选忌口") {
+                    ForEach(session.avoid, id: \.self) { name in
+                        CheckRow(title: name, isSelected: true) { session.toggleAvoid(name) }
+                    }
+                }
+            }
+            avoidSection("蔬菜", store.food.vegetable)
+            avoidSection("肉和蛋", store.food.meat)
+            avoidSection("主食", store.food.staple)
         }
         .navigationTitle("忌口")
         .toolbar {

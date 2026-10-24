@@ -36,7 +36,7 @@ export interface RecipeItem {
   /**
    * 方式
    */
-  methods?: ('炒' | '煎' | '烘' | '炸')[]
+  methods?: string[]
   /**
    * 工具
    */

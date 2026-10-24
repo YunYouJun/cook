@@ -1,4 +1,5 @@
 import type { RecipeItem } from '~/types'
+import { isPrivateRecipeURL } from '@yunyoujun/cook/custom-recipes'
 import { uniqueStuff } from '@yunyoujun/cook/recommend'
 
 /**
@@ -10,6 +11,7 @@ export interface CustomRecipe extends RecipeItem {
   note?: string
   createdAt: number
   updatedAt: number
+  copiedFrom?: string
 }
 
 export interface CustomRecipeInput {
@@ -24,7 +26,6 @@ export interface CustomRecipeInput {
 export const CUSTOM_RECIPE_NAME_MAX = 30
 
 const BV_PATTERN = /(?:^|[^0-9a-z])(BV[0-9a-z]{10})(?![0-9a-z])/i
-const URL_PATTERN = /^https?:\/\/\S+$/i
 
 /** 识别做法来源：能找到 BV 号就按 B 站视频存，否则只接受 http(s) 链接 */
 export function parseRecipeSource(text: string): Pick<RecipeItem, 'bv' | 'link'> | undefined {
@@ -34,7 +35,7 @@ export function parseRecipeSource(text: string): Pick<RecipeItem, 'bv' | 'link'>
   const bv = value.match(BV_PATTERN)?.[1]
   if (bv)
     return { bv: `BV${bv.slice(2)}` }
-  if (URL_PATTERN.test(value))
+  if (isPrivateRecipeURL(value))
     return { link: value }
   return undefined
 }
@@ -50,7 +51,7 @@ export function createCustomRecipeId() {
 /** 校验表单并生成菜谱；出错时返回给用户看的提示 */
 export function buildCustomRecipe(
   input: CustomRecipeInput,
-  existing?: Pick<CustomRecipe, 'customId' | 'createdAt'>,
+  existing?: Pick<CustomRecipe, 'customId' | 'createdAt'> & Partial<CustomRecipe>,
   now = Date.now(),
 ): { recipe: CustomRecipe } | { error: string } {
   const name = input.name.trim()
@@ -61,7 +62,10 @@ export function buildCustomRecipe(
   const stuff = uniqueStuff(input.stuff)
   if (!stuff.length)
     return { error: '至少选一样食材，才能被匹配到' }
-  const source = parseRecipeSource(input.source)
+  const displayedSource = existing?.bv ? `https://www.bilibili.com/video/${existing.bv}` : existing?.link ?? ''
+  const source = existing && input.source.trim() === displayedSource
+    ? { ...(existing.bv !== undefined ? { bv: existing.bv } : {}), ...(existing.link !== undefined ? { link: existing.link } : {}) }
+    : parseRecipeSource(input.source)
   if (!source)
     return { error: '做法链接需要是 B 站 BV 号或 http 开头的网址' }
   const note = input.note.trim()
@@ -73,9 +77,12 @@ export function buildCustomRecipe(
       tools: [...new Set(input.tools)],
       ...source,
       ...(note ? { note } : {}),
-      tags: [],
+      tags: existing?.tags ?? [],
+      ...(existing?.methods ? { methods: existing.methods } : {}),
+      ...(existing?.difficulty ? { difficulty: existing.difficulty } : {}),
+      ...(existing?.copiedFrom ? { copiedFrom: existing.copiedFrom } : {}),
       createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
+      updatedAt: Math.max(now, (existing?.updatedAt ?? -1) + 1, existing?.createdAt ?? now),
     },
   }
 }

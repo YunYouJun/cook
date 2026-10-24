@@ -1,0 +1,12 @@
+{
+  "app": "cook",
+  "kind": "personal-catalog",
+  "version": 1,
+  "items": [
+    { "category": "vegetable", "name": "鹰嘴豆" },
+    { "category": "meat", "name": "鹌鹑" },
+    { "category": "staple", "name": "藜麦" },
+    { "category": "tools", "name": "塔吉锅" }
+  ],
+  "hidden": [{ "category": "vegetable", "name": "番茄" }]
+}

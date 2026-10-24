@@ -1,0 +1,58 @@
+import XCTest
+
+final class PrivateRecipesUITests: XCTestCase {
+    @MainActor
+    func testPrivateRecipeCreateEditDelete() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        app.launch()
+        // iPad's floating tab bar exposes both its wrapper and child as the same button.
+        // Select the first matching tab, then verify navigation by waiting for the library.
+        let mine = app.buttons.matching(identifier: "我的").firstMatch
+        XCTAssertTrue(mine.waitForExistence(timeout: 30))
+        mine.tap()
+        let library = app.buttons["我的菜谱"]
+        XCTAssertTrue(library.waitForExistence(timeout: 10))
+        library.tap()
+        app.buttons["新建菜谱"].tap()
+        let name = "测试" + String(UUID().uuidString.prefix(6))
+        let nameField = app.textFields["菜名（最多 30 字）"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 10))
+        nameField.tap()
+        nameField.typeText(name)
+        let ingredients = app.textFields["鸡蛋、丝瓜"]
+        ingredients.tap()
+        ingredients.typeText("鸡蛋")
+        app.buttons["保存"].tap()
+        let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", name)).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "New context saves must update the live @Query list")
+        row.tap()
+        app.buttons["编辑菜谱"].tap()
+        XCTAssertTrue(nameField.waitForExistence(timeout: 10))
+        nameField.tap()
+        nameField.typeText("新")
+        // On iPad the keyboard moves the sheet after typing. Submit the single-line
+        // field and wait for it to close before XCTest resolves the Save button's frame.
+        nameField.typeText("\n")
+        let keyboardHidden = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
+        XCTAssertEqual(XCTWaiter().wait(for: [keyboardHidden], timeout: 30), .completed)
+        app.buttons["保存"].tap()
+        XCTAssertTrue(app.navigationBars[name + "新"].waitForExistence(timeout: 10))
+        app.buttons["删除菜谱"].tap()
+        // The dialog can enter the accessibility tree before presentation finishes
+        // on a loaded runner. Do not send the destructive tap until it is hittable.
+        let confirmation = app.sheets["删除这道私人菜谱？"]
+        XCTAssertTrue(confirmation.waitForExistence(timeout: 10))
+        let confirmDelete = confirmation.buttons["删除"]
+        let confirmationReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: confirmDelete)
+        XCTAssertEqual(XCTWaiter().wait(for: [confirmationReady], timeout: 30), .completed)
+        confirmDelete.tap()
+        let confirmationClosed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: confirmation)
+        XCTAssertEqual(XCTWaiter().wait(for: [confirmationClosed], timeout: 10), .completed, "Deletion must dismiss its confirmation before returning to the library")
+        XCTAssertTrue(app.navigationBars["我的菜谱"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", name)).firstMatch.exists)
+    }
+}

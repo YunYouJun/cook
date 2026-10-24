@@ -141,6 +141,8 @@ export default defineNuxtConfig({
     '@cook/types': fileURLToPath(new URL('../../packages/cook/src/types', import.meta.url)),
     // Use browser-safe source in the workspace, without requiring a package build first.
     '@yunyoujun/cook/recommend': fileURLToPath(new URL('../../packages/cook/src/utils/recommend.ts', import.meta.url)),
+    '@yunyoujun/cook/personal-catalog': fileURLToPath(new URL('../../packages/cook/src/utils/personal-catalog.ts', import.meta.url)),
+    '@yunyoujun/cook/custom-recipes': fileURLToPath(new URL('../../packages/cook/src/utils/custom-recipes.ts', import.meta.url)),
   },
 
   future: {
