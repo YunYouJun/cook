@@ -69,8 +69,10 @@ targets:
       path: Cook/Cook.entitlements
       properties:
         aps-environment: development
-        # ASWebAuthenticationSession 的 HTTPS 回调需要 webcredentials 域名关联。
-        com.apple.developer.associated-domains: [webcredentials:cook.yunyoujun.cn]
+        # 系统账号授权使用 webcredentials；微信 Universal Links 使用独立的 /auth/wechat/ 路径。
+        com.apple.developer.associated-domains:
+          - webcredentials:cook.yunyoujun.cn
+          - applinks:cook.yunyoujun.cn
         com.apple.developer.icloud-container-identifiers: [iCloud.fun.yunle.cook]
         com.apple.developer.icloud-services: [CloudKit]
     settings:
