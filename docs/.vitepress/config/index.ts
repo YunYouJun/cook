@@ -15,6 +15,7 @@ export default defineConfig({
 
     nav: [
       { text: '使用指南', link: '/guide/getting-started' },
+      { text: 'iOS 内测', link: '/guide/ios-beta' },
       { text: '开发文档', link: '/dev/cli' },
       { text: '方案记录', link: '/decisions/' },
       { text: 'iOS 隐私政策', link: '/privacy' },
@@ -28,6 +29,7 @@ export default defineConfig({
           items: [
             { text: '快速开始', link: '/guide/getting-started' },
             { text: '一句话找菜', link: '/guide/sentence-input' },
+            { text: '云食册 iOS 内测', link: '/guide/ios-beta' },
           ],
         },
       ],
@@ -37,6 +39,7 @@ export default defineConfig({
           items: [
             { text: 'Cook CLI', link: '/dev/cli' },
             { text: '移动应用', link: '/dev/app' },
+            { text: 'TestFlight 外部测试', link: '/dev/ios-external-testflight' },
             { text: '菜谱数据', link: '/dev/data' },
             { text: '私人菜谱与文件迁移', link: '/dev/private-recipes' },
             { text: '图文做法配图', link: '/dev/recipe-images' },
