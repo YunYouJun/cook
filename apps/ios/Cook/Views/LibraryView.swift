@@ -54,18 +54,21 @@ struct LibraryView: View {
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
 
-                if visible.isEmpty {
-                    ContentUnavailableView(emptyTitle, systemImage: emptySymbol)
-                }
-                ForEach(visible) { recipe in
-                    NavigationLink(value: RecipeRoute(recipe: recipe)) {
-                        RecipeRow(recipe: recipe)
+                Section {
+                    if visible.isEmpty {
+                        ContentUnavailableView(emptyTitle, systemImage: emptySymbol)
                     }
-                    .recipeActions(recipe, isFavorite: favoriteIds.contains(recipe.id), store: store) {
-                        withAnimation(.snappy) { favoriteActions.set(recipe.id, isFavorite: !favoriteIds.contains(recipe.id)) }
+                    ForEach(visible) { recipe in
+                        NavigationLink(value: RecipeRoute(recipe: recipe)) {
+                            RecipeRow(recipe: recipe)
+                        }
+                        .recipeActions(recipe, isFavorite: favoriteIds.contains(recipe.id), store: store) {
+                            withAnimation(.snappy) { favoriteActions.set(recipe.id, isFavorite: !favoriteIds.contains(recipe.id)) }
+                        }
                     }
                 }
             }
+            .listSectionSpacing(12)
             .navigationTitle("菜谱")
             // 分栏视图的侧栏默认用小标题，和其他几个页签的大标题对齐
             .navigationBarTitleDisplayMode(.large)
