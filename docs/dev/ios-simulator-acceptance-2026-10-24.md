@@ -30,6 +30,8 @@ iPad iOS 27 完整单元与集成测试 68 项，加历史界面验收 1 项，6
 
 正常启动 App 后手工添加今天到期的土豆、开启提醒并设置未来时间，尚未观察到通知。临时诊断发现系统 `getPendingNotificationRequests` 和 `getNotificationSettings` 的回调均未返回，随后该独立 iOS 27 模拟器重启报 `launchd failed to respond`。这不足以断定应用通知代码存在缺陷，也不能记录为通知送达通过。临时诊断代码已移除。另建 iOS 18.6 模拟器时出现启动超时；这项环境限制仍需解除后复核，不要求真机。
 
+10 月 25 日另一次独立 iOS 18.6 模拟器复测已成功授权，并在 App 退到主屏幕后于 02:22 收到系统排程的“土豆今天到期”通知。点击通知时发生 `NSInternalInconsistencyException: Call must be made on main thread`；日志堆栈指向 `NotificationDelegate.didReceive` 的 async 桥接完成回调，UIKit 此时更新后台快照。仅在 `MainActor.run` 中发路由广播不足以保证桥接完成回调也在主线程。现使用显式 completion handler，将路由与系统完成回调放在同一个主队列任务；非冰箱通知也正常完成。新增回归从后台调用响应处理，检查主线程、路由先于完成且各发生一次，以及厨房通知不跳转冰箱。系统点击复测及新提交完整 CI 仍需通过，尚不将本项记为完全通过。
+
 ## 构建与发布边界
 
 Debug、Release 模拟器编译通过。Release 中的隐私政策逐字等于 `docs/privacy.md`；二进制不含本轮诊断字符串或 `-ui-testing` 测试入口。文档 ESLint 与补丁空白检查通过。

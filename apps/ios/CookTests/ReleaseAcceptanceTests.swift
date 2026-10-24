@@ -181,6 +181,47 @@ final class ReleaseAcceptanceTests: XCTestCase {
         XCTAssertEqual(try container.mainContext.fetchCount(FetchDescriptor<Preferences>()), 1)
     }
 
+    func testNotificationResponseFromBackgroundCompletesOnMainAfterRouting() async {
+        PendingFridgeHome.requested = false
+        defer { PendingFridgeHome.requested = false }
+        let routed = expectation(description: "fridge navigation on main")
+        let completed = expectation(description: "system response completed on main")
+        routed.assertForOverFulfill = true
+        completed.assertForOverFulfill = true
+        let observer = NotificationCenter.default.addObserver(forName: .showFridgeHome, object: nil, queue: nil) { _ in
+            XCTAssertTrue(Thread.isMainThread)
+            routed.fulfill()
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+        DispatchQueue.global().async {
+            NotificationDelegate().handleResponse(identifier: "fridge-expiry-20261025") {
+                XCTAssertTrue(Thread.isMainThread)
+                completed.fulfill()
+            }
+        }
+        await fulfillment(of: [routed, completed], timeout: 3, enforceOrder: true)
+        XCTAssertTrue(PendingFridgeHome.requested)
+    }
+
+    func testKitchenNotificationResponseCompletesOnMainWithoutFridgeNavigation() async {
+        PendingFridgeHome.requested = false
+        defer { PendingFridgeHome.requested = false }
+        let completed = expectation(description: "non-fridge response completed on main")
+        completed.assertForOverFulfill = true
+        let observer = NotificationCenter.default.addObserver(forName: .showFridgeHome, object: nil, queue: nil) { _ in
+            XCTFail("Kitchen notifications must not navigate to the fridge")
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+        DispatchQueue.global().async {
+            NotificationDelegate().handleResponse(identifier: "kitchen-timer-1") {
+                XCTAssertTrue(Thread.isMainThread)
+                completed.fulfill()
+            }
+        }
+        await fulfillment(of: [completed], timeout: 3)
+        XCTAssertFalse(PendingFridgeHome.requested)
+    }
+
     func testRootConsumesColdNotificationAndRoutesWarmNotification() async throws {
         let container = Persistence.makeContainer(inMemory: true)
         let session = CookSession(defaultPantry: [], context: container.mainContext)

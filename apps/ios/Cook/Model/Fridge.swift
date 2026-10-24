@@ -258,13 +258,20 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         [.banner, .list, .sound]
     }
 
-    func userNotificationCenter(_: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        guard response.notification.request.identifier.hasPrefix(FridgeReminder.identifierPrefix) else {
-            return
-        }
-        await MainActor.run {
-            PendingFridgeHome.requested = true
-            NotificationCenter.default.post(name: .showFridgeHome, object: nil)
+    func userNotificationCenter(_: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        handleResponse(identifier: response.notification.request.identifier, completionHandler: completionHandler)
+    }
+
+    func handleResponse(identifier: String, completionHandler: @escaping () -> Void) {
+        // iOS 18 的响应完成回调会更新 UIKit 快照；async 桥接可能在后台完成并触发主线程断言。
+        // 路由与系统完成回调放在同一个主队列任务，其他通知也必须完成。
+        DispatchQueue.main.async {
+            if identifier.hasPrefix(FridgeReminder.identifierPrefix) {
+                PendingFridgeHome.requested = true
+                NotificationCenter.default.post(name: .showFridgeHome, object: nil)
+            }
+            completionHandler()
         }
     }
 }
