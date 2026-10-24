@@ -39,10 +39,25 @@ final class KitchenWorkbenchUITests: XCTestCase {
         chooseLayout("自动", in: app)
         chooseLayout("台面", in: app)
         XCTAssertEqual(app.staticTexts["kitchen.countdown"].label, paused)
-        if !egg.isHittable {
-            app.buttons["kitchen.ingredient.葱花（可选）"].swipeDown()
+        capture(app, "kitchen-tabletop-layout-restored")
+        let preparation = app.otherElements["kitchen.preparation"]
+        XCTAssertTrue(preparation.waitForExistence(timeout: 5))
+        for _ in 0..<6 {
+            if egg.exists && egg.isHittable { break }
+            // 布局切换会保留列表位置；离屏行的坐标可能落在固定计时栏后面。
+            // 只在计时栏下方的可见列表中拖动，避免误触“继续”。
+            let frame = preparation.frame
+            let top = max(frame.minY, app.buttons["重置"].frame.maxY) + 24
+            let bottom = frame.maxY - 24
+            XCTAssertGreaterThan(bottom - top, 44)
+            let origin = app.windows.firstMatch.coordinate(withNormalizedOffset: .zero)
+            origin.withOffset(CGVector(dx: frame.midX, dy: top))
+                .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: frame.midX, dy: bottom)))
         }
+        XCTAssertTrue(egg.exists && egg.isHittable)
         XCTAssertEqual(egg.value as? String, "已备好")
+        XCTAssertEqual(app.staticTexts["kitchen.countdown"].label, paused)
+        capture(app, "kitchen-tabletop-ingredient-restored")
         app.buttons["继续"].tap()
         XCTAssertTrue(app.buttons["暂停"].waitForExistence(timeout: 10))
         app.buttons["重置"].tap()
