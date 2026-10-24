@@ -91,10 +91,10 @@ struct SettingsView: View {
                     Text("网页版在「我的 → 设置 → 收藏和历史」里导出或复制，再到这里导入。导入只会添加，不会覆盖 App 里已有的收藏和浏览记录。")
                 }
                 Section {
-                    NavigationLink("意见反馈") { AppFeedbackView() }
-                    NavigationLink("菜谱投稿") { AppFeedbackView(category: .recipe) }
-                    Link("需求墙", destination: URL(string: "https://support.yunle.fun/feedback?product=cook")!)
-                    Link("支持中心", destination: URL(string: "https://support.yunle.fun/?product=cook")!)
+                    NavigationLink { HelpSettingsView() } label: {
+                        SettingsRowLabel("帮助与反馈", symbol: "questionmark.circle", color: .blue)
+                    }
+                    .accessibilityIdentifier("settings.help")
                 } header: {
                     Text("反馈")
                 }

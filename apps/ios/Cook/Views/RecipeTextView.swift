@@ -25,10 +25,33 @@ struct RecipeTextView: View {
 /// 阅读页和厨房工作台共用正文、图片查看器与出处，不包含外层导航。
 struct RecipeTextContent: View {
     @Environment(RecipeStore.self) private var store
+    @Environment(KitchenWorkbench.self) private var workbench
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let recipe: Recipe
     let text: RecipeText
+    let preparationInSidebar: Bool
+    private let presentation: RecipePresentation
+
+    init(recipe: Recipe, text: RecipeText, preparationInSidebar: Bool = false) {
+        self.recipe = recipe
+        self.text = text
+        self.preparationInSidebar = preparationInSidebar
+        presentation = RecipePresentation(text: text)
+    }
+
+    private var amounts: RecipeAmounts {
+        RecipeAmounts(rows: presentation.allQuantities, servings: workbench.state(for: recipe.id).servings)
+    }
+
+    private var canAdjustServings: Bool {
+        amounts.supportsServings || presentation.steps.contains { amounts.instruction($0.text).hasAdjustedAmounts }
+    }
+
+    private var completed: Set<String> { workbench.state(for: recipe.id).completedSteps }
+    private var nextStep: String? { presentation.steps.first { !completed.contains($0.id) }?.id }
     @State private var showsPhotos = false
     @State private var photoSelection = 0
+    @State private var stepLocation: StepLocation?
     @Namespace private var photoTransition
 
     private var originalURL: URL? {
@@ -45,20 +68,47 @@ struct RecipeTextContent: View {
     }
 
     var body: some View {
+        let amounts = amounts
+        let usage = RecipeStepUsagePlan(steps: presentation.steps, amounts: amounts, annotations: presentation.amountAnnotations)
         ScrollViewReader { proxy in
+            let jump: (RecipePresentation.Step) -> Void = { step in
+                stepLocation = StepLocation(id: step.id)
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+                    proxy.scrollTo(StepAnchor(id: step.id), anchor: .top)
+                }
+            }
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 16) {
+                    RecipeMetricsView(presentation: presentation, difficulty: recipe.difficulty)
+                    if let description = presentation.servingDescription {
+                        Text(description).font(.footnote).foregroundStyle(.secondary)
+                    }
+                    if !presentation.supplementalQuantities.isEmpty {
+                        if canAdjustServings {
+                            RecipeServingControl(recipeID: recipe.id, rows: presentation.allQuantities, identifier: "recipe.servings")
+                        }
+                        Text("按原文整理的用量").font(.headline)
+                        RecipeQuantityTable(rows: presentation.supplementalQuantities, amounts: amounts)
+                    }
                     ForEach(Array(text.blocks.enumerated()), id: \.offset) { offset, block in
-                        blockView(block, at: offset)
+                        if !presentation.metadataBlocks.contains(offset),
+                           !(preparationInSidebar && presentation.ingredientBlocks.contains(offset)) {
+                            presentedBlock(block, at: offset, amounts: amounts, usage: usage, jump: jump)
+                        }
                     }
                     footer
                         .padding(.top, 12)
                 }
-                .textSelection(.enabled)
                 .padding()
                 // iPad 上行太长不好读
                 .frame(maxWidth: 680, alignment: .leading)
                 .frame(maxWidth: .infinity)
+            }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if !presentation.steps.isEmpty {
+                    RecipeStepProgress(recipeID: recipe.id, steps: presentation.steps, jump: jump)
+                }
             }
             // 大图里翻到别的图时，正文跟着滚过去，收起时缩回那张图的位置
             .onChange(of: photoSelection) { _, id in
@@ -67,6 +117,14 @@ struct RecipeTextContent: View {
                 }
             }
         }
+        .task(id: stepLocation) {
+            guard stepLocation != nil else { return }
+            do { try await Task.sleep(for: .seconds(5)) } catch { return }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
+                stepLocation = nil
+            }
+        }
+        .sensoryFeedback(.selection, trigger: completed)
         .fullScreenCover(isPresented: $showsPhotos) {
             RecipeImageViewer(photos: photos, selection: $photoSelection)
                 .zoomTransition(sourceID: photoSelection, in: photoTransition)
@@ -74,25 +132,86 @@ struct RecipeTextContent: View {
     }
 
     @ViewBuilder
-    private func blockView(_ block: RecipeTextBlock, at offset: Int) -> some View {
+    private func presentedBlock(_ block: RecipeTextBlock, at offset: Int, amounts: RecipeAmounts, usage: RecipeStepUsagePlan, jump: @escaping (RecipePresentation.Step) -> Void) -> some View {
+        if let steps = presentation.stepsByBlock[offset] {
+            if presentation.supplementalQuantities.isEmpty, offset == presentation.stepsByBlock.keys.min(), !amounts.supportsServings, canAdjustServings {
+                RecipeServingControl(recipeID: recipe.id, rows: presentation.allQuantities, identifier: "recipe.servings")
+                    .padding(16)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+            }
+            ForEach(steps) { step in
+                RecipeStepCard(step: step, instruction: usage.instruction(for: step), servings: amounts.servings,
+                               highlighted: stepLocation?.id == step.id,
+                               completed: completed.contains(step.id), current: nextStep == step.id) {
+                    workbench.toggleStep(step.id, recipeID: recipe.id)
+                }
+                .id(StepAnchor(id: step.id))
+            }
+        } else if let rows = presentation.quantities[offset] {
+            if presentation.supplementalQuantities.isEmpty, offset == presentation.quantities.keys.min(), amounts.supportsServings {
+                RecipeServingControl(recipeID: recipe.id, rows: presentation.allQuantities, identifier: "recipe.servings")
+                    .padding(16)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+            }
+            RecipeQuantityTable(rows: rows, amounts: amounts)
+        } else if presentation.ingredientBlocks.contains(offset), case let .list(_, _, items) = block {
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    HStack(spacing: 12) {
+                        RecipeIngredientIcon(name: item, isTool: KitchenIngredients.isTool(item))
+                        Text(recipeMarkdown(item))
+                    }
+                }
+            }
+        } else {
+            blockView(block, at: offset, jump: jump)
+                .textSelection(.enabled)
+        }
+    }
+
+    @ViewBuilder
+    private func blockView(_ block: RecipeTextBlock, at offset: Int, jump: @escaping (RecipePresentation.Step) -> Void) -> some View {
         switch block {
         case let .heading(heading):
-            Text(markdown(heading))
-                .font(.title3.bold())
-                .padding(.top, 8)
-                .accessibilityAddTraits(.isHeader)
+            if heading.trimmingCharacters(in: .whitespacesAndNewlines) == "附加内容" {
+                RecipeSupplementaryHeading()
+            } else {
+                Text(markdown(heading == "计算" ? "用量参考" : heading))
+                    .font(.title3.bold())
+                    .padding(.top, 8)
+                    .accessibilityAddTraits(.isHeader)
+            }
         case let .paragraph(paragraph):
             if !paragraph.isEmpty {
-                Text(markdown(paragraph))
+                if RecipeSupplementaryContent.contains(offset, in: text.blocks) {
+                    if offset + 1 < text.blocks.count, case .list = text.blocks[offset + 1] {
+                        Text(markdown(paragraph))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineSpacing(3)
+                    } else {
+                        RecipeSupplementaryCard(text: paragraph, steps: presentation.steps, jump: jump)
+                    }
+                } else {
+                    Text(markdown(paragraph))
+                }
             }
         case let .list(ordered, start, items):
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(ordered ? "\(start + index)." : "•")
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                        Text(markdown(item))
+            if RecipeSupplementaryContent.contains(offset, in: text.blocks) {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                        RecipeSupplementaryCard(text: item, number: ordered ? start + index : nil, steps: presentation.steps, jump: jump)
+                    }
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(ordered ? "\(start + index)." : "•")
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                            Text(markdown(item))
+                        }
                     }
                 }
             }
@@ -167,6 +286,18 @@ struct RecipeTextContent: View {
 }
 
 /// 配图在正文里的滚动定位。单独一个类型，免得和列表项（也按序号区分）的 id 撞上
+private struct StepAnchor: Hashable {
+    let id: String
+}
+
+/// 每次点击都有新的请求身份，同一个目标也能重新高亮。
+private struct StepLocation: Equatable {
+    let id: String
+    private let request = UUID()
+
+    init(id: String) { self.id = id }
+}
+
 private struct PhotoAnchor: Hashable {
     let id: Int
 }

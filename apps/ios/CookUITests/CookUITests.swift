@@ -90,7 +90,7 @@ final class CookUITests: XCTestCase {
     }
 
     @MainActor
-    func testRecipeContributionUsesPrivateFeedbackForm() {
+    func testRecipeContributionHasDedicatedFieldsAndKeepsDraftOnFailure() {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
@@ -98,28 +98,52 @@ final class CookUITests: XCTestCase {
         app.launchEnvironment["COOK_UI_TEST_FEEDBACK_ENVIRONMENT"] = "production"
         app.launch()
         tap(app.buttons["我的"].firstMatch)
-        let contribution = app.buttons["菜谱投稿"]
-        for _ in 0..<5 where !contribution.isHittable { app.swipeUp() }
-        tap(contribution)
-        // SwiftUI exposes the vertical TextField's accessibility type differently across OS versions.
-        let note = app.descendants(matching: .any).matching(identifier: "feedback.note").firstMatch
-        wait(note, "exists == true")
-        XCTAssertTrue(app.staticTexts["想要的菜没有"].exists)
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "反馈私密发送至云乐坊支持中心")).firstMatch.exists)
-        XCTAssertFalse(app.buttons["发送"].isEnabled)
-        tap(note)
-        note.typeText("A recipe suggestion")
-        XCTAssertTrue(app.buttons["发送"].isEnabled)
+        let help = app.buttons["settings.help"]
+        for _ in 0..<5 where !help.isHittable { app.swipeUp() }
+        tap(help)
+        wait(app.buttons["help.contribution"], "exists == true")
+        for identifier in ["help.feedback", "help.contribution", "help.support", "help.requests"] {
+            // SwiftUI Link exposes a link, whereas NavigationLink exposes a button.
+            XCTAssertTrue(app.descendants(matching: .any).matching(identifier: identifier).firstMatch.exists, identifier)
+        }
+        let helpScreenshot = XCTAttachment(screenshot: app.screenshot())
+        helpScreenshot.name = "帮助与反馈入口"
+        helpScreenshot.lifetime = .keepAlways
+        add(helpScreenshot)
+        tap(app.buttons["help.contribution"])
+        wait(app.navigationBars["菜谱投稿"], "exists == true")
+        XCTAssertFalse(app.buttons["feedback.category"].exists)
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "feedback.note").firstMatch.exists)
+        let name = app.textFields["contribution.name"]
+        let source = app.descendants(matching: .any).matching(identifier: "contribution.source").firstMatch
+        let details = app.descendants(matching: .any).matching(identifier: "contribution.details").firstMatch
+        let submit = app.buttons["feedback.submit"]
+        XCTAssertEqual(submit.label, "提交菜谱")
+        XCTAssertFalse(submit.isEnabled)
+        let formScreenshot = XCTAttachment(screenshot: app.screenshot())
+        formScreenshot.name = "菜谱投稿表单"
+        formScreenshot.lifetime = .keepAlways
+        add(formScreenshot)
+        tap(name)
+        name.typeText("Tomato eggs")
+        XCTAssertFalse(submit.isEnabled)
+        tap(source)
+        source.typeText("https://example.com/recipe")
+        XCTAssertTrue(submit.isEnabled)
+        tap(details)
+        details.typeText("Easy to cook")
         // -ui-testing injects a failing local transport; no request leaves the device.
-        tap(app.buttons["发送"])
+        tap(submit)
         let failed = app.alerts["暂时没能提交"]
         wait(failed, "exists == true")
         XCTAssertTrue(failed.buttons["去支持中心"].exists)
         XCTAssertTrue(failed.buttons["打开邮件草稿"].exists)
         tap(failed.buttons["取消"])
         wait(failed, "exists == false")
-        XCTAssertEqual(note.value as? String, "A recipe suggestion")
-        XCTAssertTrue(app.buttons["发送"].isEnabled)
+        XCTAssertEqual(name.value as? String, "Tomato eggs")
+        XCTAssertEqual(source.value as? String, "https://example.com/recipe")
+        XCTAssertEqual(details.value as? String, "Easy to cook")
+        XCTAssertTrue(submit.isEnabled)
     }
 
     @MainActor
@@ -131,14 +155,25 @@ final class CookUITests: XCTestCase {
         app.launchEnvironment["COOK_UI_TEST_FEEDBACK_ENVIRONMENT"] = "test"
         app.launch()
         tap(app.buttons["我的"].firstMatch)
-        let contribution = app.buttons["菜谱投稿"]
-        for _ in 0..<5 where !contribution.isHittable { app.swipeUp() }
-        tap(contribution)
+        let help = app.buttons["settings.help"]
+        for _ in 0..<5 where !help.isHittable { app.swipeUp() }
+        tap(help)
+        tap(app.buttons["help.feedback"])
+        wait(app.navigationBars["意见反馈"], "exists == true")
+        tap(app.buttons["feedback.category"])
+        tap(app.buttons["想要的菜没有"])
+        XCTAssertTrue(app.navigationBars["意见反馈"].exists)
+        XCTAssertFalse(app.navigationBars["菜谱投稿"].exists)
+        XCTAssertFalse(app.textFields["contribution.name"].exists)
         wait(app.staticTexts["测试模式：反馈仅进入独立测试队列，不会发送到正式支持中心。"], "exists == true")
+        let formScreenshot = XCTAttachment(screenshot: app.screenshot())
+        formScreenshot.name = "意见反馈求菜建议"
+        formScreenshot.lifetime = .keepAlways
+        add(formScreenshot)
         let note = app.descendants(matching: .any).matching(identifier: "feedback.note").firstMatch
         tap(note)
         note.typeText("Keep this test draft")
-        tap(app.buttons["发送"])
+        tap(app.buttons["发送反馈"])
         let failed = app.alerts["暂时没能提交"]
         wait(failed, "exists == true")
         XCTAssertTrue(failed.staticTexts["测试内容已保留，可以稍后重试。"].exists)
@@ -148,7 +183,7 @@ final class CookUITests: XCTestCase {
         tap(failed.buttons["取消"])
         wait(failed, "exists == false")
         XCTAssertEqual(note.value as? String, "Keep this test draft")
-        XCTAssertTrue(app.buttons["发送"].isEnabled)
+        XCTAssertTrue(app.buttons["发送反馈"].isEnabled)
     }
 
     @MainActor
