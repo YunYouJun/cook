@@ -6,6 +6,12 @@
     "apps": [],
     "details": [
       {
+        "appID": "QT792GAY4C.fun.yunle.cook",
+        "paths": [
+          "/auth/wechat/*"
+        ]
+      },
+      {
         "appID": "N3885VFNCL.cn.yunyoujun.cook",
         "paths": [
           "/auth/callback"
