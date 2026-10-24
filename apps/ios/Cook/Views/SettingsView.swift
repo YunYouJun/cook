@@ -27,42 +27,20 @@ struct SettingsView: View {
                     NavigationLink { PrivacySettingsView() } label: {
                         SettingsRowLabel("隐私", symbol: "hand.raised.fill", color: .blue)
                     }
+                    .accessibilityIdentifier("settings.privacy")
                 }
                 Section {
                     NavigationLink { HelpSettingsView() } label: {
                         SettingsRowLabel("帮助与反馈", symbol: "questionmark", color: .purple)
                     }
+                    .accessibilityIdentifier("settings.help")
                     NavigationLink { AboutSettingsView() } label: {
                         SettingsRowLabel("关于云食册", symbol: "info", color: .gray)
                     }
                 }
             }
+            .accessibilityIdentifier("settings.list")
             .navigationTitle("我的")
-        }
-    }
-}
-
-private struct SettingsRowLabel: View {
-    let title: String
-    let symbol: String
-    let color: Color
-
-    init(_ title: String, symbol: String, color: Color) {
-        self.title = title
-        self.symbol = symbol
-        self.color = color
-    }
-
-    var body: some View {
-        Label {
-            Text(title)
-        } icon: {
-            Image(systemName: symbol)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 28, height: 28)
-                .background(color, in: RoundedRectangle(cornerRadius: 6))
-                .accessibilityHidden(true)
         }
     }
 }

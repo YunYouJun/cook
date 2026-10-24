@@ -52,23 +52,6 @@ struct PrivacySettingsView: View {
     }
 }
 
-struct HelpSettingsView: View {
-    var body: some View {
-        List {
-            Section {
-                NavigationLink("意见反馈") { AppFeedbackView() }
-                NavigationLink("菜谱投稿") { AppFeedbackView(category: .recipe) }
-            }
-            Section {
-                Link("支持中心", destination: URL(string: "https://support.yunle.fun/?product=cook")!)
-                Link("需求墙", destination: URL(string: "https://support.yunle.fun/feedback?product=cook")!)
-            }
-        }
-        .navigationTitle("帮助与反馈")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
 struct AboutSettingsView: View {
     @Environment(RecipeStore.self) private var store
 

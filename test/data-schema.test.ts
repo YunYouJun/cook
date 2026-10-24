@@ -34,6 +34,7 @@ describe('packages/data matches its JSON Schema', () => {
     ['aliases.json', 'aliases.schema.json'],
     ['query.json', 'query.schema.json'],
     ['recipe-text.json', 'recipe-text.schema.json'],
+    ['recipe-amounts.json', 'recipe-amounts.schema.json'],
     ['shelf-life.json', 'shelf-life.schema.json'],
   ])('%s', (file, schema) => {
     expect(validate(schema, readJson(file))).toEqual([])

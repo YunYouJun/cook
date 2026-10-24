@@ -4,18 +4,15 @@ import Observation
 import UserNotifications
 
 enum KitchenIngredients {
+    static func isTool(_ name: String) -> Bool {
+        let name = RecipePresentation.ingredientName(name)
+        let tools: Set<String> = ["锅", "炒锅", "平底锅", "不粘锅", "汤锅", "砂锅", "蒸锅", "一口大锅", "锅铲", "菜刀", "刀", "砧板", "案板", "碗", "筷子", "勺子", "烤箱", "空气炸锅", "微波炉", "电饭煲", "高压锅", "打蛋器", "烤盘"]
+        return tools.contains(name) || tools.contains(String(name.split(separator: " ").first ?? ""))
+    }
+
     /// 只读取正文明确标记的原料章节，保留原文中的用量和“可选”，不从步骤猜材料。
     static func list(text: RecipeText?, fallback: [String]) -> [String] {
-        var inIngredients = false
-        var items: [String] = []
-        for block in text?.blocks ?? [] {
-            if case let .heading(title) = block {
-                if inIngredients { break }
-                inIngredients = title.trimmingCharacters(in: .whitespacesAndNewlines) == "必备原料和工具"
-            } else if inIngredients, case let .list(_, _, entries) = block {
-                items.append(contentsOf: entries)
-            }
-        }
+        let items = text.map { RecipePresentation(text: $0).ingredients } ?? []
         var seen: Set<String> = []
         return (items.isEmpty ? fallback : items).compactMap { item in
             let value = item.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -84,6 +81,20 @@ struct KitchenTimer: Codable, Equatable {
 struct KitchenProgress: Codable, Equatable {
     var prepared: Set<String> = []
     var timer = KitchenTimer()
+    var completedSteps: Set<String> = []
+    var servings = 1
+
+    init() {}
+
+    private enum CodingKeys: String, CodingKey { case prepared, timer, completedSteps, servings }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        prepared = try container.decodeIfPresent(Set<String>.self, forKey: .prepared) ?? []
+        timer = try container.decodeIfPresent(KitchenTimer.self, forKey: .timer) ?? KitchenTimer()
+        completedSteps = try container.decodeIfPresent(Set<String>.self, forKey: .completedSteps) ?? []
+        servings = min(max(try container.decodeIfPresent(Int.self, forKey: .servings) ?? 1, RecipeAmounts.servingRange.lowerBound), RecipeAmounts.servingRange.upperBound)
+    }
 }
 
 /// 备料与推荐选择相互独立，不把“家里有”当成“已备好”。不参与 iCloud 同步。
@@ -117,6 +128,30 @@ final class KitchenWorkbench {
     func clearPrepared(recipeID: Int) {
         var state = state(for: recipeID)
         state.prepared = []
+        save(state, recipeID: recipeID)
+    }
+
+    func toggleStep(_ stepID: String, recipeID: Int) {
+        var state = state(for: recipeID)
+        if !state.completedSteps.insert(stepID).inserted { state.completedSteps.remove(stepID) }
+        save(state, recipeID: recipeID)
+    }
+
+    func clearSteps(recipeID: Int) {
+        var state = state(for: recipeID)
+        state.completedSteps = []
+        save(state, recipeID: recipeID)
+    }
+
+    func setServings(_ servings: Int, recipeID: Int, quantities: [RecipePresentation.Quantity]) {
+        var state = state(for: recipeID)
+        let servings = min(max(servings, RecipeAmounts.servingRange.lowerBound), RecipeAmounts.servingRange.upperBound)
+        guard servings != state.servings else { return }
+        let previous = RecipeAmounts(rows: quantities, servings: state.servings)
+        let updated = RecipeAmounts(rows: quantities, servings: servings)
+        // 用量变了的材料需要重新备料；厨具、未变化的材料、步骤和计时保持原状。
+        state.prepared = state.prepared.filter { previous.amount(for: $0)?.text == updated.amount(for: $0)?.text }
+        state.servings = servings
         save(state, recipeID: recipeID)
     }
 

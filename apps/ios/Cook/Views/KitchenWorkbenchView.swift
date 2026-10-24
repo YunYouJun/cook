@@ -96,7 +96,7 @@ struct KitchenWorkbenchView: View {
     @ViewBuilder
     private var instructions: some View {
         if let text = store.text(for: recipe) {
-            RecipeTextContent(recipe: recipe, text: text)
+            RecipeTextContent(recipe: recipe, text: text, preparationInSidebar: true)
                 .accessibilityIdentifier("kitchen.instructions")
         } else {
             ContentUnavailableView {
@@ -112,9 +112,7 @@ struct KitchenWorkbenchView: View {
     }
 
     private func preparation(tabletop: Bool) -> some View {
-        KitchenPreparationView(recipe: recipe, ingredients: KitchenIngredients.list(
-            text: store.text(for: recipe), fallback: store.data.normalizer.unique(recipe.stuff)
-        ), tabletop: tabletop)
+        KitchenPreparationView(recipe: recipe, text: store.text(for: recipe), tabletop: tabletop)
     }
 
     private var timerShortcut: some View {
@@ -140,15 +138,34 @@ struct KitchenWorkbenchView: View {
 }
 
 struct KitchenPreparationView: View {
+    @Environment(RecipeStore.self) private var store
     @Environment(KitchenWorkbench.self) private var workbench
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var confirmingClear = false
     let recipe: Recipe
-    let ingredients: [String]
+    let text: RecipeText?
     var tabletop = false
 
+    private var presentation: RecipePresentation? { text.map(RecipePresentation.init) }
+    private var amounts: RecipeAmounts {
+        RecipeAmounts(rows: presentation?.allQuantities ?? [], servings: workbench.state(for: recipe.id).servings)
+    }
+    private var canAdjustServings: Bool {
+        amounts.supportsServings || (presentation?.steps ?? []).contains { amounts.instruction($0.text).hasAdjustedAmounts }
+    }
+    private var ingredients: [String] {
+        KitchenIngredients.list(text: text, fallback: store.data.normalizer.unique(recipe.stuff))
+    }
+    private var foods: [String] { ingredients.filter { !KitchenIngredients.isTool($0) } }
+    private var tools: [String] {
+        let explicit = ingredients.filter(KitchenIngredients.isTool)
+        // 正文已列出的工具优先；补充菜谱元数据中明确记录的厨具。
+        let names = Set(explicit.map { store.toolLabel(RecipePresentation.ingredientName($0)) })
+        return uniqueStrings(explicit + recipe.tools.map(store.toolLabel).filter { !names.contains($0) })
+    }
+    private var allItems: [String] { uniqueStrings(foods + tools) }
     private var prepared: Set<String> { workbench.state(for: recipe.id).prepared }
-    private var preparedCount: Int { ingredients.filter { prepared.contains($0) }.count }
+    private var preparedCount: Int { allItems.filter { prepared.contains($0) }.count }
 
     var body: some View {
         Form {
@@ -157,42 +174,44 @@ struct KitchenPreparationView: View {
             }
 
             Section {
-                if ingredients.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Label("备料清单", systemImage: "checklist").font(.headline)
+                        Spacer()
+                        Text("\(preparedCount) / \(allItems.count)")
+                            .font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                    }
+                    ProgressView(value: Double(preparedCount), total: Double(max(allItems.count, 1)))
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("已备好 \(preparedCount) 项，共 \(allItems.count) 项")
+
+                if let description = presentation?.servingDescription {
+                    Text(description).font(.footnote).foregroundStyle(.secondary)
+                }
+                if canAdjustServings {
+                    RecipeServingControl(recipeID: recipe.id, rows: presentation?.allQuantities ?? [], identifier: "kitchen.servings")
+                }
+                if allItems.isEmpty {
                     Text("这道菜还没有材料记录，请按做法准备。")
                         .foregroundStyle(.secondary)
                 }
-                ForEach(ingredients, id: \.self) { ingredient in
-                    Button {
-                        workbench.togglePrepared(ingredient, recipeID: recipe.id)
-                    } label: {
-                        Label {
-                            Text(ingredient).foregroundStyle(.primary)
-                        } icon: {
-                            Image(systemName: prepared.contains(ingredient) ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(prepared.contains(ingredient) ? Color.accentColor : Color.secondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(ingredient)
-                    .accessibilityValue(prepared.contains(ingredient) ? "已备好" : "未备好")
-                    .accessibilityHint("轻点切换备料状态")
-                    .accessibilityIdentifier("kitchen.ingredient.\(ingredient)")
-                }
-            } header: {
-                HStack {
-                    Text("备料清单")
-                    Spacer()
-                    Text("\(preparedCount) / \(ingredients.count)")
-                        .monospacedDigit()
-                        .accessibilityLabel("已备好 \(preparedCount) 项，共 \(ingredients.count) 项")
+                ForEach(foods, id: \.self) { ingredient in
+                    preparationRow(ingredient, isTool: false)
                 }
             } footer: {
-                Text("勾选已备好的材料。完整用料与用量请参照做法。")
+                Text(canAdjustServings ? "按所选份数备料。调整份数后，用量变化的材料需重新勾选。" : "轻点勾选已备好的原料；未注明份数的用量保留原配方。")
             }
 
-            if !prepared.isEmpty {
+            if !tools.isEmpty {
+                Section("厨具") {
+                    ForEach(tools, id: \.self) { tool in
+                        preparationRow(tool, isTool: true)
+                    }
+                }
+            }
+
+            if preparedCount > 0 {
                 Section {
                     Button("重新备料", role: .destructive) { confirmingClear = true }
                 }
@@ -212,21 +231,56 @@ struct KitchenPreparationView: View {
         .confirmationDialog("清空这道菜的备料勾选？", isPresented: $confirmingClear, titleVisibility: .visible) {
             Button("重新备料", role: .destructive) { workbench.clearPrepared(recipeID: recipe.id) }
         } message: {
-            Text("计时器会继续保留。")
+            Text("操作步骤和计时器会继续保留。")
         }
         .sensoryFeedback(.selection, trigger: prepared)
+    }
+
+    private func preparationRow(_ item: String, isTool: Bool) -> some View {
+        let isPrepared = prepared.contains(item)
+        let amount = amounts.amount(for: item)
+        return Button {
+            workbench.togglePrepared(item, recipeID: recipe.id)
+        } label: {
+            HStack(alignment: .center, spacing: 10) {
+                RecipeIngredientIcon(name: item, isTool: isTool)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(recipeMarkdown(item))
+                        .foregroundStyle(isPrepared ? Color.secondary : Color.primary)
+                        .strikethrough(isPrepared)
+                    if let amount {
+                        Text(recipeMarkdown(amount.text))
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let note = amount.note {
+                            Text(note).font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: isPrepared ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(isPrepared ? Color.accentColor : Color.secondary)
+            }
+            .padding(.vertical, 4)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel([item, amount?.text].compactMap { $0 }.joined(separator: "，"))
+        .accessibilityValue(isPrepared ? "已备好" : "未备好")
+        .accessibilityHint("轻点切换备料状态")
+        .accessibilityIdentifier("kitchen.ingredient.\(item)")
     }
 }
 
 #Preview("备料清单") {
-    KitchenPreparationView(
-        recipe: Recipe(id: 1, name: "番茄炒蛋", stuff: ["番茄", "鸡蛋", "盐", "油"]),
-        ingredients: ["番茄", "鸡蛋", "盐", "油"]
-    )
-    .environment(KitchenWorkbench(defaults: nil, notifications: .disabled))
-}
-
-#Preview("材料未收录") {
-    KitchenPreparationView(recipe: Recipe(id: 2, name: "私人做法", stuff: []), ingredients: [])
+    if let store = try? RecipeStore.loadBundled(inMemory: true) {
+        KitchenPreparationView(
+            recipe: Recipe(id: 1, name: "番茄炒蛋", stuff: ["番茄", "鸡蛋", "盐", "油"], tools: ["一口大锅"]),
+            text: nil
+        )
+        .environment(store)
         .environment(KitchenWorkbench(defaults: nil, notifications: .disabled))
+    }
 }

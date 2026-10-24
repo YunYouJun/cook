@@ -81,6 +81,76 @@ final class KitchenWorkbenchTests: XCTestCase {
         XCTAssertEqual(restored.state(for: 250).timer.deadline, now.addingTimeInterval(300))
     }
 
+    func testStepProgressRestoresIndependentlyAndCanBeUndone() throws {
+        let suite = "cook.steps.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let workbench = KitchenWorkbench(defaults: defaults, notifications: .disabled)
+        workbench.togglePrepared("鸡蛋", recipeID: 250)
+        workbench.updateTimer(recipeID: 250, recipeName: "番茄炒蛋") { $0.start(at: now) }
+        workbench.toggleStep("1|洗净", recipeID: 250)
+        workbench.toggleStep("1|切块", recipeID: 250)
+        workbench.toggleStep("1|切块", recipeID: 250)
+        let restored = KitchenWorkbench(defaults: defaults, notifications: .disabled)
+        XCTAssertEqual(restored.state(for: 250).completedSteps, ["1|洗净"])
+        XCTAssertTrue(restored.state(for: 333).completedSteps.isEmpty)
+        restored.clearPrepared(recipeID: 250)
+        XCTAssertEqual(restored.state(for: 250).completedSteps, ["1|洗净"])
+        restored.togglePrepared("鸡蛋", recipeID: 250)
+        restored.clearSteps(recipeID: 250)
+        XCTAssertTrue(restored.state(for: 250).completedSteps.isEmpty)
+        XCTAssertEqual(restored.state(for: 250).prepared, ["鸡蛋"])
+        XCTAssertEqual(restored.state(for: 250).timer.deadline, now.addingTimeInterval(300))
+    }
+
+    func testOldProgressMigratesWithoutLosingPreparationOrTimer() throws {
+        var old = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(KitchenProgress())) as? [String: Any])
+        old.removeValue(forKey: "completedSteps")
+        old.removeValue(forKey: "servings")
+        old["prepared"] = ["鸡蛋"]
+        let state = try JSONDecoder().decode(KitchenProgress.self, from: JSONSerialization.data(withJSONObject: old))
+        XCTAssertEqual(state.prepared, ["鸡蛋"])
+        XCTAssertEqual(state.timer.duration, 300)
+        XCTAssertTrue(state.completedSteps.isEmpty)
+        XCTAssertEqual(state.servings, 1)
+    }
+
+    func testServingsPersistAndOnlyChangedPreparationNeedsCheckingAgain() throws {
+        let suite = "cook.servings.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let workbench = KitchenWorkbench(defaults: defaults, notifications: .disabled)
+        let quantities = try [
+            "鸡蛋 = 1.5 个 * 份数，向上取整", "食用油 = 4ml * 鸡蛋/个",
+            "辣椒 = 50 克（无论多少人都放这些）",
+        ].map { try XCTUnwrap(RecipePresentation.Quantity($0)) }
+        for item in ["鸡蛋", "食用油", "辣椒", "炒锅"] { workbench.togglePrepared(item, recipeID: 250) }
+        workbench.toggleStep("1|洗净", recipeID: 250)
+        workbench.updateTimer(recipeID: 250, recipeName: "番茄炒蛋") { $0.start(at: now) }
+        workbench.setServings(1, recipeID: 250, quantities: quantities)
+        XCTAssertEqual(workbench.state(for: 250).prepared.count, 4, "未改变份数时不清空备料")
+        workbench.setServings(3, recipeID: 250, quantities: quantities)
+        let restored = KitchenWorkbench(defaults: defaults, notifications: .disabled)
+        XCTAssertEqual(restored.state(for: 250).servings, 3)
+        XCTAssertEqual(restored.state(for: 250).prepared, ["辣椒", "炒锅"])
+        XCTAssertEqual(restored.state(for: 250).completedSteps, ["1|洗净"])
+        XCTAssertEqual(restored.state(for: 250).timer.deadline, now.addingTimeInterval(300))
+        XCTAssertEqual(restored.state(for: 333).servings, 1)
+        restored.setServings(100, recipeID: 250, quantities: quantities)
+        XCTAssertEqual(restored.state(for: 250).servings, 20)
+        restored.setServings(0, recipeID: 250, quantities: quantities)
+        XCTAssertEqual(restored.state(for: 250).servings, 1)
+    }
+
+    func testStoredServingCountIsClamped() throws {
+        var saved = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(KitchenProgress())) as? [String: Any])
+        for (input, expected) in [(-1, 1), (99, 20)] {
+            saved["servings"] = input
+            let state = try JSONDecoder().decode(KitchenProgress.self, from: JSONSerialization.data(withJSONObject: saved))
+            XCTAssertEqual(state.servings, expected)
+        }
+    }
+
     func testBrokenStoredStateDoesNotPreventOpening() throws {
         let suite = "cook.kitchen.tests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

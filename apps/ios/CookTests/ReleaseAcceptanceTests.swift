@@ -154,6 +154,7 @@ final class ReleaseAcceptanceTests: XCTestCase {
             .environment(session)
             .environment(FeedbackClient(endpoint: nil, sendsSignals: false))
             .environment(FavoriteActions(context: container.mainContext))
+            .environment(YunlefunAccountStore(vault: MemoryYunlefunAccountVault()))
             .modelContainer(container)
             .onAppear { mounted.fulfill() })
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
@@ -181,6 +182,71 @@ final class ReleaseAcceptanceTests: XCTestCase {
         XCTAssertEqual(try container.mainContext.fetchCount(FetchDescriptor<Preferences>()), 1)
     }
 
+    func testNotificationResponseFromBackgroundCompletesOnMainAfterRouting() async throws {
+        PendingFridgeHome.requested = false
+        let container = Persistence.makeContainer(inMemory: true)
+        let router = AppRouter()
+        let appeared = expectation(description: "root is ready to receive navigation")
+        let host = UIHostingController(rootView: RootView(router: router)
+            .environment(try RecipeStore.loadBundled(inMemory: true))
+            .environment(CookSession(defaultPantry: [], context: container.mainContext))
+            .environment(FeedbackClient(endpoint: nil, sendsSignals: false))
+            .environment(FavoriteActions(context: container.mainContext))
+            .environment(YunlefunAccountStore(vault: MemoryYunlefunAccountVault()))
+            .modelContainer(container)
+            .onAppear { appeared.fulfill() })
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer {
+            PendingFridgeHome.requested = false
+            window.isHidden = true
+            window.rootViewController = nil
+        }
+        await fulfillment(of: [appeared], timeout: 3)
+        XCTAssertEqual(router.tab, .cook)
+        let routed = expectation(description: "fridge navigation on main")
+        let completed = expectation(description: "system response completed on main")
+        routed.assertForOverFulfill = true
+        completed.assertForOverFulfill = true
+        let observer = NotificationCenter.default.addObserver(forName: .showFridgeHome, object: nil, queue: nil) { _ in
+            XCTAssertTrue(Thread.isMainThread)
+            routed.fulfill()
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+        DispatchQueue.global().async {
+            NotificationDelegate().handleResponse(identifier: "fridge-expiry-20261025") {
+                XCTAssertTrue(Thread.isMainThread)
+                completed.fulfill()
+            }
+        }
+        await fulfillment(of: [routed, completed], timeout: 3, enforceOrder: true)
+        // A mounted root consumes the pending flag while handling the broadcast.
+        // Verify the visible route, rather than expecting an unconsumed cold-launch request.
+        XCTAssertEqual(router.tab, .fridge)
+        XCTAssertEqual(router.fridgeHomeRequests, 1)
+        XCTAssertFalse(PendingFridgeHome.requested)
+    }
+
+    func testKitchenNotificationResponseCompletesOnMainWithoutFridgeNavigation() async {
+        PendingFridgeHome.requested = false
+        defer { PendingFridgeHome.requested = false }
+        let completed = expectation(description: "non-fridge response completed on main")
+        completed.assertForOverFulfill = true
+        let observer = NotificationCenter.default.addObserver(forName: .showFridgeHome, object: nil, queue: nil) { _ in
+            XCTFail("Kitchen notifications must not navigate to the fridge")
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+        DispatchQueue.global().async {
+            NotificationDelegate().handleResponse(identifier: "kitchen-timer-1") {
+                XCTAssertTrue(Thread.isMainThread)
+                completed.fulfill()
+            }
+        }
+        await fulfillment(of: [completed], timeout: 3)
+        XCTAssertFalse(PendingFridgeHome.requested)
+    }
+
     func testRootConsumesColdNotificationAndRoutesWarmNotification() async throws {
         let container = Persistence.makeContainer(inMemory: true)
         let session = CookSession(defaultPantry: [], context: container.mainContext)
@@ -191,6 +257,7 @@ final class ReleaseAcceptanceTests: XCTestCase {
             .environment(session)
             .environment(FeedbackClient(endpoint: nil, sendsSignals: false))
             .environment(FavoriteActions(context: container.mainContext))
+            .environment(YunlefunAccountStore(vault: MemoryYunlefunAccountVault()))
             .modelContainer(container))
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
         window.rootViewController = host
