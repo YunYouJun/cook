@@ -25,7 +25,7 @@ const createClient = vi.fn((_options: Record<string, unknown>) => ({ submitFeedb
 type Doc = Record<string, any>
 
 /** In-memory stand-in for the parts of the CloudBase database the function uses. */
-function createApp(uid = '') {
+function createApp(uid = '', target = fn) {
   const store = new Map<string, Map<string, Doc>>()
   const table = (name: string) => {
     if (!store.has(name))
@@ -74,7 +74,7 @@ function createApp(uid = '') {
     where: (cond: Doc) => query(name, cond),
     ...query(name, {}),
   })
-  fn._internal.setAppForTest({
+  target._internal.setAppForTest({
     auth: () => ({ getUserInfo: () => ({ uid }) }),
     database: () => ({ collection, command }),
   })
@@ -85,6 +85,56 @@ const deviceId = 'device-0123456789abcdef'
 const report = { action: 'report', deviceId, recipeId: 3, recipeName: '番茄炒蛋', kind: 'video' }
 
 describe('cook-feedback function', () => {
+  it('stores issue details and allowlisted diagnostics without accepting claimed user identity', async () => {
+    const { table } = createApp()
+    const context = { entryPoint: 'recipe-detail', origin: 'https://cook.yunle.fun', path: '/tabs/library', build: 'abc123', recipeVersion: 'def456', secret: 'never-store' }
+    await fn.main({ ...report, environment: 'production', version: '2.0.0', context, linkIssue: 'login', note: '需要登录', uid: 'forged' })
+    const row = [...table(fn._internal.FEEDBACK).values()][0]!
+    expect(row).toMatchObject({ environment: 'production', version: '2.0.0', linkIssue: 'login', note: '需要登录', uid: '' })
+    expect(row.context).not.toHaveProperty('secret')
+    for (const invalid of [
+      { ...context, origin: 'https://preview.example.com' },
+      { ...context, origin: 'https://cook.yunle.fun?token=secret' },
+      { ...context, path: '/feedback?token=secret' },
+      { ...context, build: 'x'.repeat(65) },
+    ]) expect(await fn.main({ ...report, context: invalid })).toEqual({ ok: false, code: 'INVALID_REPORT' })
+  })
+
+  it('rejects test traffic at the production boundary before writes, including old preview clients', async () => {
+    const { table } = createApp()
+    expect(await fn.main({ ...report, environment: 'test' })).toEqual({ ok: false, code: 'ENVIRONMENT_MISMATCH' })
+    const result = await fn.main({ httpMethod: 'POST', headers: { Origin: 'http://localhost:3000' }, body: JSON.stringify(report) })
+    expect(JSON.parse(result.body).code).toBe('ENVIRONMENT_MISMATCH')
+    expect(table(fn._internal.FEEDBACK).size).toBe(0)
+    expect(table(fn._internal.QUOTA).size).toBe(0)
+  })
+
+  it('isolates all test writes and never forwards test app feedback to Support', async () => {
+    const modulePath = require.resolve('../cloudfunctions/cook-feedback/index.js')
+    const cached = require.cache[modulePath]
+    process.env.COOK_FEEDBACK_ENVIRONMENT = 'test'
+    delete require.cache[modulePath]
+    let isolated: FunctionModule
+    try {
+      isolated = require(modulePath)
+    }
+    finally {
+      delete process.env.COOK_FEEDBACK_ENVIRONMENT
+      require.cache[modulePath] = cached
+    }
+    const { table } = createApp('', isolated!)
+    expect(await isolated!.main(report)).toEqual({ ok: false, code: 'ENVIRONMENT_MISMATCH' })
+    expect(await isolated!.main({ ...report, environment: 'test' })).toEqual({ ok: true })
+    await isolated!.main({ action: 'signal', deviceId, environment: 'test', type: 'empty', stuff: ['白菜'] })
+    const result = await isolated!.main({ action: 'feedback', deviceId, environment: 'test', category: 'bug', note: '测试', submissionId: 'test-only-123' })
+    expect(result.receipt.id).toMatch(/^test_/)
+    expect(submit).not.toHaveBeenCalled()
+    expect(table('cook_recipe_feedback_test').size).toBe(1)
+    expect(table('cook_search_signals_test').size).toBe(1)
+    expect(table('cook_app_feedback_test').size).toBe(1)
+    for (const name of ['cook_recipe_feedback', 'cook_search_signals', 'cook_app_feedback', 'cook_feedback_quota'])
+      expect(table(name).size).toBe(0)
+  })
   it('accepts text reports with source snapshots and keeps older video clients compatible', async () => {
     const { table } = createApp()
     expect(await fn.main(report)).toEqual({ ok: true })

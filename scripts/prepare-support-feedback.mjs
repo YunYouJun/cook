@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 /** Prepare an isolated cloud-function bundle; never publish the private SDK in this repository. */
 import { createHash } from 'node:crypto'
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { copyFile, cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
@@ -37,10 +37,18 @@ try {
   await writeFile(path.join(target, 'vendor', name), bytes)
   // Ship the verified private package with dependencies; cloud npm install cannot resolve it.
   execFileSync('npm', ['install', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: target, stdio: 'inherit' })
+  const testTarget = path.join(output, 'cook-feedback-test')
+  await cp(target, testTarget, { recursive: true })
+  await copyFile(path.join(target, 'index.js'), path.join(testTarget, 'handler.js'))
+  // The test entry fixes its mode in code as well as config: a missing env var cannot target production.
+  await writeFile(path.join(testTarget, 'index.js'), 'process.env.COOK_FEEDBACK_ENVIRONMENT = \'test\'\nmodule.exports = require(\'./handler\')\n')
   await writeFile(path.join(output, 'cloudbaserc.json'), `${JSON.stringify({
     envId: 'yunlefun-8g7ybcxc7345c490',
     functionRoot: '.',
-    functions: [{ name: 'cook-feedback', handler: 'index.main', runtime: 'Nodejs18.15', installDependency: false, ignore: ['vendor/**'] }],
+    functions: [
+      { name: 'cook-feedback', handler: 'index.main', runtime: 'Nodejs18.15', installDependency: false, ignore: ['vendor/**'] },
+      { name: 'cook-feedback-test', handler: 'index.main', runtime: 'Nodejs18.15', timeout: 30, installDependency: false, ignore: ['vendor/**'], envVariables: { COOK_FEEDBACK_ENVIRONMENT: 'test' } },
+    ],
   }, null, 2)}\n`)
   await writeFile(path.join(output, 'manifest.json'), `${JSON.stringify({ sdk: VERSION, sha256: SHA256, function: 'cook-feedback', envId: 'yunlefun-8g7ybcxc7345c490' }, null, 2)}\n`)
   console.log(`Prepared cook-feedback with verified Support SDK ${VERSION}: ${output}`)
