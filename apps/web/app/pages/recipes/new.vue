@@ -28,6 +28,15 @@ const selectedTools = ref<string[]>([])
 const source = ref('')
 const note = ref('')
 const error = ref('')
+const extraTool = ref('')
+const customTools = computed(() => selectedTools.value.filter(name => !tools.some(tool => tool.name === name)))
+
+function addTool() {
+  const text = extraTool.value.trim()
+  if (text && text.length <= 100 && !selectedTools.value.includes(text))
+    selectedTools.value = [...selectedTools.value, text]
+  extraTool.value = ''
+}
 
 // Ionic 会复用路由栈里的页面，所以每次进入都按当前地址重新填表；
 // 在 ion-router-outlet 里 useRoute 读不到这一页的 ?id=，直接读 router
@@ -89,7 +98,13 @@ function save() {
     void yunleHaptic('heavy')
     return
   }
-  saveCustomRecipe(result.recipe)
+  try {
+    saveCustomRecipe(result.recipe)
+  }
+  catch {
+    error.value = '没能保存，请检查本机存储空间或先备份菜谱。原有菜谱未改变。'
+    return
+  }
   void yunleHaptic('success')
   ionRouter.navigate('/recipes/mine', 'back', 'replace')
 }
@@ -99,7 +114,13 @@ async function remove() {
   if (!recipe)
     return
   if (await confirmDestructive({ header: `删除「${recipe.name}」后不可恢复`, confirmText: '删除菜谱' })) {
-    removeCustomRecipe(recipe.customId)
+    try {
+      removeCustomRecipe(recipe.customId)
+    }
+    catch {
+      error.value = '没能删除，原有菜谱未改变。'
+      return
+    }
     void yunleHaptic('success')
     ionRouter.navigate('/recipes/mine', 'back', 'replace')
   }
@@ -160,7 +181,16 @@ async function remove() {
           :selected="selectedTools.includes(item.name)"
           @click="toggleTool(item.name)"
         />
+        <IngredientChip v-for="tool in customTools" :key="tool" :label="tool" :selected="true" @click="toggleTool(tool)" />
       </IngredientSection>
+      <ion-list :inset="true">
+        <ion-item>
+          <ion-input v-model="extraTool" label="其他厨具" placeholder="如：电蒸锅" :maxlength="100" @keydown.enter.prevent="addTool" />
+          <ion-button slot="end" fill="clear" @click="addTool">
+            添加
+          </ion-button>
+        </ion-item>
+      </ion-list>
 
       <h2 class="cook-group-header">
         做法（可选）

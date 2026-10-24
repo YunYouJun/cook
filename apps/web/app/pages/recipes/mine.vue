@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { CustomRecipe } from '~/composables/store/customRecipe'
 import { customRecipes, removeCustomRecipe } from '~/composables/store/customRecipe'
+import { showAlert } from '~/utils/dialog'
 import { yunleHaptic } from '~/utils/yunleHost'
 
 definePageMeta({
@@ -13,9 +14,14 @@ definePageMeta({
  */
 const sorted = computed(() => [...customRecipes.value].sort((a, b) => b.updatedAt - a.updatedAt))
 
-function remove(recipe: CustomRecipe) {
-  removeCustomRecipe(recipe.customId)
-  void yunleHaptic('medium')
+async function remove(recipe: CustomRecipe) {
+  try {
+    removeCustomRecipe(recipe.customId)
+    void yunleHaptic('medium')
+  }
+  catch {
+    await showAlert('删除失败', '没能保存更改，原有菜谱未改变。')
+  }
 }
 </script>
 
@@ -36,6 +42,7 @@ function remove(recipe: CustomRecipe) {
     </ion-header>
 
     <ion-content :fullscreen="true">
+      <PrivateRecipeBackup />
       <ion-list v-if="sorted.length">
         <TransitionGroup name="cook-row" tag="div" class="cook-row-group">
           <ion-item-sliding v-for="recipe in sorted" :key="recipe.customId">

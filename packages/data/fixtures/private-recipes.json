@@ -1,0 +1,32 @@
+{
+  "app": "cook",
+  "kind": "custom-recipes",
+  "version": 1,
+  "exportedAt": 1792670400000,
+  "recipes": [
+    {
+      "customId": "custom-legacy-a",
+      "name": "外婆的蒸蛋",
+      "stuff": ["鸡蛋", "丝瓜"],
+      "tools": ["电蒸锅"],
+      "bv": "BV1GJ411x7h7",
+      "note": "鸡蛋两个\n水 150 ml，蒸十分钟。",
+      "tags": ["家常"],
+      "methods": ["蒸"],
+      "difficulty": "简单",
+      "createdAt": 1700000000000,
+      "updatedAt": 1792670000000
+    },
+    {
+      "customId": "custom-text-b",
+      "name": "我的沙拉",
+      "stuff": ["生菜", "自家香草"],
+      "tools": [],
+      "link": "https://example.com/recipe?a=1&b=2#steps",
+      "note": "拌匀即可。",
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000,
+      "copiedFrom": "custom-original-b"
+    }
+  ]
+}

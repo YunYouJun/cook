@@ -55,6 +55,20 @@ jobs:
       - name: Typecheck
         run: pnpm run typecheck
 
+  # Build from a fresh checkout before typecheck can generate packages/cook/dist.
+  # This matches the preview providers and catches missing workspace source aliases.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+
   test:
     runs-on: ${{ matrix.os }}
 
@@ -100,10 +114,15 @@ jobs:
       - run: pnpm run convert
       - run: swift --version
       - run: swift test --package-path apps/ios/CookCore
+      - run: bash scripts/test-private-recipe-roundtrip.sh
 
   # 云食册 iOS App：XcodeGen 生成工程，在 iPhone 和 iPad 模拟器上编译并跑测试（窄屏和宽屏两种布局）
   ios:
     runs-on: macos-26
+    env:
+      # The image includes Xcode 26.5 and iOS 26.5. Pin the matching toolchain:
+      # the default 26.6 intermittently reports only simulator placeholders.
+      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -126,20 +145,29 @@ jobs:
           IPHONE: ${{ steps.simulators.outputs.iphone }}
           IPAD: ${{ steps.simulators.outputs.ipad }}
         run: |
-          # 只启动当前测试的设备，避免两台模拟器同时做首次迁移、争抢 runner 资源。
+          xcrun simctl list runtimes
+          xcrun simctl list devices available
+          # 连启动也串行；关掉第一台再启动第二台，不让两台同时争用 runner。
+          # 即使第一台失败也跑第二台，保留两份结果；任一失败都会让检查失败。
+          result=0
           for device in "$IPHONE" "$IPAD"; do
-            xcrun simctl bootstatus "$device" -b
-            xcodebuild test -project apps/ios/Cook.xcodeproj -scheme Cook -destination "id=$device" \
-              -parallel-testing-enabled NO -resultBundlePath "$RUNNER_TEMP/xcresult/$device.xcresult" CODE_SIGNING_ALLOWED=NO
-            xcrun simctl shutdown "$device"
+            if xcrun simctl bootstatus "$device" -b; then
+              xcodebuild test -project apps/ios/Cook.xcodeproj -scheme Cook -destination "id=$device" \
+                -destination-timeout 180 -parallel-testing-enabled NO \
+                -resultBundlePath "$RUNNER_TEMP/xcresult/$device.xcresult" CODE_SIGNING_ALLOWED=NO || result=1
+            else
+              result=1
+            fi
+            xcrun simctl shutdown "$device" || result=1
           done
+          exit "$result"
       # 跑多个设备时 xcodebuild 的日志里只有失败的用例名，没有原因，从结果包里读出来
       - name: Show test failures
         if: failure()
         run: |
-          for result in "$RUNNER_TEMP"/xcresult/*.xcresult; do
-            [ -d "$result" ] || continue
-            xcrun xcresulttool get test-results summary --path "$result" | python3 -c '
+          for bundle in "$RUNNER_TEMP"/xcresult/*.xcresult; do
+            [ -d "$bundle" ] || continue
+            xcrun xcresulttool get test-results summary --path "$bundle" | python3 -c '
           import json, sys
           for failure in json.load(sys.stdin).get("testFailures", []):
               name = failure.get("testName", "")
