@@ -54,7 +54,10 @@ struct CookApp: App {
                 if environment["COOK_UI_TEST_LEGACY_CONSENT"] == "1" {
                     defaults.set(true, forKey: FeedbackClient.signalsKey)
                 }
-                let client = FeedbackClient(endpoint: URL(string: "https://example.invalid/feedback"), sendsSignals: false, defaults: defaults, transport: { _ in
+                // Exercise either UI mode with the same failing local transport.
+                // Selecting the production UI never enables real network requests.
+                let feedbackEnvironment = environment["COOK_UI_TEST_FEEDBACK_ENVIRONMENT"] == "production" ? "production" : "test"
+                let client = FeedbackClient(endpoint: URL(string: "https://example.invalid/feedback"), environment: feedbackEnvironment, sendsSignals: false, defaults: defaults, transport: { _ in
                     throw URLError(.unsupportedURL)
                 })
                 if environment["COOK_UI_TEST_DECLINE_CONSENT"] == "1" { client.setSignalConsent(false) }
