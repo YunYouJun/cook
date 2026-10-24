@@ -69,6 +69,8 @@ targets:
       path: Cook/Cook.entitlements
       properties:
         aps-environment: development
+        # ASWebAuthenticationSession 的 HTTPS 回调需要 webcredentials 域名关联。
+        com.apple.developer.associated-domains: [webcredentials:cook.yunyoujun.cn]
         com.apple.developer.icloud-container-identifiers: [iCloud.fun.yunle.cook]
         com.apple.developer.icloud-services: [CloudKit]
     settings:

@@ -36,6 +36,10 @@ CI 的 `ios` job 在 iPhone 和 iPad 模拟器上先后跑单元测试和 UI 测
 
 原生入口的发布与实际分发构建验收由 [#133](https://github.com/YunYouJun/cook/issues/133) 跟踪，源码合并不代表已经分发。
 
+## 云乐坊账号
+
+原生云乐坊登录的客户端登记、HTTPS 回调发布条件和会话验证见 [账号接入](../../docs/dev/ios-account.md)。微信登录暂缓，申请资料见 [微信移动应用申请](../../docs/dev/wechat-mobile-application.md)。登录与 iCloud 数据同步相互独立。
+
 ## iCloud 同步的结构（CloudKit schema）
 
 私人菜谱源码按维护者 2026-10-24 的决定，以最新 main 集成后的代码检查、Web/Swift 文件往返和 iPhone/iPad 模拟器测试作为合并条件。跨设备同步、离线冲突、账号隔离、退出 iCloud 后的本地数据保留，以及当前五个模型的 schema 和生产读写仍是发布门禁；本轮模拟器验收没有验证这些项目。完整范围见 [私人菜谱与文件迁移](../../docs/dev/private-recipes.md)。

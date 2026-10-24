@@ -12,6 +12,28 @@ final class CookUITests: XCTestCase {
     }
 
     @MainActor
+    func testAccountIsOptionalAndExplainsICloudDataBoundary() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launch()
+        tap(app.buttons["我的"].firstMatch)
+        let signIn = app.buttons["account.signIn"]
+        wait(signIn, "exists == true AND isEnabled == true")
+        XCTAssertFalse(app.buttons["account.signOut"].exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "与网页版暂不自动同步")).firstMatch.exists)
+        XCTAssertTrue(app.buttons["我的菜谱"].exists)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "云乐坊账号与 iCloud"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        // 基础功能不要求账号，登录入口不会挡住菜谱筛选。
+        tap(app.buttons["做菜"].firstMatch)
+        tap(app.buttons["番茄"])
+        wait(app.buttons["番茄"], "isSelected == true")
+    }
+
+    @MainActor
     func testCookFlowByAccessibilityLabels() {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
