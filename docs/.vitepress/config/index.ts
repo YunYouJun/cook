@@ -32,7 +32,7 @@ export default defineConfig(withYunlefun({
 
     nav: [
       { text: '使用指南', link: '/guide/getting-started' },
-      { text: 'iOS 内测', link: '/guide/ios-beta' },
+      { text: 'iOS 体验报名', link: '/guide/ios-beta#signup' },
       { text: '开发文档', link: '/dev/cli' },
       { text: '方案记录', link: '/decisions/' },
       { text: 'iOS 隐私政策', link: '/privacy' },
@@ -46,7 +46,7 @@ export default defineConfig(withYunlefun({
           items: [
             { text: '快速开始', link: '/guide/getting-started' },
             { text: '一句话找菜', link: '/guide/sentence-input' },
-            { text: '云食册 iOS 内测', link: '/guide/ios-beta' },
+            { text: '云食册 iOS 体验报名', link: '/guide/ios-beta#signup' },
           ],
         },
       ],
