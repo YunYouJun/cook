@@ -3,10 +3,16 @@ import { appName, links } from '~/constants'
 
 export const feedbackKinds: { kind: FeedbackKind, label: string }[] = [
   { kind: 'video', label: '视频打不开' },
+  { kind: 'text', label: '图文链接打不开' },
   { kind: 'stuff', label: '食材或厨具不对' },
   { kind: 'info', label: '难度或做法不对' },
   { kind: 'other', label: '其他问题' },
 ]
+
+/** Only offer source issues for the sources this recipe actually contains. */
+export function recipeFeedbackKinds(recipe: { bv?: string, link?: string }) {
+  return feedbackKinds.filter(item => item.kind === 'video' ? !!recipe.bv : item.kind === 'text' ? !!recipe.link : true)
+}
 
 export const appFeedbackCategories: { category: AppFeedbackCategory, label: string, placeholder: string }[] = [
   { category: 'bug', label: '用着有问题', placeholder: '在哪个页面、做了什么、看到了什么' },

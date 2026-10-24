@@ -58,6 +58,8 @@ PR 上 CI 还会运行 `pnpm validate --base <目标分支>`：同一个 id 的�
 
 ## 反馈闭环
 
+Web 菜谱纠错按实际来源提供“视频打不开”与“图文链接打不开”，分别提交 `kind: video` / `kind: text`；有两种来源时同时提供。新报告同时保存 `sourceBv` / `sourceLink`，便于审核时看到提交当时的链接。云函数校验来源格式，不请求这些链接。旧客户端省略来源字段时继续兼容；旧 `video` 数据可能是图文访问问题，后台按当前目录辅助识别，不自动改写历史反馈或审核状态。
+
 1. **用户反馈**：菜谱详情底部点「反馈一下」，选问题类型（视频打不开、食材或厨具不对、难度或做法不对、其他）即可提交，不需要 GitHub，也不强制登录。数据进 CloudBase 的 `cook-feedback` 云函数；提交失败时保留完整内容，可前往支持中心、打开预填邮件或使用 GitHub Issue 表单（`.github/ISSUE_TEMPLATE/recipe.yml`，已预填菜名和视频）。
    「我的 → 问题反馈」是不针对某道菜的意见反馈：选类型（用着有问题、功能建议、想要的菜没有、其他），写几句，可以留邮箱或微信，同样不用登录，通过云函数复用 Support SDK 私密发送至统一支持后台，成功显示回执；失败保留草稿、复用提交标识重试并提供支持中心入口，也可选择预填邮件。「菜谱投稿」和「新功能建议」复用同一表单并预选类型。邮件需要用户自行确认发送，不会自动生成 Support 回执。渠道分流见 [0012](../decisions/0012-feedback-channels.md)。详见 [统一反馈决策](../decisions/0009-unified-support-feedback.md)。
    iOS App（云食册）没有 CloudBase SDK，用 `POST` 把同样的请求体发到云函数的 HTTP 访问地址，和 Web 共用设备限额和数据集合。三类请求都带 `platform`（`web` 或 `ios`）和 `version`（iOS 为 App 版本号），没有 `platform` 的旧数据算作 web。筛选信号按端分开累计（Web 的记录键不变，iOS 的另起一组），`summary.md` 里菜谱反馈、意见反馈和筛选信号都按端分开统计；`search-eval.json` 把两端合在一起评测排序。
