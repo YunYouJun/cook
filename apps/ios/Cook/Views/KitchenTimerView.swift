@@ -47,6 +47,7 @@ struct KitchenTimerPanel: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.large)
+                    .labelStyle(.titleAndIcon)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, compact ? 0 : 8)

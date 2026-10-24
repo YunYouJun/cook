@@ -19,6 +19,7 @@ import { recipeCsvFile } from '../packages/cook/src/utils/config'
 import { parseRecipeCsv } from '../packages/cook/src/utils/csv'
 import { HOWTOCOOK_REPO, howToCookPath, parseHowToCook } from './lib/howtocook'
 import { convertImage, IMAGE_CACHE_DIR } from './lib/recipe-images'
+import { validateAmountAnnotations } from './lib/validate-recipe-amounts'
 
 const repo = process.argv[2]
 if (!repo || !fs.existsSync(path.join(repo, 'dishes'))) {
@@ -99,4 +100,14 @@ if (skippedImages.length)
 if (missing.length) {
   console.error(`HowToCook 里找不到这些菜，可能改名或删除了，检查 recipe.csv 的 link：\n${missing.join('\n')}`)
   process.exit(1)
+}
+
+// 独立标注不能在导入时自动重新签署来源。先保存完整正文，再显式报告失配。
+const amountsFile = new URL('../packages/data/recipe-amounts.json', import.meta.url)
+if (fs.existsSync(amountsFile)) {
+  const errors = validateAmountAnnotations(JSON.parse(fs.readFileSync(amountsFile, 'utf8')), data, new Set(recipes.map(recipe => recipe.id!)))
+  if (errors.length) {
+    console.error(`用量标注需重新核对（应用会保守回退原文）：\n${errors.join('\n')}`)
+    process.exitCode = 1
+  }
 }
