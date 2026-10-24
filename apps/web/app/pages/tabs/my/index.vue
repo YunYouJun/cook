@@ -151,11 +151,7 @@ async function handleSignOut(): Promise<void> {
           <CookListIcon slot="start" :icon="ioniconsHelpCircleOutline" color="#007aff" />
           <ion-label>支持中心与需求墙</ion-label>
         </ion-item>
-        <ion-item :href="links.githubDiscussions" target="_blank" :detail-icon="ioniconsOpenOutline">
-          <CookListIcon slot="start" :icon="ioniconsChatbubblesOutline" color="#30b0c7" />
-          <ion-label>参与讨论</ion-label>
-        </ion-item>
-        <ion-item :href="links.contribute" target="_blank" :detail-icon="ioniconsOpenOutline">
+        <ion-item router-link="/feedback?category=recipe" :detail="true">
           <CookListIcon slot="start" :icon="ioniconsMailOutline" color="#ff2d55" />
           <ion-label>菜谱投稿</ion-label>
         </ion-item>

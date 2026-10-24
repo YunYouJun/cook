@@ -6,7 +6,7 @@
 
 ## M0 仓库改成 monorepo
 
-- [x] 把 Nuxt 应用搬到 `apps/web`、菜谱 CSV 和生成的 JSON 搬到 `packages/data`，只改路径不改逻辑。根目录的 `pnpm build` 仍然输出到 `dist/`，CI、EdgeOne、Netlify、Vercel、Docker、Capacitor 不用改配置。
+- [x] 把 Nuxt 应用搬到 `apps/web`、菜谱 CSV 和生成的 JSON 搬到 `packages/data`，只改路径不改逻辑。根目录的 `pnpm build` 仍然输出到 `dist/`，CI、EdgeOne、Vercel、Docker、Capacitor 不用改配置。
 - [x] 食材词典、常备调料、别名改成 `packages/data` 里的 JSON（`food.json`、`pantry.json`、`aliases.json`），Web 和 iOS 读同一份。
 - [x] 两端共用的推荐用例 `packages/data/fixtures/recommend.json`，`pnpm fixtures` 生成，`pnpm test` 检查是否过期。`packages/cook` 的推荐逻辑本身不依赖 Vue / Node，不再单独拆 `packages/core`。
 
@@ -68,7 +68,7 @@
 - App Intents / 快捷指令 / Siri：「我有土豆和鸡蛋，能做什么」。
 - Spotlight 索引菜谱，系统分享面板，触感反馈，空状态和引导页。
 - 菜谱数据在线更新（按 `dataVersion` 从 CDN 拉取），失败时用内置数据。
-- 从 Capacitor 版迁移：首次启动导入旧版收藏和历史（方案待验证，备选是旧版先同步到云端）。
+- Web 到原生版的数据迁移：用户主动导出 / 导入收藏和历史文件。Capacitor 版未在 App Store 上架，不需要旧商店用户升级迁移（[0006](/decisions/0006-ios-bundle-id)）。
 
 和 Web 对齐（已完成）：
 
@@ -82,7 +82,7 @@
 
 - [x] 「冰箱」记下家里的食材和到期日（默认按 `shelf-life.json` 估），快过期的排在前面，一键拿去找菜；本地通知做临期提醒，每天最多一条（[0011](/decisions/0011-fridge-reminders)）。
 
-验收：每项功能有截图走查记录；旧版用户升级后收藏不丢；崩溃率和卡顿通过 Xcode Organizer 观察一周无异常。
+验收：每项功能有截图走查记录；文件导入保留现有收藏和历史，重复导入不产生重复记录；崩溃率和卡顿通过 Xcode Organizer 观察一周无异常。
 
 ## M4 会员与上架
 

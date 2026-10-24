@@ -1,0 +1,10 @@
+# 普通用户的反馈默认走 App 内，不需要 GitHub 账号；这里只收能复现的 bug 和开发相关的建议
+# 分流规则见 docs/decisions/0012-feedback-channels.md
+blank_issues_enabled: false
+contact_links:
+  - name: 在 App 里反馈（推荐）
+    url: https://cook.yunyoujun.cn/feedback
+    about: 网页版或云食册「我的 → 问题反馈」，不用登录，私密发送至云乐坊支持中心
+  - name: 参与讨论
+    url: https://github.com/YunYouJun/cook/discussions
+    about: 还没想清楚的想法、使用心得，先在 Discussions 聊
