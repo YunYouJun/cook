@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 enum YunlefunAccountError: LocalizedError {
     case invalidCallback, authorizationFailed, invalidResponse, expiredSession, secureStorage, unavailable, requiresUpdate
@@ -31,6 +32,13 @@ struct YunlefunAccount: Decodable, Equatable {
         [name, username].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .first { !$0.isEmpty } ?? "云乐坊用户"
     }
+
+    // CloudBase's authenticated profile may omit the optional status field.
+    // The gateway validates the token; a supplied status must still be usable.
+    var hasUsableStatus: Bool {
+        guard let status else { return true }
+        return ["DEFAULT", "ACTIVE"].contains(status.uppercased())
+    }
 }
 
 struct YunlefunCredential: Codable, Equatable {
@@ -53,6 +61,7 @@ protocol YunlefunAccountServing {
 struct YunlefunAccountService: YunlefunAccountServing {
     typealias Transport = @Sendable (URLRequest) async throws -> (Data, URLResponse)
     static let gateway = "https://yunlefun-8g7ybcxc7345c490.api.tcloudbasegateway.com/auth/v1/"
+    private static let logger = Logger(subsystem: "fun.yunle.cook", category: "account")
     private let transport: Transport
 
     init(transport: Transport? = nil) {
@@ -90,9 +99,18 @@ struct YunlefunAccountService: YunlefunAccountServing {
 
     func account(_ credential: YunlefunCredential) async throws -> YunlefunAccount {
         let data = try await request(URL(string: "\(Self.gateway)user/me")!, method: "GET", credential: credential)
-        guard let user = try? JSONDecoder().decode(YunlefunAccount.self, from: data),
-              !user.id.isEmpty, user.id == credential.subject, user.isAnonymous != true,
-              user.status == "ACTIVE" else { throw YunlefunAccountError.expiredSession }
+        guard let user = try? JSONDecoder().decode(YunlefunAccount.self, from: data) else {
+            Self.logger.error("Profile response could not be decoded")
+            throw YunlefunAccountError.invalidResponse
+        }
+        guard !user.id.isEmpty, user.id == credential.subject, user.isAnonymous != true,
+              user.hasUsableStatus else {
+            let normalizedStatus = user.status?.uppercased() ?? "missing"
+            let knownStatus = ["DEFAULT", "ACTIVE", "PENDING", "BLOCKED", "missing"].contains(normalizedStatus) ? normalizedStatus : "unknown"
+            Self.logger.error("Profile rejected: subjectMatches=\(user.id == credential.subject), anonymous=\(user.isAnonymous == true), status=\(knownStatus, privacy: .public)")
+            throw YunlefunAccountError.expiredSession
+        }
+        Self.logger.debug("Profile validated; statusFieldPresent=\(user.status != nil)")
         return user
     }
 
@@ -127,6 +145,8 @@ struct YunlefunAccountService: YunlefunAccountServing {
         guard let http = response as? HTTPURLResponse, data.count < 256 * 1024 else { throw YunlefunAccountError.invalidResponse }
         guard (200..<300).contains(http.statusCode) else {
             let failure = try? JSONDecoder().decode(ServiceFailure.self, from: data)
+            // Only a fixed endpoint path and HTTP code; never log response bodies, tokens or user identifiers.
+            Self.logger.error("Account endpoint \(url.path, privacy: .public) returned HTTP \(http.statusCode)")
             if http.statusCode == 401 || ["invalid_grant", "invalid_token", "unauthenticated", "user_not_found", "user_disabled"].contains(failure?.error ?? "") {
                 throw YunlefunAccountError.expiredSession
             }

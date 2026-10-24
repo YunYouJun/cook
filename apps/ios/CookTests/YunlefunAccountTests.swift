@@ -275,9 +275,29 @@ final class YunlefunAccountServiceTests: XCTestCase {
         XCTAssertEqual(requests[2].value(forHTTPHeaderField: "x-device-id"), "installation")
     }
 
+    func testAuthenticatedProfileAllowsOptionalAndDocumentedUsableStatuses() async throws {
+        for body in [#"{"sub":"user-1","name":"云游君"}"#,
+                     #"{"sub":"user-1","status":null}"#,
+                     #"{"sub":"user-1","status":"DEFAULT"}"#,
+                     #"{"sub":"user-1","status":"ACTIVE"}"#,
+                     #"{"sub":"user-1","status":"active"}"#] {
+            let transport = AccountTransportStub([(200, body)])
+            let service = YunlefunAccountService(transport: { try await transport.send($0) })
+            let user = try await service.account(AccountServiceStub().credential)
+            XCTAssertEqual(user.id, "user-1")
+        }
+    }
+
     func testRejectsIdentityMismatchAnonymousAndDisabledUsers() async {
         for body in [#"{"sub":"other","status":"ACTIVE"}"#,
+                     #"{"sub":"other"}"#,
                      #"{"sub":"user-1","status":"DISABLED"}"#,
+                     #"{"sub":"user-1","status":"BLOCKED"}"#,
+                     #"{"sub":"user-1","status":"blocked"}"#,
+                     #"{"sub":"user-1","status":"PENDING"}"#,
+                     #"{"sub":"user-1","status":"unknown"}"#,
+                     #"{"sub":"user-1","status":""}"#,
+                     #"{"sub":"user-1","is_anonymous":true}"#,
                      #"{"sub":"user-1","status":"ACTIVE","is_anonymous":true}"#] {
             let transport = AccountTransportStub([(200, body)])
             let service = YunlefunAccountService(transport: { try await transport.send($0) })
