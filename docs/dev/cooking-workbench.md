@@ -28,4 +28,4 @@ pnpm -C apps/web generate
 pnpm -C apps/web dev --host 127.0.0.1 --port 4317
 ```
 
-重点回归：从经典页选番茄、鸡蛋、炒锅后双向切换；刷新样式偏好；工作台调料初始为空；搜索「面」检查缺料；搜索不存在菜名检查空态和放宽筛选；手机点选、结果跳转、键盘、桌面拖放、深色和减少动态效果。`test/cookingStyle.test.ts` 覆盖存储与 SSR，`test/workbenchRecommendations.test.ts` 覆盖共享引擎及明确确认调料的边界。
+重点回归：从经典页选番茄、鸡蛋、炒锅后双向切换；刷新样式偏好；保存工作台模式后刷新，再进入食材和厨具管理页并返回，确认无 Ionic 大标题动画错误，并在经典模式重复往返；工作台调料初始为空；搜索「面」检查缺料；搜索不存在菜名检查空态和放宽筛选；手机点选、结果跳转、键盘、桌面拖放、深色和减少动态效果。`test/cookingStyle.test.ts` 覆盖存储与 SSR，`test/workbenchRecommendations.test.ts` 覆盖共享引擎及明确确认调料的边界。
