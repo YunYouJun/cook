@@ -154,6 +154,7 @@ final class ReleaseAcceptanceTests: XCTestCase {
             .environment(session)
             .environment(FeedbackClient(endpoint: nil, sendsSignals: false))
             .environment(FavoriteActions(context: container.mainContext))
+            .environment(YunlefunAccountStore(vault: MemoryYunlefunAccountVault()))
             .modelContainer(container)
             .onAppear { mounted.fulfill() })
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
@@ -191,6 +192,7 @@ final class ReleaseAcceptanceTests: XCTestCase {
             .environment(CookSession(defaultPantry: [], context: container.mainContext))
             .environment(FeedbackClient(endpoint: nil, sendsSignals: false))
             .environment(FavoriteActions(context: container.mainContext))
+            .environment(YunlefunAccountStore(vault: MemoryYunlefunAccountVault()))
             .modelContainer(container)
             .onAppear { appeared.fulfill() })
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
@@ -255,6 +257,7 @@ final class ReleaseAcceptanceTests: XCTestCase {
             .environment(session)
             .environment(FeedbackClient(endpoint: nil, sendsSignals: false))
             .environment(FavoriteActions(context: container.mainContext))
+            .environment(YunlefunAccountStore(vault: MemoryYunlefunAccountVault()))
             .modelContainer(container))
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
         window.rootViewController = host

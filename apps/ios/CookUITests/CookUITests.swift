@@ -12,6 +12,32 @@ final class CookUITests: XCTestCase {
     }
 
     @MainActor
+    func testAccountIsOptionalAndExplainsICloudDataBoundary() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launch()
+        tap(app.buttons["我的"].firstMatch)
+        let signIn = app.buttons["account.signIn"]
+        wait(signIn, "exists == true AND isEnabled == true")
+        XCTAssertFalse(app.buttons["account.signOut"].exists)
+        XCTAssertTrue(app.buttons["我的菜谱"].exists)
+        // 首页展示入口，数据说明和导入操作集中在二级页。
+        XCTAssertFalse(app.buttons["从文件导入"].exists)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "云乐坊账号与 iCloud"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        tap(app.buttons["数据与同步"])
+        XCTAssertTrue(app.buttons["从文件导入"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "云乐坊账号的登录和退出不会改变这些数据")).firstMatch.exists)
+        // 基础功能不要求账号，登录入口不会挡住菜谱筛选。
+        tap(app.buttons["做菜"].firstMatch)
+        tap(app.buttons["番茄"])
+        wait(app.buttons["番茄"], "isSelected == true")
+    }
+
+    @MainActor
     func testCookFlowByAccessibilityLabels() {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
@@ -273,14 +299,16 @@ final class CookUITests: XCTestCase {
         wait(list, "exists == true", file: file, line: line)
         // 滚动容器自身未必有可点击的命中点；用页内首行确认当前设置页已可交互。
         wait(list.buttons["我的菜谱"], "isHittable == true", file: file, line: line)
-        let share = app.switches["privacy.shareSignals"]
-        // List 按需创建屏幕外的行；不同屏幕与反馈入口数量会改变隐私分区的位置。
-        // 在列表内部拖动并逐屏查找，避开导航栏与标签栏，不能假定滑动一次就能到达。
-        for _ in 0..<6 where !share.isHittable {
+        let privacy = list.buttons["settings.privacy"]
+        // The privacy controls now live on a second-level page; scroll to its entry first.
+        for _ in 0..<6 where !privacy.isHittable {
             let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75))
             let end = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
             start.press(forDuration: 0.01, thenDragTo: end)
         }
+        tap(privacy, file: file, line: line)
+        wait(app.navigationBars["隐私"], "exists == true", file: file, line: line)
+        let share = app.switches["privacy.shareSignals"]
         wait(share, "isHittable == true", file: file, line: line)
         return share
     }

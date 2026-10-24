@@ -48,6 +48,12 @@ struct RootView: View {
         }
         .minimizesTabBarOnScroll()
         .environment(router)
+        .onOpenURL { url in
+            if router.openUniversalLink(url) {
+                // Never log query parameters, which may contain authorization codes.
+                Logger(subsystem: "fun.yunle.cook", category: "UniversalLink").notice("Opened account area from WeChat universal link")
+            }
+        }
         .modifier(PrivateRecipeDeletionSync())
         .onChange(of: preferenceRecords.map(\.snapshot), initial: true) {
             session.refreshPreferences()
