@@ -58,6 +58,7 @@ export default defineConfig(withYunlefun({
             { text: '文档站部署', link: '/dev/docs-site' },
             { text: '移动应用', link: '/dev/app' },
             { text: 'TestFlight 外部测试', link: '/dev/ios-external-testflight' },
+            { text: '外测自动化与反馈', link: '/dev/testflight-automation' },
             { text: '菜谱数据', link: '/dev/data' },
             { text: '私人菜谱与文件迁移', link: '/dev/private-recipes' },
             { text: '图文做法配图', link: '/dev/recipe-images' },
