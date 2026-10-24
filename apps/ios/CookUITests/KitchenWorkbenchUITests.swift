@@ -82,15 +82,11 @@ final class KitchenWorkbenchUITests: XCTestCase {
 
         let progress = app.staticTexts["recipe.stepProgress"].label
         let target = app.buttons["recipe.step.10"]
-        let before = target.frame.minY
         reference.tap()
         let targetCard = app.otherElements["recipe.stepCard.10"]
         XCTAssertEqual(targetCard.value as? String, "已定位", "即使目标已在可视区域，也明确高亮对应步骤")
         capture(app, "supplementary-jump-result")
-        let located = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            target.isHittable && target.frame.minY <= before
-        }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [located], timeout: 10), .completed)
+        waitForVisibleStep(target, in: app)
         XCTAssertEqual(target.value as? String, "未完成")
         XCTAssertEqual(app.staticTexts["recipe.stepProgress"].label, progress)
         let faded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
@@ -105,8 +101,27 @@ final class KitchenWorkbenchUITests: XCTestCase {
         }
         reference.tap()
         XCTAssertEqual(targetCard.value as? String, "已定位")
-        XCTAssertTrue(target.isHittable)
+        waitForVisibleStep(target, in: app)
         XCTAssertEqual(app.staticTexts["recipe.stepProgress"].label, progress)
+    }
+
+    @MainActor
+    private func waitForVisibleStep(_ step: XCUIElement, in app: XCUIApplication) {
+        var previousFrame = CGRect.null
+        let located = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            let frame = step.frame
+            defer { previousFrame = frame }
+            let window = app.windows.firstMatch.frame
+            let headerBottom = app.buttons["recipe.continueStep"].frame.maxY
+            let timer = app.buttons["kitchen.timerShortcut"]
+            let bottom = timer.exists ? timer.frame.minY : window.maxY
+            // 目标原先可能在屏幕上方，正确定位反而会增大 y；验证可见区域与动画完成。
+            // 不在滚动动画中询问点击位置，避免 XCTest 对被裁剪按钮抛出定位错误。
+            return !frame.isEmpty && frame == previousFrame && window.contains(frame)
+                && frame.minY >= headerBottom && frame.maxY <= bottom
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [located], timeout: 10), .completed)
+        XCTAssertTrue(step.isHittable)
     }
 
     @MainActor
