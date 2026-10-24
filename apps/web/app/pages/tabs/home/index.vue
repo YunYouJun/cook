@@ -110,12 +110,6 @@ ion-header.workbench-header ion-toolbar.in-toolbar ion-title {
   opacity: 1;
   pointer-events: auto;
 }
-.workbench-content {
-  --background: #faf8f3;
-}
-:global(.ion-palette-dark .workbench-content) {
-  --background: #1e2722;
-}
 .style-storage-note {
   margin: 12px 20px;
   font-size: 14px;

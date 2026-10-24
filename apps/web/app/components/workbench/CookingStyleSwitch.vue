@@ -5,12 +5,12 @@ const model = defineModel<CookingStyle>({ required: true })
 </script>
 
 <template>
-  <div class="cooking-style-switch" role="group" aria-label="做菜界面样式">
+  <div class="cooking-style-switch" role="group" aria-label="做菜视图">
     <button type="button" :aria-pressed="model === 'classic'" @click="model = 'classic'">
-      经典模式
+      分组选择
     </button>
     <button type="button" :aria-pressed="model === 'workbench'" @click="model = 'workbench'">
-      料理工作台
+      并排浏览
     </button>
   </div>
 </template>
@@ -21,30 +21,24 @@ const model = defineModel<CookingStyle>({ required: true })
   width: min(340px, calc(100% - 32px));
   padding: 4px;
   margin: 18px auto;
-  border-radius: 28px;
-  background: #ebe9e5;
+  border-radius: 11px;
+  background: var(--cook-fill);
 }
 .cooking-style-switch button {
   flex: 1;
   min-height: 44px;
   padding: 8px 12px;
-  border-radius: 24px;
+  border-radius: 8px;
   font-size: 15px;
   font-weight: 600;
-  color: #233c34;
+  color: var(--ion-text-color);
 }
 .cooking-style-switch button[aria-pressed='true'] {
-  background: #a64128;
-  color: #fff;
+  background: var(--ion-item-background, #fff);
+  box-shadow: 0 1px 3px #00000014;
 }
 .cooking-style-switch button:focus-visible {
-  outline: 3px solid var(--ion-color-primary, #244e40);
+  outline: 2px solid var(--ion-color-primary);
   outline-offset: 3px;
-}
-:global(.ion-palette-dark .cooking-style-switch) {
-  background: #303d34;
-}
-:global(.ion-palette-dark .cooking-style-switch button) {
-  color: #f2f6f3;
 }
 </style>

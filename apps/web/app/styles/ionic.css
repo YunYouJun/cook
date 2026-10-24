@@ -44,23 +44,23 @@ html {
   --padding-end: max(var(--cook-host-capsule-inset, 0px), 4px);
 }
 
-/* 品牌主色：标签栏选中、链接按钮、开关等 iOS tint 统一用 Cook 绿，和匹配视图一致 */
+/* 交互主色与原生端统一；内容区使用系统分组背景和语义文字色。 */
 :root {
-  --ion-color-primary: #1d7a45;
-  --ion-color-primary-rgb: 29, 122, 69;
+  --ion-color-primary: #0066cc;
+  --ion-color-primary-rgb: 0, 102, 204;
   --ion-color-primary-contrast: #ffffff;
   --ion-color-primary-contrast-rgb: 255, 255, 255;
-  --ion-color-primary-shade: #1a6b3d;
-  --ion-color-primary-tint: #348758;
+  --ion-color-primary-shade: #005ab4;
+  --ion-color-primary-tint: #1a75d1;
 }
 
 .ion-palette-dark {
-  --ion-color-primary: #91d8a7;
-  --ion-color-primary-rgb: 145, 216, 167;
-  --ion-color-primary-contrast: #102c1b;
-  --ion-color-primary-contrast-rgb: 16, 44, 27;
-  --ion-color-primary-shade: #80be93;
-  --ion-color-primary-tint: #9cdcb0;
+  --ion-color-primary: #64adff;
+  --ion-color-primary-rgb: 100, 173, 255;
+  --ion-color-primary-contrast: #001c3b;
+  --ion-color-primary-contrast-rgb: 0, 28, 59;
+  --ion-color-primary-shade: #5898e0;
+  --ion-color-primary-tint: #74b5ff;
 }
 
 /* iOS 分组列表的组标题和组脚注 */
@@ -70,7 +70,7 @@ html {
   font-size: 13px;
   font-weight: 400;
   line-height: 18px;
-  color: var(--ion-color-step-600, #6d6d72);
+  color: var(--ion-text-color-step-400, #6d6d72);
 }
 
 .cook-group-header + ion-list.list-inset {
@@ -82,7 +82,7 @@ html {
   padding: 0 calc(16px + 20px);
   font-size: 13px;
   line-height: 18px;
-  color: var(--ion-color-step-600, #6d6d72);
+  color: var(--ion-text-color-step-400, #6d6d72);
 }
 
 /* 系统填充色（按钮底色）和提示用的橙色 */

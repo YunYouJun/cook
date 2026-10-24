@@ -21,12 +21,13 @@ const { isDark, setDarkMode, setLightMode } = useDarkMode()
 onMounted(() => {
   // init dark mode
   if (isClient) {
-    if (isDark.value) {
-      setDarkMode()
-    }
-    else {
-      setLightMode()
-    }
+    // Keep Ionic surfaces in sync when the system appearance changes at runtime.
+    watch(isDark, (dark) => {
+      if (dark)
+        void setDarkMode()
+      else
+        void setLightMode()
+    }, { immediate: true })
 
     indexedDB.init()
   }

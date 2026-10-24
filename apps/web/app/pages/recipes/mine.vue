@@ -56,8 +56,7 @@ async function remove(recipe: CustomRecipe) {
     </ion-header>
 
     <ion-content :fullscreen="true">
-      <PrivateRecipeBackup />
-      <ion-list v-if="sorted.length">
+      <ion-list v-if="sorted.length" :inset="true">
         <TransitionGroup name="cook-row" tag="div" class="cook-row-group">
           <ion-item-sliding v-for="recipe in sorted" :key="recipe.customId">
             <ion-item :button="true" @click="open(recipe)">
@@ -87,7 +86,33 @@ async function remove(recipe: CustomRecipe) {
           添加菜谱
         </ion-button>
       </div>
+      <details class="private-backup">
+        <summary>备份与迁移</summary>
+        <PrivateRecipeBackup />
+      </details>
       <RecipeDetailSheet v-model:open="detailOpen" :recipe="detail" />
     </ion-content>
   </ion-page>
 </template>
+
+<style scoped>
+.private-backup {
+  margin: 24px 16px;
+  padding-bottom: 16px;
+  border-radius: 12px;
+  background: var(--ion-item-background, #fff);
+}
+.private-backup:not([open]) {
+  padding-bottom: 0;
+}
+.private-backup summary {
+  min-height: 48px;
+  padding: 14px 20px;
+  cursor: pointer;
+  font-size: 17px;
+}
+.private-backup summary:focus-visible {
+  outline: 2px solid var(--ion-color-primary);
+  outline-offset: 2px;
+}
+</style>

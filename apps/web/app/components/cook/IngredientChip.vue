@@ -24,13 +24,13 @@ defineProps<{
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-height: 34px;
-  padding: 0 12px;
+  min-height: 44px;
+  padding: 8px 12px;
   border-radius: 17px;
   background: var(--cook-fill);
   color: var(--ion-text-color, #000);
   font-size: 15px;
-  line-height: 1;
+  line-height: 1.4;
   transition:
     transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
     background-color 0.2s ease,

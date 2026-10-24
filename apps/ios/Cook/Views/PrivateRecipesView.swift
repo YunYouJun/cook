@@ -18,16 +18,6 @@ struct PrivateRecipesView: View {
 
     var body: some View {
         List {
-            Section {
-                Button("新建菜谱", systemImage: "plus") { editor = RecipeEditorItem(recipe: nil) }
-                Button("导出私人菜谱", systemImage: "square.and.arrow.up", action: export)
-                Button("从文件导入", systemImage: "folder") { importing = true }
-                PasteButton(payloadType: String.self) { strings in
-                    Task { @MainActor in read(strings.joined()) }
-                }
-            } footer: {
-                Text("私人菜谱通过 iCloud 在同一 Apple 账号的 Apple 设备间同步；与网页版通过文件迁移。尚未登录或无法使用 iCloud 时保存在本机。")
-            }
             switch snapshot {
             case let .success(data):
                 Section("我的菜谱 · \(data.recipes.count)") {
@@ -45,13 +35,33 @@ struct PrivateRecipesView: View {
                             NavigationLink { PrivateRecipeDetailView(customId: recipe.customId) } label: { recipeLabel(recipe) }
                         }
                     }
-                    if data.recipes.isEmpty { Text("记下自己的做法，或导入网页版备份。给菜谱添加的食材和厨具只属于这道菜谱。").foregroundStyle(.secondary) }
+                    if data.recipes.isEmpty {
+                        ContentUnavailableView("还没有私人菜谱", systemImage: "book.closed", description: Text("点右上角的加号，记下自己的做法。"))
+                    } else if !data.recipes.contains(where: { query.isEmpty || $0.name.contains(query) || $0.stuff.contains(where: { $0.contains(query) }) }) {
+                        ContentUnavailableView.search(text: query)
+                    }
                 }
             case .failure:
                 Text("有菜谱暂时无法读取，已保留原始数据。请勿清除 App 数据。").foregroundStyle(.red)
             }
+            Section {
+                DisclosureGroup("备份与迁移") {
+                    Button("导出私人菜谱", systemImage: "square.and.arrow.up", action: export)
+                    Button("从文件导入", systemImage: "folder") { importing = true }
+                    PasteButton(payloadType: String.self) { strings in
+                        Task { @MainActor in read(strings.joined()) }
+                    }
+                }
+            } footer: {
+                Text("通过 iCloud 在你的 Apple 设备间同步；无法使用 iCloud 时保存在本机。与网页版通过文件迁移。")
+            }
         }
         .navigationTitle("我的菜谱")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("新建菜谱", systemImage: "plus") { editor = RecipeEditorItem(recipe: nil) }
+            }
+        }
         .searchable(text: $query, prompt: "菜名或食材")
         .sheet(item: $editor) { item in PrivateRecipeEditor(original: item.recipe) }
         .sheet(item: $incoming) { item in PrivateRecipeImportView(recipes: item.recipes) }
@@ -231,6 +241,7 @@ private struct PrivateRecipeEditor: View {
                 if let error { Text(error).foregroundStyle(.red) }
             }
             .navigationTitle(original == nil ? "新建菜谱" : "编辑菜谱")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button("保存", action: save) }
