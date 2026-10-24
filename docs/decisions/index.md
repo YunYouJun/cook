@@ -23,6 +23,6 @@
 | [0009](./0009-text-recipes)          | 支持图文做法，首批来自 HowToCook     | 提议中 |
 | [0010](./0010-recipe-quality-score)  | 用视频质量分决定同组菜谱的先后       | 已采纳 |
 | [0011](./0011-fridge-reminders)      | 冰箱食材与临期提醒                   | 已采纳 |
-| [0012](./0012-private-recipes)       | 私人菜谱与跨端文件迁移               | 提议中 |
 | [0012](./0012-feedback-channels)     | 反馈渠道分流                         | 已采纳 |
-| [0013](./0013-personal-catalog)      | 个人食材和厨具                       | 已实施 |
+| [0013](./0013-private-recipes)       | 私人菜谱与跨端文件迁移               | 提议中 |
+| [0014](./0014-personal-catalog)      | 个人食材和厨具                       | 已实施 |

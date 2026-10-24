@@ -155,14 +155,42 @@ private struct PrivateRecipeDetailView: View {
     }
 }
 
+enum PrivateRecipeEditorInput {
+    static func list(_ text: String, preserving original: [String]?) -> [String] {
+        if let original, text == original.joined(separator: "、") { return original }
+        return uniqueStrings(text.components(separatedBy: CharacterSet(charactersIn: "、,，\n")).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
+    }
+}
+
+struct PrivateRecipeEditorList {
+    var text: String
+    private var preserved: [String]?
+
+    init(preserving original: [String]?) {
+        preserved = original
+        text = original?.joined(separator: "、") ?? ""
+    }
+
+    var values: [String] { PrivateRecipeEditorInput.list(text, preserving: preserved) }
+
+    mutating func append(_ name: String, normalizer: StuffNormalizer? = nil) {
+        let current = values
+        let added = normalizer?.normalize([name]).first ?? name
+        let existingNames = normalizer?.normalize(current) ?? current
+        let next = existingNames.contains(added) ? current : current + [added]
+        preserved = next
+        text = next.joined(separator: "、")
+    }
+}
+
 private struct PrivateRecipeEditor: View {
     let original: PrivateRecipe?
     @Environment(RecipeStore.self) private var store
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
-    @State private var stuff: String
-    @State private var tools: String
+    @State private var stuff: PrivateRecipeEditorList
+    @State private var tools: PrivateRecipeEditorList
     @State private var source: String
     @State private var note: String
     @State private var error: String?
@@ -170,8 +198,8 @@ private struct PrivateRecipeEditor: View {
     init(original: PrivateRecipe?) {
         self.original = original
         _name = State(initialValue: original?.name ?? "")
-        _stuff = State(initialValue: original?.stuff.joined(separator: "、") ?? "")
-        _tools = State(initialValue: original?.tools.joined(separator: "、") ?? "")
+        _stuff = State(initialValue: PrivateRecipeEditorList(preserving: original?.stuff))
+        _tools = State(initialValue: PrivateRecipeEditorList(preserving: original?.tools))
         _source = State(initialValue: original?.bv.flatMap { $0.isEmpty ? nil : $0 } ?? original?.link ?? "")
         _note = State(initialValue: original?.note ?? "")
     }
@@ -181,18 +209,18 @@ private struct PrivateRecipeEditor: View {
             Form {
                 Section { TextField("菜名（最多 30 字）", text: $name) }
                 Section {
-                    TextField("鸡蛋、丝瓜", text: $stuff, axis: .vertical)
+                    TextField("鸡蛋、丝瓜", text: $stuff.text, axis: .vertical)
                     Menu("从食材列表添加") {
                         ForEach(store.stuffItems, id: \.name) { item in
-                            Button(item.name) { stuff = store.data.normalizer.unique(list(stuff) + [item.name]).joined(separator: "、") }
+                            Button(item.name) { stuff.append(item.name, normalizer: store.data.normalizer) }
                         }
                     }
                 } header: { Text("食材") } footer: { Text("用顿号、逗号或换行分隔，至少一种。") }
                 Section {
-                    TextField("电蒸锅", text: $tools, axis: .vertical)
+                    TextField("电蒸锅", text: $tools.text, axis: .vertical)
                     Menu("从厨具列表添加") {
                         ForEach(store.food.tools, id: \.name) { item in
-                            Button(item.name) { tools = uniqueStrings(list(tools) + [item.name]).joined(separator: "、") }
+                            Button(item.name) { tools.append(item.name) }
                         }
                     }
                 } header: { Text("厨具（可选）") } footer: { Text("可填写自己的食材和厨具名称，不会修改公共词典。") }
@@ -210,17 +238,13 @@ private struct PrivateRecipeEditor: View {
         }
     }
 
-    private func list(_ text: String) -> [String] {
-        uniqueStrings(text.components(separatedBy: CharacterSet(charactersIn: "、,，\n")).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
-    }
-
     private func save() {
         do {
             let now = max(Int64(Date().timeIntervalSince1970 * 1000), (original?.updatedAt ?? 0) + 1)
             var recipe = original ?? PrivateRecipe(customId: "custom-" + UUID().uuidString.lowercased(), name: "", stuff: [], tools: [], createdAt: now, updatedAt: now)
             recipe.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            recipe.stuff = list(stuff)
-            recipe.tools = list(tools)
+            recipe.stuff = stuff.values
+            recipe.tools = tools.values
             recipe.note = note
             recipe.updatedAt = now
             let source = source.trimmingCharacters(in: .whitespacesAndNewlines)

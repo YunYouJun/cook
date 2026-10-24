@@ -148,6 +148,8 @@ jobs:
           IPHONE: ${{ steps.simulators.outputs.iphone }}
           IPAD: ${{ steps.simulators.outputs.ipad }}
         run: |
+          xcrun simctl list runtimes
+          xcrun simctl list devices available
           # 连启动也串行；关掉第一台再启动第二台，不让两台同时争用 runner。
           # 即使第一台失败也跑第二台，保留两份结果；任一失败都会让检查失败。
           result=0
@@ -167,8 +169,8 @@ jobs:
         if: failure()
         run: |
           for bundle in "$RUNNER_TEMP"/xcresult/*.xcresult; do
-          [ -d "$bundle" ] || continue
-          xcrun xcresulttool get test-results summary --path "$bundle" | python3 -c '
+            [ -d "$bundle" ] || continue
+            xcrun xcresulttool get test-results summary --path "$bundle" | python3 -c '
           import json, sys
           for failure in json.load(sys.stdin).get("testFailures", []):
               name = failure.get("testName", "")

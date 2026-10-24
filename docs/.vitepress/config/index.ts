@@ -61,6 +61,8 @@ export default defineConfig({
             { text: '0010 视频质量分', link: '/decisions/0010-recipe-quality-score' },
             { text: '0011 冰箱与临期提醒', link: '/decisions/0011-fridge-reminders' },
             { text: '0012 反馈渠道分流', link: '/decisions/0012-feedback-channels' },
+            { text: '0013 私人菜谱与文件迁移', link: '/decisions/0013-private-recipes' },
+            { text: '0014 个人食材和厨具', link: '/decisions/0014-personal-catalog' },
           ],
         },
       ],

@@ -102,6 +102,17 @@ final class CookUITests: XCTestCase {
     private func wait(_ element: XCUIElement, _ condition: String, file: StaticString = #filePath, line: UInt = #line) {
         let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: condition), object: element)
         let result = XCTWaiter().wait(for: [expectation], timeout: timeout)
+        if result != .completed {
+            let app = XCUIApplication()
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "Accessibility hierarchy after failed wait"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            let screenshot = XCTAttachment(screenshot: app.screenshot())
+            screenshot.name = "Screen after failed wait"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+        }
         XCTAssertEqual(result, .completed, "等了 \(Int(timeout)) 秒，\(element.description) 仍不满足 \(condition)", file: file, line: line)
     }
 

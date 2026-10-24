@@ -18,7 +18,7 @@ Web 的「我的 → 我的菜谱」保存在本机。导出私人菜谱，再�
 
 实现：`packages/cook/src/utils/custom-recipes.ts` 和 `CookCore/PrivateRecipes.swift`；共享样例为 `packages/data/fixtures/private-recipes.json`。`bash scripts/test-private-recipe-roundtrip.sh` 实际执行 Web 导出 → Swift 解析/导出 → Web 比较，并运行冲突、去重、坏文件用例。所有测试使用合成数据。
 
-## iOS 持久化和上线验收
+## iOS 持久化与验收边界
 
 新增 `PrivateRecipeRecord` 模型，不改内置菜谱的整数编号，也不迁移收藏/历史引用。JSON payload 作为一个字段存储，所有必填属性都有默认值、无唯一约束，继续由 SwiftData 的现有 CloudKit 私有库同步。重复记录按更新时间取最新，时间相同优先删除；编辑打开后发现本机已收到其他改动时拒绝覆盖并保留编辑表单。系统级离线并发编辑仍遵循 CloudKit 合并行为，首版不提供多版本编辑历史。
 
@@ -26,11 +26,15 @@ Web 的「我的 → 我的菜谱」保存在本机。导出私人菜谱，再�
 
 已整合 #112 的 CloudKit 初始化机制（schema 2 含 FridgeItem），版本已升到 3，新增 PrivateRecipeRecord。需维护者在 Development 验证后另行决定 Production schema 部署。本功能的代码和模拟器测试不能证明生产 iCloud 已经可用。
 
-合并/发布前验收：同 Apple 账号两台真实设备新建、修改、删除、离线编辑后重连；未登录/退出 iCloud 的本地数据保留；另一 Apple 账号隔离；Development/Production schema 匹配。当前实现不含 Web 云同步、公共投稿，以及 iOS 私人菜谱参与内置推荐、收藏或历史；Web 原有参与推荐/随机选菜的行为保留。
+维护者于 2026-10-24 明确将本轮源码合并条件限定为代码与模拟器验收：与最新 main 集成后，代码检查、Web/Swift 文件往返和 iPhone/iPad 模拟器测试全部通过。模拟器中的本地保存、迁移和进程重启结果不代表生产 CloudKit 已通过验收，源码合并也不代表发布 App。
+
+发布前仍须验证：同 Apple 账号两台真实设备的新建、修改、删除和离线并发修改/删除后重连；未登录和退出 iCloud 后的本地数据保留；另一 Apple 账号的数据隔离；当前五个模型的 Development/Production schema 匹配及生产环境实际读写。这些项目目前未验证，继续作为发布门禁，不由模拟器结果替代。
+
+当前实现不含 Web 云同步、公共投稿，以及 iOS 私人菜谱参与内置推荐、收藏或历史；Web 原有参与推荐/随机选菜的行为保留。范围与验收决定见 [0013 私人菜谱与跨端文件迁移](../decisions/0013-private-recipes)。
 
 ## 个人食材和厨具
 
-「我的 → 食材和厨具」支持按类别添加、删除自定义名称，以及隐藏和恢复内置条目。配置会用于做菜选择、输入联想和私人菜谱编辑；iOS 冰箱选择器也共用配置。隐藏只影响候选列表，已选食材/厨具仍有取消入口，忌口独立保留。新标签不会凭空生成新的公共菜谱，网页版会用它们匹配自己的菜谱。
+「我的 → 食材和厨具」支持按类别添加、删除自定义名称，以及隐藏和恢复内置条目。配置会用于经典和工作台模式的选择、搜索、拖入校验、输入联想和私人菜谱编辑；iOS 冰箱选择器也共用配置。隐藏只影响候选列表，已选食材/厨具仍有取消入口，忌口独立保留。新标签不会凭空生成新的公共菜谱，网页版会用它们匹配自己的菜谱。设计见 [0014 个人食材和厨具](../decisions/0014-personal-catalog)。
 
 个人配置的备份为独立 JSON：`{ app: "cook", kind: "personal-catalog", version: 1, items, hidden }`，每项 `{ category, name }`。类别为 `vegetable/meat/staple/tools`，每列最多 500 项，名称 1–30 UTF-16 单元，文件最多 256 KB。导入确认后合并，重复名称保留本机类别。iOS 原子文件、Web localStorage 都先验证后保存；出错保留原文件，不修改菜谱 v1 或 CloudKit schema。共享用例 `packages/data/fixtures/personal-catalog.json`，`bash scripts/test-personal-catalog-roundtrip.sh` 执行两端真实导出器的往返测试。
 
