@@ -42,7 +42,7 @@ CI 的 `ios` job 在 iPhone 和 iPad 模拟器上先后跑单元测试和 UI 测
 
 ## iCloud 同步的结构（CloudKit schema）
 
-私人菜谱源码按维护者 2026-10-24 的决定，以最新 main 集成后的代码检查、Web/Swift 文件往返和 iPhone/iPad 模拟器测试作为合并条件。跨设备同步、离线冲突、账号隔离、退出 iCloud 后的本地数据保留，以及当前五个模型的 schema 和生产读写仍是发布门禁；本轮模拟器验收没有验证这些项目。完整范围见 [私人菜谱与文件迁移](../../docs/dev/private-recipes.md)。
+私人菜谱源码以最新 main 集成后的代码检查、Web/Swift 文件往返和 iPhone/iPad 模拟器测试作为合并条件。五模型生产结构、同账户跨设备读写，以及构建 6 的离线新增和修改 / 删除冲突已有[真实生产证据](../../docs/dev/ios-production-sync-2026-10-24.md)。维护者随后决定，剩余验收改用模拟器，不再要求真机；覆盖范围和不能由本地测试证明的账号行为见[模拟器验收记录](../../docs/dev/ios-simulator-acceptance-2026-10-24.md)。文件协议见[私人菜谱与文件迁移](../../docs/dev/private-recipes.md)。
 
 收藏、浏览记录、做菜偏好、冰箱食材和私人菜谱用 SwiftData 存，登录 iCloud 时通过容器 `iCloud.fun.yunle.cook` 同步。TestFlight 和 App Store 版本用 CloudKit 的 **Production** 环境，结构要先在 Development 环境建好，再手动部署过去：
 

@@ -1,5 +1,7 @@
 # iOS P0 验证记录
 
+最新进展见 [2026-10-24 真实生产同步验收](./ios-production-sync-2026-10-24.md)：iPhone 与 Mac 的 TestFlight 构建 6 已通过离线新增、修改 / 删除冲突及重启保留的生产复测，两端已删除正文清空。构建 4 的首次新条目缺失仍未复现。维护者随后决定剩余验收仅使用模拟器，最新范围及真实账号切换未实测的边界见[模拟器验收](./ios-simulator-acceptance-2026-10-24.md)。下文保留各历史阶段的检查范围，不能把旧的“缺少第二台设备”当成当前状态。
+
 检查日期：2026-10-23（北京时间）。本次修改尚未上传 TestFlight，也未发布网站。
 
 ## 本次修复
@@ -62,7 +64,7 @@ Schema 候选以实际 `NSManagedObjectModel`、Apple 映射和现有三类全�
 
 ### 两台真机的 TestFlight 同步
 
-先确认 Production 已覆盖当前五模型，包括冰箱和私人菜谱的完整字段与框架索引。两台设备使用同一 Apple 账户，开启本 App 的 iCloud，安装同一个包含偏好修复的待发布 TestFlight 构建，记录版本、构建号和每步时间。目前没有第二台设备，以下真实双设备验收仍待完成：
+先确认 Production 已覆盖当前五模型，包括冰箱和私人菜谱的完整字段与框架索引。两台设备使用同一 Apple 账户，开启本 App 的 iCloud，安装同一个包含偏好修复的待发布 TestFlight 构建，记录版本、构建号和每步时间。以下为验收清单；2026-10-24 已使用 Mac TestFlight 作为第二端，逐项结果和剩余门禁见[最新生产同步记录](./ios-production-sync-2026-10-24.md)：
 
 1. 在 A 收藏一道未收藏的菜，确认 B 出现且重启后仍在。
 2. 在 B 取消该收藏，确认 A 消失；再次收藏，确认两端恢复且没有重复项。
@@ -76,4 +78,4 @@ Schema 候选以实际 `NSManagedObjectModel`、Apple 映射和现有三类全�
 
 ### 公开政策及 App Store 元数据
 
-文档站隐私政策已加入源码并可构建。检查时 `https://cook.yunyoujun.cn/docs/privacy` 返回 HTTP 404，因此 App 只提供完整离线政策，没有链接到这个尚未发布的地址。发布文档站后，应验证公开 URL 返回政策正文，再填入 App Store Connect 的隐私政策 URL；App 隐私申报需与更新后的 `PrivacyInfo.xcprivacy` 一致。
+文档站隐私政策已加入源码并可构建。检查时 `https://cook.yunyoujun.cn/docs/privacy` 返回 HTTP 404，因此 App 只提供完整离线政策，没有链接到这个尚未发布的地址。2026-10-24 复核已确认 `https://cook-docs.pages.dev/privacy` 在普通浏览器中直接显示完整政策；应使用该可访问地址，App Store Connect 配置及 App 隐私申报仍需单独核验。历史 404 地址不再作为发布入口。
