@@ -4,17 +4,17 @@
 
 ## 先看当前状态
 
-| 项目                     | 已核验结果                                                                                            |
-| ------------------------ | ----------------------------------------------------------------------------------------------------- |
-| 原生 iOS 应用名称        | `云食册 - 食用手册`，已通过 App Store Connect API 核对                                                |
-| Bundle ID                | `fun.yunle.cook`                                                                                      |
-| Apple Team               | `QT792GAY4C`                                                                                          |
-| App Store Connect App ID | `6824589542`；这是 Apple 的 ID，不是微信 AppID                                                        |
-| App Store 版本           | `2.0.0`，状态 `PREPARE_FOR_SUBMISSION`，尚未正式上架                                                  |
-| 云乐坊原生登录           | 系统授权窗口、回跳、会话恢复已在真机通过                                                              |
-| 头像与账号页             | `2.0.0 (6.4)` 真机已显示头像和原生账号详情                                                            |
-| 公开隐私政策             | `https://docs.cook.yunle.fun/privacy` 已发布 2026-10-25 版，包含云乐坊账号、头像与微信登录状态说明    |
-| 原生关联域名             | `webcredentials` 与微信 `applinks` 均已配置；6.5 包已安装，Apple CDN 部分节点仍超时，真机跳转尚未通过 |
+| 项目                     | 已核验结果                                                                                          |
+| ------------------------ | --------------------------------------------------------------------------------------------------- |
+| 原生 iOS 应用名称        | `云食册 - 食用手册`，已通过 App Store Connect API 核对                                              |
+| Bundle ID                | `fun.yunle.cook`                                                                                    |
+| Apple Team               | `QT792GAY4C`                                                                                        |
+| App Store Connect App ID | `6824589542`；这是 Apple 的 ID，不是微信 AppID                                                      |
+| App Store 版本           | `2.0.0`，状态 `PREPARE_FOR_SUBMISSION`，尚未正式上架                                                |
+| 云乐坊原生登录           | 系统授权窗口、回跳、会话恢复已在真机通过                                                            |
+| 头像与账号页             | `2.0.0 (6.4)` 真机已显示头像和原生账号详情                                                          |
+| 公开隐私政策             | `https://docs.cook.yunle.fun/privacy` 已发布 2026-10-25 版，包含云乐坊账号、头像与微信登录状态说明  |
+| 原生关联域名             | `webcredentials` 与微信 `applinks` 均已配置；6.6 已通过真机冷、热启动回跳，Apple CDN 部分节点仍超时 |
 
 当前可以准备或保存申请资料，但不能把 Apple 草稿版本当作已上架证明，也不能把现有云乐坊 SSO 回调当作微信 Universal Links。
 
@@ -42,7 +42,7 @@
 | 申请能力                                  | 微信登录                                                    |
 | 主体、联系人、电话、资质或备案            | 由管理员按实际资料填写，不复制示例或占位值                  |
 | 应用图标                                  | 使用下方现有 PNG，尺寸及文件大小按表单要求调整              |
-| Universal Links                           | 见第 4 步；地址已部署，真机跳转验证仍待通过                 |
+| Universal Links                           | 见第 4 步；地址已部署，6.6 真机系统回跳通过                 |
 
 **应用简介，可复制：**
 
@@ -71,7 +71,7 @@
 
 现有 `webcredentials` 用于云乐坊系统授权回跳；微信 SDK 的 Universal Links 还需要原生 App 的 `applinks` 关联。Apple 对两种服务有明确区分，详见 [Associated Domains](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.associated-domains)。
 
-开放平台登记值如下，末尾 `/` 需要保留。**站点与签名配置已部署，但当前真机自动跳转尚未通过，不应在审核材料中写成已完成微信授权联调**：
+开放平台登记值如下，末尾 `/` 需要保留。**站点与签名配置已部署，6.6 真机系统回跳通过；微信 SDK 尚未接入，不应写成已完成微信授权联调**：
 
 ```text
 https://cook.yunyoujun.cn/auth/wechat/
@@ -93,9 +93,9 @@ https://cook.yunyoujun.cn/auth/wechat/
 4. 核验 HTTPS、无重定向、JSON 内容以及 Apple CDN 中的原生应用条目；重新签名并安装含新增权限的 App。
 5. 后续平台登记、SDK 注册和客户端处理使用同一前缀。取得微信 AppID 并接入 SDK 后，完成真机“云食册 → 微信 → 云食册”授权测试。
 
-发布记录：PR #151 已合入主线；EdgeOne 生产部署 `dpbe84c98zk4` 的 AASA 和回跳兜底页均为 HTTPS 200、无重定向。Release `2.0.0 (6.5)` 的签名已包含两类 Associated Domains，保留 iCloud Production，并已安装到 iPhone 15 Pro。Apple 海外 CDN 节点已返回与源站一致的新 AASA，但本地默认节点返回 `SWCERR00301 Timeout`；真机从备忘录点击链接仍进入浏览器，暂不视为 Universal Links 已验收。详见[发布与验证记录](./wechat-links-deployment.md)。
+发布记录：PR #151 已合入主线；EdgeOne 生产部署 `dpbe84c98zk4` 的 AASA 和回跳兜底页均为 HTTPS 200、无重定向。Release `2.0.0 (6.6)` 的签名包含两类 Associated Domains，保留 iCloud Production，并已安装到 iPhone 15 Pro。补上 SwiftUI `.onOpenURL` 接收入口后，从备忘录点击链接的热启动、冷启动均直接进入云食册「我的」，既有会话恢复正常。Apple 海外 CDN 节点返回正确 AASA，部分国内节点仍返回 `SWCERR00301 Timeout`，不能将单台设备成功等同于所有地区已生效。详见[发布与验证记录](./wechat-links-deployment.md)。
 
-若申请表强制要求已通过真机校验，等该项通过后再提交。`https://cook.yunyoujun.cn/auth/callback?platform=native` 是现有云乐坊 SSO 回调，不能直接拿来替代。
+若申请表要求微信 SDK 自检或实际微信授权测试，仍需在取得 AppID 并集成 SDK 后完成。`https://cook.yunyoujun.cn/auth/callback?platform=native` 是现有云乐坊 SSO 回调，不能直接拿来替代。
 
 ## 5. 补齐隐私政策后提交
 
