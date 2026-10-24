@@ -45,7 +45,7 @@
 
 ## 开发
 
-**开发文档**：<https://cook-docs.pages.dev/>
+**开发文档**：<https://docs.cook.yunle.fun/>
 
 详细的环境配置、飞书数据拉取等说明请查看开发文档。
 
@@ -76,7 +76,7 @@ pnpm fetch
 pnpm convert
 ```
 
-更多 CLI 使用说明请查看 [Cook CLI 文档](https://cook.yunyoujun.cn/docs/dev/cli)。
+更多 CLI 使用说明请查看 [Cook CLI 文档](https://docs.cook.yunle.fun/dev/cli)。
 
 ### 开发 APP
 
