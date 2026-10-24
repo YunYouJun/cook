@@ -92,6 +92,44 @@ final class CookUITests: XCTestCase {
         XCTAssertTrue(app.buttons["发送"].isEnabled)
     }
 
+    @MainActor
+    func testClearingHistoryRequiresConfirmationAndKeepsFavorites() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        app.launch()
+        tap(app.buttons["番茄"])
+        tap(app.buttons["鸡蛋"])
+        if app.windows.firstMatch.horizontalSizeClass != .regular {
+            tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "看看能做什么")).firstMatch)
+        }
+        let recipe = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch
+        tap(recipe)
+        tap(app.navigationBars.buttons["收藏"])
+        wait(app.buttons["取消收藏"], "exists == true")
+        tap(app.buttons["菜谱"].firstMatch)
+        tap(app.segmentedControls.buttons["最近浏览"])
+        wait(recipe, "exists == true")
+        tap(app.buttons["清空"])
+        wait(app.buttons["清空浏览记录"], "exists == true")
+        let cancel = app.buttons.matching(NSPredicate(format: "label IN %@", ["取消", "Cancel"])).firstMatch
+        if cancel.exists {
+            tap(cancel)
+        } else {
+            // iPad presents a popover whose standard cancellation is an outside tap.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
+        }
+        wait(app.buttons["清空浏览记录"], "exists == false")
+        wait(recipe, "exists == true")
+        tap(app.buttons["清空"])
+        tap(app.buttons["清空浏览记录"])
+        wait(app.staticTexts["还没有浏览记录"], "exists == true")
+        XCTAssertFalse(app.buttons["清空"].exists)
+        tap(app.segmentedControls.buttons["收藏"])
+        wait(recipe, "exists == true")
+    }
+
     /// 等控件出现再点；在屏幕外时 tap() 会自己滚过去
     @MainActor
     private func tap(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {

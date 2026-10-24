@@ -1,6 +1,6 @@
 # iOS P0 验证记录
 
-最新进展见 [2026-10-24 真实生产同步验收](./ios-production-sync-2026-10-24.md)：iPhone 与 Mac 的 TestFlight 构建 6 已通过离线新增、修改 / 删除冲突及重启保留的生产复测，两端已删除正文清空。构建 4 的首次新条目缺失仍未复现，账号隔离等发布门禁尚未完成。下文保留各历史阶段的检查范围，不能把旧的“缺少第二台设备”当成当前状态。
+最新进展见 [2026-10-24 真实生产同步验收](./ios-production-sync-2026-10-24.md)：iPhone 与 Mac 的 TestFlight 构建 6 已通过离线新增、修改 / 删除冲突及重启保留的生产复测，两端已删除正文清空。构建 4 的首次新条目缺失仍未复现。维护者随后决定剩余验收仅使用模拟器，最新范围及真实账号切换未实测的边界见[模拟器验收](./ios-simulator-acceptance-2026-10-24.md)。下文保留各历史阶段的检查范围，不能把旧的“缺少第二台设备”当成当前状态。
 
 检查日期：2026-10-23（北京时间）。本次修改尚未上传 TestFlight，也未发布网站。
 
@@ -78,4 +78,4 @@ Schema 候选以实际 `NSManagedObjectModel`、Apple 映射和现有三类全�
 
 ### 公开政策及 App Store 元数据
 
-文档站隐私政策已加入源码并可构建。检查时 `https://cook.yunyoujun.cn/docs/privacy` 返回 HTTP 404，因此 App 只提供完整离线政策，没有链接到这个尚未发布的地址。发布文档站后，应验证公开 URL 返回政策正文，再填入 App Store Connect 的隐私政策 URL；App 隐私申报需与更新后的 `PrivacyInfo.xcprivacy` 一致。
+文档站隐私政策已加入源码并可构建。检查时 `https://cook.yunyoujun.cn/docs/privacy` 返回 HTTP 404，因此 App 只提供完整离线政策，没有链接到这个尚未发布的地址。2026-10-24 复核已确认 `https://cook-docs.pages.dev/privacy` 在普通浏览器中直接显示完整政策；应使用该可访问地址，App Store Connect 配置及 App 隐私申报仍需单独核验。历史 404 地址不再作为发布入口。
