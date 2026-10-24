@@ -85,6 +85,32 @@ const deviceId = 'device-0123456789abcdef'
 const report = { action: 'report', deviceId, recipeId: 3, recipeName: '番茄炒蛋', kind: 'video' }
 
 describe('cook-feedback function', () => {
+  it('accepts text reports with source snapshots and keeps older video clients compatible', async () => {
+    const { table } = createApp()
+    expect(await fn.main(report)).toEqual({ ok: true })
+    expect(await fn.main({ ...report, kind: 'text', sourceBv: '', sourceLink: 'https://example.com/recipe' })).toEqual({ ok: true })
+    const rows = [...table(fn._internal.FEEDBACK).values()]
+    expect(rows).toHaveLength(2)
+    expect(rows.find(row => row.kind === 'video')).not.toHaveProperty('sourceLink')
+    expect(rows.find(row => row.kind === 'text')).toMatchObject({ sourceBv: '', sourceLink: 'https://example.com/recipe' })
+  })
+
+  it('rejects unsafe or mismatched source snapshots before any database write', async () => {
+    const { table } = createApp()
+    for (const snapshot of [
+      { sourceBv: 'not-a-video' },
+      { sourceBv: '', sourceLink: 'https://example.com/recipe' },
+      { kind: 'text', sourceLink: '' },
+      { kind: 'text', sourceLink: 'javascript:alert(1)' },
+      { kind: 'text', sourceLink: 'https://user:pass@example.com/recipe' },
+      { kind: 'text', sourceLink: 'x'.repeat(2049) },
+    ]) {
+      expect(await fn.main({ ...report, ...snapshot })).toEqual({ ok: false, code: 'INVALID_REPORT' })
+    }
+    expect(table(fn._internal.FEEDBACK).size).toBe(0)
+    expect(table(fn._internal.QUOTA).size).toBe(0)
+  })
+
   beforeEach(() => {
     delete process.env.COOK_FEEDBACK_EXPORT_TOKEN
     process.env.COOK_SUPPORT_PRIVATE_KEY = 'test-key-not-a-real-secret'

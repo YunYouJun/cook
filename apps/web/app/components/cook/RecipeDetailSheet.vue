@@ -10,7 +10,7 @@ import { getEmojisFromStuff } from '~/utils'
 import { trackCookEvent } from '~/utils/analytics'
 import { isCustomRecipe } from '~/utils/customRecipe'
 import { promptText } from '~/utils/dialog'
-import { buildFeedbackMail, buildFeedbackText, copyFeedbackText, feedbackKinds } from '~/utils/feedback'
+import { buildFeedbackMail, buildFeedbackText, copyFeedbackText, feedbackKinds, recipeFeedbackKinds } from '~/utils/feedback'
 import { getRecipeFeedbackLink, getRecipeLink, getRecipeTextLink, openRecipe } from '~/utils/recipe'
 import { yunleHaptic } from '~/utils/yunleHost'
 
@@ -78,7 +78,7 @@ async function onFeedback() {
   const sheet = await actionSheetController.create({
     header: '这道菜有什么问题？',
     buttons: [
-      ...feedbackKinds.map(item => ({ text: item.label, data: item.kind })),
+      ...recipeFeedbackKinds(recipe).map(item => ({ text: item.label, data: item.kind })),
       { text: '取消', role: 'cancel' },
     ],
   })
@@ -96,7 +96,7 @@ async function onFeedback() {
   }
 
   try {
-    await feedback.report({ recipeId: recipe.id, recipeName: recipe.name, kind, note })
+    await feedback.report({ recipeId: recipe.id, recipeName: recipe.name, kind, note, sourceBv: recipe.bv || '', sourceLink: recipe.link || '' })
     void yunleHaptic('success')
     const toast = await toastController.create({ message: '收到了，谢谢反馈', duration: 1800, position: 'top' })
     await toast.present()
@@ -108,7 +108,7 @@ async function onFeedback() {
         `菜谱：${recipe.name}（#${recipe.id}）`,
         `问题：${feedbackKinds.find(item => item.kind === kind)?.label ?? kind}`,
         note,
-        getRecipeLink(recipe),
+        kind === 'text' ? recipe.link || '' : getRecipeLink(recipe),
       ],
     }
     const text = buildFeedbackText(message)
@@ -227,7 +227,7 @@ function onPresented() {
         <template v-else>
           食材来自菜谱记录，用量和调味以{{ recipe.bv ? '视频' : '做法原文' }}为准。
           <button type="button" class="recipe-detail-feedback" @click="onFeedback">
-            {{ recipe.bv ? '视频' : '链接' }}打不开或信息不对？反馈一下
+            做法打不开或信息不对？反馈一下
           </button>
         </template>
       </p>
