@@ -26,6 +26,30 @@ private final class FakeTransport: @unchecked Sendable {
 
 @MainActor
 final class FeedbackClientTests: XCTestCase {
+    func testRecipeIssuesFollowAvailableSourcesAndRouteTestBuildsAwayFromProduction() {
+        let text = Recipe(id: 708, name: "土豆炖排骨", link: "https://example.com/recipe", stuff: [])
+        XCTAssertEqual(FeedbackClient.RecipeIssue.available(for: text), [.text, .stuff, .info, .other])
+        var both = text
+        both.bv = "BV1NE411Q7Jj"
+        XCTAssertEqual(FeedbackClient.RecipeIssue.available(for: both), [.video, .text, .stuff, .info, .other])
+        let production = URL(string: "https://api.yunle.fun/cook-feedback")!
+        XCTAssertEqual(FeedbackClient.routedEndpoint(production, environment: "test")?.path, "/cook-feedback-test")
+        XCTAssertEqual(FeedbackClient.routedEndpoint(production, environment: "production"), production)
+    }
+
+    func testTextReportCarriesSourceDetailsVersionAndContext() async throws {
+        let transport = FakeTransport()
+        let client = FeedbackClient(endpoint: endpoint, version: "2.0.0", environment: "test", build: "42", recipeVersion: "abc123", defaults: defaults, transport: { try await transport.send($0) })
+        let recipe = Recipe(id: 708, name: "土豆炖排骨", link: "https://example.com/recipe", stuff: [])
+        try await client.report(recipe, issue: .text, note: "一直加载", linkIssue: .loading)
+        let body = try XCTUnwrap(transport.sent.first)
+        XCTAssertEqual(body["sourceLink"] as? String, recipe.link)
+        XCTAssertEqual(body["sourceBv"] as? String, "")
+        XCTAssertEqual(body["kind"] as? String, "text")
+        XCTAssertEqual(body["linkIssue"] as? String, "loading")
+        XCTAssertEqual(body["environment"] as? String, "test")
+        XCTAssertEqual(body["context"] as? [String: String], ["entryPoint": "recipe-detail", "origin": "", "path": "/recipe-detail", "build": "42", "recipeVersion": "abc123"])
+    }
     private let endpoint = URL(string: "https://example.com/cook-feedback")!
     private var defaults: UserDefaults!
 

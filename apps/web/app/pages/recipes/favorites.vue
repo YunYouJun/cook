@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { IonSearchbarCustomEvent, SearchbarInputEventDetail } from '@ionic/core'
 import type { DbRecipeItem } from '~/utils/db'
+import RecipeFeedbackButton from '~/components/feedback/RecipeButton.vue'
 import { getFavoriteTime, isFavorited, toggleFavorite } from '~/composables/store/favorite'
 import { db } from '~/utils/db'
 import { confirmDestructive } from '~/utils/dialog'
@@ -119,6 +120,7 @@ function onToggleFavorite(item: DbRecipeItem) {
               <ion-label class="truncate">
                 <DishLabel class="text-sm" :dish="item" />
               </ion-label>
+              <RecipeFeedbackButton slot="end" :recipe="item" compact />
               <ion-icon slot="end" :icon="ioniconsStar" color="warning" />
             </ion-item>
 
