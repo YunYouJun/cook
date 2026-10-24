@@ -49,7 +49,7 @@ const signalStats = summarizeSignals(signals)
 const cases = buildEvalCases(signals)
 fs.writeFileSync(path.join(rootDir, 'test/fixtures/search-eval.json'), `${JSON.stringify(cases, null, 2)}\n`)
 
-const kindLabel: Record<string, string> = { video: '视频打不开', stuff: '食材或厨具不对', info: '难度或做法不对', other: '其他' }
+const kindLabel: Record<string, string> = { video: '视频 / 旧版做法链接打不开', text: '图文链接打不开', stuff: '食材或厨具不对', info: '难度或做法不对', other: '其他' }
 const categoryLabel: Record<string, string> = { bug: '用着有问题', idea: '功能建议', recipe: '想要的菜没有', other: '其他' }
 const appFeedback = [...data.appFeedback ?? []].sort((a, b) => b.day.localeCompare(a.day))
 const cell = (text: string) => text.replace(/\|/g, '/').replace(/\s+/g, ' ')

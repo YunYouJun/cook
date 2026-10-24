@@ -20,7 +20,7 @@ const categories = appFeedbackCategories.map(item => ({ value: item.category, la
       <div role="status" class="feedback-receipt">
         <span class="receipt-icon i-carbon-checkmark-outline" aria-hidden="true" />
         <h1>收到了，谢谢你。</h1>
-        <p>反馈已进入云乐坊支持中心，仅团队可见。</p>
+        <p>{{ feedback.isTest ? '测试反馈已收到，不会进入正式支持队列。' : '反馈已进入云乐坊支持中心，仅团队可见。' }}</p>
         <p class="receipt-id">
           反馈编号：{{ receipt.id }}
         </p>
@@ -33,6 +33,9 @@ const categories = appFeedbackCategories.map(item => ({ value: item.category, la
       <h1>有什么可以做得更好？</h1>
       <p class="feedback-intro">
         不用登录，也不必离开云食册。问题和建议会私密发送给团队。
+      </p>
+      <p v-if="feedback.isTest" role="status">
+        测试模式：仅发送到独立测试队列。
       </p>
       <fieldset :disabled="pending" class="feedback-fields">
         <label for="feedback-category">反馈类型</label>
@@ -49,7 +52,7 @@ const categories = appFeedbackCategories.map(item => ({ value: item.category, la
       <YlfButton type="submit" :disabled="pending" class="feedback-send">
         {{ pending ? '正在提交…' : '发送私密反馈' }}
       </YlfButton>
-      <MailFallback v-if="error && note.trim()" :message="mailMessage" />
+      <MailFallback v-if="error && note.trim() && !feedback.isTest" :message="mailMessage" />
       <p class="feedback-privacy">
         反馈不会自动公开到需求墙。请不要填写密码、验证码或付款信息。
       </p>

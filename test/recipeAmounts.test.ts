@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { parseRecipeCsv } from '../packages/cook/src/utils/csv'
 import { parsePreparationLine } from '../scripts/lib/recipe-amount-extraction'
-import { literal, matchesAnchor, parseFormula, parseLiteral, sourceFingerprint, sourceLines } from '../scripts/lib/recipe-amounts'
+import { isContainedIngredientMention, literal, matchesAnchor, parseFormula, parseLiteral, sourceFingerprint, sourceLines } from '../scripts/lib/recipe-amounts'
 import { validateAmountAnnotations } from '../scripts/lib/validate-recipe-amounts'
 
 const texts = JSON.parse(fs.readFileSync('packages/data/recipe-text.json', 'utf8'))
@@ -10,6 +10,11 @@ const annotations = JSON.parse(fs.readFileSync('packages/data/recipe-amounts.jso
 const ids = new Set(parseRecipeCsv(fs.readFileSync('packages/data/recipe.csv', 'utf8')).map(r => r.id!))
 
 describe('source anchored recipe amounts', () => {
+  it('does not diagnose sesame oil volume as a sesame mass conflict', () => {
+    const text = '10g 芝麻 + 5ml 芝麻油'
+    expect(isContainedIngredientMention(text, '芝麻', text.indexOf('芝麻'), ['芝麻', '芝麻油'])).toBe(false)
+    expect(isContainedIngredientMention(text, '芝麻', text.lastIndexOf('芝麻'), ['芝麻', '芝麻油'])).toBe(true)
+  })
   it('covers the exact offline text ID set and every annotation anchor', () => {
     expect(Object.keys(annotations.recipes).sort()).toEqual(Object.keys(texts.recipes).sort())
     expect(validateAmountAnnotations(annotations, texts, ids)).toEqual([])

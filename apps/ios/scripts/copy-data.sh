@@ -12,6 +12,7 @@ fi
 
 rm -rf "${DEST}"
 mkdir -p "${DEST}"
+shasum -a 256 "${DATA_DIR}/recipe.csv" | cut -c1-12 > "${DEST}/recipe-version.txt"
 for file in recipe-meta.json incompatible-foods.json aliases.json food.json pantry.json query.json shelf-life.json recipe-text.json recipe-amounts.json; do
   cp "${DATA_DIR}/${file}" "${DEST}/"
 done

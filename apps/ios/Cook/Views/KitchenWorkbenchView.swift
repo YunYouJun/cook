@@ -8,6 +8,7 @@ struct KitchenWorkbenchView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var pane: Pane = .recipe
+    @State private var layout: LayoutChoice = .automatic
     let recipe: Recipe
 
     private enum Pane: String, CaseIterable {
@@ -15,21 +16,42 @@ struct KitchenWorkbenchView: View {
         case preparation = "备料与计时"
     }
 
+    private enum LayoutChoice: String, CaseIterable {
+        case automatic = "自动"
+        case tabletop = "台面"
+    }
+
     var body: some View {
         NavigationStack {
             GeometryReader { geometry in
-                if geometry.size.width >= 760, !dynamicTypeSize.isAccessibilitySize {
-                    HStack(spacing: 0) {
+                let frames = KitchenWorkbenchFrames.resolve(
+                    size: geometry.size, division: geometry.kitchenDivision,
+                    tabletop: layout == .tabletop, accessibility: dynamicTypeSize.isAccessibilitySize
+                )
+                let compact = frames.mode == .compact
+                ZStack(alignment: .top) {
+                    KitchenPaneLayout(frames: frames) {
                         instructions
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        Divider()
-                        preparation
-                            .frame(width: min(420, max(320, geometry.size.width * 0.38)))
+                            .safeAreaInset(edge: .bottom, spacing: 0) {
+                                if compact { timerShortcut }
+                            }
+                            .clipped()
+                            .opacity(!compact || pane == .recipe ? 1 : 0)
+                            .allowsHitTesting(!compact || pane == .recipe)
+                            .accessibilityHidden(compact && pane != .recipe)
+                        preparation(tabletop: frames.mode == .tabletop)
+                            .clipped()
+                            .opacity(!compact || pane == .preparation ? 1 : 0)
+                            .allowsHitTesting(!compact || pane == .preparation)
+                            .accessibilityHidden(compact && pane != .preparation)
                     }
-                    .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier("kitchen.wide")
-                } else {
-                    VStack(spacing: 0) {
+                    if !frames.divider.isEmpty {
+                        Rectangle().fill(.separator)
+                            .frame(width: frames.divider.width, height: frames.divider.height)
+                            .position(x: frames.divider.midX, y: frames.divider.midY)
+                            .accessibilityHidden(true)
+                    }
+                    if compact {
                         Picker("工作台内容", selection: $pane) {
                             ForEach(Pane.allCases, id: \.self) { pane in
                                 Text(pane.rawValue).tag(pane)
@@ -37,25 +59,8 @@ struct KitchenWorkbenchView: View {
                         }
                         .pickerStyle(.segmented)
                         .padding(.horizontal)
-                        .padding(.vertical, 8)
-
-                        // 两个原生滚动视图保留身份，切换时不重建正文或丢失阅读位置。
-                        ZStack {
-                            instructions
-                                .safeAreaInset(edge: .bottom) {
-                                    timerShortcut
-                                }
-                                .opacity(pane == .recipe ? 1 : 0)
-                                .allowsHitTesting(pane == .recipe)
-                                .accessibilityHidden(pane != .recipe)
-                            preparation
-                                .opacity(pane == .preparation ? 1 : 0)
-                                .allowsHitTesting(pane == .preparation)
-                                .accessibilityHidden(pane != .preparation)
-                        }
+                        .frame(height: 48)
                     }
-                    .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier("kitchen.compact")
                 }
             }
             .navigationTitle(recipe.name)
@@ -64,6 +69,18 @@ struct KitchenWorkbenchView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("收起", systemImage: "chevron.down") { dismiss() }
                         .accessibilityIdentifier("kitchen.close")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Picker("工作台布局", selection: $layout) {
+                            ForEach(LayoutChoice.allCases, id: \.self) { choice in
+                                Text(choice.rawValue).tag(choice)
+                            }
+                        }
+                    } label: {
+                        Label("布局，\(layout.rawValue)", systemImage: "rectangle.split.2x1")
+                    }
+                    .accessibilityIdentifier("kitchen.layout")
                 }
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 2) {
@@ -80,7 +97,7 @@ struct KitchenWorkbenchView: View {
     private var instructions: some View {
         if let text = store.text(for: recipe) {
             RecipeTextContent(recipe: recipe, text: text, preparationInSidebar: true)
-
+                .accessibilityIdentifier("kitchen.instructions")
         } else {
             ContentUnavailableView {
                 Label("暂未收录图文做法", systemImage: "book.closed")
@@ -94,8 +111,8 @@ struct KitchenWorkbenchView: View {
         }
     }
 
-    private var preparation: some View {
-        KitchenPreparationView(recipe: recipe, text: store.text(for: recipe))
+    private func preparation(tabletop: Bool) -> some View {
+        KitchenPreparationView(recipe: recipe, text: store.text(for: recipe), tabletop: tabletop)
     }
 
     private var timerShortcut: some View {
@@ -123,9 +140,11 @@ struct KitchenWorkbenchView: View {
 struct KitchenPreparationView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(KitchenWorkbench.self) private var workbench
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var confirmingClear = false
     let recipe: Recipe
     let text: RecipeText?
+    var tabletop = false
 
     private var presentation: RecipePresentation? { text.map(RecipePresentation.init) }
     private var amounts: RecipeAmounts {
@@ -150,7 +169,9 @@ struct KitchenPreparationView: View {
 
     var body: some View {
         Form {
-            KitchenTimerSection(recipe: recipe)
+            if !tabletop || dynamicTypeSize.isAccessibilitySize {
+                KitchenTimerSection(recipe: recipe)
+            }
 
             Section {
                 VStack(alignment: .leading, spacing: 8) {
@@ -196,7 +217,16 @@ struct KitchenPreparationView: View {
                 }
             }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if tabletop, !dynamicTypeSize.isAccessibilitySize {
+                KitchenTimerPanel(recipe: recipe, compact: true)
+                    .padding(.horizontal)
+                    .padding(.vertical, 10)
+                    .background(.bar)
+            }
+        }
         .listSectionSpacing(16)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("kitchen.preparation")
         .confirmationDialog("清空这道菜的备料勾选？", isPresented: $confirmingClear, titleVisibility: .visible) {
             Button("重新备料", role: .destructive) { workbench.clearPrepared(recipeID: recipe.id) }

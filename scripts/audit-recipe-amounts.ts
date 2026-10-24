@@ -6,7 +6,7 @@ import { parseRecipeCsv } from '../packages/cook/src/utils/csv'
 import { parsePreparationLine } from './lib/recipe-amount-extraction'
 import { applyReviewedAmountAllocations } from './lib/recipe-amount-followup'
 import { recipeAmountReviewNotes } from './lib/recipe-amount-review-notes'
-import { anchorOf, ingredientHeadings, key, parseLiteral, sourceLines, stepHeadings, units } from './lib/recipe-amounts'
+import { anchorOf, ingredientHeadings, isContainedIngredientMention, key, parseLiteral, sourceLines, stepHeadings, units } from './lib/recipe-amounts'
 import { runAmountRuntime } from './run-amount-runtime'
 
 const directory = 'artifacts/recipe-amount-audit'
@@ -205,11 +205,14 @@ const audit = recipes.map((recipe, catalogIndex) => {
         const name = key(q.name)
         if (!line.text.includes(name))
           continue
-        const nearby = new RegExp(`(?:([0-9]+(?:\\.[0-9]+)?)\\s*(茶匙|汤匙|kg|g|克|千克|ml|mL|毫升|L|升)\\s*(?:的)?\\s*${name}|${name}\\s*([0-9]+(?:\\.[0-9]+)?)\\s*(茶匙|汤匙|kg|g|克|千克|ml|mL|毫升|L|升))`, 'g')
+        const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const nearby = new RegExp(`(?:([0-9]+(?:\\.[0-9]+)?)\\s*(茶匙|汤匙|kg|g|克|千克|ml|mL|毫升|L|升)\\s*(?:的)?\\s*${escaped}|${escaped}\\s*([0-9]+(?:\\.[0-9]+)?)\\s*(茶匙|汤匙|kg|g|克|千克|ml|mL|毫升|L|升))`, 'g')
         const values = [...line.text.matchAll(nearby)]
         const totalUnit = q.numericMeasurement.unit
         const base = (unit: string) => /^(?:g|克|kg|千克)$/.test(unit) ? 'mass' : /^(?:ml|mL|毫升|L|升)$/.test(unit) ? 'volume' : unit
         for (const value of values) {
+          if (isContainedIngredientMention(line.text, name, value.index! + value[0].indexOf(name), after.quantities.map((q: any) => key(q.name))))
+            continue
           const unit = value[2] ?? value[4]!
           sourceUnits.set(name, (sourceUnits.get(name) ?? new Set()).add(unit))
           if (totalUnit && base(totalUnit) !== base(unit))

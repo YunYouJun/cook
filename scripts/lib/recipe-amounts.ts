@@ -181,6 +181,21 @@ export function anchorOf(line: AmountAnchor): AmountAnchor {
 export function key(name: string) {
   return name.replace(/`|\*\*/g, '').replace(/[（(]可选[）)]/g, '').replace(/(?:的数量|的用量|数量|用量|量)$/, '').trim()
 }
+
+/** “芝麻油”里的“芝麻”不是另一次芝麻投料；只比较完整材料名的覆盖位置。 */
+export function isContainedIngredientMention(text: string, name: string, offset: number, names: string[]) {
+  return names.some((other) => {
+    if (other.length <= name.length || !other.includes(name))
+      return false
+    let start = text.indexOf(other)
+    while (start !== -1) {
+      if (start <= offset && start + other.length >= offset + name.length)
+        return true
+      start = text.indexOf(other, start + 1)
+    }
+    return false
+  })
+}
 export const scalar = (lower: number): AmountFormula => ({ op: 'scalar', lower })
 export const literal = (lower: number, unit: string, upper?: number): AmountFormula => ({ op: 'literal', lower, ...(upper === undefined || upper === lower ? {} : { upper }), unit })
 export const servings: AmountFormula = { op: 'servings' }

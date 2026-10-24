@@ -1,14 +1,20 @@
 import type { CloudbaseFunctionCaller } from './yunlefunAuth'
+import type { FeedbackContext, FeedbackEnvironment } from '~/utils/feedbackContext'
 
 export const FEEDBACK_FUNCTION = 'cook-feedback'
 
-export type FeedbackKind = 'video' | 'stuff' | 'info' | 'other'
+export type FeedbackKind = 'video' | 'text' | 'stuff' | 'info' | 'other'
+export type LinkIssue = '' | 'unavailable' | 'loading' | 'login' | 'wrong-content' | 'other'
 
 export interface RecipeReport {
   recipeId: number
   recipeName: string
   kind: FeedbackKind
   note?: string
+  linkIssue?: LinkIssue
+  /** Recipe sources at submission time; older clients may omit them. */
+  sourceBv?: string
+  sourceLink?: string
 }
 
 export interface SearchSignal {
@@ -52,7 +58,8 @@ interface FunctionResult {
 
 /** Use the existing native HTTP entry for signed-out feedback; never send cookies or a claimed UID. */
 export async function callGuestFeedback(data: Record<string, unknown>, fetcher: typeof fetch = fetch): Promise<unknown> {
-  const response = await fetcher('https://api.yunle.fun/cook-feedback', {
+  const name = data.environment === 'test' ? 'cook-feedback-test' : FEEDBACK_FUNCTION
+  const response = await fetcher(`https://api.yunle.fun/${name}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'omit',
@@ -70,9 +77,9 @@ export async function callGuestFeedback(data: Record<string, unknown>, fetcher: 
  * Talks to the `cook-feedback` cloud function. Signing in is optional: the
  * function falls back to the random device id to deduplicate and rate limit.
  */
-export function createFeedbackRemote(callFunction: CloudbaseFunctionCaller, deviceId: string) {
+export function createFeedbackRemote(callFunction: CloudbaseFunctionCaller, deviceId: string, metadata?: { environment: FeedbackEnvironment, version: string, context: FeedbackContext }) {
   async function call(data: Record<string, unknown>): Promise<FunctionResult> {
-    const result = await callFunction(FEEDBACK_FUNCTION, { ...data, deviceId }) as FunctionResult | null
+    const result = await callFunction(metadata?.environment === 'test' ? 'cook-feedback-test' : FEEDBACK_FUNCTION, { ...data, ...metadata, deviceId }) as FunctionResult | null
     if (!result || result.ok !== true)
       throw new FeedbackError(result?.code ?? 'UNKNOWN_ERROR')
     return result

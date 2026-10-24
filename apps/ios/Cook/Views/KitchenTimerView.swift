@@ -2,9 +2,20 @@ import CookCore
 import SwiftUI
 
 struct KitchenTimerSection: View {
+    let recipe: Recipe
+
+    var body: some View {
+        Section("计时器") {
+            KitchenTimerPanel(recipe: recipe)
+        }
+    }
+}
+
+struct KitchenTimerPanel: View {
     @Environment(KitchenWorkbench.self) private var workbench
     @State private var durationSheet: DurationSelection?
     let recipe: Recipe
+    var compact = false
 
     private struct DurationSelection: Identifiable {
         let id = UUID()
@@ -12,19 +23,24 @@ struct KitchenTimerSection: View {
     }
 
     var body: some View {
-        Section("计时器") {
+        VStack(spacing: compact ? 6 : 12) {
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 let timer = workbench.state(for: recipe.id).timer
                 let phase = timer.phase(at: context.date)
-                VStack(spacing: 12) {
-                    Text(timer.display(at: context.date))
-                        .font(.system(.largeTitle, design: .rounded).monospacedDigit())
-                        .accessibilityIdentifier("kitchen.countdown")
-                    Text(status(phase))
-                        .font(.subheadline)
-                        .foregroundStyle(phase == .finished ? Color.accentColor : Color.secondary)
-                        .accessibilityIdentifier("kitchen.timerStatus")
-
+                // 台面下半屏保留固定操作条；材料列表单独滚动。
+                let arrangement = compact ? AnyLayout(HStackLayout(spacing: 16)) : AnyLayout(VStackLayout(spacing: 12))
+                arrangement {
+                    VStack(alignment: compact ? .leading : .center, spacing: compact ? 2 : 8) {
+                        Text(timer.display(at: context.date))
+                            .font(.system(compact ? .title2 : .largeTitle, design: .rounded).monospacedDigit())
+                            .accessibilityIdentifier("kitchen.countdown")
+                        Text(status(phase))
+                            .font(compact ? .caption : .subheadline)
+                            .foregroundStyle(phase == .finished ? Color.accentColor : Color.secondary)
+                            .accessibilityIdentifier("kitchen.timerStatus")
+                    }
+                    .fixedSize(horizontal: compact, vertical: false)
+                    if compact { Spacer(minLength: 0) }
                     ViewThatFits(in: .horizontal) {
                         HStack(spacing: 16) { controls(phase) }
                         VStack(spacing: 12) { controls(phase) }
@@ -34,7 +50,7 @@ struct KitchenTimerSection: View {
                     .labelStyle(.titleAndIcon)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
+                .padding(.vertical, compact ? 0 : 8)
                 .sensoryFeedback(.success, trigger: phase == .finished)
             }
 
@@ -44,7 +60,10 @@ struct KitchenTimerSection: View {
                     durationSheet = DurationSelection(minutes: max(1, Int(timer.duration / 60)))
                 } label: {
                     LabeledContent("时长", value: "\(Int(timer.duration / 60)) 分钟")
+                        .font(compact ? .subheadline : .body)
+                        .frame(minHeight: 44)
                 }
+                .buttonStyle(.plain)
                 .accessibilityIdentifier("kitchen.duration")
             }
             if workbench.reminderUnavailable.contains(recipe.id) {

@@ -1,8 +1,10 @@
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+
 import { defineNuxtConfig } from 'nuxt/config'
 import { simpleGit } from 'simple-git'
-
 // import { pwa } from './app/config/pwa'
 import { appDescription, appStoreId } from './app/constants/index'
 
@@ -119,6 +121,9 @@ export default defineNuxtConfig({
   spaLoadingTemplate: 'spa-loading-template.html',
   runtimeConfig: {
     public: {
+      feedbackVersion: JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version as string,
+      feedbackBuild: process.env.VITE_COMMIT_REF || '',
+      feedbackRecipeVersion: createHash('sha256').update(readFileSync(new URL('../../packages/data/recipe.csv', import.meta.url))).digest('hex').slice(0, 12),
       clarityProjectId: process.env.NUXT_PUBLIC_CLARITY_PROJECT_ID ?? 'ks1ebw03i5',
       clarityDomains: process.env.NUXT_PUBLIC_CLARITY_DOMAINS ?? 'cook.yunyoujun.cn,cook.yunle.fun',
       yunlefunCloudbaseEnv: process.env.NUXT_PUBLIC_YUNLEFUN_CLOUDBASE_ENV || 'yunlefun-8g7ybcxc7345c490',

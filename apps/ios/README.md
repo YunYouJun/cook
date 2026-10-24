@@ -2,7 +2,7 @@
 
 SwiftUI 原生 App，计划和验收标准见 [iOS App 打磨目标](../../docs/dev/ios-roadmap.md)。
 
-菜谱详情中的「厨房工作台」提供图文做法、备料清单和计时器；宽屏并排展示，窄屏分段切换。交互与保存规则见 [厨房工作台](../../docs/dev/ios-kitchen-workbench.md)。
+菜谱详情中的「厨房工作台」提供图文做法、备料清单和计时器；宽屏并排展示，窄屏分段切换，可选择上下排列的「台面」布局。使用新 SDK 构建时支持 iOS 27.1 的系统折叠分区。交互、保存规则及验证范围见 [厨房工作台](../../docs/dev/ios-kitchen-workbench.md)。
 
 TestFlight 发布参数、正式反馈配置和内部组验收见 [原生发布流程](../../docs/dev/ios-testflight.md)。
 
@@ -29,6 +29,8 @@ swift test --package-path apps/ios/CookCore   # 只跑核心逻辑
 ```
 
 CI 的 `ios` job 在 iPhone 和 iPad 模拟器上先后跑单元测试和 UI 测试。失败时 `Show test failures` 一步会写出失败原因，完整结果包（截图、每一步的操作记录）在这次运行的 Artifacts 里，名为 `ios-xcresult`，下载后用 Xcode 打开。
+
+本地遇到 `launchd_sim could not bind to session` 或 Xcode 等待模拟器启动 60 秒后超时，先用 `xcrun simctl list devices available` 确定目标 UDID，再运行 `python3 apps/ios/scripts/prepare-simulator.py <UDID>`。脚本仅准备指定设备：检查对应运行时的共享缓存、等待完整启动、确认 SpringBoard 可响应，总超时默认 360 秒；成功后再向同一个 UDID 执行测试。它不清空设备、不重启全局服务。缓存检查依据 [Apple 开发者工程师的排查说明](https://developer.apple.com/forums/thread/807025)。
 
 本地使用 Xcode 27.1 / iPadOS 27.0 时，如果中文输入后的每次操作都报告 `App animations complete notification not received` 并等待约 60 秒，可在模拟器键盘的地球菜单中切换到 English (US) 后重跑。2026-10-24 的验收中，仅切换输入法即消除了该等待，测试仍输入和验证中文菜名、食材及厨具。不要通过跳过断言、禁用应用动画或无限增加超时来判定通过。iPad 的内联搜索框没有 iPhone 的取消按钮，测试需提交并清除搜索后再定位系统返回按钮。
 
