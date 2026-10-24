@@ -32,9 +32,10 @@ struct Chip: View {
             .foregroundStyle(isSelected ? Color.white : Color.primary)
             .background(isSelected ? Color.accentColor : Color(uiColor: .secondarySystemFill), in: Capsule())
             .contentShape(Capsule())
+            // Animate the visual label, keeping the native Button and its accessibility node stable.
+            .modifier(SelectBounce(isSelected: isSelected, enabled: !reduceMotion))
         }
         .buttonStyle(.plain)
-        .modifier(SelectBounce(isSelected: isSelected, enabled: !reduceMotion))
         .onGeometryChange(for: CGRect.self) { proxy in
             proxy.frame(in: .global)
         } action: { frame in
