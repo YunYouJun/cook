@@ -95,6 +95,7 @@ final class CookUITests: XCTestCase {
         app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        app.launchEnvironment["COOK_UI_TEST_FEEDBACK_ENVIRONMENT"] = "production"
         app.launch()
         tap(app.buttons["我的"].firstMatch)
         let contribution = app.buttons["菜谱投稿"]
@@ -118,6 +119,35 @@ final class CookUITests: XCTestCase {
         tap(failed.buttons["取消"])
         wait(failed, "exists == false")
         XCTAssertEqual(note.value as? String, "A recipe suggestion")
+        XCTAssertTrue(app.buttons["发送"].isEnabled)
+    }
+
+    @MainActor
+    func testTestFeedbackFailureKeepsDraftWithoutProductionFallbacks() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        app.launchEnvironment["COOK_UI_TEST_FEEDBACK_ENVIRONMENT"] = "test"
+        app.launch()
+        tap(app.buttons["我的"].firstMatch)
+        let contribution = app.buttons["菜谱投稿"]
+        for _ in 0..<5 where !contribution.isHittable { app.swipeUp() }
+        tap(contribution)
+        wait(app.staticTexts["测试模式：反馈仅进入独立测试队列，不会发送到正式支持中心。"], "exists == true")
+        let note = app.descendants(matching: .any).matching(identifier: "feedback.note").firstMatch
+        tap(note)
+        note.typeText("Keep this test draft")
+        tap(app.buttons["发送"])
+        let failed = app.alerts["暂时没能提交"]
+        wait(failed, "exists == true")
+        XCTAssertTrue(failed.staticTexts["测试内容已保留，可以稍后重试。"].exists)
+        XCTAssertFalse(failed.buttons["去支持中心"].exists)
+        XCTAssertFalse(failed.buttons["打开邮件草稿"].exists)
+        XCTAssertFalse(failed.buttons["复制邮箱和内容"].exists)
+        tap(failed.buttons["取消"])
+        wait(failed, "exists == false")
+        XCTAssertEqual(note.value as? String, "Keep this test draft")
         XCTAssertTrue(app.buttons["发送"].isEnabled)
     }
 
