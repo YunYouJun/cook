@@ -1,5 +1,7 @@
 # 云食册 TestFlight 外部测试准备
 
+手动提交审核、30 人限额、验收门禁及私密反馈汇总见 [外测自动化](./testflight-automation.md)。
+
 本页用于外测，现有 [内部发布流程](./ios-testflight.md) 继续使用原配置。2026-10-24 准备的首个外测候选为 **2.0.0 (5)**，基于 main `9bdbcf25dc6ef4f0774d81873021b38fbd6b2507`，包含 #138 的厨具界面改进。候选源码 `8a12512ccf6e1437eae8c99cee8b028621fafdfe` 只增加构建号与独立导出配置，应用逻辑与该 main 相同。
 
 2026-10-24 已上传并回读为 `VALID / APP_STORE_ELIGIBLE / READY_FOR_BETA_SUBMISSION`，尚未提交 Beta 审核或向普通用户开放。每次后续上传前重新查询构建号，确认未被其他发布占用。

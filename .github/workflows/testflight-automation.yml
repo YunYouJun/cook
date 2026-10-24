@@ -1,0 +1,24 @@
+name: TestFlight automation checks
+
+on:
+  pull_request:
+    paths:
+      - scripts/testflight/**
+      - .github/workflows/testflight-automation.yml
+  push:
+    branches: [main]
+    paths:
+      - scripts/testflight/**
+      - .github/workflows/testflight-automation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Test release gates and private feedback queue without credentials
+        run: python3 -m unittest discover -s scripts/testflight -p 'test_*.py' -v

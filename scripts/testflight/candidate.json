@@ -1,0 +1,10 @@
+{
+  "appId": "6824589542",
+  "groupId": "a2e33916-bbd0-4433-8ff7-4895ae926412",
+  "version": "2.0.0",
+  "buildNumber": "5",
+  "buildId": "64d24fe2-3bbd-4d0b-beee-ea12325e7a8a",
+  "sourceCommit": "8a12512ccf6e1437eae8c99cee8b028621fafdfe",
+  "ipaSha256": "5c65a9a12b67a9ccb5e659a6e58c9e97087049f7343da638def442c0ef83a704",
+  "testerLimit": 30
+}
