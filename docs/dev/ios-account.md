@@ -31,7 +31,7 @@
 
 1. 在 Apple Developer 的 `fun.yunle.cook` 标识符开启 Associated Domains，并更新签名描述文件。
 2. 将 `apps/web/public/.well-known/apple-app-site-association` 发布到 `https://cook.yunyoujun.cn/.well-known/apple-app-site-association`。新增 `webcredentials.apps` 的 `QT792GAY4C.fun.yunle.cook`；旧 Capacitor 的 `N3885VFNCL.cn.yunyoujun.cook` applinks 保留。
-3. 用正确的 `APPLE_DEVELOPMENT_TEAM` 生成工程。`project.yml` 已声明 `webcredentials:cook.yunyoujun.cn`；如果改签名团队，必须同步修改站点 AASA。
+3. 用正确的 `APPLE_DEVELOPMENT_TEAM` 生成工程。`project.yml` 已声明 `webcredentials:cook.yunyoujun.cn`，并为后续微信登录声明 `applinks:cook.yunyoujun.cn`；如果改签名团队，必须同步修改站点 AASA。
 4. 等 Apple 的关联域名缓存更新后，真机验证系统授权窗口和 HTTPS 回调。模拟器编译、协议测试均不能替代此步骤。
 
 2026-10-24 已将 AASA 发布到 EdgeOne 生产项目 `yunyoujun-cook`（部署 `dpwz3nca44ld`）。生产域名与 Apple CDN 均返回 HTTP 200、`application/json`，内容一致且包含原生 `webcredentials`。Apple App ID `JJLY23S94L` 已回读确认开启 Associated Domains，Xcode 自动更新了开发描述文件。
@@ -58,3 +58,5 @@
 发布前补充验收：生产令牌过期刷新、离线/恢复、账号停用、同一设备切换另一个云乐坊账号，以及两台设备间的 iCloud 同步。自动化已覆盖刷新、失效、离线恢复及身份隔离，但不替代上述真实账号场景。另需核验账号管理/注销入口和 App Store 隐私标签。
 
 参考：[Apple 系统认证窗口](https://developer.apple.com/documentation/authenticationservices/aswebauthenticationsession)、[CloudBase 自定义登录](https://docs.cloudbase.net/authentication-v2/method/custom-login)、[获取当前用户信息](https://docs.cloudbase.net/http-api/auth/user-me)。
+
+2026-10-25 已发布微信 `/auth/wechat/` 的 AASA 配置和新版隐私政策，Release 开发签名包 `2.0.0 (6.5)` 已安装。Apple CDN 节点间读取结果暂不一致，微信 Universal Links 真机跳转尚未通过；该结果与此前云乐坊系统授权登录成功分别记录。详见[微信关联域名发布与验证](./wechat-links-deployment.md)。

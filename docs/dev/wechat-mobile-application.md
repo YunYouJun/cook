@@ -4,17 +4,17 @@
 
 ## 先看当前状态
 
-| 项目                     | 已核验结果                                                                                   |
-| ------------------------ | -------------------------------------------------------------------------------------------- |
-| 原生 iOS 应用名称        | `云食册 - 食用手册`，已通过 App Store Connect API 核对                                       |
-| Bundle ID                | `fun.yunle.cook`                                                                             |
-| Apple Team               | `QT792GAY4C`                                                                                 |
-| App Store Connect App ID | `6824589542`；这是 Apple 的 ID，不是微信 AppID                                               |
-| App Store 版本           | `2.0.0`，状态 `PREPARE_FOR_SUBMISSION`，尚未正式上架                                         |
-| 云乐坊原生登录           | 系统授权窗口、回跳、会话恢复已在真机通过                                                     |
-| 头像与账号页             | `2.0.0 (6.4)` 真机已显示头像和原生账号详情                                                   |
-| 公开隐私政策             | `https://docs.cook.yunle.fun/privacy` 可在普通浏览器读取；当前线上正文尚无新增云乐坊登录章节 |
-| 原生关联域名             | `webcredentials:cook.yunyoujun.cn` 已生效；原生 App 的微信 `applinks` 路径尚未配置           |
+| 项目                     | 已核验结果                                                                                            |
+| ------------------------ | ----------------------------------------------------------------------------------------------------- |
+| 原生 iOS 应用名称        | `云食册 - 食用手册`，已通过 App Store Connect API 核对                                                |
+| Bundle ID                | `fun.yunle.cook`                                                                                      |
+| Apple Team               | `QT792GAY4C`                                                                                          |
+| App Store Connect App ID | `6824589542`；这是 Apple 的 ID，不是微信 AppID                                                        |
+| App Store 版本           | `2.0.0`，状态 `PREPARE_FOR_SUBMISSION`，尚未正式上架                                                  |
+| 云乐坊原生登录           | 系统授权窗口、回跳、会话恢复已在真机通过                                                              |
+| 头像与账号页             | `2.0.0 (6.4)` 真机已显示头像和原生账号详情                                                            |
+| 公开隐私政策             | `https://docs.cook.yunle.fun/privacy` 已发布 2026-10-25 版，包含云乐坊账号、头像与微信登录状态说明    |
+| 原生关联域名             | `webcredentials` 与微信 `applinks` 均已配置；6.5 包已安装，Apple CDN 部分节点仍超时，真机跳转尚未通过 |
 
 当前可以准备或保存申请资料，但不能把 Apple 草稿版本当作已上架证明，也不能把现有云乐坊 SSO 回调当作微信 Universal Links。
 
@@ -30,19 +30,19 @@
 
 ## 2. 填写应用资料
 
-| 表单含义                                  | 可以填写的内容                                                            |
-| ----------------------------------------- | ------------------------------------------------------------------------- |
-| 应用名称                                  | `云食册 - 食用手册`                                                       |
-| 简称 / App 内名称（若有）                 | `云食册`                                                                  |
-| 平台                                      | iOS                                                                       |
-| Bundle ID / Bundle Identifier             | `fun.yunle.cook`                                                          |
-| Apple App ID / App Store ID（若有此字段） | `6824589542`                                                              |
-| 项目网站                                  | `https://cook.yunyoujun.cn`                                               |
-| 隐私政策                                  | `https://docs.cook.yunle.fun/privacy`，提交前先发布补齐账号登录说明的正文 |
-| 申请能力                                  | 微信登录                                                                  |
-| 主体、联系人、电话、资质或备案            | 由管理员按实际资料填写，不复制示例或占位值                                |
-| 应用图标                                  | 使用下方现有 PNG，尺寸及文件大小按表单要求调整                            |
-| Universal Links                           | 见第 4 步；当前不能把规划地址标成已验证                                   |
+| 表单含义                                  | 可以填写的内容                                              |
+| ----------------------------------------- | ----------------------------------------------------------- |
+| 应用名称                                  | `云食册 - 食用手册`                                         |
+| 简称 / App 内名称（若有）                 | `云食册`                                                    |
+| 平台                                      | iOS                                                         |
+| Bundle ID / Bundle Identifier             | `fun.yunle.cook`                                            |
+| Apple App ID / App Store ID（若有此字段） | `6824589542`                                                |
+| 项目网站                                  | `https://cook.yunyoujun.cn`                                 |
+| 隐私政策                                  | `https://docs.cook.yunle.fun/privacy`（已发布账号登录说明） |
+| 申请能力                                  | 微信登录                                                    |
+| 主体、联系人、电话、资质或备案            | 由管理员按实际资料填写，不复制示例或占位值                  |
+| 应用图标                                  | 使用下方现有 PNG，尺寸及文件大小按表单要求调整              |
+| Universal Links                           | 见第 4 步；地址已部署，真机跳转验证仍待通过                 |
 
 **应用简介，可复制：**
 
@@ -71,13 +71,13 @@
 
 现有 `webcredentials` 用于云乐坊系统授权回跳；微信 SDK 的 Universal Links 还需要原生 App 的 `applinks` 关联。Apple 对两种服务有明确区分，详见 [Associated Domains](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.associated-domains)。
 
-规划值如下，**尚未部署，不能在审核材料中写成已经可用**：
+开放平台登记值如下，末尾 `/` 需要保留。**站点与签名配置已部署，但当前真机自动跳转尚未通过，不应在审核材料中写成已完成微信授权联调**：
 
 ```text
 https://cook.yunyoujun.cn/auth/wechat/
 ```
 
-技术准备步骤：
+以下配置已于 2026-10-25 发布，后续维护时保持一致：
 
 1. 在现有 AASA 的 `applinks.details` 中新增原生应用条目，保留已有 `webcredentials` 和旧 Capacitor 条目：
 
@@ -91,13 +91,15 @@ https://cook.yunyoujun.cn/auth/wechat/
 2. 在原生 App 的 Associated Domains 中保留 `webcredentials:cook.yunyoujun.cn`，新增 `applinks:cook.yunyoujun.cn`。不要改动原有 CloudKit 容器。
 3. 将更新后的完整 AASA 发布至 `https://cook.yunyoujun.cn/.well-known/apple-app-site-association`。站点实际由 EdgeOne 项目 `yunyoujun-cook` 托管，发布时保留完整站点内容。
 4. 核验 HTTPS、无重定向、JSON 内容以及 Apple CDN 中的原生应用条目；重新签名并安装含新增权限的 App。
-5. 平台登记、SDK 注册和客户端处理使用同一前缀。取得微信 AppID 并接入 SDK 后，完成真机“云食册 → 微信 → 云食册”授权测试。
+5. 后续平台登记、SDK 注册和客户端处理使用同一前缀。取得微信 AppID 并接入 SDK 后，完成真机“云食册 → 微信 → 云食册”授权测试。
 
-若申请表此时强制校验 Universal Links，先完成这些技术步骤再提交。`https://cook.yunyoujun.cn/auth/callback?platform=native` 是现有云乐坊 SSO 回调，不能直接拿来替代。
+发布记录：PR #151 已合入主线；EdgeOne 生产部署 `dpbe84c98zk4` 的 AASA 和回跳兜底页均为 HTTPS 200、无重定向。Release `2.0.0 (6.5)` 的签名已包含两类 Associated Domains，保留 iCloud Production，并已安装到 iPhone 15 Pro。Apple 海外 CDN 节点已返回与源站一致的新 AASA，但本地默认节点返回 `SWCERR00301 Timeout`；真机从备忘录点击链接仍进入浏览器，暂不视为 Universal Links 已验收。详见[发布与验证记录](./wechat-links-deployment.md)。
+
+若申请表强制要求已通过真机校验，等该项通过后再提交。`https://cook.yunyoujun.cn/auth/callback?platform=native` 是现有云乐坊 SSO 回调，不能直接拿来替代。
 
 ## 5. 补齐隐私政策后提交
 
-1. 先发布原生云乐坊登录和头像说明。相关正文已在 PR #149 的 `docs/privacy.md` 中；2026-10-25 核验时生产文档站尚未包含该章节。
+1. 原生云乐坊登录、头像、账号注销、iCloud 边界和微信 SDK 尚未启用的说明已发布到正式隐私政策，更新日期为 2026-10-25。
 2. 微信 SDK 实际接入时，再按选定 SDK 版本补充提供者、使用目的、实际处理的数据及官方隐私说明链接，不提前声称尚未发生的数据处理已经启用。
 3. 打开正式隐私政策 URL，确认显示的是待审核应用实际使用的内容。
 4. 回到平台逐项检查应用名称、Bundle ID、主体、图标、下载或未上架材料、Universal Links。
