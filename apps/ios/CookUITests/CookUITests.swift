@@ -233,8 +233,10 @@ final class CookUITests: XCTestCase {
     private func openPrivacySettings(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
         tap(app.buttons["我的"].firstMatch, file: file, line: line)
         wait(app.navigationBars["我的"], "isHittable == true", file: file, line: line)
-        let list = app.collectionViews.firstMatch
-        wait(list, "isHittable == true", file: file, line: line)
+        let list = app.collectionViews["settings.list"]
+        wait(list, "exists == true", file: file, line: line)
+        // 滚动容器自身未必有可点击的命中点；用页内首行确认当前设置页已可交互。
+        wait(list.buttons["我的菜谱"], "isHittable == true", file: file, line: line)
         let share = app.switches["privacy.shareSignals"]
         // List 按需创建屏幕外的行；不同屏幕与反馈入口数量会改变隐私分区的位置。
         // 在列表内部拖动并逐屏查找，避开导航栏与标签栏，不能假定滑动一次就能到达。
