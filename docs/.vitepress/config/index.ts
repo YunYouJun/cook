@@ -60,6 +60,7 @@ export default defineConfig({
             { text: '0009 图文做法', link: '/decisions/0009-text-recipes' },
             { text: '0010 视频质量分', link: '/decisions/0010-recipe-quality-score' },
             { text: '0011 冰箱与临期提醒', link: '/decisions/0011-fridge-reminders' },
+            { text: '0012 反馈渠道分流', link: '/decisions/0012-feedback-channels' },
           ],
         },
       ],

@@ -1,6 +1,7 @@
 import CookCore
 import SwiftData
 import SwiftUI
+import UIKit
 
 /// 菜谱详情：已有、还缺、常备分开列出，可以收藏、分享、去 B 站或图文页看做法
 struct RecipeDetailView: View {
@@ -15,6 +16,9 @@ struct RecipeDetailView: View {
     @State private var note = ""
     @State private var showingSent = false
     @State private var showingFailed = false
+    @State private var showingNoMail = false
+    /// 提交失败时记下这次反馈，邮件兜底用
+    @State private var failedIssue: FeedbackClient.RecipeIssue = .other
     @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }) private var favorites: [Favorite]
     let route: RecipeRoute
 
@@ -75,6 +79,21 @@ struct RecipeDetailView: View {
             URLQueryItem(name: "video", value: webURL?.absoluteString ?? ""),
         ]
         return components.url!
+    }
+
+    private var failedMailURL: URL {
+        FeedbackClient.mailURL(
+            topic: recipe.name,
+            lines: failedMailLines
+        )
+    }
+
+    private var failedMailLines: [String] {
+        ["菜谱：\(recipe.name)（#\(recipe.id)）", "问题：\(failedIssue.label)", failedIssue == .other ? note : "", webURL?.absoluteString ?? ""]
+    }
+
+    private var failedMailText: String {
+        FeedbackClient.mailText(topic: recipe.name, lines: failedMailLines)
     }
 
     var body: some View {
@@ -166,9 +185,23 @@ struct RecipeDetailView: View {
         }
         .alert("暂时没能提交", isPresented: $showingFailed) {
             Button("取消", role: .cancel) {}
+            Button("去支持中心") { openURL(URL(string: "https://support.yunle.fun/contact?product=cook&source=cook-ios&intent=feedback")!) }
             Button("去 GitHub 填写") { openURL(feedbackURL) }
+            Button("发邮件") {
+                openURL(failedMailURL) { accepted in
+                    if !accepted {
+                        UIPasteboard.general.string = failedMailText
+                        showingNoMail = true
+                    }
+                }
+            }
         } message: {
-            Text("可以到 GitHub 填写反馈表单，菜名和视频已经帮你填好。")
+            Text("内容已经复制。可以发邮件给我们，或者到 GitHub 填写反馈表单，菜名和视频都已经帮你填好。")
+        }
+        .alert("没有找到邮件 App", isPresented: $showingNoMail) {
+            Button("好", role: .cancel) {}
+        } message: {
+            Text("邮箱 \(FeedbackClient.supportEmail) 和反馈内容都已复制，可以用其他邮箱发给我们。")
         }
         // 菜名只放在大标题里，滚动后收进导航栏，不在页面里再写一遍
         .navigationTitle(recipe.name)
@@ -208,6 +241,8 @@ struct RecipeDetailView: View {
                 try await feedback.report(recipe, issue: issue, note: note)
                 showingSent = true
             } catch {
+                failedIssue = issue
+                UIPasteboard.general.string = failedMailText
                 showingFailed = true
             }
         }

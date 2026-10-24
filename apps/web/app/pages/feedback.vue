@@ -1,5 +1,14 @@
 <script setup lang="ts">
+import { onIonViewWillEnter } from '@ionic/vue'
 import AppFeedbackForm from '~/components/feedback/AppForm.vue'
+import { parseAppFeedbackCategory } from '~/utils/feedback'
+
+const router = useRouter()
+// Ionic owns the route outlet; read its current route on entry, including cached pages.
+const initialCategory = shallowRef(parseAppFeedbackCategory(router.currentRoute.value.query.category))
+onIonViewWillEnter(() => {
+  initialCategory.value = parseAppFeedbackCategory(router.currentRoute.value.query.category)
+})
 </script>
 
 <template>
@@ -13,7 +22,7 @@ import AppFeedbackForm from '~/components/feedback/AppForm.vue'
       </ion-toolbar>
     </ion-header>
     <ion-content :fullscreen="true">
-      <AppFeedbackForm />
+      <AppFeedbackForm :key="initialCategory" :initial-category="initialCategory" />
     </ion-content>
   </ion-page>
 </template>

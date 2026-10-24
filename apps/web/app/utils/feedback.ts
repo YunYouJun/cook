@@ -1,4 +1,5 @@
 import type { AppFeedbackCategory, FeedbackKind, SearchSignal } from '~/adapters/feedback'
+import { appName, links } from '~/constants'
 
 export const feedbackKinds: { kind: FeedbackKind, label: string }[] = [
   { kind: 'video', label: '视频打不开' },
@@ -7,12 +8,17 @@ export const feedbackKinds: { kind: FeedbackKind, label: string }[] = [
   { kind: 'other', label: '其他问题' },
 ]
 
-export const appFeedbackCategories: { category: AppFeedbackCategory, label: string }[] = [
-  { category: 'bug', label: '用着有问题' },
-  { category: 'idea', label: '功能建议' },
-  { category: 'recipe', label: '想要的菜没有' },
-  { category: 'other', label: '其他' },
+export const appFeedbackCategories: { category: AppFeedbackCategory, label: string, placeholder: string }[] = [
+  { category: 'bug', label: '用着有问题', placeholder: '在哪个页面、做了什么、看到了什么' },
+  { category: 'idea', label: '功能建议', placeholder: '想要什么功能，用在什么时候' },
+  { category: 'recipe', label: '想要的菜没有', placeholder: '菜名；有 B 站视频的话贴上链接' },
+  { category: 'other', label: '其他', placeholder: '说说具体情况' },
 ]
+
+/** Only the known categories can be preselected by a feedback deep link. */
+export function parseAppFeedbackCategory(value: unknown): AppFeedbackCategory {
+  return appFeedbackCategories.find(item => item.category === value)?.category ?? 'bug'
+}
 
 const DEVICE_ID_KEY = 'cook:device-id'
 
@@ -34,4 +40,36 @@ export function getDeviceId(): string {
 /** One key per distinct signal, so the same selection is reported once per session. */
 export function signalKey(signal: SearchSignal): string {
   return [signal.type, [...signal.stuff].sort().join('、'), signal.tool ?? '', signal.mode ?? '', signal.recipeId ?? ''].join('|')
+}
+
+/**
+ * A prefilled email to the support mailbox, the fallback when the cloud function
+ * can't be reached: no account needed, unlike GitHub. Mirrors `FeedbackClient.mailURL` on iOS.
+ */
+export function buildFeedbackMail(options: { topic: string, lines: string[], platform?: string }): string {
+  const subject = `【${appName}反馈】${options.topic}`
+  const body = [
+    ...options.lines.filter(Boolean),
+    '',
+    '---',
+    `来自 ${appName}（${options.platform ?? 'web'}）`,
+  ].join('\n')
+  return `mailto:${links.supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+}
+
+/** Keep the same complete message available when a mail app or clipboard is unavailable. */
+export function buildFeedbackText(options: { topic: string, lines: string[], platform?: string }): string {
+  const mail = new URL(buildFeedbackMail(options))
+  return `收件人：${links.supportEmail}\n主题：${mail.searchParams.get('subject')}\n\n${mail.searchParams.get('body')}`
+}
+
+/** Best effort: a failed write (no permission, insecure context) just means nothing was copied. */
+export async function copyFeedbackText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  }
+  catch {
+    return false
+  }
 }

@@ -11,8 +11,9 @@
 
 - 网站链接（Cloudflare）：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)
   - 国内加速（腾讯云）：[cook.yunle.fun](https://cook.yunle.fun)
-- 备用（Netlify）：[cook.yyj.moe](https://cook.yyj.moe)
 - 开发版（Vercel）：[cook.yunle.app](https://cook.yunle.app)
+
+本仓库不再配置 Netlify 自动部署；其余网站入口和部署配置保持不变。
 
 ### 小程序版本
 

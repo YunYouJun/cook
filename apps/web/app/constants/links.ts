@@ -2,9 +2,9 @@ export const links = {
   cook: 'https://cook.yunyoujun.cn',
 
   /**
-   * 菜谱投稿链接
+   * 应用内反馈提交失败时的可选邮件兜底
    */
-  contribute: 'https://docs.qq.com/form/page/DWk9GWW9oTmlXZU9V',
+  supportEmail: 'kf@yunle.fun',
   /**
    * 私密反馈与公开需求墙
    */

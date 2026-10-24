@@ -2,6 +2,8 @@
 
 SwiftUI 原生 App，计划和验收标准见 [iOS App 打磨目标](../../docs/dev/ios-roadmap.md)。
 
+TestFlight 发布参数、正式反馈配置和内部组验收见 [原生发布流程](../../docs/dev/ios-testflight.md)。
+
 - `CookCore/`：推荐、搜索、相克判断，移植自 `packages/cook`，和 Web 跑同一份用例。
 - `Cook/`：App 界面（SwiftUI）、收藏和浏览记录（SwiftData，有 iCloud 权限时通过 CloudKit 同步）。
 - `project.yml`：XcodeGen 工程定义，生成的 `Cook.xcodeproj`、`Info.plist`、`Cook.entitlements` 不提交。
@@ -25,6 +27,12 @@ swift test --package-path apps/ios/CookCore   # 只跑核心逻辑
 ```
 
 CI 的 `ios` job 在 iPhone 和 iPad 模拟器上先后跑单元测试和 UI 测试。失败时 `Show test failures` 一步会写出失败原因，完整结果包（截图、每一步的操作记录）在这次运行的 Artifacts 里，名为 `ios-xcresult`，下载后用 Xcode 打开。
+
+## 反馈入口
+
+「我的 → 反馈」中的「需求墙」直接打开 `https://support.yunle.fun/feedback?product=cook`，保留 Cook 筛选；「支持中心」打开支持中心首页。意见反馈仍在 App 内私密提交，失败时保留内容并提供支持中心私密反馈入口，菜谱纠错保持原流程。
+
+原生入口的发布与实际分发构建验收由 [#133](https://github.com/YunYouJun/cook/issues/133) 跟踪，源码合并不代表已经分发。
 
 ## iCloud 同步的结构（CloudKit schema）
 

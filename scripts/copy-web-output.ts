@@ -1,7 +1,7 @@
 import { cpSync, existsSync, rmSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-// Deploy targets (Netlify, Vercel, Cloudflare Pages, EdgeOne, Docker, Capacitor) read `dist/`
+// Deploy targets (Vercel, Cloudflare Pages, EdgeOne, Docker, Capacitor) read `dist/`
 // at the repo root, so mirror the web app's static output there.
 const root = resolve(import.meta.dirname, '..')
 const webDist = resolve(root, 'apps/web/dist')

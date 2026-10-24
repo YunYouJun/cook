@@ -57,6 +57,26 @@ const appStoreUrl = appStoreId ? `https://apps.apple.com/cn/app/id${appStoreId}`
           </ion-text>
         </ion-item>
       </ion-list>
+
+      <ion-list :inset="true">
+        <ion-list-header>
+          <ion-label>开发者</ion-label>
+        </ion-list-header>
+        <ion-item :href="links.githubIssue" target="_blank">
+          <ion-label>提 Issue</ion-label>
+          <ion-text class="inline-flex items-center justify-center">
+            <div class="inline-flex" i-ri-github-line />
+            <span m="l-1" class="inline-flex">GitHub</span>
+          </ion-text>
+        </ion-item>
+        <ion-item :href="links.githubDiscussions" target="_blank">
+          <ion-label>参与讨论</ion-label>
+          <ion-text class="inline-flex items-center justify-center">
+            <div class="inline-flex" i-ri-discuss-line />
+            <span m="l-1" class="inline-flex">Discussions</span>
+          </ion-text>
+        </ion-item>
+      </ion-list>
     </ion-content>
   </ion-page>
 </template>

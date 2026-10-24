@@ -58,6 +58,38 @@ final class CookUITests: XCTestCase {
         wait(unfavorite, "exists == true")
     }
 
+    @MainActor
+    func testRecipeContributionUsesPrivateFeedbackForm() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        app.launch()
+        tap(app.buttons["我的"].firstMatch)
+        let contribution = app.buttons["菜谱投稿"]
+        for _ in 0..<5 where !contribution.isHittable { app.swipeUp() }
+        tap(contribution)
+        // SwiftUI exposes the vertical TextField's accessibility type differently across OS versions.
+        let note = app.descendants(matching: .any).matching(identifier: "feedback.note").firstMatch
+        wait(note, "exists == true")
+        XCTAssertTrue(app.staticTexts["想要的菜没有"].exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "反馈私密发送至云乐坊支持中心")).firstMatch.exists)
+        XCTAssertFalse(app.buttons["发送"].isEnabled)
+        tap(note)
+        note.typeText("A recipe suggestion")
+        XCTAssertTrue(app.buttons["发送"].isEnabled)
+        // -ui-testing injects a failing local transport; no request leaves the device.
+        tap(app.buttons["发送"])
+        let failed = app.alerts["暂时没能提交"]
+        wait(failed, "exists == true")
+        XCTAssertTrue(failed.buttons["去支持中心"].exists)
+        XCTAssertTrue(failed.buttons["打开邮件草稿"].exists)
+        tap(failed.buttons["取消"])
+        wait(failed, "exists == false")
+        XCTAssertEqual(note.value as? String, "A recipe suggestion")
+        XCTAssertTrue(app.buttons["发送"].isEnabled)
+    }
+
     /// 等控件出现再点；在屏幕外时 tap() 会自己滚过去
     @MainActor
     private func tap(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
