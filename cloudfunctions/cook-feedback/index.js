@@ -30,7 +30,7 @@ const SIGNALS = 'cook_search_signals'
 const QUOTA = 'cook_feedback_quota'
 const APP_FEEDBACK = 'cook_app_feedback'
 
-const KINDS = new Set(['video', 'stuff', 'info', 'other'])
+const KINDS = new Set(['video', 'text', 'stuff', 'info', 'other'])
 const MODES = new Set(['loose', 'strict', 'survival'])
 const SIGNAL_TYPES = new Set(['empty', 'open'])
 const CATEGORIES = new Set(['bug', 'idea', 'recipe', 'other'])
@@ -125,11 +125,35 @@ function readSource(event) {
   return { platform, version }
 }
 
+/** Store a bounded, inert source snapshot. Never fetch caller-provided URLs. */
+function readRecipeSources(event) {
+  if (event.sourceBv === undefined && event.sourceLink === undefined)
+    return {}
+  const sourceBv = event.sourceBv ?? ''
+  const sourceLink = event.sourceLink ?? ''
+  if (typeof sourceBv !== 'string' || (sourceBv && !/^(?:BV[0-9A-Za-z]{10}|av\d+)$/.test(sourceBv)) || typeof sourceLink !== 'string' || sourceLink.length > 2048)
+    return null
+  if (sourceLink) {
+    try {
+      const url = new URL(sourceLink)
+      if (url.protocol !== 'https:' || url.username || url.password)
+        return null
+    }
+    catch {
+      return null
+    }
+  }
+  if ((event.kind === 'video' && !sourceBv) || (event.kind === 'text' && !sourceLink))
+    return null
+  return { sourceBv, sourceLink }
+}
+
 async function report(event, reporter, now) {
   const { recipeId, recipeName, kind } = event
   const note = typeof event.note === 'string' ? event.note.trim().slice(0, MAX_NOTE) : ''
   const source = readSource(event)
-  if (!isIndex(recipeId, 1e6) || !isWord(recipeName, MAX_NAME) || !KINDS.has(kind) || !source)
+  const recipeSources = readRecipeSources(event)
+  if (!isIndex(recipeId, 1e6) || !isWord(recipeName, MAX_NAME) || !KINDS.has(kind) || !source || !recipeSources)
     return fail('INVALID_REPORT')
   if (!await takeQuota(reporter, now))
     return fail('RATE_LIMITED')
@@ -143,6 +167,7 @@ async function report(event, reporter, now) {
     kind,
     note,
     ...source,
+    ...recipeSources,
     reporter: reporter.key,
     uid: reporter.uid,
     day,

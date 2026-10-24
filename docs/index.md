@@ -14,8 +14,8 @@ hero:
       text: 使用说明
       link: /guide/getting-started
     - theme: alt
-      text: 云食册 iOS 内测
-      link: /guide/ios-beta
+      text: 报名 iOS 体验
+      link: /guide/ios-beta#signup
 
 features:
   - title: 用现有食材找菜

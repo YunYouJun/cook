@@ -2,13 +2,16 @@ import type { CloudbaseFunctionCaller } from './yunlefunAuth'
 
 export const FEEDBACK_FUNCTION = 'cook-feedback'
 
-export type FeedbackKind = 'video' | 'stuff' | 'info' | 'other'
+export type FeedbackKind = 'video' | 'text' | 'stuff' | 'info' | 'other'
 
 export interface RecipeReport {
   recipeId: number
   recipeName: string
   kind: FeedbackKind
   note?: string
+  /** Recipe sources at submission time; older clients may omit them. */
+  sourceBv?: string
+  sourceLink?: string
 }
 
 export interface SearchSignal {
