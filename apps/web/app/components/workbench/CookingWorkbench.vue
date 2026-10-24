@@ -2,7 +2,7 @@
 import type { RecipeMatch } from '@yunyoujun/cook'
 import type { RecipeItem, StuffItem } from '~/types'
 import { DIFFICULTY_LEVELS, METHOD_GROUPS } from '@yunyoujun/cook/recommend'
-import { meat, staple, tools, vegetable } from '~/data/food'
+import { useWorkbenchCatalog } from '~/composables/useWorkbenchCatalog'
 import { pantryOptions } from '~/data/pantry'
 
 defineEmits<{ detail: [recipe: RecipeItem, match?: RecipeMatch] }>()
@@ -10,16 +10,11 @@ const pantry = defineModel<string[]>('pantry', { required: true })
 const rStore = useRecipeStore()
 const pointerFine = useMediaQuery('(hover: hover) and (pointer: fine)')
 const reducedMotion = usePreferredReducedMotion()
-const categories = [
-  { name: '蔬菜', items: vegetable },
-  { name: '肉和蛋', items: meat },
-  { name: '主食', items: staple },
-]
+const { sections: categories, ingredients: allFood, tools, acceptsIngredient } = useWorkbenchCatalog(() => rStore.curTool)
 const category = ref(0)
 const query = ref('')
 const expanded = ref(false)
 const avoidOpen = ref(false)
-const allFood = [...vegetable, ...meat, ...staple]
 const matches = computed(() => rStore.recommendWithPantry(pantry.value))
 const toolOnly = computed(() => !rStore.selectedStuff.length && Boolean(rStore.curTool))
 const count = computed(() => toolOnly.value ? rStore.toolRecipes.length : matches.value.length)
@@ -31,10 +26,10 @@ const dragType = 'application/x-cook-ingredient'
 const visibleItems = computed(() => {
   const text = query.value.trim()
   if (text)
-    return allFood.filter(item => item.name.includes(text) || item.alias?.includes(text))
-  return categories[category.value]!.items.filter(item => expanded.value || !item.more || rStore.selectedStuff.includes(item.name))
+    return allFood.value.filter(item => item.name.includes(text) || item.alias?.includes(text))
+  return categories.value[category.value]!.items.filter(item => expanded.value || !item.more || rStore.selectedStuff.includes(item.name))
 })
-const hasMore = computed(() => categories[category.value]!.items.some(item => item.more))
+const hasMore = computed(() => categories.value[category.value]!.items.some(item => item.more))
 const preferenceSummary = computed(() => [
   ...rStore.methodGroups,
   ...rStore.difficulty,
@@ -47,7 +42,7 @@ watch([matches, () => rStore.toolRecipes], () => {
 })
 
 function emoji(name: string) {
-  return allFood.find(item => item.name === name)?.emoji || '🥣'
+  return allFood.value.find(item => item.name === name)?.emoji || '🥣'
 }
 
 function togglePantry(name: string) {
@@ -82,7 +77,7 @@ function dragOver(event: DragEvent) {
 function dropIngredient(event: DragEvent) {
   dragActive.value = false
   const name = event.dataTransfer?.getData(dragType)
-  if (!name || !allFood.some(item => item.name === name))
+  if (!name || !acceptsIngredient(name))
     return
   event.preventDefault()
   // Dropping an already selected ingredient must not toggle it off.
@@ -115,8 +110,8 @@ function addUnlisted() {
           <input v-model="query" type="search" placeholder="如：土豆、鸡蛋、西红柿" autocomplete="off">
         </label>
         <div class="wb-categories" role="group" aria-label="食材分类">
-          <button v-for="(group, index) in categories" :key="group.name" type="button" :aria-pressed="category === index && !query" @click="category = index; query = ''; expanded = false">
-            {{ group.name }}
+          <button v-for="(group, index) in categories" :key="group.category" type="button" :aria-pressed="category === index && !query" @click="category = index; query = ''; expanded = false">
+            {{ group.title }}
           </button>
         </div>
         <div class="wb-food-grid">
@@ -148,6 +143,9 @@ function addUnlisted() {
         <p class="wb-hint">
           点一下加入，再点一下移除。<span v-if="pointerFine">也可拖到砧板上。</span>
         </p>
+        <NuxtLink class="wb-text-button" to="/catalog">
+          管理食材和厨具
+        </NuxtLink>
 
         <details class="wb-settings">
           <summary>本次确认的调料 <span>{{ pantry.length }} 种</span></summary>
@@ -216,7 +214,7 @@ function addUnlisted() {
           <h2>厨具 <span>（可选）</span></h2>
           <div class="wb-pills" role="group" aria-label="工作台厨具">
             <button v-for="tool in tools" :key="tool.name" type="button" :aria-pressed="rStore.curTool === tool.name" @click="rStore.clickTool(tool)">
-              <span :class="tool.icon" aria-hidden="true" />{{ tool.name === '一口大锅' ? '炒锅' : tool.name }}<span v-if="rStore.curTool === tool.name" aria-hidden="true">✓</span>
+              <span v-if="tool.icon" :class="tool.icon" aria-hidden="true" /><span v-else aria-hidden="true">{{ tool.emoji }}</span>{{ tool.name === '一口大锅' ? '炒锅' : tool.name }}<span v-if="rStore.curTool === tool.name" aria-hidden="true">✓</span>
             </button>
           </div>
         </div>
