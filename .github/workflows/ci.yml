@@ -12,6 +12,25 @@ on:
       - dev
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      docs_only: ${{ steps.changes.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Test change detection
+        run: node --test test/ciChanges.test.mjs
+      - name: Detect documentation-only changes
+        id: changes
+        run: node scripts/ci-changes.mjs
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -68,6 +87,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
+      - name: Build documentation
+        run: pnpm run docs:build
 
   test:
     runs-on: ${{ matrix.os }}
@@ -100,6 +121,8 @@ jobs:
 
   # iOS 的 CookCore 跑和 Web 共用的用例（ubuntu 镜像自带 Swift）
   swift:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -121,6 +144,8 @@ jobs:
 
   # 云食册 iOS App：XcodeGen 生成工程，在 iPhone 和 iPad 模拟器上编译并跑测试（窄屏和宽屏两种布局）
   ios:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: macos-26
     env:
       # The image includes Xcode 26.5 and iOS 26.5. Pin the matching toolchain:
