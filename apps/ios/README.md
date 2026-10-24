@@ -36,7 +36,7 @@ CI 的 `ios` job 在 iPhone 和 iPad 模拟器上先后跑单元测试和 UI 测
 
 ## 反馈入口
 
-「我的 → 反馈」中的「需求墙」直接打开 `https://support.yunle.fun/feedback?product=cook`，保留 Cook 筛选；「支持中心」打开支持中心首页。意见反馈仍在 App 内私密提交，失败时保留内容并提供支持中心私密反馈入口，菜谱纠错保持原流程。
+「我的 → 帮助与反馈」中的「需求墙」直接打开 `https://support.yunle.fun/feedback?product=cook`，保留 Cook 筛选；「支持中心」打开支持中心首页。意见反馈仍在 App 内私密提交，失败时保留内容并提供支持中心私密反馈入口，菜谱纠错保持原流程。
 
 原生入口的发布与实际分发构建验收由 [#133](https://github.com/YunYouJun/cook/issues/133) 跟踪，源码合并不代表已经分发。
 

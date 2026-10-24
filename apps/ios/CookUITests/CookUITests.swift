@@ -21,12 +21,16 @@ final class CookUITests: XCTestCase {
         let signIn = app.buttons["account.signIn"]
         wait(signIn, "exists == true AND isEnabled == true")
         XCTAssertFalse(app.buttons["account.signOut"].exists)
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "与网页版暂不自动同步")).firstMatch.exists)
         XCTAssertTrue(app.buttons["我的菜谱"].exists)
+        // 首页展示入口，数据说明和导入操作集中在二级页。
+        XCTAssertFalse(app.buttons["从文件导入"].exists)
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "云乐坊账号与 iCloud"
         attachment.lifetime = .keepAlways
         add(attachment)
+        tap(app.buttons["数据与同步"])
+        XCTAssertTrue(app.buttons["从文件导入"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "云乐坊账号的登录和退出不会改变这些数据")).firstMatch.exists)
         // 基础功能不要求账号，登录入口不会挡住菜谱筛选。
         tap(app.buttons["做菜"].firstMatch)
         tap(app.buttons["番茄"])
@@ -264,7 +268,7 @@ final class CookUITests: XCTestCase {
         app.navigationBars.buttons.element(boundBy: 0).tap()
         tap(decline)
         tap(app.buttons["我的"].firstMatch)
-        app.swipeUp()
+        tap(app.buttons["隐私"])
         let share = app.switches["privacy.shareSignals"]
         XCTAssertTrue(share.waitForExistence(timeout: timeout))
         wait(share, "value == '0'")
@@ -278,7 +282,7 @@ final class CookUITests: XCTestCase {
         XCTAssertTrue(app.buttons["我的"].firstMatch.waitForExistence(timeout: timeout))
         XCTAssertFalse(decline.exists, "明确选择后不再弹出")
         tap(app.buttons["我的"].firstMatch)
-        app.swipeUp()
+        tap(app.buttons["隐私"])
         wait(share, "value == '1'")
         try tapSwitch(share, in: app)
         wait(share, "value == '0'")

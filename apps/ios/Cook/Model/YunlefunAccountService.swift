@@ -23,14 +23,22 @@ struct YunlefunAccount: Decodable, Equatable {
     let username: String?
     let status: String?
     let isAnonymous: Bool?
+    var picture: String? = nil
 
     enum CodingKeys: String, CodingKey {
-        case id = "sub", name, username, status, isAnonymous = "is_anonymous"
+        case id = "sub", name, username, status, picture, isAnonymous = "is_anonymous"
     }
 
     var displayName: String {
         [name, username].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .first { !$0.isEmpty } ?? "云乐坊用户"
+    }
+
+    var avatarURL: URL? {
+        guard let picture, picture.count <= 2048,
+              let url = URL(string: picture), url.scheme?.lowercased() == "https",
+              let host = url.host, !host.isEmpty, url.user == nil, url.password == nil else { return nil }
+        return url
     }
 
     // CloudBase's authenticated profile may omit the optional status field.

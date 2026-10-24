@@ -242,6 +242,18 @@ private actor AccountTransportStub {
 
 @MainActor
 final class YunlefunAccountServiceTests: XCTestCase {
+    func testProfileDecodesAvatarWithoutRequiringItForLogin() throws {
+        let profile = try JSONDecoder().decode(YunlefunAccount.self, from: Data(#"{"sub":"user-1","name":"云游君","picture":"https://images.example/avatar.png"}"#.utf8))
+        XCTAssertEqual(profile.avatarURL?.absoluteString, "https://images.example/avatar.png")
+        let legacy = try JSONDecoder().decode(YunlefunAccount.self, from: Data(#"{"sub":"user-1"}"#.utf8))
+        XCTAssertNil(legacy.avatarURL)
+        var account = profile
+        for picture in ["http://images.example/avatar.png", "file:///avatar.png", "data:image/png;base64,abc", "https://user:password@images.example/avatar.png", "invalid"] {
+            account.picture = picture
+            XCTAssertNil(account.avatarURL)
+        }
+    }
+
     func testRefreshCannotSwitchToAnotherSubject() async {
         let transport = AccountTransportStub([(200, #"{"access_token":"access","refresh_token":"refresh","sub":"other-user","expires_in":7200}"#)])
         let service = YunlefunAccountService(transport: { try await transport.send($0) })
