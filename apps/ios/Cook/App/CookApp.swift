@@ -9,10 +9,12 @@ private let launchSignposter = OSSignposter(subsystem: "fun.yunle.cook", categor
 
 @main
 struct CookApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var loadResult: Result<RecipeStore, Error>
     @State private var session: CookSession
     @State private var feedback = FeedbackClient()
     @State private var favoriteActions: FavoriteActions
+    @State private var accounts: YunlefunAccountStore
     @State private var workbench: KitchenWorkbench
     private let container: ModelContainer
     /// 通知中心只弱引用代理，这里留着
@@ -37,6 +39,7 @@ struct CookApp: App {
         _loadResult = State(initialValue: result)
         _session = State(initialValue: CookSession(defaultPantry: defaultPantry, context: container.mainContext))
         _favoriteActions = State(initialValue: FavoriteActions(context: container.mainContext))
+        _accounts = State(initialValue: YunlefunAccountStore(vault: inMemory ? MemoryYunlefunAccountVault() : KeychainYunlefunAccountVault()))
         _workbench = State(initialValue: KitchenWorkbench(defaults: inMemory ? nil : .standard, notifications: inMemory ? .disabled : .live))
         #if DEBUG
             if uiTesting {
@@ -88,6 +91,12 @@ struct CookApp: App {
                     .environment(feedback)
                     .environment(favoriteActions)
                     .environment(workbench)
+                    .environment(accounts)
+                    .task { await accounts.restore() }
+                    .onChange(of: scenePhase) { _, phase in
+                        if phase == .active { Task { await accounts.refreshIfNeeded() } }
+                    }
+
             case let .failure(error):
                 ContentUnavailableView(
                     "菜谱数据加载失败",

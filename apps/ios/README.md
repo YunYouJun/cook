@@ -42,9 +42,17 @@ CI 的 `ios` job 在 iPhone 和 iPad 模拟器上先后跑单元测试和 UI 测
 
 原生入口的发布与实际分发构建验收由 [#133](https://github.com/YunYouJun/cook/issues/133) 跟踪，源码合并不代表已经分发。
 
+## 云乐坊账号
+
+原生云乐坊登录的客户端登记、HTTPS 回调发布条件和会话验证见 [账号接入](../../docs/dev/ios-account.md)。微信登录暂缓，申请资料见 [微信移动应用申请](../../docs/dev/wechat-mobile-application.md)。登录与 iCloud 数据同步相互独立。
+
+原生微信入口预留构建开关 `COOK_WECHAT_LOGIN_ENABLED`，Debug / Release 均默认 `NO`，通过 `Info.plist` 的 `CookWeChatLoginEnabled` 供 `CookFeatures.weChatLoginEnabled` 读取。只有显式 `YES` 才开启；缺失或未展开的值保持关闭。后续接入微信按钮和发起授权动作时，统一使用该属性控制入口。审核通过且 SDK、同一云乐坊账号绑定联调完成后，可在 `project.yml` 修改默认值并重新生成工程，或通过 `xcodebuild ... COOK_WECHAT_LOGIN_ENABLED=YES` 覆盖本次构建，再重新打包分发。
+
+此开关目前仅预留配置，尚无原生微信按钮或 SDK 消费它；单独改成 `YES` 不会提供微信登录能力。开关不控制现有云乐坊授权网页、Universal Links 或 iCloud 同步，也不是远程开关。
+
 ## iCloud 同步的结构（CloudKit schema）
 
-私人菜谱源码按维护者 2026-10-24 的决定，以最新 main 集成后的代码检查、Web/Swift 文件往返和 iPhone/iPad 模拟器测试作为合并条件。跨设备同步、离线冲突、账号隔离、退出 iCloud 后的本地数据保留，以及当前五个模型的 schema 和生产读写仍是发布门禁；本轮模拟器验收没有验证这些项目。完整范围见 [私人菜谱与文件迁移](../../docs/dev/private-recipes.md)。
+私人菜谱源码以最新 main 集成后的代码检查、Web/Swift 文件往返和 iPhone/iPad 模拟器测试作为合并条件。五模型生产结构、同账户跨设备读写，以及构建 6 的离线新增和修改 / 删除冲突已有[真实生产证据](../../docs/dev/ios-production-sync-2026-10-24.md)。维护者随后决定，剩余验收改用模拟器，不再要求真机；覆盖范围和不能由本地测试证明的账号行为见[模拟器验收记录](../../docs/dev/ios-simulator-acceptance-2026-10-24.md)。文件协议见[私人菜谱与文件迁移](../../docs/dev/private-recipes.md)。
 
 收藏、浏览记录、做菜偏好、冰箱食材和私人菜谱用 SwiftData 存，登录 iCloud 时通过容器 `iCloud.fun.yunle.cook` 同步。TestFlight 和 App Store 版本用 CloudKit 的 **Production** 环境，结构要先在 Development 环境建好，再手动部署过去：
 

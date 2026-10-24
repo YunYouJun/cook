@@ -43,8 +43,12 @@ final class PersonalCatalogUITests: XCTestCase {
         XCTAssertTrue(back.waitForExistence(timeout: 10))
         back.tap()
         XCTAssertTrue(app.buttons["食材和厨具"].waitForExistence(timeout: 10))
-        // A scroll in the manager minimizes the iOS 26+ tab bar; expand it before switching.
-        app.swipeDown()
+        // The manager can minimize the iOS 26+ tab bar. Tapping its current tab
+        // expands it even when the root list is already at the top and cannot scroll back.
+        capture(app, "ios-catalog-returned-to-settings")
+        let mine = app.buttons.matching(identifier: "我的").firstMatch
+        XCTAssertTrue(mine.waitForExistence(timeout: 10))
+        mine.tap()
         let cook = app.buttons.matching(identifier: "做菜").firstMatch
         XCTAssertTrue(cook.waitForExistence(timeout: 10))
         cook.tap()
@@ -53,6 +57,7 @@ final class PersonalCatalogUITests: XCTestCase {
         XCTAssertTrue(ingredient.waitForExistence(timeout: 10))
         ingredient.tap()
         XCTAssertTrue(ingredient.isSelected || ingredient.value as? String == "已选")
+        capture(app, "ios-custom-ingredient-selected")
     }
 
     @MainActor

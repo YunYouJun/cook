@@ -12,6 +12,32 @@ final class CookUITests: XCTestCase {
     }
 
     @MainActor
+    func testAccountIsOptionalAndExplainsICloudDataBoundary() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launch()
+        tap(app.buttons["我的"].firstMatch)
+        let signIn = app.buttons["account.signIn"]
+        wait(signIn, "exists == true AND isEnabled == true")
+        XCTAssertFalse(app.buttons["account.signOut"].exists)
+        XCTAssertTrue(app.buttons["我的菜谱"].exists)
+        // 首页展示入口，数据说明和导入操作集中在二级页。
+        XCTAssertFalse(app.buttons["从文件导入"].exists)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "云乐坊账号与 iCloud"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        tap(app.buttons["数据与同步"])
+        XCTAssertTrue(app.buttons["从文件导入"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "云乐坊账号的登录和退出不会改变这些数据")).firstMatch.exists)
+        // 基础功能不要求账号，登录入口不会挡住菜谱筛选。
+        tap(app.buttons["做菜"].firstMatch)
+        tap(app.buttons["番茄"])
+        wait(app.buttons["番茄"], "isSelected == true")
+    }
+
+    @MainActor
     func testCookFlowByAccessibilityLabels() {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
@@ -22,7 +48,9 @@ final class CookUITests: XCTestCase {
 
         // 食材按钮只读名字，不读 emoji，选中后带「已选」状态
         for name in ["土豆", "番茄", "鸡蛋"] {
-            let stuff = app.buttons[name]
+            // 明确检查 VoiceOver label。iOS 26.5 的快捷 identifier 查询曾返回不存在，
+            // 但同一失败现场的完整无障碍树和截图均包含该按钮。
+            let stuff = app.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch
             tap(stuff)
             wait(stuff, "isSelected == true")
         }
@@ -185,6 +213,45 @@ final class CookUITests: XCTestCase {
     }
 
     @MainActor
+    func testClearingHistoryRequiresConfirmationAndKeepsFavorites() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        app.launch()
+        tap(app.buttons["番茄"])
+        tap(app.buttons["鸡蛋"])
+        if app.windows.firstMatch.horizontalSizeClass != .regular {
+            tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "看看能做什么")).firstMatch)
+        }
+        let recipe = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch
+        tap(recipe)
+        tap(app.navigationBars.buttons["收藏"])
+        wait(app.buttons["取消收藏"], "exists == true")
+        tap(app.buttons["菜谱"].firstMatch)
+        tap(app.segmentedControls.buttons["最近浏览"])
+        wait(recipe, "exists == true")
+        tap(app.buttons["清空"])
+        wait(app.buttons["清空浏览记录"], "exists == true")
+        let cancel = app.buttons.matching(NSPredicate(format: "label IN %@", ["取消", "Cancel"])).firstMatch
+        if cancel.exists {
+            tap(cancel)
+        } else {
+            // iPad presents a popover whose standard cancellation is an outside tap.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
+        }
+        wait(app.buttons["清空浏览记录"], "exists == false")
+        wait(recipe, "exists == true")
+        tap(app.buttons["清空"])
+        tap(app.buttons["清空浏览记录"])
+        wait(app.staticTexts["还没有浏览记录"], "exists == true")
+        XCTAssertFalse(app.buttons["清空"].exists)
+        tap(app.segmentedControls.buttons["收藏"])
+        wait(recipe, "exists == true")
+    }
+
+    /// 等控件出现再点；在屏幕外时 tap() 会自己滚过去
+    @MainActor
     private func tap(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         wait(element, "exists == true", file: file, line: line)
         element.tap()
@@ -212,19 +279,42 @@ final class CookUITests: XCTestCase {
     /// SwiftUI 把带标签的整行也暴露成 Switch；真正的系统开关是行内另一个无障碍元素。
     /// 按实际边界找到它，避免在大屏上按整行宽度计算点击位置时点到空白处。
     @MainActor
-    private func tapSwitch(_ row: XCUIElement, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) throws {
+    private func tapSwitch(_ row: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         wait(row, "isHittable == true", file: file, line: line)
-        let bounds = row.frame
-        let control = app.switches.allElementsBoundByIndex.first { element in
-            let frame = element.frame
-            return frame.width > 0 && frame.width < bounds.width && bounds.contains(frame)
-        }
-        let target = try XCTUnwrap(control, "未找到开关行内的系统开关", file: file, line: line)
-        tap(target, file: file, line: line)
+        // SwiftUI 同时暴露整行和行内 UISwitch，直接限定到该行的系统控件。
+        let control = row.switches.firstMatch
+        wait(control, "isHittable == true", file: file, line: line)
+        let value = control.value as? String
+        XCTAssertTrue(value == "0" || value == "1", "系统开关应提供明确的开关状态", file: file, line: line)
+        // 点击当前滑块，而非轨道中点；CI 曾在中点合成点击后仍保持开启。
+        let thumb = control.coordinate(withNormalizedOffset: CGVector(dx: value == "1" ? 0.75 : 0.25, dy: 0.5))
+        thumb.press(forDuration: 0.1)
     }
 
     @MainActor
-    func testPrivacyPolicyAndConsentChoicesSurviveRelaunch() throws {
+    private func openPrivacySettings(in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
+        tap(app.buttons["我的"].firstMatch, file: file, line: line)
+        wait(app.navigationBars["我的"], "isHittable == true", file: file, line: line)
+        let list = app.collectionViews["settings.list"]
+        wait(list, "exists == true", file: file, line: line)
+        // 滚动容器自身未必有可点击的命中点；用页内首行确认当前设置页已可交互。
+        wait(list.buttons["我的菜谱"], "isHittable == true", file: file, line: line)
+        let privacy = list.buttons["settings.privacy"]
+        // The privacy controls now live on a second-level page; scroll to its entry first.
+        for _ in 0..<6 where !privacy.isHittable {
+            let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75))
+            let end = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+            start.press(forDuration: 0.01, thenDragTo: end)
+        }
+        tap(privacy, file: file, line: line)
+        wait(app.navigationBars["隐私"], "exists == true", file: file, line: line)
+        let share = app.switches["privacy.shareSignals"]
+        wait(share, "isHittable == true", file: file, line: line)
+        return share
+    }
+
+    @MainActor
+    func testPrivacyPolicyAndConsentChoicesSurviveRelaunch() {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_LEGACY_CONSENT"] = "1"
@@ -235,12 +325,9 @@ final class CookUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["云食册隐私政策"].waitForExistence(timeout: timeout))
         app.navigationBars.buttons.element(boundBy: 0).tap()
         tap(decline)
-        tap(app.buttons["我的"].firstMatch)
-        app.swipeUp()
-        let share = app.switches["privacy.shareSignals"]
-        XCTAssertTrue(share.waitForExistence(timeout: timeout))
+        let share = openPrivacySettings(in: app)
         wait(share, "value == '0'")
-        try tapSwitch(share, in: app)
+        tapSwitch(share)
         wait(share, "value == '1'")
 
         app.terminate()
@@ -249,11 +336,16 @@ final class CookUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.buttons["我的"].firstMatch.waitForExistence(timeout: timeout))
         XCTAssertFalse(decline.exists, "明确选择后不再弹出")
-        tap(app.buttons["我的"].firstMatch)
-        app.swipeUp()
-        wait(share, "value == '1'")
-        try tapSwitch(share, in: app)
-        wait(share, "value == '0'")
+        let restoredShare = openPrivacySettings(in: app)
+        wait(restoredShare, "value == '1'")
+        tapSwitch(restoredShare)
+        wait(restoredShare, "value == '0'")
+
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["我的"].firstMatch.waitForExistence(timeout: timeout))
+        XCTAssertFalse(decline.exists, "撤回同意也应在重启后保留")
+        wait(openPrivacySettings(in: app), "value == '0'")
         tap(app.buttons["隐私政策"])
         XCTAssertTrue(app.staticTexts["云食册隐私政策"].waitForExistence(timeout: timeout))
     }
