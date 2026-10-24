@@ -186,11 +186,12 @@ struct KitchenPreparationView: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("已备好 \(preparedCount) 项，共 \(allItems.count) 项")
 
-                if let description = presentation?.servingDescription {
+                // 台面高度有限；可调份数已由下方原生控件表达，原文说明仍保留在做法栏。
+                if let description = presentation?.servingDescription, !tabletop || !canAdjustServings {
                     Text(description).font(.footnote).foregroundStyle(.secondary)
                 }
                 if canAdjustServings {
-                    RecipeServingControl(recipeID: recipe.id, rows: presentation?.allQuantities ?? [], identifier: "kitchen.servings")
+                    RecipeServingControl(recipeID: recipe.id, rows: presentation?.allQuantities ?? [], identifier: "kitchen.servings", compact: tabletop)
                 }
                 if allItems.isEmpty {
                     Text("这道菜还没有材料记录，请按做法准备。")
@@ -217,6 +218,7 @@ struct KitchenPreparationView: View {
                 }
             }
         }
+        .contentMargins(.top, tabletop ? 8 : nil, for: .scrollContent)
         .safeAreaInset(edge: .top, spacing: 0) {
             if tabletop, !dynamicTypeSize.isAccessibilitySize {
                 KitchenTimerPanel(recipe: recipe, compact: true)
