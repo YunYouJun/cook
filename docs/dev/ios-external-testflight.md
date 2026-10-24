@@ -2,7 +2,7 @@
 
 本页用于外测，现有 [内部发布流程](./ios-testflight.md) 继续使用原配置。2026-10-24 准备的首个外测候选为 **2.0.0 (5)**，基于 main `9bdbcf25dc6ef4f0774d81873021b38fbd6b2507`，包含 #138 的厨具界面改进。候选源码 `8a12512ccf6e1437eae8c99cee8b028621fafdfe` 只增加构建号与独立导出配置，应用逻辑与该 main 相同。
 
-这是准备记录，不代表已上传、通过 Beta 审核或向用户开放。每次实际上传前重新查询构建号，确认未被其他发布占用。
+2026-10-24 已上传并回读为 `VALID / APP_STORE_ELIGIBLE / READY_FOR_BETA_SUBMISSION`，尚未提交 Beta 审核或向普通用户开放。每次后续上传前重新查询构建号，确认未被其他发布占用。
 
 ## 构建与导出
 
@@ -50,14 +50,14 @@ The maintainer has not yet completed real production iCloud transfer and dual-de
 
 ## 网站与链接
 
-| 用途       | 地址与状态                                                                                                            |
-| ---------- | --------------------------------------------------------------------------------------------------------------------- |
-| 隐私政策   | `https://cook-docs.pages.dev/privacy`，2026-10-24 已验证 HTTP 200 且包含私人菜谱和个人词典说明                        |
-| 支持中心   | `https://support.yunle.fun/?product=cook`，已验证 HTTP 200                                                            |
-| 需求墙     | `https://support.yunle.fun/feedback?product=cook`，已验证 HTTP 200；公开建议，不接收私密数据                          |
-| 内测说明页 | `docs/guide/ios-beta.md`，目标地址 `https://cook-docs.pages.dev/guide/ios-beta`；本次新增，部署前不可当作有效外链填写 |
+| 用途       | 地址与状态                                                                                   |
+| ---------- | -------------------------------------------------------------------------------------------- |
+| 隐私政策   | `https://docs.cook.yunle.fun/privacy`，包含私人菜谱和个人词典说明；原 Pages 地址继续可用     |
+| 支持中心   | `https://support.yunle.fun/?product=cook`，已验证 HTTP 200                                   |
+| 需求墙     | `https://support.yunle.fun/feedback?product=cook`，已验证 HTTP 200；公开建议，不接收私密数据 |
+| 内测说明页 | `https://docs.cook.yunle.fun/guide/ios-beta`，包含安装、测试范围、已知限制与反馈方式         |
 
-不需要新建域名、报名数据库或单独营销站。已有文档站足够承载安装方法、范围、反馈和隐私说明。旧地址 `https://cook.yunyoujun.cn/docs/privacy` 返回 404，不可填入审核资料。
+已有 Cloudflare Pages 项目 `cook-docs` 绑定 `docs.cook.yunle.fun`，使用 `vitepress-theme-yunlefun`；无需另建报名数据库或营销站。部署方式见 [文档站部署](./docs-site.md)。填写 Apple 材料前需确认正式域名的 HTTPS 与对应页面可访问。旧地址 `https://cook.yunyoujun.cn/docs/privacy` 返回 404，不可填入审核资料。
 
 ## 开放前待办
 
@@ -65,12 +65,12 @@ Apple 的要求与本项目的数据验收分别核对，不能把本地包校�
 
 ### 提交 Beta 审核
 
-- [ ] 上传经过本地和 Apple 校验的外测包，精确构建回读为 `VALID / APP_STORE_ELIGIBLE`，确认没有出口合规待处理项。
-- [ ] 填写 Beta 描述、Feedback Email、审核联系人、无需演示账号、Review Notes 和构建的 What to Test，并回读。
-- [ ] 创建首批外部组，关联精确构建，关闭自动通知，先不开放公开链接。
+- [x] 上传经过本地和 Apple 校验的外测包，精确构建回读为 `VALID / APP_STORE_ELIGIBLE`，确认没有出口合规待处理项。
+- [x] 填写 Beta 描述、Feedback Email、审核联系人、无需演示账号、Review Notes 和构建的 What to Test，并回读。
+- [x] 创建首批外部组，关联精确构建，关闭自动通知，先不开放公开链接。
 - [ ] 提交首个外测构建到 Beta App Review，保留审核回执；审核通过后才能开始外测。
 
-2026-10-24 初始只读检查发现 Beta 描述、Feedback Email 和四个审核联系人字段为空，当前只有内部组。构建 4 的 `asc validate testflight` 报告四个联系人字段缺失；该命令不覆盖所有外测条件，不能代替上述清单。后续填写状态以发布目录的最新回读为准。
+2026-10-24 已补齐初始检查中缺失的材料；构建 5 的外测材料检查为 0 错误、0 警告，首批外部组已关联构建，测试者为 0，公开链接和自动通知关闭。该检查不覆盖全部外测条件，不能代替真机验收和 Beta 审核。后续状态以发布目录的最新回读为准。
 
 ### 向首批用户开放前
 

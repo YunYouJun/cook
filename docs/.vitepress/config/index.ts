@@ -1,17 +1,34 @@
 import { getVitepressConfig } from '@yunyoujun/docs'
 import { defineConfig } from 'vitepress'
+import { withYunlefun, yunlefunMarkdown, zhThemeConfig } from 'vitepress-theme-yunlefun/config'
 
 const vpConfig = getVitepressConfig({
   repo: 'https://github.com/YunYouJun/cook',
 })
 
-export default defineConfig({
+export default defineConfig(withYunlefun({
   ...vpConfig,
+  lang: 'zh-CN',
   title: 'Cook',
   description: '食用手册',
+  sitemap: {
+    hostname: 'https://docs.cook.yunle.fun',
+  },
+  markdown: {
+    ...vpConfig.markdown,
+    config(md) {
+      vpConfig.markdown?.config?.(md)
+      md.use(yunlefunMarkdown)
+    },
+  },
 
   themeConfig: {
     ...vpConfig.themeConfig,
+    ...zhThemeConfig,
+    editLink: {
+      ...vpConfig.themeConfig?.editLink,
+      text: '在 GitHub 上编辑此页',
+    },
 
     nav: [
       { text: '使用指南', link: '/guide/getting-started' },
@@ -38,6 +55,7 @@ export default defineConfig({
           text: '开发文档',
           items: [
             { text: 'Cook CLI', link: '/dev/cli' },
+            { text: '文档站部署', link: '/dev/docs-site' },
             { text: '移动应用', link: '/dev/app' },
             { text: 'TestFlight 外部测试', link: '/dev/ios-external-testflight' },
             { text: '菜谱数据', link: '/dev/data' },
@@ -71,4 +89,4 @@ export default defineConfig({
       ],
     },
   },
-})
+}))
