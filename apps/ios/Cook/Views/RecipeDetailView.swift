@@ -12,6 +12,7 @@ struct RecipeDetailView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.openURL) private var openURL
     @State private var feedbackRecipe: Recipe?
+    @State private var kitchenRecipe: Recipe?
     @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }) private var favorites: [Favorite]
     let route: RecipeRoute
 
@@ -77,6 +78,15 @@ struct RecipeDetailView: View {
                 .padding(.vertical, 8)
             }
 
+            Section {
+                Button {
+                    kitchenRecipe = recipe
+                } label: {
+                    Label("厨房工作台", systemImage: "checklist")
+                }
+                .accessibilityIdentifier("recipe.openKitchen")
+            }
+
             ForEach(groups, id: \.label) { group in
                 Section(group.label) {
                     Text(group.items.map { name in
@@ -125,6 +135,9 @@ struct RecipeDetailView: View {
                 }
                 .accessibilityIdentifier("recipe.feedback")
             }
+        }
+        .fullScreenCover(item: $kitchenRecipe) { recipe in
+            KitchenWorkbenchView(recipe: recipe)
         }
         .sheet(item: $feedbackRecipe) { item in
             RecipeFeedbackView(recipe: item)
