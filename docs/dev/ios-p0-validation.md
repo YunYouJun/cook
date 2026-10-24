@@ -40,7 +40,7 @@
 | Usage，月范围               | Requests by Device Type 为 Other 100%；OS Version 无结果                              | 未取得 iOS 客户端生产同步成功的证据 |
 | 本机可访问的真机            | 一台 iPhone 上安装 2.0.0 (1)，`builtByDeveloper = true`                               | 开发构建不用于 TestFlight 生产验收  |
 
-结论：当时三个模型的生产结构检查通过。同步远端后，当前代码还包含 `FridgeItem`（`CloudKitSchema.version = 2`）；**`CD_FridgeItem` 的生产结构及双设备生产同步尚未验收**。整合后尝试复查时 Apple 登录会话已失效，未重新取得冰箱模型的生产状态。控制台请求量和模拟器测试不能替代真实的 CloudKit 同步结果。
+结论：当时三个模型的生产结构检查通过。随后一次同步的代码还包含 `FridgeItem`（`CloudKitSchema.version = 2`）；**`CD_FridgeItem` 的生产结构及双设备生产同步尚未验收**。当次整合后尝试复查时 Apple 登录会话已失效，未重新取得冰箱模型的生产状态。控制台请求量和模拟器测试不能替代真实的 CloudKit 同步结果。
 
 ## 上架前仍需完成
 
@@ -50,22 +50,27 @@ TestFlight `2.0.0 (3)` 已完成 iPhone 原位更新及 #133 的反馈入口验�
 
 对构建 3 源码进行隔离 SwiftData 内存库复现，确认两个偏好问题：新设备启动自动保存的默认记录可能覆盖稍后导入的旧设备偏好；当前会话固定引用启动时的记录，晚到的另一条偏好记录要重启后才显示。复现不访问 CloudKit，不能作为生产同步测试结果。
 
-本次修复让默认值保持在内存中，首次实际编辑才保存；查询变化重新绑定偏好，写入前重新读取最新记录。已有重复记录只读选择，不再覆盖或删除。10 项新增回归在独立 macOS SwiftData 测试中通过，iOS 全部测试目标编译通过；模型仍为原有 6 个字段，无需因此新增 schema 字段。测试中的刷新由用例触发，真实前台自动刷新仍需双设备验收。
+本次修复让默认值保持在内存中，首次实际编辑才保存；查询变化重新绑定偏好，写入前重新读取最新记录。已有重复记录只读选择，不再覆盖或删除。10 项新增回归在独立 macOS SwiftData 测试中通过；修复分支 `f32a3e7` 的 iPhone、iPad CI 各 47/47 通过，零失败或跳过。该结果对应尚未包含 #124/#131 的旧基线，整合后的完整 CI 须单独核验。Preferences 仍为原有 6 个字段，无需因偏好修复新增 schema 字段。测试中的刷新由用例触发，真实前台自动刷新仍需双设备验收。
+
+[#124](https://github.com/YunYouJun/cook/pull/124) 与 [#131](https://github.com/YunYouJun/cook/pull/131) 已合并到 main `23b731b`，本次修复也已整合该版本。当前 `Persistence.models` 包含收藏、历史、偏好、冰箱和私人菜谱五个模型（`CloudKitSchema.version = 3`）；私人菜谱与个人词典的备份协议及发布门禁继续按[私人菜谱与备份](./private-recipes.md)执行。四模型历史基线不能替代五模型生产验收。
 
 两端需先升级到包含偏好修复的同一构建，再进行下面的同步测试。旧构建仍可能执行破坏性的重复记录合并；已被旧版本覆盖的数据不能靠升级自动恢复。验收应额外覆盖「第二台设备第一次打开、尚未编辑时收到既有偏好」和「收到偏好后立即编辑」；测试前记录现有设置，结束后恢复。
 
-生产 schema 复查仍等待 CloudKit Console 重新登录。CLI 未配置管理令牌，本轮尚未部署 schema 或修改生产记录。核对字段时包括实际 `CD_` 前缀、可变长度属性的 `_ckAsset` 配对字段以及框架索引，以 Development 和 Production 的完整导出差异为准，不手工按业务字段表补齐。
+CloudKit Console 重新登录后保存的初始 Development/Production 完整导出逐字相同，仅含 `CD_Favorite`、`CD_HistoryEntry`、`CD_Preferences` 和 `Users`。发布流程随后补齐 `CD_FridgeItem`（16 字段、18 索引）和 `CD_PrivateRecipeRecord`（15 字段、15 索引），并于 2026-10-24 16:16（UTC+8）回读确认两环境完整结构相同，SHA-256 为 `3bb08709e693a1d3b9cafa1b18e86a40f357b88221dd9f93e1bb7347484db271`。原有类型的字段、索引及 GRANT 保持原样，新类型无 PUBLIC grants，Security Roles 变更为零。
+
+Schema 候选以实际 `NSManagedObjectModel`、Apple 映射和现有三类全量零差异回归构造，经控制台校验、Development 导入、部署预览及 Production 回读验证。完全离线 `printSchema` 未成功，不将此候选描述为框架直接输出。结构核对包括实际 `CD_` 前缀、可变长度属性的 `_ckAsset` 配对字段和框架索引。五模型结构匹配已完成；真实传输、前台刷新、生产读写及双设备同步仍未验收。生产结构与分发包的验证须由同一发布流程统一记录，源码及模拟器结果不替代这些验收。
 
 ### 两台真机的 TestFlight 同步
 
-先确认 Production 已部署 `CD_FridgeItem`（`name`、`addedAt`、`expiresAt`、`createdAt`、`updatedAt`、`deletedAt` 及 SwiftData 所需字段和索引）。两台设备使用同一 Apple 账户，开启本 App 的 iCloud，安装同一个待发布 TestFlight 构建，记录版本、构建号和每步时间：
+先确认 Production 已覆盖当前五模型，包括冰箱和私人菜谱的完整字段与框架索引。两台设备使用同一 Apple 账户，开启本 App 的 iCloud，安装同一个包含偏好修复的待发布 TestFlight 构建，记录版本、构建号和每步时间。目前没有第二台设备，以下真实双设备验收仍待完成：
 
 1. 在 A 收藏一道未收藏的菜，确认 B 出现且重启后仍在。
 2. 在 B 取消该收藏，确认 A 消失；再次收藏，确认两端恢复且没有重复项。
 3. 在 A 浏览另一道菜、修改常备食材和忌口，确认 B 的历史与偏好同步。
 4. A 断网后变更收藏，确认本地成功保存；恢复网络，确认 B 最终一致。离线保存本身不应显示保存失败。
 5. 在 A 添加冰箱食材、修改到期日，确认 B 的食材名称和日期一致；在 B 移出，确认 A 同步消失。两端分别授权临期提醒，确认通知按各自设备设置排程，点开可进入冰箱首页。
-6. 对照 Production 的同步记录或设备 CloudKit 日志记录结果；如果超时，保留错误码和发生时间，不反复部署已经存在的 Schema。
+6. 在 A 新建私人菜谱，确认 B 收到；在 B 修改并确认 A 更新，随后删除并确认两端消失。离线冲突、账号隔离及退出 iCloud 后的数据保留按私人菜谱发布门禁另行验证。
+7. 对照 Production 的同步记录或设备 CloudKit 日志记录结果；如果超时，保留错误码和发生时间，不反复部署已经存在的 Schema。
 
 验收前检查导出的分发包签名权限：容器为 `iCloud.fun.yunle.cook`，`com.apple.developer.icloud-container-environment` 为 `Production`，推送权限为 `production`。不能仅凭源码中的开发 entitlement 推断最终分发包的环境。
 
