@@ -48,5 +48,5 @@
 - 合并后的 Web 全套：365 项通过；审查子串回归另行运行。
 - CookCore：64 项，63 通过、1 项既有桥接测试跳过。
 - schema/来源/ID：232 道通过；菜谱校验 0 错误、6 条既有警告。
-- iPad 合并验证：执行份数同步、进度保存、附加步骤定位、台面布局与相关状态/布局单元测试；最终结果在合并记录中补齐。
+- iPad 合并验证：25 项全部通过（19 项状态/布局单元测试、6 项 UI 测试），覆盖份数同步、进度保存、附加步骤定位、台面布局和真实标注恢复。测试摘要、完整日志与 14 张截图已导出保留；工具等待超时后，以实际 xcodebuild 成功结果和 xcresult 为准。
 - `pnpm amounts:check`、`pnpm audit:amounts`、`pnpm exec vitest run` 和 `swift test --package-path apps/ios/CookCore --scratch-path <独占目录>` 可复现。原始证据和测试日志保留在任务审查归档，不将构建目录提交到仓库。
