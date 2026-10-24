@@ -39,10 +39,25 @@ final class KitchenWorkbenchUITests: XCTestCase {
         chooseLayout("自动", in: app)
         chooseLayout("台面", in: app)
         XCTAssertEqual(app.staticTexts["kitchen.countdown"].label, paused)
-        if !egg.isHittable {
-            app.buttons["kitchen.ingredient.葱花（可选）"].swipeDown()
+        capture(app, "kitchen-tabletop-layout-restored")
+        let preparation = app.otherElements["kitchen.preparation"]
+        XCTAssertTrue(preparation.waitForExistence(timeout: 5))
+        for _ in 0..<6 {
+            if egg.exists && egg.isHittable { break }
+            // 布局切换会保留列表位置；离屏行的坐标可能落在固定计时栏后面。
+            // 只在计时栏下方的可见列表中拖动，避免误触“继续”。
+            let frame = preparation.frame
+            let top = max(frame.minY, app.buttons["重置"].frame.maxY) + 24
+            let bottom = frame.maxY - 24
+            XCTAssertGreaterThan(bottom - top, 44)
+            let origin = app.windows.firstMatch.coordinate(withNormalizedOffset: .zero)
+            origin.withOffset(CGVector(dx: frame.midX, dy: top))
+                .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: frame.midX, dy: bottom)))
         }
+        XCTAssertTrue(egg.exists && egg.isHittable)
         XCTAssertEqual(egg.value as? String, "已备好")
+        XCTAssertEqual(app.staticTexts["kitchen.countdown"].label, paused)
+        capture(app, "kitchen-tabletop-ingredient-restored")
         app.buttons["继续"].tap()
         XCTAssertTrue(app.buttons["暂停"].waitForExistence(timeout: 10))
         app.buttons["重置"].tap()
@@ -82,15 +97,11 @@ final class KitchenWorkbenchUITests: XCTestCase {
 
         let progress = app.staticTexts["recipe.stepProgress"].label
         let target = app.buttons["recipe.step.10"]
-        let before = target.frame.minY
         reference.tap()
         let targetCard = app.otherElements["recipe.stepCard.10"]
         XCTAssertEqual(targetCard.value as? String, "已定位", "即使目标已在可视区域，也明确高亮对应步骤")
         capture(app, "supplementary-jump-result")
-        let located = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            target.isHittable && target.frame.minY <= before
-        }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [located], timeout: 10), .completed)
+        waitForVisibleStep(target, in: app)
         XCTAssertEqual(target.value as? String, "未完成")
         XCTAssertEqual(app.staticTexts["recipe.stepProgress"].label, progress)
         let faded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
@@ -105,8 +116,27 @@ final class KitchenWorkbenchUITests: XCTestCase {
         }
         reference.tap()
         XCTAssertEqual(targetCard.value as? String, "已定位")
-        XCTAssertTrue(target.isHittable)
+        waitForVisibleStep(target, in: app)
         XCTAssertEqual(app.staticTexts["recipe.stepProgress"].label, progress)
+    }
+
+    @MainActor
+    private func waitForVisibleStep(_ step: XCUIElement, in app: XCUIApplication) {
+        var previousFrame = CGRect.null
+        let located = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            let frame = step.frame
+            defer { previousFrame = frame }
+            let window = app.windows.firstMatch.frame
+            let headerBottom = app.buttons["recipe.continueStep"].frame.maxY
+            let timer = app.buttons["kitchen.timerShortcut"]
+            let bottom = timer.exists ? timer.frame.minY : window.maxY
+            // 目标原先可能在屏幕上方，正确定位反而会增大 y；验证可见区域与动画完成。
+            // 不在滚动动画中询问点击位置，避免 XCTest 对被裁剪按钮抛出定位错误。
+            return !frame.isEmpty && frame == previousFrame && window.contains(frame)
+                && frame.minY >= headerBottom && frame.maxY <= bottom
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [located], timeout: 10), .completed)
+        XCTAssertTrue(step.isHittable)
     }
 
     @MainActor
