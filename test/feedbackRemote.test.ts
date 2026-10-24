@@ -4,6 +4,16 @@ import { callGuestFeedback, createFeedbackRemote } from '../apps/web/app/adapter
 const receipt = { id: 'private-test', productId: 'cook', status: 'received', createdAt: '2026-10-23T00:00:00.000Z' }
 
 describe('private app feedback transport', () => {
+  it('retains private return links only for the exact Support ticket', async () => {
+    const run = (ticketUrl: string) => createFeedbackRemote(async () => ({ ok: true, receipt: { ...receipt, ticketId: 'ticket-one', ticketUrl } }), 'device-test-12345').feedback({ category: 'bug', note: 'test feedback' })
+    const safe = 'https://support.yunle.fun/tickets/ticket-one#access=private-token'
+    expect((await run(safe)).ticketUrl).toBe(safe)
+    for (const url of ['https://evil.example/tickets/ticket-one', 'https://support.yunle.fun/tickets/other', 'https://user@support.yunle.fun/tickets/ticket-one', 'javascript:alert(1)', 'https://support.yunle.fun/tickets/ticket-one?token=private']) {
+      const result = await run(url)
+      expect(result.id).toBe(receipt.id)
+      expect(result.ticketUrl).toBeUndefined()
+    }
+  })
   it('submits signed-out feedback to the existing HTTP entry without browser credentials', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ ok: true, receipt })))
     const remote = createFeedbackRemote((_name, data) => callGuestFeedback(data, fetcher), 'device-test-12345')

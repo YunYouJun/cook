@@ -28,6 +28,8 @@ export interface FeedbackReceipt {
   productId: 'cook'
   status: 'received' | 'reviewing' | 'resolved'
   createdAt: string
+  ticketId?: string
+  ticketUrl?: string
 }
 
 export class FeedbackError extends Error {
@@ -89,7 +91,16 @@ export function createFeedbackRemote(callFunction: CloudbaseFunctionCaller, devi
       const value = receipt as Record<string, unknown>
       if (typeof value.id !== 'string' || value.productId !== 'cook' || typeof value.createdAt !== 'string' || (value.status !== 'received' && value.status !== 'reviewing' && value.status !== 'resolved'))
         throw new FeedbackError('INVALID_RECEIPT')
-      return { id: value.id, productId: 'cook', createdAt: value.createdAt, status: value.status as FeedbackReceipt['status'] }
+      let ticketUrl: string | undefined
+      if (typeof value.ticketId === 'string' && typeof value.ticketUrl === 'string') {
+        try {
+          const url = new URL(value.ticketUrl)
+          if (url.origin === 'https://support.yunle.fun' && /^[\w-]{1,128}$/.test(value.ticketId) && url.pathname === `/tickets/${value.ticketId}` && !url.username && !url.password && !url.search)
+            ticketUrl = url.toString()
+        }
+        catch { /* Preserve the valid submission receipt without opening an unsafe URL. */ }
+      }
+      return { id: value.id, productId: 'cook', createdAt: value.createdAt, status: value.status as FeedbackReceipt['status'], ...(ticketUrl ? { ticketId: String(value.ticketId), ticketUrl } : {}) }
     },
   }
 }

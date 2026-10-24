@@ -171,16 +171,39 @@ final class FeedbackClient {
         ])
     }
 
-    func send(_ category: Category, note: String, contact: String) async throws {
-        try await post([
+    struct Receipt {
+        let id: String
+        let ticketURL: URL?
+    }
+
+    @discardableResult
+    func send(_ category: Category, note: String, contact: String, submissionId: String? = nil) async throws -> Receipt? {
+        var body: [String: Any] = [
             "action": "feedback",
             "category": category.rawValue,
             "note": String(note.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Self.maxNote)),
             "contact": String(contact.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Self.maxContact)),
-        ])
+        ]
+        if let submissionId { body["submissionId"] = submissionId }
+        let result = try await post(body)
+        guard let receipt = result["receipt"] as? [String: Any], let id = receipt["id"] as? String else { return nil }
+        return Receipt(id: id, ticketURL: Self.ticketURL(receipt))
     }
 
-    private func post(_ body: [String: Any]) async throws {
+    static func ticketURL(_ receipt: [String: Any]) -> URL? {
+        guard let id = receipt["ticketId"] as? String,
+              id.range(of: "^[A-Za-z0-9_-]{1,128}$", options: .regularExpression) != nil,
+              let value = receipt["ticketUrl"] as? String,
+              let parts = URLComponents(string: value), parts.scheme == "https",
+              parts.host == "support.yunle.fun", parts.port == nil,
+              parts.user == nil, parts.password == nil, parts.query == nil,
+              parts.percentEncodedPath == "/tickets/\(id)"
+        else { return nil }
+        return parts.url
+    }
+
+    @discardableResult
+    private func post(_ body: [String: Any]) async throws -> [String: Any] {
         guard let endpoint else {
             throw SendError.notConfigured
         }
@@ -199,6 +222,7 @@ final class FeedbackClient {
         guard (response as? HTTPURLResponse)?.statusCode == 200, result?["ok"] as? Bool == true else {
             throw SendError.rejected(result?["code"] as? String ?? "unknown")
         }
+        return result ?? [:]
     }
 
     // MARK: 邮件兜底

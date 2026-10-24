@@ -203,6 +203,27 @@ final class FeedbackClientTests: XCTestCase {
         XCTAssertEqual(query["body"], "番茄 & 鸡蛋 + 葱\n\n---\n来自 云食册（iOS 2.0.0）", "空行去掉，+ 不能变成空格")
     }
 
+    func testTicketURLAcceptsOnlyMatchingPrivateSupportLinks() {
+        let valid = "https://support.yunle.fun/tickets/ticket-one#access=private-capability"
+        XCTAssertEqual(FeedbackClient.ticketURL(["ticketId": "ticket-one", "ticketUrl": valid])?.absoluteString, valid)
+        for value in ["https://evil.example/tickets/ticket-one", "https://support.yunle.fun/tickets/other", "https://user@support.yunle.fun/tickets/ticket-one", "javascript:alert(1)", "https://support.yunle.fun/tickets/ticket-one?secret=value"] {
+            XCTAssertNil(FeedbackClient.ticketURL(["ticketId": "ticket-one", "ticketUrl": value]))
+        }
+    }
+
+    func testFeedbackReturnsTicketAndPreservesStableSubmissionKey() async throws {
+        let url = "https://support.yunle.fun/tickets/ticket-one#access=private-capability"
+        let client = FeedbackClient(endpoint: endpoint, defaults: defaults) { request in
+            let body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
+            XCTAssertEqual(body["submissionId"] as? String, "stable-operation-key")
+            let data = try JSONSerialization.data(withJSONObject: ["ok": true, "receipt": ["id": "feedback-one", "ticketId": "ticket-one", "ticketUrl": url]])
+            return (data, HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+        }
+        let receipt = try await client.send(.bug, note: "测试问题", contact: "", submissionId: "stable-operation-key")
+        XCTAssertEqual(receipt?.id, "feedback-one")
+        XCTAssertEqual(receipt?.ticketURL?.absoluteString, url)
+    }
+
     func testCopiedMailPreservesCategoryContactAndPlatform() {
         let text = FeedbackClient.mailText(topic: "想要的菜没有", lines: ["番茄 & 鸡蛋 + 葱", "联系方式：cook+test@example.com"], version: "2.0.0")
         XCTAssertEqual(text, "收件人：kf@yunle.fun\n主题：【云食册反馈】想要的菜没有\n\n番茄 & 鸡蛋 + 葱\n联系方式：cook+test@example.com\n\n---\n来自 云食册（iOS 2.0.0）")
