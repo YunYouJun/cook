@@ -95,15 +95,10 @@ function addUnlisted() {
 
 <template>
   <div class="cooking-workbench">
-    <header class="wb-intro">
-      <h1>料理工作台</h1>
-      <p>把手边的食材放上来，发现有据可查的搭配。</p>
-    </header>
-
     <div class="wb-layout">
       <section class="wb-tray wb-panel" aria-labelledby="wb-tray-title">
         <h2 id="wb-tray-title">
-          食材托盘
+          选择食材
         </h2>
         <label class="wb-search">
           <span>找食材</span>
@@ -135,22 +130,22 @@ function addUnlisted() {
           {{ expanded ? '收起更多食材 ↑' : '展开更多食材 ↓' }}
         </button>
         <div v-if="query && !visibleItems.length" class="wb-empty-search">
-          <p>托盘暂未收录「{{ query }}」，加入后只查找现有菜谱。</p>
+          <p>列表中没有「{{ query }}」，加入后只查找现有菜谱。</p>
           <button class="wb-button" type="button" @click="addUnlisted">
             加入这项食材
           </button>
         </div>
         <p class="wb-hint">
-          点一下加入，再点一下移除。<span v-if="pointerFine">也可拖到砧板上。</span>
+          点一下加入，再点一下移除。<span v-if="pointerFine">也可拖到已选食材中。</span>
         </p>
         <NuxtLink class="wb-text-button" to="/catalog">
           管理食材和厨具
         </NuxtLink>
 
         <details class="wb-settings">
-          <summary>本次确认的调料 <span>{{ pantry.length }} 种</span></summary>
+          <summary>家里现有的调料 <span>{{ pantry.length }} 种</span></summary>
           <p class="wb-hint">
-            油、盐也需要你确认。这里单独记录，不沿用经典模式的默认常备。
+            选择这次可用的调料，单独保存于此视图。
           </p>
           <div class="wb-pills" role="group" aria-label="已确认有的调料">
             <button v-for="name in pantryOptions" :key="name" type="button" :aria-pressed="pantry.includes(name)" @click="togglePantry(name)">
@@ -164,7 +159,7 @@ function addUnlisted() {
         <details class="wb-settings">
           <summary>做法、难度与忌口</summary>
           <p class="wb-hint">
-            这些筛选与经典模式同步。
+            筛选条件在两种视图间同步。
           </p>
           <div class="wb-pills" role="group" aria-label="做法筛选">
             <button v-for="group in METHOD_GROUPS" :key="group.label" type="button" :aria-pressed="rStore.methodGroups.includes(group.label)" @click="rStore.toggleMethodGroup(group.label)">
@@ -182,7 +177,7 @@ function addUnlisted() {
           </button>
         </details>
         <button class="wb-results-jump" type="button" @click="goToResults">
-          查看菜谱发现 · {{ count }} 道 <span aria-hidden="true">↓</span>
+          查看推荐菜谱 · {{ count }} 道 <span aria-hidden="true">↓</span>
         </button>
       </section>
 
@@ -190,21 +185,21 @@ function addUnlisted() {
         <div class="wb-board" :class="{ 'is-drag-over': dragActive }" @dragover="dragOver" @dragleave.self="dragActive = false" @drop="dropIngredient">
           <div class="wb-section-heading">
             <h2 id="wb-board-title">
-              砧板 <span>· 已选 {{ rStore.selectedStuff.length }} 种</span>
+              已选食材 <span>{{ rStore.selectedStuff.length }} 种</span>
             </h2>
           </div>
           <div class="wb-board-items">
-            <button v-for="name in rStore.selectedStuff" :key="name" type="button" class="wb-board-item" :aria-label="`从砧板移除${name}`" @click="rStore.toggleStuff(name)">
+            <button v-for="name in rStore.selectedStuff" :key="name" type="button" class="wb-board-item" :aria-label="`移除${name}`" @click="rStore.toggleStuff(name)">
               <span class="wb-remove" aria-hidden="true">×</span>
               <span class="wb-emoji" aria-hidden="true">{{ emoji(name) }}</span>
               <span>{{ name }}</span>
             </button>
-            <div class="wb-board-placeholder" aria-hidden="true">
-              <span>＋</span>{{ rStore.selectedStuff.length ? '继续加入食材' : '从食材托盘点选' }}
-            </div>
+            <p v-if="!rStore.selectedStuff.length" class="wb-selection-empty">
+              从食材列表中点选，或拖入食材。
+            </p>
           </div>
           <p class="wb-board-note">
-            不用记摆放顺序，点选就能发现搭配。
+            点按已选食材即可移除。
           </p>
           <button v-if="!rStore.selectedStuff.length" class="wb-example" type="button" @click="example">
             试一试：番茄 + 鸡蛋 + 炒锅 <span aria-hidden="true">→</span>
@@ -219,21 +214,21 @@ function addUnlisted() {
           </div>
         </div>
         <button class="wb-results-jump" type="button" @click="goToResults">
-          查看菜谱发现 · {{ count }} 道 <span aria-hidden="true">↓</span>
+          查看推荐菜谱 · {{ count }} 道 <span aria-hidden="true">↓</span>
         </button>
       </section>
 
       <section class="wb-results wb-panel" aria-labelledby="wb-results-title" :aria-busy="rStore.isSearching">
         <div class="wb-section-heading">
           <h2 id="wb-results-title" ref="resultsHeading" tabindex="-1">
-            菜谱发现
+            推荐菜谱
           </h2>
           <p role="status" aria-live="polite" aria-atomic="true">
             {{ rStore.isSearching ? '正在读取菜谱…' : rStore.loadError ? '菜谱加载失败' : `已选 ${rStore.selectedStuff.length} 种食材 · ${count} 道相关菜谱` }}
           </p>
         </div>
         <p class="wb-hint">
-          来自现有菜谱，食材摆放顺序不影响结果。只核对已记录的食材，不代表全部用料已齐备。
+          根据已记录的食材匹配，完整用料请查看做法。
         </p>
         <div class="wb-result-filters">
           <label class="wb-search"><span>在结果里找菜名</span><input v-model="rStore.keyword" type="search" placeholder="输入菜名"></label>
@@ -251,12 +246,12 @@ function addUnlisted() {
           <p>正在准备菜谱，请稍候。</p>
         </div>
         <div v-else-if="!rStore.selectedStuff.length && !rStore.curTool" class="wb-empty">
-          <span class="wb-empty-emoji" aria-hidden="true">🍽️</span><h3>今天，从手边的食材开始</h3><p>选食材后，相关菜谱会出现在这里。</p><button type="button" class="wb-button" @click="example">
+          <h3>先选几样食材</h3><p>选食材后，相关菜谱会出现在这里。</p><button type="button" class="wb-button" @click="example">
             加入番茄、鸡蛋和炒锅
           </button>
         </div>
         <div v-else-if="!count" class="wb-empty">
-          <h3>这组条件下暂时没有菜谱</h3><p>没有匹配也很正常。试试调整食材、取消厨具或放宽筛选；这里不会生成未经验证的配方。</p><button type="button" class="wb-button" @click="rStore.clearFilters">
+          <h3>这组条件下暂时没有菜谱</h3><p>试试减少食材、取消厨具或放宽筛选。</p><button type="button" class="wb-button" @click="rStore.clearFilters">
             放宽筛选，保留食材
           </button>
         </div>
@@ -279,48 +274,33 @@ function addUnlisted() {
 
 <style scoped>
 .cooking-workbench {
-  --wb-bg: #faf8f3;
-  --wb-surface: #fff;
-  --wb-text: #223e35;
-  --wb-muted: #626b66;
-  --wb-line: #e3e5de;
-  --wb-green: #244e40;
-  --wb-accent: #a64128;
-  --wb-tint: #f7eee7;
-  --wb-action-text: #fff;
-  color: var(--wb-text);
+  --wb-bg: var(--ion-background-color, #f2f2f7);
+  --wb-surface: var(--ion-item-background, #fff);
+  --wb-text: var(--ion-text-color, #1c1c1e);
+  --wb-muted: var(--ion-text-color-step-400, #636366);
+  --wb-line: var(--ion-item-border-color, #d1d1d6);
+  --wb-green: var(--ion-color-primary);
+  --wb-accent: var(--ion-color-primary);
+  --wb-tint: var(--cook-fill);
+  --wb-action-text: var(--ion-color-primary-contrast);
   max-width: 1180px;
   margin: 0 auto;
-  padding: 6px 24px 40px;
-  font-size: 15px;
-  line-height: 1.5;
-}
-.wb-intro {
-  text-align: center;
-  margin-bottom: 28px;
-}
-.wb-intro h1 {
-  margin: 0 0 8px;
-  font-size: clamp(28px, 3vw, 36px);
-  font-weight: 750;
-  letter-spacing: 0.02em;
-}
-.wb-intro p {
-  margin: 0;
-  color: var(--wb-muted);
+  padding: 4px 24px 32px;
+  color: var(--wb-text);
   font-size: 16px;
+  line-height: 1.5;
 }
 .wb-layout {
   display: grid;
-  grid-template-columns: minmax(300px, 0.85fr) minmax(0, 1.5fr);
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.5fr);
   grid-template-areas: 'tray bench' 'tray results';
   align-items: start;
-  gap: 18px;
+  gap: 20px;
 }
-.wb-panel {
-  padding: 22px;
-  border: 1px solid var(--wb-line);
-  border-radius: 18px;
+.wb-panel,
+.wb-board {
+  padding: 20px;
+  border-radius: 12px;
   background: var(--wb-surface);
 }
 .wb-tray {
@@ -335,123 +315,115 @@ function addUnlisted() {
   min-width: 0;
 }
 .cooking-workbench h2 {
-  font-size: 21px;
-  font-weight: 700;
   margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 600;
 }
 .cooking-workbench h2 > span {
+  margin-left: 6px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
+  color: var(--wb-muted);
 }
 .wb-search {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
   font-size: 13px;
   color: var(--wb-muted);
-  min-width: 0;
 }
 .wb-search input,
 .wb-search select {
   width: 100%;
   min-height: 44px;
   padding: 10px 12px;
-  border: 1px solid var(--wb-line);
-  border-radius: 10px;
-  background: var(--wb-bg);
+  border: 0;
+  border-radius: 8px;
+  background: var(--cook-fill);
   color: var(--wb-text);
   font-size: 16px;
 }
 .wb-categories {
   display: flex;
-  border-bottom: 1px solid var(--wb-line);
-  margin: 14px 0;
+  padding: 3px;
+  margin: 16px 0;
+  border-radius: 9px;
+  background: var(--cook-fill);
 }
 .wb-categories button {
   flex: 1;
   min-height: 44px;
-  border-bottom: 2px solid transparent;
-  font-weight: 600;
+  padding: 4px;
+  border-radius: 7px;
+  font-size: 14px;
 }
 .wb-categories button[aria-pressed='true'] {
-  color: var(--wb-accent);
-  border-bottom-color: var(--wb-accent);
+  background: var(--wb-surface);
+  font-weight: 600;
+  box-shadow: 0 1px 3px #00000014;
 }
 .wb-food-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
   gap: 8px;
 }
 .wb-food {
-  position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 7px;
-  padding: 10px 2px;
-  min-height: 88px;
-  border: 1px solid var(--wb-line);
-  border-radius: 12px;
-  background: var(--wb-bg);
+  justify-content: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--cook-fill);
   font-size: 14px;
-  transition:
-    transform 150ms ease,
-    border-color 150ms ease;
+  overflow-wrap: anywhere;
 }
 .wb-food[aria-pressed='true'] {
-  color: var(--wb-accent);
-  border-color: var(--wb-accent);
-  background: var(--wb-tint);
-  font-weight: 600;
+  background: var(--wb-accent);
+  color: var(--wb-action-text);
 }
 .wb-emoji {
-  display: block;
-  font-size: 30px;
+  font-size: 18px;
   line-height: 1.2;
 }
 .wb-selected-mark {
-  position: absolute;
-  right: 3px;
-  top: 3px;
-  font-size: 11px;
-  background: var(--wb-accent);
-  color: var(--wb-surface);
-  border-radius: 50%;
-  width: 16px;
-  height: 16px;
+  font-size: 12px;
 }
 .wb-text-button {
+  display: inline-flex;
+  align-items: center;
   min-height: 44px;
   padding: 8px 0;
   color: var(--wb-accent);
-  font-size: 14px;
+  font-size: 15px;
 }
-.wb-hint {
-  color: var(--wb-muted);
+.wb-hint,
+.wb-board-note,
+.wb-selection-empty {
   margin: 12px 0;
+  color: var(--wb-muted);
   font-size: 13px;
-  line-height: 1.7;
+  line-height: 1.6;
 }
 .wb-settings {
   border-top: 1px solid var(--wb-line);
-  padding: 12px 0 0;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 .wb-settings summary {
   cursor: pointer;
-  padding: 10px 0;
+  padding: 12px 0;
   min-height: 44px;
-  font-weight: 600;
 }
 .wb-settings summary > span {
   float: right;
   color: var(--wb-muted);
-  font-weight: 400;
 }
 .wb-pills {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 8px;
 }
 .wb-pills + .wb-pills {
   margin-top: 12px;
@@ -462,22 +434,18 @@ function addUnlisted() {
   justify-content: center;
   gap: 6px;
   min-height: 44px;
-  border: 1px solid var(--wb-line);
-  border-radius: 9px;
   padding: 9px 12px;
-  font-size: 14px;
+  border-radius: 10px;
+  background: var(--cook-fill);
   color: var(--wb-text);
-  background: var(--wb-surface);
+  font-size: 14px;
 }
 .wb-pills button[aria-pressed='true'] {
-  border-color: var(--wb-green);
-  color: var(--wb-green);
-  background: var(--wb-bg);
-  box-shadow: inset 0 0 0 1px var(--wb-green);
-  font-weight: 600;
+  background: var(--wb-accent);
+  color: var(--wb-action-text);
 }
 .wb-pills button > span[class] {
-  font-size: 20px;
+  font-size: 18px;
 }
 .wb-checkbox {
   display: inline-flex;
@@ -489,24 +457,16 @@ function addUnlisted() {
 .wb-checkbox input {
   width: 20px;
   height: 20px;
-  accent-color: var(--wb-green);
-}
-.wb-board {
-  padding: 22px;
-  border: 8px solid #dcb993;
-  border-radius: 18px;
-  background: repeating-linear-gradient(2deg, transparent 0 8px, #e3bc8c18 8px 10px), #f5dec0;
-  color: #244638;
-  box-shadow: inset 0 0 0 1px #cba16e;
-  transition: border-color 150ms ease;
+  accent-color: var(--wb-accent);
 }
 .wb-board.is-drag-over {
-  border-color: #244e40;
+  outline: 2px solid var(--wb-accent);
+  outline-offset: -2px;
 }
 .wb-section-heading {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 6px 12px;
 }
@@ -514,83 +474,40 @@ function addUnlisted() {
   margin-bottom: 8px;
 }
 .wb-section-heading > p {
+  margin: 0 0 8px;
   font-size: 13px;
   color: var(--wb-muted);
-  margin: 0 0 8px;
 }
 .wb-board-items {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 10px 0;
+  gap: 8px;
 }
 .wb-board-item {
-  position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  width: 100px;
-  min-height: 110px;
-  padding: 16px 8px 10px;
-  border-radius: 14px;
-  background: #fffcf7;
-  color: #244638;
-  box-shadow: 0 4px 8px #7e583a12;
-  font-weight: 600;
+  gap: 6px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--cook-fill);
   overflow-wrap: anywhere;
 }
-.wb-board-item .wb-emoji {
-  font-size: 36px;
-}
 .wb-remove {
-  position: absolute;
-  right: 8px;
-  top: 4px;
-  font-size: 18px;
-  font-weight: 400;
-  color: #65655a;
-}
-.wb-board-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 110px;
-  width: 110px;
-  border: 1px dashed #ad8c65;
-  border-radius: 14px;
-  color: #6c573c;
-  font-size: 13px;
-}
-.wb-board-placeholder > span {
-  font-size: 30px;
-}
-.wb-board-note {
-  margin: 8px 0 0;
-  color: #6c573c;
-  font-size: 13px;
+  order: 1;
+  margin-left: 4px;
+  color: var(--wb-muted);
+  font-size: 20px;
 }
 .wb-example {
   min-height: 44px;
-  margin-top: 10px;
+  color: var(--wb-accent);
+  font-size: 15px;
   text-align: left;
-  font-size: 14px;
-  font-weight: 600;
 }
 .wb-tools {
-  padding: 18px;
-  margin-top: 10px;
-}
-.wb-tools h2 {
-  font-size: 16px;
-  margin-bottom: 12px;
-}
-.wb-tools .wb-pills button {
-  flex: 1 0 auto;
-  padding-inline: 9px;
+  margin-top: 12px;
 }
 .wb-results-jump {
   display: none;
@@ -601,147 +518,70 @@ function addUnlisted() {
   gap: 12px;
   margin: 16px 0;
 }
-.wb-recipe-list {
-  display: grid;
-  gap: 12px;
-}
 .wb-empty {
-  padding: 24px 4px;
+  padding: 28px 8px;
   text-align: center;
 }
 .wb-empty h3 {
   margin: 8px 0;
-  font-size: 18px;
-  font-weight: 650;
+  font-size: 20px;
+  font-weight: 600;
 }
 .wb-empty p,
 .wb-empty-search p {
-  font-size: 14px;
   color: var(--wb-muted);
-  line-height: 1.8;
-}
-.wb-empty-emoji {
-  font-size: 40px;
+  font-size: 15px;
+  line-height: 1.6;
 }
 .wb-button {
   min-height: 44px;
+  margin-top: 12px;
   padding: 10px 16px;
   border-radius: 10px;
-  background: var(--wb-green);
+  background: var(--wb-accent);
   color: var(--wb-action-text);
-  font-size: 14px;
-  font-weight: 600;
-  margin-top: 12px;
+  font-size: 15px;
+  font-weight: 500;
 }
 .wb-more {
-  justify-self: center;
+  display: block;
+  margin: 16px auto 0;
 }
-.cooking-workbench :is(button, input, select, summary, h2):focus-visible {
-  outline: 3px solid var(--wb-accent);
+.cooking-workbench :is(button, input, select, summary, h2, a):focus-visible {
+  outline: 2px solid var(--wb-accent);
   outline-offset: 3px;
 }
 @media (hover: hover) and (pointer: fine) {
-  .wb-food:hover {
-    transform: translateY(-2px);
-    border-color: var(--wb-accent);
-  }
-}
-@media (min-width: 1000px) {
-  .wb-results {
-    display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    column-gap: 12px;
-  }
-  .wb-results > .wb-section-heading {
-    grid-column: 1;
-    grid-row: 1;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0;
-  }
-  .wb-result-filters {
-    grid-column: 2;
-    grid-row: 1;
-    align-self: start;
-    margin: 0;
-    gap: 8px;
-  }
-  .wb-result-filters .wb-search span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .wb-results > :not(.wb-section-heading, .wb-result-filters) {
-    grid-column: 1 / -1;
+  .wb-food:hover,
+  .wb-pills button:hover {
+    filter: brightness(0.95);
   }
 }
 @media (max-width: 760px) {
   .cooking-workbench {
-    padding: 4px 14px 28px;
-  }
-  .wb-intro {
-    margin-bottom: 20px;
-  }
-  .wb-intro p {
-    font-size: 14px;
+    padding: 0 16px 24px;
   }
   .wb-layout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: 'bench' 'tray' 'results';
     gap: 16px;
   }
-  .wb-panel {
-    padding: 18px;
-  }
+  .wb-panel,
   .wb-board {
     padding: 16px;
-    border-width: 6px;
-  }
-  .wb-board-item,
-  .wb-board-placeholder {
-    width: 86px;
-    min-height: 96px;
-  }
-  .wb-board-item .wb-emoji {
-    font-size: 30px;
   }
   .wb-results-jump {
     display: flex;
+    align-items: center;
     justify-content: space-between;
     width: 100%;
     min-height: 44px;
-    padding: 12px 4px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--wb-green);
+    margin-top: 8px;
+    color: var(--wb-accent);
+    font-size: 15px;
   }
   .wb-result-filters {
     grid-template-columns: minmax(0, 1fr);
-  }
-}
-:global(.ion-palette-dark .cooking-workbench) {
-  --wb-bg: #1e2722;
-  --wb-surface: #18201c;
-  --wb-text: #edf4ed;
-  --wb-muted: #b1beb4;
-  --wb-line: #3b4940;
-  --wb-green: #a7d4b9;
-  --wb-accent: #ffb192;
-  --wb-tint: #3a2e26;
-  --wb-action-text: #18201c;
-}
-@media (prefers-reduced-motion: reduce) {
-  .wb-food,
-  .wb-board {
-    transition: none;
-  }
-  .wb-food:hover {
-    transform: none;
   }
 }
 </style>

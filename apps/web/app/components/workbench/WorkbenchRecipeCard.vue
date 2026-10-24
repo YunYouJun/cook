@@ -38,7 +38,7 @@ const tools = computed(() => props.recipe.tools.map(tool => tool === '一口大�
           {{ recorded.length ? `待核对：${recorded.join('、')}（尚未选择食材）` : '未知：菜谱未记录食材' }}
         </p>
         <p class="wb-muted wb-unknown">
-          <span aria-hidden="true">?</span> 未知：未记录的材料、调料与用量，请查看做法确认。
+          <span aria-hidden="true">?</span> 完整用料与用量请查看做法。
         </p>
       </div>
       <button class="wb-action" type="button" :aria-label="`查看${recipe.name}做法`" @click="$emit('detail', recipe, match)">
@@ -50,9 +50,8 @@ const tools = computed(() => props.recipe.tools.map(tool => tool === '一口大�
 
 <style scoped>
 .wb-recipe {
-  padding: 20px;
-  border: 1px solid var(--wb-line);
-  border-radius: 14px;
+  padding: 20px 0;
+  border-top: 1px solid var(--wb-line);
   background: var(--wb-surface);
 }
 .wb-recipe-heading {
@@ -65,8 +64,8 @@ const tools = computed(() => props.recipe.tools.map(tool => tool === '一口大�
 }
 .wb-recipe h3 {
   margin: 0;
-  font-size: 19px;
-  font-weight: 650;
+  font-size: 17px;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 .wb-recipe-heading > span {
@@ -99,8 +98,8 @@ const tools = computed(() => props.recipe.tools.map(tool => tool === '一口大�
   margin-top: 12px;
   padding: 10px 16px;
   border-radius: 10px;
-  color: var(--wb-action-text);
-  background: var(--wb-green);
+  color: var(--wb-accent);
+  background: var(--cook-fill);
   font-size: 14px;
   font-weight: 600;
 }

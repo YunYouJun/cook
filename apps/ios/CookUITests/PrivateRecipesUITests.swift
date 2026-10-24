@@ -18,18 +18,26 @@ final class PrivateRecipesUITests: XCTestCase {
         XCTAssertTrue(library.waitForExistence(timeout: 10))
         library.tap()
         app.buttons["新建菜谱"].tap()
-        let name = "测试" + String(UUID().uuidString.prefix(6))
+        let name = "番茄炒蛋"
         let nameField = app.textFields["菜名（最多 30 字）"]
         XCTAssertTrue(nameField.waitForExistence(timeout: 10))
         nameField.tap()
         nameField.typeText(name)
         let ingredients = app.textFields["鸡蛋、丝瓜"]
         ingredients.tap()
-        ingredients.typeText("鸡蛋")
+        ingredients.typeText("番茄、鸡蛋")
         app.buttons["保存"].tap()
         let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", name)).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 10), "New context saves must update the live @Query list")
+        let listScreenshot = XCTAttachment(screenshot: app.screenshot())
+        listScreenshot.name = "ios-private-recipes"
+        listScreenshot.lifetime = .keepAlways
+        add(listScreenshot)
         row.tap()
+        let detailScreenshot = XCTAttachment(screenshot: app.screenshot())
+        detailScreenshot.name = "ios-private-detail"
+        detailScreenshot.lifetime = .keepAlways
+        add(detailScreenshot)
         app.buttons["编辑菜谱"].tap()
         XCTAssertTrue(nameField.waitForExistence(timeout: 10))
         nameField.tap()

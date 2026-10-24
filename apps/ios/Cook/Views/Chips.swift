@@ -17,18 +17,20 @@ struct Chip: View {
             action()
         } label: {
             HStack(spacing: 4) {
-                if let emoji, !emoji.isEmpty {
+                if isSelected {
+                    Image(systemName: "checkmark").accessibilityHidden(true)
+                } else if let emoji, !emoji.isEmpty {
                     Text(emoji)
                         .accessibilityHidden(true)
                 }
                 Text(title)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
             }
             .font(.subheadline)
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 44)
             .foregroundStyle(isSelected ? Color.white : Color.primary)
             .background(isSelected ? Color.accentColor : Color(uiColor: .secondarySystemFill), in: Capsule())
             .contentShape(Capsule())
@@ -81,13 +83,13 @@ struct MoreChip: View {
                     .imageScale(.small)
                     .accessibilityHidden(true)
                 Text(isExpanded ? "收起" : "更多 \(hidden) 种")
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
             }
             .font(.subheadline)
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 44)
             .foregroundStyle(.tint)
             .contentShape(Capsule())
         }
