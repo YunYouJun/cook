@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { RecipeHistoryItem } from '~/composables/store/history'
 import dayjs from 'dayjs'
+import RecipeFeedbackButton from '~/components/feedback/RecipeButton.vue'
 import { clearRecipeHistories, recipeHistories, removeRecipeHistory } from '~/composables/store/history'
 import { confirmDestructive } from '~/utils/dialog'
 import { openRecipe } from '~/utils/recipe'
@@ -73,6 +74,7 @@ function clearOneHistory(history: RecipeHistoryItem) {
                 <ion-label class="truncate">
                   <DishLabel class="text-sm" :dish="history.recipe" />
                 </ion-label>
+                <RecipeFeedbackButton slot="end" :recipe="history.recipe" compact />
                 <ion-note slot="end" class="text-xs">
                   {{ dayjs(history.time).format('HH:mm') }}
                 </ion-note>

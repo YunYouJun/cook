@@ -11,14 +11,7 @@ struct RecipeDetailView: View {
     @Environment(FavoriteActions.self) private var favoriteActions
     @Environment(\.modelContext) private var context
     @Environment(\.openURL) private var openURL
-    @State private var choosingIssue = false
-    @State private var writingNote = false
-    @State private var note = ""
-    @State private var showingSent = false
-    @State private var showingFailed = false
-    @State private var showingNoMail = false
-    /// 提交失败时记下这次反馈，邮件兜底用
-    @State private var failedIssue: FeedbackClient.RecipeIssue = .other
+    @State private var feedbackRecipe: Recipe?
     @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }) private var favorites: [Favorite]
     let route: RecipeRoute
 
@@ -68,32 +61,6 @@ struct RecipeDetailView: View {
     private var textURL: URL? {
         guard let link = recipe.link, !link.isEmpty else { return nil }
         return URL(string: link)
-    }
-
-    private var feedbackURL: URL {
-        var components = URLComponents(string: "https://github.com/YunYouJun/cook/issues/new")!
-        components.queryItems = [
-            URLQueryItem(name: "template", value: "recipe.yml"),
-            URLQueryItem(name: "title", value: "[菜谱] \(recipe.name)"),
-            URLQueryItem(name: "name", value: recipe.name),
-            URLQueryItem(name: "video", value: webURL?.absoluteString ?? ""),
-        ]
-        return components.url!
-    }
-
-    private var failedMailURL: URL {
-        FeedbackClient.mailURL(
-            topic: recipe.name,
-            lines: failedMailLines
-        )
-    }
-
-    private var failedMailLines: [String] {
-        ["菜谱：\(recipe.name)（#\(recipe.id)）", "问题：\(failedIssue.label)", failedIssue == .other ? note : "", webURL?.absoluteString ?? ""]
-    }
-
-    private var failedMailText: String {
-        FeedbackClient.mailText(topic: recipe.name, lines: failedMailLines)
     }
 
     var body: some View {
@@ -152,56 +119,15 @@ struct RecipeDetailView: View {
                     }
                 }
                 Button {
-                    // 没配置反馈地址的构建（比如本机调试）直接去 GitHub
-                    if feedback.isConfigured {
-                        choosingIssue = true
-                    } else {
-                        openURL(feedbackURL)
-                    }
+                    feedbackRecipe = recipe
                 } label: {
                     Label("反馈这道菜的问题", systemImage: "exclamationmark.bubble")
                 }
-                .confirmationDialog("这道菜有什么问题？", isPresented: $choosingIssue, titleVisibility: .visible) {
-                    ForEach(FeedbackClient.RecipeIssue.allCases) { issue in
-                        Button(issue.label) {
-                            if issue == .other {
-                                note = ""
-                                writingNote = true
-                            } else {
-                                submit(issue)
-                            }
-                        }
-                    }
-                }
-                .alert("具体是什么问题？", isPresented: $writingNote) {
-                    TextField("比如：用量不对、步骤有误", text: $note)
-                    Button("取消", role: .cancel) {}
-                    Button("提交") { submit(.other, note: note) }
-                }
+                .accessibilityIdentifier("recipe.feedback")
             }
         }
-        .alert("收到了，谢谢反馈", isPresented: $showingSent) {
-            Button("好", role: .cancel) {}
-        }
-        .alert("暂时没能提交", isPresented: $showingFailed) {
-            Button("取消", role: .cancel) {}
-            Button("去支持中心") { openURL(URL(string: "https://support.yunle.fun/contact?product=cook&source=cook-ios&intent=feedback")!) }
-            Button("去 GitHub 填写") { openURL(feedbackURL) }
-            Button("发邮件") {
-                openURL(failedMailURL) { accepted in
-                    if !accepted {
-                        UIPasteboard.general.string = failedMailText
-                        showingNoMail = true
-                    }
-                }
-            }
-        } message: {
-            Text("内容已经复制。可以发邮件给我们，或者到 GitHub 填写反馈表单，菜名和视频都已经帮你填好。")
-        }
-        .alert("没有找到邮件 App", isPresented: $showingNoMail) {
-            Button("好", role: .cancel) {}
-        } message: {
-            Text("邮箱 \(FeedbackClient.supportEmail) 和反馈内容都已复制，可以用其他邮箱发给我们。")
+        .sheet(item: $feedbackRecipe) { item in
+            RecipeFeedbackView(recipe: item)
         }
         // 菜名只放在大标题里，滚动后收进导航栏，不在页面里再写一遍
         .navigationTitle(recipe.name)
@@ -230,20 +156,6 @@ struct RecipeDetailView: View {
             // 从推荐结果点进来时，匿名记录这组食材下点开了第几个，用来评估排序
             if let rank = route.rank {
                 feedback.signalOpen(stuff: session.selectedStuff, tool: session.tool, mode: session.mode, recipeId: recipe.id, rank: rank)
-            }
-        }
-        .sensoryFeedback(.success, trigger: showingSent) { _, sent in sent }
-    }
-
-    private func submit(_ issue: FeedbackClient.RecipeIssue, note: String = "") {
-        Task {
-            do {
-                try await feedback.report(recipe, issue: issue, note: note)
-                showingSent = true
-            } catch {
-                failedIssue = issue
-                UIPasteboard.general.string = failedMailText
-                showingFailed = true
             }
         }
     }

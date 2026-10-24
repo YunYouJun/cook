@@ -9,6 +9,15 @@ export const feedbackKinds: { kind: FeedbackKind, label: string }[] = [
   { kind: 'other', label: '其他问题' },
 ]
 
+export const linkIssues = [
+  { value: '', label: '暂不确定' },
+  { value: 'unavailable', label: '内容不存在或已下架' },
+  { value: 'loading', label: '一直加载或网络错误' },
+  { value: 'login', label: '要求登录或没有访问权限' },
+  { value: 'wrong-content', label: '打开的不是这道菜' },
+  { value: 'other', label: '其他情况' },
+]
+
 /** Only offer source issues for the sources this recipe actually contains. */
 export function recipeFeedbackKinds(recipe: { bv?: string, link?: string }) {
   return feedbackKinds.filter(item => item.kind === 'video' ? !!recipe.bv : item.kind === 'text' ? !!recipe.link : true)
