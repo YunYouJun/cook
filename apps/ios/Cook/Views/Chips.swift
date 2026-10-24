@@ -1,10 +1,13 @@
+import CookCore
 import SwiftUI
 
 /// 可多选的小标签；在 List 里用 plain 样式，避免点一个标签触发整行
 struct Chip: View {
     let title: String
     var emoji: String? = nil
+    var imageName: String? = nil
     let isSelected: Bool
+    @ScaledMetric(relativeTo: .subheadline) var iconSize: CGFloat = 18
     /// 点击时报告标签在屏幕上的位置，做「入篮」动画用；不需要时不传
     var onTap: ((CGRect) -> Void)? = nil
     let action: () -> Void
@@ -17,6 +20,14 @@ struct Chip: View {
             action()
         } label: {
             HStack(spacing: 4) {
+                if let imageName {
+                    Image(imageName)
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: iconSize, height: iconSize)
+                        .accessibilityHidden(true)
+                }
                 if let emoji, !emoji.isEmpty {
                     Text(emoji)
                         .accessibilityHidden(true)
@@ -42,6 +53,23 @@ struct Chip: View {
         }
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+/// 做法图标只用于 iOS 展示，不混入多端共用的推荐规则。
+extension MethodGroup {
+    var imageName: String? {
+        switch label {
+        case "炒菜": return "method-stir-fry"
+        case "汤羹": return "method-soup"
+        case "炖煮": return "method-stew"
+        case "蒸": return "method-steam"
+        case "炸煎": return "method-pan-fry"
+        case "烤": return "method-bake"
+        case "凉拌": return "method-salad"
+        case "微波": return "method-microwave"
+        default: return nil
+        }
     }
 }
 
@@ -101,6 +129,7 @@ struct ChipSection<Content: View>: View {
     var note: String? = nil
     /// 跟着系统字号放大，字大时一行少放几个，免得菜名被截断（不能是 private，否则逐一成员构造器也会变成 private）
     @ScaledMetric(relativeTo: .subheadline) var minChipWidth: CGFloat = 92
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ViewBuilder let content: () -> Content
 
     var body: some View {
@@ -108,6 +137,8 @@ struct ChipSection<Content: View>: View {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: minChipWidth), spacing: 8)], spacing: 8) {
                 content()
             }
+            // 字号改变会切换列数，重建网格，避免懒加载的旧单元格仍停留在原位置。
+            .id(dynamicTypeSize)
             .padding(.vertical, 4)
         } header: {
             Text(title)

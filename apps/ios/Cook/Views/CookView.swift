@@ -25,10 +25,7 @@ struct CookView: View {
     @AppStorage("cook.food.moreExpanded") private var moreExpanded = ""
 
     var body: some View {
-        let toolOnly = session.selectedStuff.isEmpty && session.tool != nil
-        let matchCount = toolOnly
-            ? store.recommender.recipes(using: session.tool ?? "", options: session.options).count
-            : store.recommender.recommend(session.options).count
+        let matchCount = session.matchCount(using: store.recommender) ?? 0
         let emptySignal = emptySignalID(matchCount: matchCount)
         let warnings = findIncompatibleRules(session.selectedStuff, rules: store.data.incompatibleRules)
         let extras = session.selectedStuff.filter { !store.isCatalogStuff($0) }
@@ -444,20 +441,29 @@ struct ResultsRoute: Hashable {}
 
 /// 筛选：做法、难度、不吃辣，以及家里常备和忌口
 struct FilterSheet: View {
+    @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        let matchCount = session.matchCount(using: store.recommender)
+
         NavigationStack {
             List {
                 ChipSection(title: "做法", note: session.methodGroups.isEmpty ? nil : "只看这些做法") {
                     ForEach(Recommender.methodGroups, id: \.label) { group in
-                        Chip(title: group.label, isSelected: session.methodGroups.contains(group.label)) {
+                        Chip(title: group.label, imageName: group.imageName, isSelected: session.methodGroups.contains(group.label)) {
                             session.toggleMethodGroup(group.label)
                         }
                     }
                 }
-                ChipSection(title: "难度", note: session.difficulty.isEmpty ? nil : "没标难度的菜会被隐藏") {
+                ChipSection(
+                    title: "难度",
+                    note: session.difficulty.isEmpty
+                        ? "可多选，不选则不限"
+                        : "可多选，不选则不限；没标难度的菜会被隐藏"
+                ) {
                     ForEach(Recommender.difficultyLevels, id: \.self) { level in
                         Chip(title: level, isSelected: session.difficulty.contains(level)) {
                             session.toggleDifficulty(level)
@@ -472,6 +478,9 @@ struct FilterSheet: View {
                     Text("家里常备、忌口和不吃辣会记住，下次打开还在。")
                 }
             }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                resultSummary(matchCount: matchCount)
+            }
             .navigationTitle("筛选")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -485,6 +494,41 @@ struct FilterSheet: View {
             }
         }
         .sensoryFeedback(.selection, trigger: session.activeFilterCount)
+    }
+
+    /// 固定在列表底部，不增加第二个确认按钮；进入调料和忌口子页时随根列表一起移走。
+    private func resultSummary(matchCount: Int?) -> some View {
+        VStack(spacing: 4) {
+            if let matchCount {
+                HStack(spacing: 0) {
+                    Text("符合条件 ")
+                    Text("\(matchCount)")
+                        .monospacedDigit()
+                        .contentTransition(.numericText(value: Double(matchCount)))
+                        .animation(reduceMotion ? nil : .snappy, value: matchCount)
+                    Text(" 道菜")
+                }
+                .font(.subheadline.weight(.medium))
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("符合条件 \(matchCount) 道菜")
+                .accessibilityIdentifier("filter.resultCount")
+                if matchCount == 0 {
+                    Text("试试减少做法或难度限制，或更换食材和厨具。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text("选好食材或厨具后，这里会显示结果数量。")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("filter.selectionHint")
+            }
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(Color(uiColor: .systemGroupedBackground))
     }
 }
 
@@ -512,72 +556,23 @@ struct IncompatibleWarning: View {
 struct PreferenceRows: View {
     @Environment(CookSession.self) private var session
 
+    private func summary(_ names: [String], empty: String) -> String {
+        if names.isEmpty { return empty }
+        let preview = names.prefix(2).joined(separator: "、")
+        return names.count > 2 ? "\(preview)等 \(names.count) 种" : preview
+    }
+
     var body: some View {
         NavigationLink {
             PantryPicker()
         } label: {
-            LabeledContent("家里常备", value: session.pantry.isEmpty ? "未选择" : session.pantry.joined(separator: "、"))
+            LabeledContent("家里常备", value: summary(session.pantry, empty: "未选择"))
         }
         NavigationLink {
             AvoidPicker()
         } label: {
-            LabeledContent("忌口", value: session.avoid.isEmpty ? "无" : session.avoid.joined(separator: "、"))
+            LabeledContent("忌口", value: summary(session.avoid, empty: "无"))
         }
         Toggle("不吃辣", isOn: Binding(get: { session.noSpicy }, set: { session.setNoSpicy($0) }))
-    }
-}
-
-struct PantryPicker: View {
-    @Environment(RecipeStore.self) private var store
-    @Environment(CookSession.self) private var session
-
-    var body: some View {
-        List {
-            Section {
-                ForEach(store.data.pantry.options, id: \.self) { name in
-                    CheckRow(title: name, isSelected: session.pantry.contains(name)) {
-                        session.togglePantry(name)
-                    }
-                }
-            } footer: {
-                Text("家里常备的调料不算缺少的食材。")
-            }
-        }
-        .navigationTitle("家里常备")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("恢复默认") { session.resetPantry(to: store.data.pantry.defaults) }
-            }
-        }
-    }
-}
-
-struct AvoidPicker: View {
-    @Environment(RecipeStore.self) private var store
-    @Environment(CookSession.self) private var session
-
-    var body: some View {
-        List {
-            avoidSection("蔬菜", store.data.food.vegetable)
-            avoidSection("肉和蛋", store.data.food.meat)
-            avoidSection("主食", store.data.food.staple)
-        }
-        .navigationTitle("忌口")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("清空") { session.clearAvoid() }
-                    .disabled(session.avoid.isEmpty)
-            }
-        }
-    }
-
-    private func avoidSection(_ title: String, _ items: [StuffItem]) -> some View {
-        Section(title) {
-            ForEach(items, id: \.name) { item in
-                CheckRow(title: "\(item.emoji) \(item.name)", isSelected: session.avoid.contains(item.name)) {
-                    session.toggleAvoid(item.name)
-                }
-            }
-        }
     }
 }
