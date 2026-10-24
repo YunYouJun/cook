@@ -43,7 +43,7 @@ final class CookTests: XCTestCase {
         XCTAssertEqual(reloaded.activeFilterCount, 0)
     }
 
-    func testDuplicatePreferencesMergeIntoOne() throws {
+    func testDuplicatePreferencesSelectLatestWithoutDeletingOlderValues() throws {
         let container = Persistence.makeContainer(inMemory: true)
         let context = container.mainContext
         // 两台设备各建了一条，同步后都在本地
@@ -57,9 +57,11 @@ final class CookTests: XCTestCase {
         context.insert(newer)
         try context.save()
 
-        let kept = context.preferences(defaultPantry: [])
-        XCTAssertEqual(kept.pantry, ["油", "盐", "糖"], "留最早那条，内容用最新修改的")
-        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Preferences>()), 1)
+        let kept = try context.latestPreferences()
+        XCTAssertTrue(kept === newer)
+        XCTAssertEqual(kept?.pantry, ["油", "盐", "糖"])
+        XCTAssertEqual(older.pantry, ["油"], "不能用另一条记录覆盖尚未确认来源的旧值")
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Preferences>()), 2)
     }
 
     func testFavoritesAndHistory() throws {

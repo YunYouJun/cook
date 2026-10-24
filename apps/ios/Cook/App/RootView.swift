@@ -15,6 +15,8 @@ struct RootView: View {
     @State private var router = AppRouter()
     @Environment(\.scenePhase) private var scenePhase
     @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }) private var fridgeItems: [FridgeItem]
+    @Query private var preferenceRecords: [Preferences]
+    @Environment(CookSession.self) private var session
     @AppStorage(FridgeReminder.enabledKey) private var remindersEnabled = false
     @AppStorage(FridgeReminder.timeKey) private var reminderMinutes = FridgeReminder.defaultMinutes
     @Environment(FeedbackClient.self) private var feedback
@@ -41,6 +43,9 @@ struct RootView: View {
         }
         .minimizesTabBarOnScroll()
         .environment(router)
+        .onChange(of: preferenceRecords.map(\.snapshot), initial: true) {
+            session.refreshPreferences()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .showFridgeHome)) { _ in
             PendingFridgeHome.requested = false
             router.showFridgeHome()

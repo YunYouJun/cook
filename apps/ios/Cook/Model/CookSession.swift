@@ -1,6 +1,7 @@
 import CookCore
 import Foundation
 import Observation
+import os
 import SwiftData
 
 /// 做菜页的选择：已选食材和筛选条件只在本次使用；常备调料、忌口、不吃辣和推荐模式存在 SwiftData，随 iCloud 同步
@@ -13,28 +14,41 @@ final class CookSession {
     var keyword = ""
 
     private let context: ModelContext
-    private let preferences: Preferences
+    private let defaults: PreferenceValues
+    private var preferences: Preferences?
+    private static let logger = Logger(subsystem: "fun.yunle.cook", category: "Preferences")
 
     init(defaultPantry: [String], context: ModelContext) {
         self.context = context
-        preferences = context.preferences(defaultPantry: defaultPantry)
+        defaults = PreferenceValues(pantry: defaultPantry)
+        refreshPreferences()
     }
 
-    // 偏好直接读写模型，其他设备同步过来的修改也会刷新界面
+    /// 查询变化时重新绑定；只读、不保存，重复调用不会触发写入或查询循环。
+    func refreshPreferences() {
+        do {
+            let latest = try context.latestPreferences()
+            if preferences !== latest { preferences = latest }
+        } catch {
+            Self.logger.error("读取做菜偏好失败：\(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    // 已绑定记录的属性更新由 SwiftData 跟踪；新增、删除记录由 RootView 的 @Query 触发重绑定。
     var pantry: [String] {
-        preferences.pantry
+        preferences?.pantry ?? defaults.pantry
     }
 
     var avoid: [String] {
-        preferences.avoid
+        preferences?.avoid ?? defaults.avoid
     }
 
     var noSpicy: Bool {
-        preferences.noSpicy
+        preferences?.noSpicy ?? defaults.noSpicy
     }
 
     var mode: RecommendationMode {
-        get { RecommendationMode(rawValue: preferences.mode) ?? .loose }
+        get { RecommendationMode(rawValue: preferences?.mode ?? defaults.mode) ?? .loose }
         set { updatePreferences { $0.mode = newValue.rawValue } }
     }
 
@@ -90,8 +104,7 @@ final class CookSession {
         let avoided = Set(normalizer.unique(query.avoid))
         selectedStuff = normalizer.unique(selectedStuff + query.stuff + query.unknown).filter { !avoided.contains($0) }
         if !avoided.isEmpty {
-            let merged = normalizer.unique(avoid + query.avoid)
-            updatePreferences { $0.avoid = merged }
+            updatePreferences { $0.avoid = normalizer.unique($0.avoid + query.avoid) }
         }
         if query.noSpicy {
             setNoSpicy(true)
@@ -143,10 +156,13 @@ final class CookSession {
         setNoSpicy(false)
     }
 
-    private func updatePreferences(_ change: (Preferences) -> Void) {
-        change(preferences)
-        preferences.updatedAt = Date()
-        try? context.save()
+    private func updatePreferences(_ change: (inout PreferenceValues) -> Void) {
+        do {
+            preferences = try context.updatePreferences(defaults: defaults, change)
+        } catch {
+            Self.logger.error("保存做菜偏好失败：\(error.localizedDescription, privacy: .public)")
+            refreshPreferences()
+        }
     }
 
     static func toggled(_ list: [String], _ item: String) -> [String] {
