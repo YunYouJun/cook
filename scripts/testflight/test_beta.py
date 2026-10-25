@@ -23,7 +23,7 @@ class BetaTests(unittest.TestCase):
         self.e = {**{k: self.c[k] for k in ('buildId', 'sourceCommit', 'ipaSha256')},
                   'approvedBy': 'test-fixture', 'checks': {k: dict(check) for k in beta.CHECKS}}
         self.s = {'build': {'id': self.c['buildId'], 'attributes': {
-            'version': '5', 'processingState': 'VALID', 'buildAudienceType': 'APP_STORE_ELIGIBLE',
+            'version': self.c['buildNumber'], 'processingState': 'VALID', 'buildAudienceType': 'APP_STORE_ELIGIBLE',
             'expired': False, 'usesNonExemptEncryption': False, 'expirationDate': '2099-01-01T00:00:00Z'}},
             'group': {'id': self.c['groupId'], 'attributes': {
                 'isInternalGroup': False, 'publicLinkEnabled': False}},
@@ -63,6 +63,41 @@ class BetaTests(unittest.TestCase):
         self.s['testers'] = 31
         self.assertTrue({'apple.approval', 'build.expired', 'group.unverified_builds', 'group.capacity'}
                         <= set(beta.gate(self.c, self.s, self.e)))
+
+    def test_approved_build_does_not_require_another_review(self):
+        for state in beta.APPROVED_EXTERNAL_STATES:
+            with self.subTest(state=state):
+                self.s['externalState'] = state
+                self.assertEqual(beta.gate(self.c, self.s, self.e), [])
+                c = self.controller()
+                with patch.object(c, 'snapshot', return_value=self.s), patch.object(c, 'asc') as mutate:
+                    self.assertFalse(c.submit(True)['submitted'])
+                    mutate.assert_not_called()
+        for state in ('READY_FOR_BETA_SUBMISSION', 'BETA_REJECTED', 'IN_BETA_REVIEW', 'UNKNOWN'):
+            self.s['externalState'] = state
+            self.assertIn('apple.approval', beta.gate(self.c, self.s, self.e))
+
+    def test_simulator_policy_requires_its_own_complete_evidence(self):
+        self.c['acceptancePolicy'] = 'simulator'
+        self.assertIn('acceptance.policy', beta.gate(self.c, self.s, self.e))
+        check = self.e['checks']['upgrade']
+        self.e['acceptancePolicy'] = 'simulator'
+        self.e['checks'] = {key: dict(check) for key in beta.SIMULATOR_CHECKS}
+        for value in self.e['checks'].values():
+            value.pop('physicalDeviceLabels')
+        self.assertEqual(beta.gate(self.c, self.s, self.e), [])
+        for key in beta.SIMULATOR_CHECKS:
+            missing = copy.deepcopy(self.e)
+            del missing['checks'][key]
+            self.assertIn(f'acceptance.{key}', beta.gate(self.c, self.s, missing))
+        # Neither an unknown policy nor a simulator record can downgrade a
+        # production candidate's requirement for two real devices.
+        self.c['acceptancePolicy'] = 'production'
+        errors = beta.gate(self.c, self.s, self.e)
+        self.assertIn('acceptance.policy', errors)
+        self.assertIn('acceptance.production_sync', errors)
+        self.c['acceptancePolicy'] = 'unknown'
+        self.assertIn('acceptance.policy', beta.gate(self.c, self.s, self.e))
 
     def test_open_sets_limit_in_same_request(self):
         c = self.controller()

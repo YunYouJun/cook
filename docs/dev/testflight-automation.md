@@ -1,6 +1,6 @@
 # TestFlight 外测自动化
 
-首批外测采用 **手动提交候选 → Apple 审核 → 真机验收 → 30 人自助加入**。默认关闭邀请，当前候选为 `2.0.0 (5)`。
+首批外测采用 **准备精确候选 → Apple 审核 → 完成该候选的验收 → 30 人自助加入**。默认关闭邀请，已上传候选仍为 `2.0.0 (5)`；2026-10-25 回读为 `BETA_APPROVED`，0 位测试者，公开邀请关闭。新的 `2.0.0 (7)` 正在独立工作树准备，未上传前不替换在线候选。
 
 ## 手动发布
 
@@ -34,7 +34,7 @@ python3 scripts/testflight/beta.py feedback
 
 ## 开放门禁
 
-私密的 `acceptance.json` 必须绑定候选 `buildId/sourceCommit/ipaSha256`，由真实验收负责人填写 `approvedBy`，包含六项 `checks`：
+私密的 `acceptance.json` 必须绑定候选 `buildId/sourceCommit/ipaSha256`，由验收负责人填写 `approvedBy`。默认 `acceptancePolicy=production`，包含六项 `checks`：
 
 | 键                  | 必须覆盖                                                            |
 | ------------------- | ------------------------------------------------------------------- |
@@ -46,10 +46,13 @@ python3 scripts/testflight/beta.py feedback
 | `site_privacy`      | 线上说明与隐私页可用，内容和候选包一致                              |
 
 每项填写 `passed: true`、ISO 时间 `testedAt`、绝对路径 `evidencePath`、文件 SHA-256 `evidenceSha256`。
-同步项还需两个不同的 `physicalDeviceLabels`（自定义标签，无需公开设备标识）。脚本验证文件和哈希，负责人仍需核对报告内容。
-CI、模拟器、schema 相同和旧版本通过都不能替代真机结果。
+默认生产策略的同步项还需两个不同的 `physicalDeviceLabels`（自定义标签，无需公开设备标识）。脚本验证文件和哈希，负责人仍需核对报告内容。
 
-开放前还检查 App/构建/组身份、未过期、可外部分发、合规状态、Apple 允许外测、专用组只有该候选且不自动接收全部构建、人数不超过 30。
+维护者已接受剩余验收使用模拟器，范围见[验收记录](./ios-simulator-acceptance-2026-10-24.md)。新候选可以在候选文件中显式冻结 `acceptancePolicy=simulator`，验收文件必须声明相同策略；旧候选不会自动降级。该策略要求八项：`upgrade`、`file_roundtrip`、`local_persistence`、`local_isolation`、`feedback_privacy`、`site_privacy`、`notifications`、`account_session`，每项仍需完整证据及哈希。通知须包含系统送达及点击复测；账号须记录刷新、失效、离线恢复和切换的实际覆盖层级。
+
+模拟器策略验证本地存储、升级及隔离，不将检查命名为生产同步或 Apple 账号隔离。真实 CloudKit 传输、Apple 账号退出与切换仍可保持未验证，必须在报告和测试说明中明示。CI、模拟器、schema 相同及旧构建结果均不能写成新候选的真实生产验收。未知策略或候选与验收策略不一致会阻止开放。
+
+开放前还检查 App/构建/组身份、未过期、可外部分发、合规状态、Apple 允许外测（`BETA_APPROVED`、`READY_FOR_BETA_TESTING` 或 `IN_BETA_TESTING`）、专用组只有该候选且不自动接收全部构建、人数不超过 30。
 Apple 不允许在关闭公开链接时修改人数上限，所以脚本在同一次开启请求中设置 30 人上限，随后回读。错误时尝试关闭链接并报告失败。
 满员由 Apple 阻止新加入，不应额外用邮件批量加入绕过首批范围。
 
