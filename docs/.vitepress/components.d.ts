@@ -12,8 +12,13 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    CookBetaSignup: typeof import('./theme/components/CookBetaSignup.vue')['default']
+    CookLanding: typeof import('./theme/components/CookLanding.vue')['default']
+    CookLandingHero: typeof import('./theme/components/CookLandingHero.vue')['default']
+    CookShowcase: typeof import('./theme/components/CookShowcase.vue')['default']
     DocsProjectCard: typeof import('./../../node_modules/.pnpm/@yunyoujun+docs@0.1.14_vite@8.2.1_@types+node@25.9.5_esbuild@0.28.2_jiti@2.7.0_sass@1.1_36a5fa0507118b7279013ea35a3fd8ec/node_modules/@yunyoujun/docs/client/components/DocsProjectCard.vue')['default']
     DocsProjectList: typeof import('./../../node_modules/.pnpm/@yunyoujun+docs@0.1.14_vite@8.2.1_@types+node@25.9.5_esbuild@0.28.2_jiti@2.7.0_sass@1.1_36a5fa0507118b7279013ea35a3fd8ec/node_modules/@yunyoujun/docs/client/components/DocsProjectList.vue')['default']
+    PhoneDemo: typeof import('./theme/components/PhoneDemo.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }
@@ -21,8 +26,13 @@ declare module 'vue' {
 
 // For TSX support
 declare global {
+  const CookBetaSignup: typeof import('./theme/components/CookBetaSignup.vue')['default']
+  const CookLanding: typeof import('./theme/components/CookLanding.vue')['default']
+  const CookLandingHero: typeof import('./theme/components/CookLandingHero.vue')['default']
+  const CookShowcase: typeof import('./theme/components/CookShowcase.vue')['default']
   const DocsProjectCard: typeof import('./../../node_modules/.pnpm/@yunyoujun+docs@0.1.14_vite@8.2.1_@types+node@25.9.5_esbuild@0.28.2_jiti@2.7.0_sass@1.1_36a5fa0507118b7279013ea35a3fd8ec/node_modules/@yunyoujun/docs/client/components/DocsProjectCard.vue')['default']
   const DocsProjectList: typeof import('./../../node_modules/.pnpm/@yunyoujun+docs@0.1.14_vite@8.2.1_@types+node@25.9.5_esbuild@0.28.2_jiti@2.7.0_sass@1.1_36a5fa0507118b7279013ea35a3fd8ec/node_modules/@yunyoujun/docs/client/components/DocsProjectList.vue')['default']
+  const PhoneDemo: typeof import('./theme/components/PhoneDemo.vue')['default']
   const RouterLink: typeof import('vue-router')['RouterLink']
   const RouterView: typeof import('vue-router')['RouterView']
 }
