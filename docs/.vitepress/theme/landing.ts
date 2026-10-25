@@ -3,6 +3,7 @@ import type { CookQuery, RecommendationOptions } from '../../../packages/cook/sr
 import { createRecipeRecommender, uniqueStuff } from '../../../packages/cook/src/utils/recommend'
 import food from '../../../packages/data/food.json'
 import pantry from '../../../packages/data/pantry.json'
+import { expandRecipe } from './landing-data'
 import { data } from './recipes.data'
 
 /** 首页用到的菜谱、推荐和展示规则，和 App 的 RecipeStore 对齐 */
@@ -25,15 +26,7 @@ export const stuffGroups = [
 const allStuff = [...food.vegetable, ...food.meat, ...food.staple] as StuffItem[]
 const emojiByName = new Map(allStuff.map(item => [item.name, item.emoji]))
 
-export const catalog: RecipeItem[] = data.recipes.map(recipe => ({
-  id: recipe.id,
-  name: recipe.n,
-  stuff: recipe.s,
-  difficulty: recipe.d as RecipeItem['difficulty'],
-  methods: recipe.m,
-  tools: recipe.t ?? [],
-  score: recipe.c,
-}))
+export const catalog: RecipeItem[] = data.recipes.map(expandRecipe)
 
 const recommender = createRecipeRecommender(catalog)
 

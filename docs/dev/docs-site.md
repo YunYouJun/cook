@@ -26,6 +26,8 @@ pnpm build:site
 
 `pnpm build:site` 先运行现有网页版构建，再构建文档，最后由 `scripts/compose-product-site.mjs` 输出 `dist-site`。该脚本不修改两个输入目录：VitePress 占用官网根路径和文档路由，保留 Nuxt 资源、登录回调、同域旧版设置 / 数据导出路径、AASA 及退役 service worker。未找到的文档返回文档 404，不使用应用壳兜底。
 
+组合产物中的 `/about/` 和 `/about/terms.html` 是兼容页面，通过 HTML meta refresh 跳到 `/` 与 `/terms`，同时提供手动链接和标准地址；这不是服务器 301，且不会携带原查询参数。网页版 `dist` 中的审核页面保持不变。EdgeOne Git 部署读取项目根目录的 `edgeone.json`；登录回调的 `no-store` / `no-referrer` 等共享响应头维护在该源配置中，不依赖构建输出内的配置被再次发现。
+
 ## 生产项目
 
 ### 官网：EdgeOne `yunlefun-cook`

@@ -29,7 +29,15 @@ const inputs = {
   'docs/.vitepress/dist/terms.html': 'current product agreement',
   'docs/.vitepress/dist/privacy.html': 'privacy policy',
   'docs/.vitepress/dist/guide/start.html': 'getting started',
-  'edgeone.json': '{"headers":[{"source":"/auth/wechat/*","headers":[{"key":"Referrer-Policy","value":"no-referrer"}]}]}',
+  'edgeone.json': JSON.stringify({
+    headers: ['/auth/wechat/*', '/auth/callback', '/auth/callback/*'].map(source => ({
+      source,
+      headers: [
+        { key: 'Cache-Control', value: 'no-store' },
+        { key: 'Referrer-Policy', value: 'no-referrer' },
+      ],
+    })),
+  }),
 }
 
 function fixture(run, omitted = []) {
@@ -65,8 +73,8 @@ test('documentation owns root and unknown-page HTML while legacy resources survi
     assert.equal(read('dist-site/assets/app-only.js'), 'legacy public app asset')
     assert.equal(read('dist-site/assets/shared/icon.svg'), 'identical shared icon')
     assert.equal(read('dist-site/terms.html'), 'current product agreement')
-    assert.deepEqual(JSON.parse(read('dist-site/edgeone.json')).headers[0], JSON.parse(inputs['edgeone.json']).headers[0])
-    for (const path of ['_nuxt/app.js', 'auth/callback/index.html', 'auth/wechat/index.html', '.well-known/apple-app-site-association', 'sw.js', 'about/index.html', 'about/terms.html', 'about/site.css', 'about/assets/icon.svg', 'settings/index.html'])
+    assert.equal(read('dist-site/edgeone.json'), inputs['edgeone.json'])
+    for (const path of ['_nuxt/app.js', 'auth/callback/index.html', 'auth/wechat/index.html', '.well-known/apple-app-site-association', 'sw.js', 'about/site.css', 'about/assets/icon.svg', 'settings/index.html'])
       assert.equal(read(`dist-site/${path}`), inputs[`dist/${path}`], path)
     assert.equal(existsSync(join(root, 'dist-site/200.html')), false)
     assert.equal(existsSync(join(root, 'dist-site/unknown-doc/index.html')), false)
@@ -76,7 +84,7 @@ test('documentation owns root and unknown-page HTML while legacy resources survi
   })
 })
 
-test('product-only rules redirect legacy marketing URLs and protect same-origin callbacks', () => {
+test('only composed marketing aliases navigate to fixed destinations through complete HTML', () => {
   fixture(({ root, write, read }) => {
     const original = {
       ...JSON.parse(inputs['edgeone.json']),
@@ -86,29 +94,37 @@ test('product-only rules redirect legacy marketing URLs and protect same-origin 
     const originalText = JSON.stringify(original)
     write('edgeone.json', originalText)
     composeProductSite(root)
-    const config = JSON.parse(read('dist-site/edgeone.json'))
     assert.equal(read('edgeone.json'), originalText)
-    assert.equal(config.buildCommand, 'pnpm build')
-    assert.deepEqual(config.redirects, [
-      ...original.redirects,
-      { source: '/about', destination: '/', statusCode: 301 },
-      { source: '/about/', destination: '/', statusCode: 301 },
-      { source: '/about/index.html', destination: '/', statusCode: 301 },
-      { source: '/about/terms.html', destination: '/terms', statusCode: 301 },
-    ])
-    assert.deepEqual(config.headers.slice(0, original.headers.length), original.headers)
-    for (const source of ['/auth/callback', '/auth/callback/*']) {
-      assert.deepEqual(config.headers.find(rule => rule.source === source)?.headers, [
-        { key: 'Cache-Control', value: 'no-store' },
-        { key: 'Referrer-Policy', value: 'no-referrer' },
-      ])
+    assert.equal(read('dist-site/edgeone.json'), originalText)
+    for (const [path, destination, label] of [
+      ['about/index.html', '/', '食用手册官网'],
+      ['about/terms.html', '/terms', '用户协议'],
+    ]) {
+      const html = read(`dist-site/${path}`)
+      assert.match(html, /^<!doctype html>\n<html lang="zh-CN">/)
+      assert.ok(html.includes('<meta charset="utf-8">'))
+      assert.ok(html.includes(`<link rel="canonical" href="https://cook.yunle.fun${destination}">`))
+      assert.ok(html.includes(`<meta http-equiv="refresh" content="0; url=${destination}">`))
+      assert.ok(html.includes(`<a href="${destination}">${label}</a>`))
+      assert.match(html, /<\/body>\n<\/html>\n$/)
+      assert.doesNotMatch(html, /<script|location\.|\?|submitted product snapshot|existing agreement/i)
     }
-    assert.equal(config.redirects.some(rule => rule.source.startsWith('/auth') || rule.source === '/about/*'), false)
     assert.equal(read('dist-site/auth/callback/index.html'), inputs['dist/auth/callback/index.html'])
     assert.equal(read('dist-site/about/me/index.html'), inputs['dist/200.html'])
+    assert.equal(read('dist-site/about/acknowledgements/index.html'), inputs['dist/200.html'])
     assert.equal(read('dist/about/index.html'), 'submitted product snapshot')
     assert.equal(read('dist/about/terms.html'), 'existing agreement')
   })
+})
+
+test('root configuration protects callbacks without redirecting them or the submitted about page', () => {
+  const config = JSON.parse(readFileSync(new URL('../edgeone.json', import.meta.url), 'utf8'))
+  for (const source of ['/auth/wechat/*', '/auth/callback', '/auth/callback/*']) {
+    const headers = config.headers.find(rule => rule.source === source)?.headers ?? []
+    assert.ok(headers.some(header => header.key === 'Cache-Control' && header.value === 'no-store'), source)
+    assert.ok(headers.some(header => header.key === 'Referrer-Policy' && header.value === 'no-referrer'), source)
+  }
+  assert.equal(config.redirects, undefined)
 })
 
 test('different contents or file-directory conflicts at shared asset URLs fail before replacing output', () => {

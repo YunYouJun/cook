@@ -68,26 +68,19 @@ function assertStagingPath(root, staging) {
     throw new Error(`Refusing unexpected staging path: ${staging}`)
 }
 
-function productEdgeoneConfig(config) {
-  // Schema: https://edgeone.cloud.tencent.com/pages/document/162936771610066944
-  return {
-    ...config,
-    redirects: [
-      ...(config.redirects ?? []),
-      ...['/about', '/about/', '/about/index.html'].map(source => ({ source, destination: '/', statusCode: 301 })),
-      { source: '/about/terms.html', destination: '/terms', statusCode: 301 },
-    ],
-    headers: [
-      ...(config.headers ?? []),
-      ...['/auth/callback', '/auth/callback/*'].map(source => ({
-        source,
-        headers: [
-          { key: 'Cache-Control', value: 'no-store' },
-          { key: 'Referrer-Policy', value: 'no-referrer' },
-        ],
-      })),
-    ],
-  }
+function redirectDocument(destination, label) {
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${label} · 食用手册</title>
+<link rel="canonical" href="https://cook.yunle.fun${destination}">
+<meta http-equiv="refresh" content="0; url=${destination}">
+</head>
+<body><p>页面已迁移，请前往<a href="${destination}">${label}</a>。</p></body>
+</html>
+`
 }
 
 function assertAssetCompatibility(web, docs, path = 'assets') {
@@ -110,6 +103,7 @@ function assertAssetCompatibility(web, docs, path = 'assets') {
 
 /**
  * Compose the product/docs site and same-origin legacy app into an isolated output.
+ * Legacy marketing pages use HTML refresh links, without server redirect rules.
  *
  * @param {string} [repositoryRoot] Repository containing dist and docs/.vitepress/dist.
  * @returns {string} Absolute path of the completed dist-site directory.
@@ -131,7 +125,7 @@ export function composeProductSite(repositoryRoot = defaultRoot) {
     requirePath(join(docs, path))
   requirePath(join(root, 'edgeone.json'))
   // Validate configuration before replacing an earlier successful composition.
-  const edgeone = productEdgeoneConfig(JSON.parse(readFileSync(join(root, 'edgeone.json'), 'utf8')))
+  JSON.parse(readFileSync(join(root, 'edgeone.json'), 'utf8'))
   assertAssetCompatibility(web, docs)
 
   for (const source of [realpathSync(web), realpathSync(docs)]) {
@@ -166,7 +160,9 @@ export function composeProductSite(repositoryRoot = defaultRoot) {
         writeFileSync(page, shell)
       }
     }
-    writeFileSync(join(staging, 'edgeone.json'), `${JSON.stringify(edgeone, null, 2)}\n`)
+    writeFileSync(join(staging, 'about/index.html'), redirectDocument('/', '食用手册官网'))
+    writeFileSync(join(staging, 'about/terms.html'), redirectDocument('/terms', '用户协议'))
+    cpSync(join(root, 'edgeone.json'), join(staging, 'edgeone.json'))
     assertOutputPath(root, output)
     assertStagingPath(root, staging)
     rmSync(output, { recursive: true, force: true })
