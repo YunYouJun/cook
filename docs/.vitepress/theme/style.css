@@ -1,7 +1,7 @@
 /* Colors follow the Cook app icon; display typography uses local fonts. */
 :root {
   --vp-c-brand-1: #2563eb;
-  --vp-c-brand-2: #3b82f6;
+  --vp-c-brand-2: #1d4ed8;
   --vp-c-brand-3: #2563eb;
   --vp-c-brand-soft: rgba(85, 170, 255, 0.16);
   --cook-font-display: 'Kaiti SC', 'STKaiti', 'KaiTi', 'Songti SC', 'SimSun', serif;
@@ -24,6 +24,17 @@
   margin: 0 auto;
   padding: 16px 16px 0;
   color: var(--vp-c-text-1);
+}
+/* Custom product sections own their spacing; prose defaults must not move UI elements. */
+.cook-landing :is(h1, h2, h3, p, ul, ol, li, figure, dl, dt, dd, summary, img) {
+  margin: 0;
+}
+.cook-landing li + li {
+  margin-top: 0;
+}
+.cook-landing :is(h1, h2, h3) {
+  padding: 0;
+  border: 0;
 }
 .dark .cook-landing {
   --cloud: #e6f0ff;
