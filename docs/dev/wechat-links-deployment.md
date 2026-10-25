@@ -8,10 +8,10 @@
 | --------------- | ---------------------------------------- |
 | iOS Bundle ID   | `fun.yunle.cook`                         |
 | Universal Links | `https://cook.yunyoujun.cn/auth/wechat/` |
-| 隐私政策        | `https://docs.cook.yunle.fun/privacy`    |
+| 隐私政策        | `https://cook.yunle.fun/privacy`         |
 | Apple Team      | `QT792GAY4C`                             |
 
-Universal Links 保留结尾 `/`；不要用云乐坊 SSO 的 `/auth/callback?platform=native` 代替。
+Universal Links 保留结尾 `/`；不要用云乐坊 SSO 的 `/auth/callback?platform=native` 代替。隐私政策填写值已统一到官网，提交前核验页面可访问并回读平台保存值；下文 Pages 部署是历史证据，不表示当前平台 URL 已迁移。退役顺序见[文档站部署](./docs-site.md)。
 
 ## 已发布内容
 
