@@ -326,7 +326,7 @@ final class CookUITests: XCTestCase {
         tap(ginger)
         wait(ginger, "isSelected == true")
 
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tap(app.buttons["BackButton"].firstMatch)
         wait(pantry, "label CONTAINS '等 3 种'")
         tap(pantry)
         wait(oil, "isSelected == false")
@@ -355,16 +355,22 @@ final class CookUITests: XCTestCase {
         tap(avoid)
         let search = app.searchFields["搜索食材或别名"]
 
-        for (query, name) in [("西红柿", "番茄"), ("虾", "虾")] {
+        for (index, entry) in [("西红柿", "番茄"), ("虾", "虾")].enumerated() {
+            let (query, name) = entry
             tap(search)
-            if search.buttons["清除文本"].exists { tap(search.buttons["清除文本"]) }
+            if index > 0 {
+                tap(search.buttons["清除文本"])
+                tap(search)
+            }
             search.typeText(query)
             let item = app.buttons["avoid.item.\(name)"]
             tap(item)
             wait(item, "isSelected == true")
             wait(app.buttons["avoid.remove.\(name)"], "exists == true")
         }
+        tap(search)
         tap(search.buttons["清除文本"])
+        tap(search)
         search.typeText("不存在的食材")
         wait(app.staticTexts["avoid.noSearchResults"], "exists == true")
         let tomato = app.buttons["avoid.remove.番茄"]
@@ -376,8 +382,16 @@ final class CookUITests: XCTestCase {
         wait(shrimp, "exists == true")
         capture(app, "ios-avoid-selection-during-search")
 
-        tap(app.buttons.matching(NSPredicate(format: "label IN %@", ["关闭", "取消"])).firstMatch)
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let closeSearch = app.buttons.matching(NSPredicate(format: "label IN %@", ["关闭", "取消"])).firstMatch
+        if closeSearch.exists {
+            tap(closeSearch)
+        } else {
+            tap(search)
+            search.typeText("\n")
+            let clearSearch = search.buttons["清除文本"]
+            if clearSearch.exists { tap(clearSearch) }
+        }
+        tap(app.buttons["BackButton"].firstMatch)
         wait(avoid, "label CONTAINS '虾'")
         tap(avoid)
         wait(shrimp, "exists == true")
