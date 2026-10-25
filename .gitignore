@@ -4,6 +4,15 @@ packages/data/recipe-meta.json
 packages/data/recipe-chunk-*.json
 packages/data/incompatible-foods.json
 
+# Generated data left by the pre-monorepo layout
+/app/data/recipe.json
+/app/data/recipe-meta.json
+/app/data/recipe-chunk-*.json
+/app/data/incompatible-foods.json
+
+# Local screenshots, test reports, and verification archives
+/artifacts/
+
 # Swift Package Manager
 apps/ios/**/.build
 apps/ios/**/.swiftpm
