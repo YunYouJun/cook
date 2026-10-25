@@ -1,10 +1,13 @@
+import CookCore
 import SwiftUI
 
 /// 可多选的小标签；在 List 里用 plain 样式，避免点一个标签触发整行
 struct Chip: View {
     let title: String
     var emoji: String? = nil
+    var imageName: String? = nil
     let isSelected: Bool
+    @ScaledMetric(relativeTo: .subheadline) var iconSize: CGFloat = 18
     /// 点击时报告标签在屏幕上的位置，做「入篮」动画用；不需要时不传
     var onTap: ((CGRect) -> Void)? = nil
     let action: () -> Void
@@ -19,6 +22,13 @@ struct Chip: View {
             HStack(spacing: 4) {
                 if isSelected {
                     Image(systemName: "checkmark").accessibilityHidden(true)
+                } else if let imageName {
+                    Image(imageName)
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: iconSize, height: iconSize)
+                        .accessibilityHidden(true)
                 } else if let emoji, !emoji.isEmpty {
                     Text(emoji)
                         .accessibilityHidden(true)
@@ -142,5 +152,19 @@ struct CheckRow: View {
             .contentShape(Rectangle())
         }
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+/// 厨具图标只用于 iOS 展示，复用做法中已有的器具图形。
+extension StuffItem {
+    var toolImageName: String? {
+        switch name {
+        case "烤箱": return "method-bake"
+        case "空气炸锅": return "tool-air-fryer"
+        case "微波炉": return "method-microwave"
+        case "电饭煲": return "tool-rice-cooker"
+        case "一口大锅": return "method-stir-fry"
+        default: return nil
+        }
     }
 }
