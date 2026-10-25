@@ -357,21 +357,23 @@ final class CookUITests: XCTestCase {
 
         for (index, entry) in [("西红柿", "番茄"), ("虾", "虾")].enumerated() {
             let (query, name) = entry
-            tap(search)
+            focusSearch(search, in: app)
             if index > 0 {
                 tap(search.buttons["清除文本"])
-                tap(search)
+                focusSearch(search, in: app)
             }
             search.typeText(query)
+            XCTAssertEqual(search.value as? String, query)
             let item = app.buttons["avoid.item.\(name)"]
             tap(item)
             wait(item, "isSelected == true")
             wait(app.buttons["avoid.remove.\(name)"], "exists == true")
         }
-        tap(search)
+        focusSearch(search, in: app)
         tap(search.buttons["清除文本"])
-        tap(search)
+        focusSearch(search, in: app)
         search.typeText("不存在的食材")
+        XCTAssertEqual(search.value as? String, "不存在的食材")
         wait(app.staticTexts["avoid.noSearchResults"], "exists == true")
         let tomato = app.buttons["avoid.remove.番茄"]
         let shrimp = app.buttons["avoid.remove.虾"]
@@ -386,7 +388,7 @@ final class CookUITests: XCTestCase {
         if closeSearch.exists {
             tap(closeSearch)
         } else {
-            tap(search)
+            focusSearch(search, in: app)
             search.typeText("\n")
             let clearSearch = search.buttons["清除文本"]
             if clearSearch.exists { tap(clearSearch) }
@@ -400,6 +402,14 @@ final class CookUITests: XCTestCase {
         wait(app.staticTexts["avoid.emptySelection"], "exists == true")
         wait(shrimp, "exists == false")
         wait(clear, "isEnabled == false")
+    }
+
+    /// 搜索栏存在不代表可交互；等待可点击及键盘出现，超时保留现场并失败。
+    @MainActor
+    private func focusSearch(_ search: XCUIElement, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        wait(search, "isHittable == true", file: file, line: line)
+        search.tap()
+        wait(app.keyboards.firstMatch, "exists == true", file: file, line: line)
     }
 
     @MainActor
