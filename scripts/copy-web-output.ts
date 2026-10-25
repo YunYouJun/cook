@@ -12,5 +12,7 @@ if (!existsSync(webDist))
 
 rmSync(rootDist, { recursive: true, force: true })
 cpSync(webDist, rootDist, { recursive: true, dereference: true })
+// Direct uploads must include the shared routing and privacy header configuration.
+cpSync(resolve(root, 'edgeone.json'), resolve(rootDist, 'edgeone.json'))
 
 console.log('Copied apps/web/dist to dist/')

@@ -42,7 +42,7 @@ pnpm build:site
 
 ### 网页版：EdgeOne `yunyoujun-cook`
 
-网页版使用独立的 Upload 项目，输出仍为 `dist`。官网改版不应把 `dist-site` 上传到此项目，也不应覆盖网页版或审核中的 `/about/`。现有版本发布流程仍按仓库 release workflow 执行。
+网页版使用独立的 Upload 项目，输出仍为 `dist`。`scripts/copy-web-output.ts` 将根目录 `edgeone.json` 一并复制到上传产物，使授权回调的 `no-store` / `no-referrer` 等响应头随直接上传生效。官网改版不应把 `dist-site` 上传到此项目，也不应覆盖网页版或审核中的 `/about/`。现有版本发布流程仍按仓库 release workflow 执行。
 
 ### 旧文档域名退役
 
