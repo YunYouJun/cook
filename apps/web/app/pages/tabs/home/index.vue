@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { RecipeMatch } from '@yunyoujun/cook'
+import type { CookingStyle } from '~/composables/useCookingStyle'
 import type { RecipeItem } from '~/types'
 import { onIonViewDidEnter, onIonViewWillLeave } from '@ionic/vue'
 import { useCookingStyle } from '~/composables/useCookingStyle'
@@ -25,7 +26,15 @@ onIonViewWillLeave(() => {
 const panelRef = ref<{ $el: HTMLElement }>()
 const flightTarget = computed(() => panelRef.value?.$el)
 const contentRef = ref<{ $el: HTMLIonContentElement }>()
+const styleSwitchRef = useTemplateRef<{ focus: () => void }>('styleSwitch')
 const reducedMotion = usePreferredReducedMotion()
+
+async function changeCookingStyle(style: CookingStyle) {
+  cookingStyle.value = style
+  await nextTick()
+  void contentRef.value?.$el.scrollToTop(0)
+  styleSwitchRef.value?.focus()
+}
 
 /** 结果弹层遮住的高度，留作页面底部空白 */
 const panelInset = ref(0)
@@ -73,6 +82,7 @@ watchDebounced(
       <ion-toolbar>
         <ion-title>做菜</ion-title>
         <ion-buttons slot="end">
+          <CookingStyleSwitch ref="styleSwitch" :model-value="cookingStyle" @update:model-value="changeCookingStyle" />
           <ion-button :disabled="!hasSelection" @click="reset">
             清空
           </ion-button>
@@ -89,7 +99,6 @@ watchDebounced(
         </ion-toolbar>
       </ion-header>
 
-      <CookingStyleSwitch v-model="cookingStyle" />
       <p v-if="!canPersist" class="style-storage-note" role="status">
         浏览器暂时无法保存样式偏好，本次仍可切换使用。
       </p>
