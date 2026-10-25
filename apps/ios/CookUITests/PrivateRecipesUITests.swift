@@ -46,18 +46,33 @@ final class PrivateRecipesUITests: XCTestCase {
             search.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: "不存在的食材".count))
         }
         XCTAssertTrue(row.waitForExistence(timeout: 10), "Clearing the query must restore saved recipes")
-        search.tap()
-        search.typeText("\n")
+        // An empty system search disables Return on iPhone. Close that search
+        // explicitly; the iPad toolbar field dismisses its keyboard on submit.
+        if systemSearch.exists {
+            let closeSearch = app.buttons.matching(NSPredicate(format: "label IN %@", ["关闭", "取消"])).firstMatch
+            XCTAssertTrue(closeSearch.waitForExistence(timeout: 10))
+            closeSearch.tap()
+        } else {
+            search.tap()
+            search.typeText("\n")
+        }
+        let searchKeyboardHidden = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
+        XCTAssertEqual(XCTWaiter().wait(for: [searchKeyboardHidden], timeout: 30), .completed)
         let listScreenshot = XCTAttachment(screenshot: app.screenshot())
         listScreenshot.name = "ios-private-recipes"
         listScreenshot.lifetime = .keepAlways
         add(listScreenshot)
+        let rowReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: row)
+        XCTAssertEqual(XCTWaiter().wait(for: [rowReady], timeout: 30), .completed)
         row.tap()
+        XCTAssertTrue(app.navigationBars[name].waitForExistence(timeout: 10), "Opening a saved recipe must reach its detail page")
         let detailScreenshot = XCTAttachment(screenshot: app.screenshot())
         detailScreenshot.name = "ios-private-detail"
         detailScreenshot.lifetime = .keepAlways
         add(detailScreenshot)
-        app.buttons["编辑菜谱"].tap()
+        let edit = app.buttons["编辑菜谱"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 10))
+        edit.tap()
         XCTAssertTrue(nameField.waitForExistence(timeout: 10))
         nameField.tap()
         nameField.typeText("新")
