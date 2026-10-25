@@ -4,7 +4,9 @@
 
 IPA SHA-256：`162ed1d7e4e0aa578c7626f30690b0cb2c6b5e8798292e9948902302aaafddfc`。包内最低系统为 iOS 17，CloudKit / APS 使用 Production，外测标志允许外部分发。签名描述文件包含 CloudKit 与 Associated Domains；离线隐私正文、隐私清单和菜谱资源已与冻结源码核对。签名、entitlement 与 schema 匹配不代表生产同步已验收。
 
-本轮只准备包，**没有上传新构建、提交 Beta Review 或开放邀请**。已上传候选仍为构建 5，`candidate.json` 没有被未上传的新包替换。下次上传前重新确认构建号可用，上传同一散列的 IPA 后，才能填写真实构建 ID。
+本地准备阶段没有上传或开放邀请。**2026-10-26 已获维护者明确授权，上传同一散列 IPA；Apple 构建 ID 为 `3f9e3992-bceb-4687-9346-875bf527fe0c`。**服务端回读为 `VALID / APP_STORE_ELIGIBLE`，出口合规为无需非豁免加密声明；提交 Beta Review 后，精确构建已回读为 `APPROVED / BETA_APPROVED`。
+
+八项验收证据已逐项核对文件与 SHA-256，并以 `simulator` 策略绑定该构建、冻结源码和 IPA 散列；维护者在本次发布指令中确认验收，私密批准记录已保存。首批外测组已移除构建 5，只关联构建 7；自动通知与公开邀请关闭，测试者为 0。审核材料检查为零错误、零警告，隐私页、测试说明页和支持中心均重新验证为 HTTP 200。只读开放门禁为零阻塞、`wouldOpen: true`；实际邀请入口尚未启用。
 
 ## 回归结果
 
@@ -34,6 +36,6 @@ IPA SHA-256：`162ed1d7e4e0aa578c7626f30690b0cb2c6b5e8798292e9948902302aaafddfc`
 
 沿用维护者已接受的[模拟器验收范围](./ios-simulator-acceptance-2026-10-24.md)和[外测门禁](./testflight-automation.md#开放门禁)。新候选的真实 CloudKit 生产传输、Apple 账号退出/切换、生产 token 到期和真实 Keychain 恢复未实测。Release 模拟器使用未签名构建，系统 Keychain 不可用提示不能作为正式分发包账号失败的证据。iOS 17 仅确认部署目标，没有实际运行结果。
 
-签名 IPA、archive/dSYM、源码归档、验包回执、两套 xcresult、原位升级快照、通知与反馈截图均保存在本机私密发布目录 `~/Library/Developer/ReleaseArtifacts/Cook/20261025-2.0.0-7-external`。目录内 `ACCEPTANCE.md` 和 `acceptance-prepared.json` 记录具体证据及散列。后者尚无 Apple buildId 和负责人批准，不能直接用于开放邀请。
+签名 IPA、archive/dSYM、源码归档、验包回执、两套 xcresult、原位升级快照、通知与反馈截图均保存在本机私密发布目录 `~/Library/Developer/ReleaseArtifacts/Cook/20261025-2.0.0-7-external`。目录内 `ACCEPTANCE.md` 和 `acceptance-prepared.json` 记录具体证据及散列。`acceptance-prepared.json` 保留上传前的原始记录；发布目录中的 `delivery-20261026/acceptance.json` 已绑定真实构建 ID、负责人确认与审核回执，运行状态目录也已同步。
 
 此前通知报告中“系统点击复测待完成”的状态已由本轮真实送达和两种点击结果补齐；历史记录保留原始失败与覆盖边界。

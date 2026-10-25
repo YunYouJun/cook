@@ -2,9 +2,10 @@
   "appId": "6824589542",
   "groupId": "a2e33916-bbd0-4433-8ff7-4895ae926412",
   "version": "2.0.0",
-  "buildNumber": "5",
-  "buildId": "64d24fe2-3bbd-4d0b-beee-ea12325e7a8a",
-  "sourceCommit": "8a12512ccf6e1437eae8c99cee8b028621fafdfe",
-  "ipaSha256": "5c65a9a12b67a9ccb5e659a6e58c9e97087049f7343da638def442c0ef83a704",
-  "testerLimit": 30
+  "buildNumber": "7",
+  "sourceCommit": "ed5087f174e16b15b4260e5bd96b3580a2bbfddd",
+  "ipaSha256": "162ed1d7e4e0aa578c7626f30690b0cb2c6b5e8798292e9948902302aaafddfc",
+  "testerLimit": 30,
+  "acceptancePolicy": "simulator",
+  "buildId": "3f9e3992-bceb-4687-9346-875bf527fe0c"
 }
