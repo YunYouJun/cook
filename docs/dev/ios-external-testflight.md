@@ -4,6 +4,8 @@
 
 本页用于外测，现有 [内部发布流程](./ios-testflight.md) 继续使用原配置。2026-10-24 准备的首个外测候选为 **2.0.0 (5)**，基于 main `9bdbcf25dc6ef4f0774d81873021b38fbd6b2507`，包含 #138 的厨具界面改进。候选源码 `8a12512ccf6e1437eae8c99cee8b028621fafdfe` 只增加构建号与独立导出配置，应用逻辑与该 main 相同。
 
+2026-10-25 更新：构建 5 已回读为 `BETA_APPROVED`，测试者为 0，公开邀请关闭。基于 main `f0424f5` 的构建 7 已完成签名、Apple 包校验及关键回归，反馈 SDK 差异已上线修复并验证私密回访，候选尚未上传；具体结果见[候选验收记录](./ios-candidate-7-validation.md)。下文构建 5 的待办保留历史含义；新候选按[模拟器验收策略](./testflight-automation.md#开放门禁)记录覆盖范围，不要求再次操作个人真机，也不将模拟器结果写成生产 CloudKit 或 Apple 账号切换通过。新包上传前不替换 `candidate.json` 的构建 ID 和散列。
+
 2026-10-24 已上传并回读为 `VALID / APP_STORE_ELIGIBLE / READY_FOR_BETA_SUBMISSION`，尚未提交 Beta 审核或向普通用户开放。每次后续上传前重新查询构建号，确认未被其他发布占用。
 
 ## 构建与导出

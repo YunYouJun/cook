@@ -19,6 +19,10 @@ from datetime import datetime, timezone
 
 CHECKS = ('upgrade', 'file_roundtrip', 'production_sync', 'account_isolation',
           'feedback_privacy', 'site_privacy')
+SIMULATOR_CHECKS = ('upgrade', 'file_roundtrip', 'local_persistence', 'local_isolation',
+                    'feedback_privacy', 'site_privacy', 'notifications', 'account_session')
+ACCEPTANCE_POLICIES = {'production': CHECKS, 'simulator': SIMULATOR_CHECKS}
+APPROVED_EXTERNAL_STATES = ('BETA_APPROVED', 'READY_FOR_BETA_TESTING', 'IN_BETA_TESTING')
 STATES = ('new', 'triaged', 'in_progress', 'waiting_user', 'verified', 'reply_draft', 'closed')
 DEFAULT_STATE = Path.home() / 'Library/Application Support/CookExternalBeta'
 
@@ -70,7 +74,15 @@ def acceptance_errors(candidate, evidence, current=None):
             errors.append(f'acceptance.{key}')
     if not evidence.get('approvedBy'):
         errors.append('acceptance.approvedBy')
-    for key in CHECKS:
+    # Scope is frozen with the candidate. A simulator report cannot satisfy the
+    # default production policy or claim real CloudKit/account-switch coverage.
+    policy = candidate.get('acceptancePolicy', 'production')
+    if policy not in ACCEPTANCE_POLICIES:
+        errors.append('acceptance.policy')
+        return errors
+    if evidence.get('acceptancePolicy', 'production') != policy:
+        errors.append('acceptance.policy')
+    for key in ACCEPTANCE_POLICIES[policy]:
         check = evidence.get('checks', {}).get(key, {})
         valid = check.get('passed') is True
         try:
@@ -105,7 +117,7 @@ def gate(candidate, snapshot, evidence):
         errors.append('build.expiration')
     if attr.get('usesNonExemptEncryption') is not False:
         errors.append('build.compliance')
-    if snapshot['externalState'] not in ('READY_FOR_BETA_TESTING', 'IN_BETA_TESTING'):
+    if snapshot['externalState'] not in APPROVED_EXTERNAL_STATES:
         errors.append('apple.approval')
     if snapshot['group']['id'] != candidate['groupId'] or group.get('isInternalGroup') is not False:
         errors.append('group.identity')
@@ -164,6 +176,7 @@ class Controller:
     def status(self):
         snapshot = self.snapshot()
         result = {'checkedAt': now(), 'buildId': self.c['buildId'],
+                  'acceptancePolicy': self.c.get('acceptancePolicy', 'production'),
                   'blockers': gate(self.c, snapshot, self.acceptance()),
                   'externalState': snapshot['externalState'], 'testers': snapshot['testers'],
                   'publicLinkEnabled': snapshot['group']['attributes'].get('publicLinkEnabled'),
