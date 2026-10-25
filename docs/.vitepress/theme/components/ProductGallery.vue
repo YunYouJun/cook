@@ -36,7 +36,7 @@ const appOnly = [
             <img class="shot-dark" :src="`/ios/dark-${screen.file}.webp`" :alt="screen.alt" width="640" height="1392" loading="lazy" decoding="async">
           </li>
         </ul>
-        <figcaption>iOS 开发版本真实截图 · 界面可能随版本调整，不代表已提供下载</figcaption>
+        <figcaption>iOS 开发版本真实截图 · 界面可能随版本调整</figcaption>
       </figure>
     </section>
 
@@ -96,6 +96,7 @@ const appOnly = [
 }
 
 .shot {
+  margin: 0;
   aspect-ratio: 640 / 1392;
   padding: 4px;
   border-radius: 26px;
@@ -108,6 +109,7 @@ const appOnly = [
 }
 
 .shot img {
+  margin: 0;
   width: 100%;
   height: 100%;
   border-radius: 22px;
