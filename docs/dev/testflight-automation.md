@@ -23,6 +23,8 @@ python3 scripts/testflight/beta.py reconcile --apply
 python3 scripts/testflight/beta.py feedback
 ```
 
+Apple 审核批准后，如果添加构建时关闭了自动通知，还需由维护者对精确构建执行 `asc testflight notifications send --build-id BUILD_ID` 开始测试，再验证公开邀请页确实显示当前应用并允许加入。审核通过、链接开关开启和落地页可加入分别核对；本轮在外部成员为 0 时完成开始测试。参见 [Apple 开始外测说明](https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers/#notify-external-testers-after-your-build-is-approved)。
+
 此入口处理已上传候选的外测发布。新版本编译、签名、验包和上传继续遵循 [构建流程](./ios-testflight.md) 与
 [外测准备](./ios-external-testflight.md)。完成后更新 `scripts/testflight/candidate.json` 的精确构建 ID、版本、源码 SHA 和 IPA SHA-256。
 不能使用 `latest` 或沿用旧构建验收。保留 archive、dSYM、IPA、验证回执，回收 DerivedData 等中间产物。
