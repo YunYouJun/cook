@@ -1,0 +1,486 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Cook 原文锚定用量标注 v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "recipes": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^(0|[1-9][0-9]*)$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "recipes"
+  ],
+  "$defs": {
+    "anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "block": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "item": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "block",
+        "text"
+      ]
+    },
+    "formula": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "op": {
+              "const": "literal"
+            },
+            "lower": {
+              "type": "number",
+              "minimum": 0
+            },
+            "upper": {
+              "type": "number",
+              "minimum": 0
+            },
+            "unit": {
+              "enum": [
+                "g",
+                "kg",
+                "ml",
+                "L",
+                "斤",
+                "cm",
+                "个",
+                "颗",
+                "只",
+                "根",
+                "瓣",
+                "片",
+                "朵",
+                "张",
+                "支",
+                "块",
+                "勺",
+                "汤匙",
+                "茶匙",
+                "把",
+                "杯",
+                "袋",
+                "包",
+                "盒",
+                "瓶",
+                "罐",
+                "枚",
+                "粒",
+                "棵",
+                "条",
+                "碗",
+                "滴",
+                "扎",
+                "圈",
+                "节",
+                "段",
+                "株",
+                "叶",
+                "卷",
+                "头",
+                "份",
+                "小块",
+                "瓶盖"
+              ]
+            }
+          },
+          "required": [
+            "op",
+            "lower",
+            "unit"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "op": {
+              "const": "scalar"
+            },
+            "lower": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "op",
+            "lower"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "op": {
+              "const": "servings"
+            }
+          },
+          "required": [
+            "op"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "op": {
+              "const": "reference"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "op",
+            "name"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "op": {
+              "const": "count"
+            },
+            "unit": {
+              "enum": [
+                "g",
+                "kg",
+                "ml",
+                "L",
+                "斤",
+                "cm",
+                "个",
+                "颗",
+                "只",
+                "根",
+                "瓣",
+                "片",
+                "朵",
+                "张",
+                "支",
+                "块",
+                "勺",
+                "汤匙",
+                "茶匙",
+                "把",
+                "杯",
+                "袋",
+                "包",
+                "盒",
+                "瓶",
+                "罐",
+                "枚",
+                "粒",
+                "棵",
+                "条",
+                "碗",
+                "滴",
+                "扎",
+                "圈",
+                "节",
+                "段",
+                "株",
+                "叶",
+                "卷",
+                "头",
+                "份",
+                "小块",
+                "瓶盖"
+              ]
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "op",
+            "unit",
+            "name"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "op": {
+              "const": "multiply"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/formula"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "op": {
+              "const": "divide"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/formula"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "op": {
+              "const": "add"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/formula"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "op": {
+              "const": "ceil"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/formula"
+              },
+              "minItems": 1,
+              "maxItems": 1
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "op": {
+              "const": "floor"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/formula"
+              },
+              "minItems": 1,
+              "maxItems": 1
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ]
+        }
+      ]
+    },
+    "quantity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "formula": {
+          "$ref": "#/$defs/formula"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/anchor"
+          },
+          "minItems": 1
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "conditional": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "formula",
+        "evidence",
+        "aliases",
+        "conditional"
+      ]
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "ingredient": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "amount",
+            "total",
+            "remaining",
+            "unknown",
+            "reference"
+          ]
+        },
+        "formula": {
+          "$ref": "#/$defs/formula"
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "conditional": {
+          "type": "boolean"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/anchor"
+          },
+          "minItems": 1
+        },
+        "display": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "anchor",
+        "ingredient",
+        "kind",
+        "conditional",
+        "evidence"
+      ]
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sourceFingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{16}$"
+        },
+        "servingEvidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/anchor"
+          }
+        },
+        "servingDescription": {
+          "type": "string"
+        },
+        "quantities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/quantity"
+          }
+        },
+        "stepSections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/anchor"
+          }
+        },
+        "usages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/usage"
+          }
+        },
+        "blockedIngredients": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "referenceServings": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        }
+      },
+      "required": [
+        "sourceFingerprint",
+        "servingEvidence",
+        "quantities",
+        "stepSections",
+        "usages",
+        "blockedIngredients"
+      ]
+    }
+  }
+}

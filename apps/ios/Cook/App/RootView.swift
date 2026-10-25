@@ -1,4 +1,5 @@
 import CookCore
+import os
 import SwiftData
 import SwiftUI
 
@@ -12,7 +13,7 @@ enum AppTab: Hashable {
 
 struct RootView: View {
     /// 每个窗口自己的 Tab，不跟别的窗口联动
-    @State private var router = AppRouter()
+    @State private var router: AppRouter
     @Environment(\.scenePhase) private var scenePhase
     @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }) private var fridgeItems: [FridgeItem]
     @Query private var preferenceRecords: [Preferences]
@@ -22,6 +23,10 @@ struct RootView: View {
     @Environment(FeedbackClient.self) private var feedback
     @Environment(FavoriteActions.self) private var favoriteActions
     @State private var showingSignalConsent = false
+
+    init(router: AppRouter = AppRouter()) {
+        _router = State(initialValue: router)
+    }
 
     var body: some View {
         TabView(selection: $router.tab) {
@@ -43,6 +48,13 @@ struct RootView: View {
         }
         .minimizesTabBarOnScroll()
         .environment(router)
+        .onOpenURL { url in
+            if router.openUniversalLink(url) {
+                // Never log query parameters, which may contain authorization codes.
+                Logger(subsystem: "fun.yunle.cook", category: "UniversalLink").notice("Opened account area from WeChat universal link")
+            }
+        }
+        .modifier(PrivateRecipeDeletionSync())
         .onChange(of: preferenceRecords.map(\.snapshot), initial: true) {
             session.refreshPreferences()
         }
@@ -101,6 +113,31 @@ struct RootView: View {
             .map { "\($0.name)@\(Int($0.expiresAt.timeIntervalSince1970))" }
             .sorted()
         return ([remindersEnabled ? "on" : "off", String(reminderMinutes)] + items).joined(separator: "|")
+    }
+}
+
+/// Keep deletion privacy correct even when the private-recipe screen is not open.
+struct PrivateRecipeDeletionSync: ViewModifier {
+    @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
+    @Query private var records: [PrivateRecipeRecord]
+    private static let logger = Logger(subsystem: "fun.yunle.cook", category: "PrivateRecipeDeletionSync")
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: records.map(\.deletionState), initial: true) { reconcile() }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { reconcile() }
+            }
+    }
+
+    private func reconcile() {
+        do { try PrivateRecipePersistence.reconcileDeletions(in: context.container) }
+        catch {
+            // Keep the tombstone hidden and retry on the next import or foreground transition.
+            // Do not log the payload or identifiers.
+            Self.logger.error("私人菜谱删除正文清理未能保存，等待重试（错误码 \((error as NSError).code)）")
+        }
     }
 }
 

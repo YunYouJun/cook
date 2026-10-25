@@ -2,6 +2,8 @@
 
 SwiftUI 原生 App，计划和验收标准见 [iOS App 打磨目标](../../docs/dev/ios-roadmap.md)。
 
+菜谱详情中的「厨房工作台」提供图文做法、备料清单和计时器；宽屏并排展示，窄屏分段切换，可选择上下排列的「台面」布局。使用新 SDK 构建时支持 iOS 27.1 的系统折叠分区。交互、保存规则及验证范围见 [厨房工作台](../../docs/dev/ios-kitchen-workbench.md)。
+
 TestFlight 发布参数、正式反馈配置和内部组验收见 [原生发布流程](../../docs/dev/ios-testflight.md)。
 
 - `CookCore/`：推荐、搜索、相克判断，移植自 `packages/cook`，和 Web 跑同一份用例。
@@ -28,17 +30,29 @@ swift test --package-path apps/ios/CookCore   # 只跑核心逻辑
 
 CI 的 `ios` job 在 iPhone 和 iPad 模拟器上先后跑单元测试和 UI 测试。失败时 `Show test failures` 一步会写出失败原因，完整结果包（截图、每一步的操作记录）在这次运行的 Artifacts 里，名为 `ios-xcresult`，下载后用 Xcode 打开。
 
+本地遇到 `launchd_sim could not bind to session` 或 Xcode 等待模拟器启动 60 秒后超时，先用 `xcrun simctl list devices available` 确定目标 UDID，再运行 `python3 apps/ios/scripts/prepare-simulator.py <UDID>`。脚本仅准备指定设备：检查对应运行时的共享缓存、等待完整启动、确认 SpringBoard 可响应，总超时默认 360 秒；成功后再向同一个 UDID 执行测试。它不清空设备、不重启全局服务。缓存检查依据 [Apple 开发者工程师的排查说明](https://developer.apple.com/forums/thread/807025)。
+
 本地使用 Xcode 27.1 / iPadOS 27.0 时，如果中文输入后的每次操作都报告 `App animations complete notification not received` 并等待约 60 秒，可在模拟器键盘的地球菜单中切换到 English (US) 后重跑。2026-10-24 的验收中，仅切换输入法即消除了该等待，测试仍输入和验证中文菜名、食材及厨具。不要通过跳过断言、禁用应用动画或无限增加超时来判定通过。iPad 的内联搜索框没有 iPhone 的取消按钮，测试需提交并清除搜索后再定位系统返回按钮。
 
 ## 反馈入口
 
-「我的 → 反馈」中的「需求墙」直接打开 `https://support.yunle.fun/feedback?product=cook`，保留 Cook 筛选；「支持中心」打开支持中心首页。意见反馈仍在 App 内私密提交，失败时保留内容并提供支持中心私密反馈入口，菜谱纠错保持原流程。
+「我的 → 帮助与反馈」中的「需求墙」直接打开 `https://support.yunle.fun/feedback?product=cook`，保留 Cook 筛选；「支持中心」打开支持中心首页。意见反馈仍在 App 内私密提交，失败时保留内容并提供支持中心私密反馈入口，菜谱纠错保持原流程。
+
+帮助页的四个入口共用设置列表的图标样式，并附用途说明；外部页面显示外链箭头。「意见反馈」保留问题、功能建议、求菜和其他类型，切换类型不会改变页面标题。「菜谱投稿」固定填写菜名、视频或图文链接以及可选补充说明，校验网页链接与完整内容的 500 字限额；提交时复用 `recipe` 类别，以「菜谱投稿」及字段名称标识内容。两种表单复用私密提交、联系方式和失败兜底，失败保留各字段草稿。
 
 原生入口的发布与实际分发构建验收由 [#133](https://github.com/YunYouJun/cook/issues/133) 跟踪，源码合并不代表已经分发。
 
+## 云乐坊账号
+
+原生云乐坊登录的客户端登记、HTTPS 回调发布条件和会话验证见 [账号接入](../../docs/dev/ios-account.md)。微信登录暂缓，申请资料见 [微信移动应用申请](../../docs/dev/wechat-mobile-application.md)。登录与 iCloud 数据同步相互独立。
+
+原生微信入口预留构建开关 `COOK_WECHAT_LOGIN_ENABLED`，Debug / Release 均默认 `NO`，通过 `Info.plist` 的 `CookWeChatLoginEnabled` 供 `CookFeatures.weChatLoginEnabled` 读取。只有显式 `YES` 才开启；缺失或未展开的值保持关闭。后续接入微信按钮和发起授权动作时，统一使用该属性控制入口。审核通过且 SDK、同一云乐坊账号绑定联调完成后，可在 `project.yml` 修改默认值并重新生成工程，或通过 `xcodebuild ... COOK_WECHAT_LOGIN_ENABLED=YES` 覆盖本次构建，再重新打包分发。
+
+此开关目前仅预留配置，尚无原生微信按钮或 SDK 消费它；单独改成 `YES` 不会提供微信登录能力。开关不控制现有云乐坊授权网页、Universal Links 或 iCloud 同步，也不是远程开关。
+
 ## iCloud 同步的结构（CloudKit schema）
 
-私人菜谱源码按维护者 2026-10-24 的决定，以最新 main 集成后的代码检查、Web/Swift 文件往返和 iPhone/iPad 模拟器测试作为合并条件。跨设备同步、离线冲突、账号隔离、退出 iCloud 后的本地数据保留，以及当前五个模型的 schema 和生产读写仍是发布门禁；本轮模拟器验收没有验证这些项目。完整范围见 [私人菜谱与文件迁移](../../docs/dev/private-recipes.md)。
+私人菜谱源码以最新 main 集成后的代码检查、Web/Swift 文件往返和 iPhone/iPad 模拟器测试作为合并条件。五模型生产结构、同账户跨设备读写，以及构建 6 的离线新增和修改 / 删除冲突已有[真实生产证据](../../docs/dev/ios-production-sync-2026-10-24.md)。维护者随后决定，剩余验收改用模拟器，不再要求真机；覆盖范围和不能由本地测试证明的账号行为见[模拟器验收记录](../../docs/dev/ios-simulator-acceptance-2026-10-24.md)。文件协议见[私人菜谱与文件迁移](../../docs/dev/private-recipes.md)。
 
 收藏、浏览记录、做菜偏好、冰箱食材和私人菜谱用 SwiftData 存，登录 iCloud 时通过容器 `iCloud.fun.yunle.cook` 同步。TestFlight 和 App Store 版本用 CloudKit 的 **Production** 环境，结构要先在 Development 环境建好，再手动部署过去：
 

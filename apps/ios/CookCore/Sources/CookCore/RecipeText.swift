@@ -43,6 +43,9 @@ public enum RecipeTextBlock: Decodable, Hashable, Sendable {
 /// 一道菜的图文做法正文，App 离线显示，不用打开原文网页
 public struct RecipeText: Decodable, Hashable, Sendable {
     public var blocks: [RecipeTextBlock]
+    public var amountAnnotations: RecipeAmountAnnotations.Entry?
+
+    private enum CodingKeys: String, CodingKey { case blocks }
 
     public init(blocks: [RecipeTextBlock]) {
         self.blocks = blocks
@@ -70,6 +73,9 @@ public struct RecipeTextLibrary: Decodable, Sendable {
     /// 配图地址前缀（以 / 结尾），没有时不显示配图
     public var imageBase: URL?
     private var recipes: [String: RecipeText]
+    private var amountAnnotations: RecipeAmountAnnotations?
+
+    private enum CodingKeys: String, CodingKey { case source, imageBase, recipes }
 
     public static let fileName = "recipe-text.json"
 
@@ -79,7 +85,9 @@ public struct RecipeTextLibrary: Decodable, Sendable {
         guard FileManager.default.fileExists(atPath: url.path) else {
             return nil
         }
-        return try JSONDecoder().decode(RecipeTextLibrary.self, from: Data(contentsOf: url))
+        var library = try JSONDecoder().decode(RecipeTextLibrary.self, from: Data(contentsOf: url))
+        library.amountAnnotations = RecipeAmountAnnotations.load(from: directory)
+        return library
     }
 
     public var count: Int {
@@ -87,7 +95,9 @@ public struct RecipeTextLibrary: Decodable, Sendable {
     }
 
     public func text(for recipeId: Int) -> RecipeText? {
-        recipes[String(recipeId)]
+        guard var text = recipes[String(recipeId)] else { return nil }
+        text.amountAnnotations = amountAnnotations?.entry(for: recipeId, source: text)
+        return text
     }
 
     /// 配图的完整地址；没配置 imageBase 时为 nil

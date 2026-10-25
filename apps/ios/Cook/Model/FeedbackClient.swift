@@ -67,7 +67,7 @@ final class FeedbackClient {
             switch self {
             case .bug: return "在哪个页面、做了什么、看到了什么"
             case .idea: return "想要什么功能，用在什么时候"
-            case .recipe: return "菜名；有 B 站视频的话贴上链接"
+            case .recipe: return "想做哪道菜，有哪些食材或做法偏好"
             case .other: return "说说具体情况"
             }
         }

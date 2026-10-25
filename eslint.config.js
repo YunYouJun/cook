@@ -11,6 +11,8 @@ export default nuxt(
     {
       ignores: [
         'packages/data/**/*.json',
+        // 构建、验收和审查报告保留原句与机器输出；数据源另有 schema/锚点校验。
+        'artifacts/**',
         'ios/**/*',
         'android/**/*',
         'apps/web/public/**/*',

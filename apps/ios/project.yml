@@ -47,6 +47,8 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         # cook-feedback 云函数的 HTTP 访问地址（docs/dev/data.md），生成工程前 export COOK_FEEDBACK_URL=…；不填时保留支持中心和邮件草稿入口，不发筛选信号
         CookFeedbackURL: ${COOK_FEEDBACK_URL}
+        # 预留给原生微信入口；只在 SDK、账号绑定与审核均就绪后开启。
+        CookWeChatLoginEnabled: $(COOK_WECHAT_LOGIN_ENABLED)
         LSApplicationQueriesSchemes: [bilibili]
         # 大图里的分享按钮可以把配图存到相册
         NSPhotoLibraryAddUsageDescription: 把菜谱配图存到相册。
@@ -69,12 +71,17 @@ targets:
       path: Cook/Cook.entitlements
       properties:
         aps-environment: development
+        # 系统账号授权使用 webcredentials；微信 Universal Links 使用独立的 /auth/wechat/ 路径。
+        com.apple.developer.associated-domains:
+          - webcredentials:cook.yunyoujun.cn
+          - applinks:cook.yunyoujun.cn
         com.apple.developer.icloud-container-identifiers: [iCloud.fun.yunle.cook]
         com.apple.developer.icloud-services: [CloudKit]
     settings:
       base:
         PRODUCT_NAME: Cook
         PRODUCT_BUNDLE_IDENTIFIER: fun.yunle.cook
+        COOK_WECHAT_LOGIN_ENABLED: NO
         TARGETED_DEVICE_FAMILY: '1,2'
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # 构建脚本要读仓库里的 packages/data
