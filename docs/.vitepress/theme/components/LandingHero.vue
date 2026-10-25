@@ -49,7 +49,7 @@ function missingText(missing: string[]) {
           </p>
           <p class="app-status">
             <span class="status-dot" aria-hidden="true" />
-            网页版可用 · iOS 正在准备发布
+            <span>网页版可用 · iOS 准备中</span>
           </p>
         </div>
       </div>
@@ -181,7 +181,7 @@ function missingText(missing: string[]) {
 
 .app-status {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   margin: 4px 0 0;
   font-size: 13px;
@@ -193,6 +193,7 @@ function missingText(missing: string[]) {
   flex: none;
   width: 8px;
   height: 8px;
+  margin-top: 0.5em;
   border-radius: 50%;
   background: var(--yolk);
 }

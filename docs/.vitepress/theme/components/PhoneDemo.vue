@@ -1,42 +1,42 @@
 <script setup lang="ts">
-import type { RecipeItem } from '../../../../packages/cook/src/types/recipe'
-import type { RecipeMatch } from '../../../../packages/cook/src/utils/recommend'
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
-import { parseCookQuery } from '../../../../packages/cook/src/utils/recommend'
-import { catalog, describe, emojiOf, flyEmoji, groupLabels, meta, prefersReducedMotion, recommend, stuffGroups, thumbnail, tweenNumber } from '../landing'
+import { useTemplateRef } from 'vue'
+import { emojiOf, meta, stuffGroups, thumbnail } from '../landing'
+import { usePhoneDemo } from '../use-phone-demo'
 
-/**
- * 首页的 iPhone 演示：照着 App 的界面和动效，用真实菜谱数据自动播放四段。
- * 推荐、整句识别都调用和 App 同一套逻辑，演示里的数字和菜名都是真的。
- */
-
-type Screen = 'cook' | 'results' | 'fridge' | 'random'
-type ChapterId = 'pick' | 'sentence' | 'fridge' | 'random'
-interface Ctx {
-  fast: boolean
-  wait: (ms: number) => Promise<void>
-}
-
-const SENTENCE = '冰箱里有半颗白菜两个蛋，不要辣'
-const PICKS = ['土豆', '番茄', '鸡蛋']
-/** 放入几天前，和 shelf-life.json 的冷藏天数对得上 */
-const SOON = [
-  { name: '豆腐', label: '今天到期', added: 3 },
-  { name: '菠菜', label: '明天到期', added: 2 },
-]
-const FRESH = [
-  { name: '胡萝卜', label: '还剩 12 天', added: 9 },
-  { name: '土豆', label: '还剩 21 天', added: 9 },
-  { name: '洋葱', label: '还剩 25 天', added: 5 },
-  { name: '鸡蛋', label: '还剩 26 天', added: 4 },
-]
-
-const chapters: { id: ChapterId, title: string, short: string, text: string, duration: number }[] = [
-  { id: 'pick', title: '点几样食材', short: '点食材', text: '点一下冰箱里有的，食材飞进篮子，能做几道马上跳出来。', duration: 8200 },
-  { id: 'sentence', title: '说一句话', short: '说句话', text: `打一句「${SENTENCE}」，自动拆成食材和口味。`, duration: 7600 },
-  { id: 'fridge', title: '快过期了提醒你', short: '临期提醒', text: '记下买回来的食材，主动开启提醒后，由设备在本地通知你。', duration: 8400 },
-  { id: 'random', title: '今天吃什么', short: '随机', text: '拿不定主意就摇一摇手机，换一道。', duration: 7400 },
-]
+const root = useTemplateRef<HTMLElement>('root')
+const screenEl = useTemplateRef<HTMLElement>('screenEl')
+const {
+  chapters,
+  SOON,
+  FRESH,
+  active,
+  running,
+  playback,
+  reduced,
+  progressKey,
+  screen,
+  transitionName,
+  tab,
+  selected,
+  basket,
+  searching,
+  query,
+  notice,
+  bounceKey,
+  displayCount,
+  resultStuff,
+  noSpicy,
+  resultGroups,
+  banner,
+  card,
+  shuffleEmoji,
+  tossKey,
+  shaking,
+  touch,
+  addedText,
+  choose,
+  togglePause,
+} = usePhoneDemo(root, screenEl)
 
 const tabs = [
   { id: 'cook', label: '做菜', icon: 'M8 1.5a3.35 3.35 0 0 0 0 6.7h1.53c.39 0 .76.1 1.08.3h2.02c-.58-1.05-1.77-1.75-3.1-1.75H8c-1 0-1.85-.98-1.85-2S7 3 8 3zm4.85.5c0 1-.85 1.85-1.85 1.85v1.5c1.92 0 3.5 1.35 3.89 3.15h1.53a5.54 5.54 0 0 0-3.07-4.12c.62-.61 1-1.45 1-2.38zM3 10v2h2v7a2 2 0 0 0 2 2h10c1.11 0 2-.89 2-2v-7h2v-2zm4 2h10v7H7z' },
@@ -55,353 +55,6 @@ const icons = {
   check: 'M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10s10-4.5 10-10S17.5 2 12 2m-2 15l-5-5l1.41-1.41L10 14.17l7.59-7.59L19 8z',
   dice: 'M14 8c-.55 0-1-.45-1-1s.45-1 1-1s1 .45 1 1s-.45 1-1 1m-2 4v7H5v-7zm.78-2H4.22C3.55 10 3 10.55 3 11.22v8.56c0 .67.55 1.22 1.22 1.22h8.56c.67 0 1.22-.55 1.22-1.22v-8.56c0-.67-.55-1.22-1.22-1.22m7-7h-8.56C10.55 3 10 3.55 10 4.22V8h2V5h7v7h-3v2h3.78c.67 0 1.22-.55 1.22-1.22V4.22C21 3.55 20.45 3 19.78 3M17 8c-.55 0-1-.45-1-1s.45-1 1-1s1 .45 1 1s-.45 1-1 1m0 3c-.55 0-1-.45-1-1s.45-1 1-1s1 .45 1 1s-.45 1-1 1M7 15c-.55 0-1-.45-1-1s.45-1 1-1s1 .45 1 1s-.45 1-1 1m3 3c-.55 0-1-.45-1-1s.45-1 1-1s1 .45 1 1s-.45 1-1 1',
 }
-
-/** 随机页从这些菜里抽：视频口碑好、做法简单 */
-const preferredPool: RecipeItem[] = catalog.filter(recipe => (recipe.score ?? 0) >= 70 && recipe.difficulty === '简单' && thumbnail(recipe) !== '🍽️')
-
-// ---------- 界面状态 ----------
-
-const pool = preferredPool.length ? preferredPool : catalog
-
-const root = ref<HTMLElement>()
-const screenEl = ref<HTMLElement>()
-const screen = ref<Screen>('cook')
-const transitionName = ref('fade')
-const resultsFrom = ref<'cook' | 'fridge'>('cook')
-const tab = computed(() => screen.value === 'results' ? resultsFrom.value : screen.value)
-
-const selected = ref<string[]>([])
-const basket = ref<string[]>([])
-const noSpicy = ref(false)
-const query = ref('')
-const searching = ref(false)
-const notice = ref('')
-const bounceKey = ref(0)
-const displayCount = ref(0)
-
-const resultStuff = ref<string[]>([])
-const banner = ref(false)
-const card = shallowRef<RecipeItem>(pool[0]!)
-const shuffleEmoji = ref('')
-const tossKey = ref(0)
-const shaking = ref(false)
-const touch = ref({ x: 0, y: 0, n: 0 })
-const today = ref<Date>()
-
-const active = ref(0)
-const running = ref(false)
-const userPaused = shallowRef(true)
-const reduced = ref(false)
-const progressKey = ref(0)
-
-const cookCount = computed(() => selected.value.length ? recommend({ stuff: selected.value, noSpicy: noSpicy.value }).length : 0)
-
-const resultMatches = computed(() => resultStuff.value.length ? recommend({ stuff: resultStuff.value, noSpicy: noSpicy.value }) : [])
-/** 结果页：按缺几样分组，最多露出 7 行 */
-const resultGroups = computed(() => {
-  const groups: { label: string, items: { match: RecipeMatch, index: number }[] }[] = []
-  let index = 0
-  for (let missing = 0; missing < groupLabels.length && index < 7; missing++) {
-    const all = resultMatches.value.filter(match => match.missingStuff.length === missing)
-    if (!all.length)
-      continue
-    const items = all.slice(0, 7 - index).map(match => ({ match, index: index++ }))
-    groups.push({ label: `${groupLabels[missing]} · ${all.length}`, items })
-  }
-  return groups
-})
-
-let stopTween = () => {}
-watch(cookCount, (to) => {
-  stopTween()
-  if (reduced.value || !running.value)
-    displayCount.value = to
-  else
-    stopTween = tweenNumber(displayCount.value, to, value => displayCount.value = value)
-})
-
-function addedText(daysAgo: number) {
-  if (!today.value)
-    return ''
-  const date = new Date(today.value.getTime() - daysAgo * 86_400_000)
-  return `${date.getMonth() + 1}月${date.getDate()}日放入`
-}
-
-// ---------- 播放 ----------
-
-let runId = 0
-let playbackController = new AbortController()
-
-function createCtx(fast: boolean): Ctx {
-  const signal = playbackController.signal
-  return {
-    fast,
-    async wait(ms) {
-      signal.throwIfAborted()
-      if (!fast) {
-        await new Promise<void>((resolve, reject) => {
-          let timer: ReturnType<typeof setTimeout>
-          const abort = () => {
-            clearTimeout(timer)
-            reject(signal.reason)
-          }
-          timer = setTimeout(() => {
-            signal.removeEventListener('abort', abort)
-            resolve()
-          }, ms)
-          signal.addEventListener('abort', abort, { once: true })
-        })
-      }
-      signal.throwIfAborted()
-    },
-  }
-}
-
-// Settle pending waits and stop flights before starting another chapter.
-function cancel() {
-  runId++
-  playbackController.abort()
-  playbackController = new AbortController()
-  stopTween()
-}
-
-function go(next: Screen) {
-  const prev = screen.value
-  transitionName.value = next === 'results' ? 'push' : prev === 'results' && next === resultsFrom.value ? 'pop' : 'fade'
-  screen.value = next
-}
-
-function reset(id: ChapterId) {
-  selected.value = []
-  basket.value = []
-  noSpicy.value = false
-  query.value = ''
-  searching.value = false
-  notice.value = ''
-  banner.value = false
-  shaking.value = false
-  shuffleEmoji.value = ''
-  go(id === 'fridge' ? 'fridge' : id === 'random' ? 'random' : 'cook')
-}
-
-function find(key: string) {
-  return screenEl.value?.querySelector<HTMLElement>(`[data-demo="${key}"]`) ?? undefined
-}
-
-/** 手指点一下：在元素上出现一个触点，元素按下去再弹回来 */
-async function tap(ctx: Ctx, key: string) {
-  if (ctx.fast)
-    return
-  const el = find(key)
-  const base = screenEl.value?.getBoundingClientRect()
-  if (!el || !base)
-    return
-  const rect = el.getBoundingClientRect()
-  touch.value = { x: rect.left + rect.width / 2 - base.left, y: rect.top + rect.height / 2 - base.top, n: touch.value.n + 1 }
-  el.classList.add('is-pressed')
-  try {
-    await ctx.wait(240)
-  }
-  finally {
-    el.classList.remove('is-pressed')
-  }
-}
-
-function land(name: string) {
-  basket.value = [...basket.value.filter(item => item !== name), name].slice(-3)
-  bounceKey.value++
-}
-
-/** 选中食材，emoji 沿弧线飞进底部按钮，和 App 的 BasketFlight 一样 */
-function pick(ctx: Ctx, name: string) {
-  selected.value = [...selected.value, name]
-  const chip = find(`chip-${name}`)
-  const target = find('see')
-  const emoji = emojiOf(name)
-  if (ctx.fast || !chip || !target || !screenEl.value || !emoji) {
-    land(name)
-    return
-  }
-  const id = runId
-  void flyEmoji(screenEl.value, emoji, chip.getBoundingClientRect(), target.getBoundingClientRect(), { signal: playbackController.signal }).then(() => {
-    if (id === runId)
-      land(name)
-  })
-}
-
-function openResults(stuff: string[], from: 'cook' | 'fridge') {
-  resultStuff.value = stuff
-  resultsFrom.value = from
-  go('results')
-}
-
-let rollIndex = 0
-async function roll(ctx: Ctx) {
-  rollIndex = (rollIndex + 1 + Math.floor(Math.random() * 5)) % pool.length
-  if (!ctx.fast) {
-    shuffleEmoji.value = thumbnail(card.value)
-    for (const delay of [55, 60, 70, 80, 95, 115, 140, 170]) {
-      shuffleEmoji.value = thumbnail(pool[Math.floor(Math.random() * pool.length)]!)
-      await ctx.wait(delay)
-    }
-  }
-  card.value = pool[rollIndex]!
-  shuffleEmoji.value = ''
-  tossKey.value++
-}
-
-const scripts: Record<ChapterId, (ctx: Ctx) => Promise<void>> = {
-  async pick(ctx) {
-    await ctx.wait(700)
-    for (const name of PICKS) {
-      await tap(ctx, `chip-${name}`)
-      pick(ctx, name)
-      await ctx.wait(620)
-    }
-    await ctx.wait(400)
-    await tap(ctx, 'see')
-    openResults(selected.value, 'cook')
-  },
-  async sentence(ctx) {
-    await ctx.wait(600)
-    await tap(ctx, 'search')
-    searching.value = true
-    if (ctx.fast) {
-      query.value = SENTENCE
-    }
-    else {
-      for (const char of SENTENCE) {
-        query.value += char
-        await ctx.wait(char === '，' ? 260 : 85)
-      }
-    }
-    await ctx.wait(500)
-    const parsed = parseCookQuery(SENTENCE)
-    searching.value = false
-    query.value = ''
-    notice.value = `已按「${describe(parsed)}」筛选`
-    noSpicy.value = parsed.noSpicy
-    await ctx.wait(250)
-    for (const name of parsed.stuff) {
-      pick(ctx, name)
-      await ctx.wait(180)
-    }
-  },
-  async fridge(ctx) {
-    await ctx.wait(900)
-    banner.value = true
-    await ctx.wait(2800)
-    if (ctx.fast)
-      return
-    banner.value = false
-    await ctx.wait(450)
-    await tap(ctx, 'use-soon')
-    openResults(SOON.map(item => item.name), 'fridge')
-  },
-  async random(ctx) {
-    await ctx.wait(700)
-    await tap(ctx, 'roll')
-    await roll(ctx)
-    await ctx.wait(1700)
-    if (ctx.fast)
-      return
-    shaking.value = true
-    await ctx.wait(560)
-    shaking.value = false
-    await roll(ctx)
-  },
-}
-
-async function play(index: number) {
-  cancel()
-  const id = runId
-  const chapter = chapters[index]!
-  active.value = index
-  reset(chapter.id)
-  running.value = !reduced.value
-  progressKey.value++
-  const ctx = createCtx(reduced.value)
-  try {
-    await Promise.all([scripts[chapter.id](ctx), ctx.wait(chapter.duration)])
-    if (id === runId) {
-      running.value = false
-      userPaused.value = true
-    }
-  }
-  catch (error) {
-    if (id !== runId)
-      return
-    running.value = false
-    userPaused.value = true
-    throw error
-  }
-}
-
-function stop() {
-  cancel()
-  running.value = false
-  displayCount.value = cookCount.value
-}
-
-let visible = false
-let observer: IntersectionObserver | undefined
-
-/** 看不见（滚走了、切到别的标签页）就停，回来时从这一段开头接着播 */
-function sync() {
-  if (reduced.value)
-    return
-  const shouldPlay = visible && !document.hidden && !userPaused.value
-  if (shouldPlay && !running.value)
-    void play(active.value)
-  else if (!shouldPlay && running.value)
-    stop()
-}
-
-function choose(index: number) {
-  userPaused.value = false
-  void play(index)
-}
-
-function togglePause() {
-  if (running.value) {
-    userPaused.value = true
-    stop()
-  }
-  else {
-    choose(active.value)
-  }
-}
-
-let motionQuery: MediaQueryList | undefined
-function updateMotion() {
-  reduced.value = motionQuery?.matches ?? false
-  userPaused.value = true
-  stop()
-}
-
-onMounted(() => {
-  today.value = new Date()
-  reduced.value = prefersReducedMotion()
-  motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
-  motionQuery.addEventListener('change', updateMotion)
-  if (typeof IntersectionObserver !== 'undefined') {
-    observer = new IntersectionObserver(([entry]) => {
-      visible = !!entry?.isIntersecting
-      sync()
-    }, { threshold: 0.35 })
-  }
-  if (root.value)
-    observer?.observe(root.value)
-  document.addEventListener('visibilitychange', sync)
-})
-
-onBeforeUnmount(() => {
-  stop()
-  stopTween()
-  observer?.disconnect()
-  motionQuery?.removeEventListener('change', updateMotion)
-  document.removeEventListener('visibilitychange', sync)
-})
 </script>
 
 <template>
@@ -418,12 +71,12 @@ onBeforeUnmount(() => {
           >
             <span class="chapter-bar" aria-hidden="true">
               <span
-                v-if="index === active && running"
+                v-if="index === active && playback !== 'idle'"
                 :key="progressKey"
                 class="chapter-fill"
+                :class="{ 'is-full': playback === 'finished' }"
                 :style="{ animationDuration: `${chapter.duration}ms` }"
               />
-              <span v-else-if="index === active || index < active" class="chapter-fill is-full" />
             </span>
             <span class="chapter-title"><span class="is-long">{{ chapter.title }}</span><span class="is-short">{{ chapter.short }}</span></span>
             <span class="chapter-text">{{ chapter.text }}</span>
@@ -499,7 +152,7 @@ onBeforeUnmount(() => {
                 <span v-if="basket.length" class="basket">
                   <i v-for="name in basket" :key="name">{{ emojiOf(name) }}</i>
                 </span>
-                <template v-if="selected.length">看看能做什么（<b class="count">{{ displayCount }}</b>）</template>
+                <span v-if="selected.length">看看能做什么（<b class="count">{{ displayCount }}</b>）</span>
                 <template v-else>先选几样食材</template>
               </span>
             </div>
@@ -624,6 +277,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .demo {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 32px;
   justify-items: center;
 }
@@ -659,6 +313,11 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
     gap: 4px;
   }
+}
+
+.chapters > li {
+  min-width: 0;
+  margin: 0;
 }
 
 .chapter {
@@ -825,7 +484,8 @@ onBeforeUnmount(() => {
   --p-glass: rgba(255, 255, 255, 0.72);
 
   flex: none;
-  width: min(316px, 100%);
+  width: 316px;
+  max-width: 100%;
   padding: 8px;
   border-radius: 54px;
   background: #11161f;
@@ -1543,14 +1203,29 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 380px) {
+  .chapter-title {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .chip {
+    gap: 2px;
+    padding-inline: 4px;
+    font-size: 11px;
+  }
+
   .phone {
-    width: min(300px, 100%);
+    width: 300px;
     padding: 6px;
   }
 }
 
-.demo.is-paused :deep(*) {
-  animation-play-state: paused !important;
+.demo.is-paused .chapter-fill {
+  animation-play-state: paused;
+}
+
+.demo.is-paused .screen :deep(*) {
+  animation: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
