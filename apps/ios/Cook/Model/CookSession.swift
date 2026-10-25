@@ -86,6 +86,15 @@ final class CookSession {
         !selectedStuff.isEmpty || tool != nil
     }
 
+    /// 做菜页和筛选弹层共用结果数；nil 表示还没选食材或厨具，区别于真正的零结果。
+    func matchCount(using recommender: Recommender) -> Int? {
+        guard hasSelection else { return nil }
+        if selectedStuff.isEmpty, let tool {
+            return recommender.recipes(using: tool, options: options).count
+        }
+        return recommender.recommend(options).count
+    }
+
     /// 冰箱页「用这些做菜」：换成这几样食材，厨具和菜名搜索清掉，免得结果莫名变少
     func use(_ stuff: [String]) {
         selectedStuff = uniqueStrings(stuff)

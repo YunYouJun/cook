@@ -64,6 +64,62 @@ final class CookTests: XCTestCase {
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<Preferences>()), 2)
     }
 
+    func testFilterCountTracksIngredientsAndPreferences() {
+        let container = Persistence.makeContainer(inMemory: true)
+        let session = CookSession(defaultPantry: [], context: container.mainContext)
+        let recommender = filterCountRecommender
+        XCTAssertNil(session.matchCount(using: recommender), "没选食材或厨具时不能误报为零结果")
+
+        session.toggleStuff("番茄")
+        XCTAssertEqual(session.matchCount(using: recommender), 3)
+        session.toggleMethodGroup("炒菜")
+        XCTAssertEqual(session.matchCount(using: recommender), 2)
+        session.toggleDifficulty("困难")
+        XCTAssertEqual(session.matchCount(using: recommender), 0)
+        session.clearFilters()
+        session.setNoSpicy(true)
+        XCTAssertEqual(session.matchCount(using: recommender), 2)
+        session.toggleAvoid("鸡蛋")
+        XCTAssertEqual(session.matchCount(using: recommender), 1)
+        session.clearAvoid()
+        session.setNoSpicy(false)
+
+        session.mode = .survival
+        XCTAssertEqual(session.matchCount(using: recommender), 1)
+        session.togglePantry("盐")
+        XCTAssertEqual(session.matchCount(using: recommender), 2, "常备调料变化后立即重新计算")
+        session.keyword = "汤"
+        XCTAssertEqual(session.matchCount(using: recommender), 1)
+        session.clearStuff()
+        XCTAssertNil(session.matchCount(using: recommender))
+    }
+
+    func testFilterCountSupportsToolOnlySelection() {
+        let container = Persistence.makeContainer(inMemory: true)
+        let session = CookSession(defaultPantry: [], context: container.mainContext)
+        let recommender = filterCountRecommender
+        session.toggleTool("一口大锅")
+        XCTAssertEqual(session.matchCount(using: recommender), 3, "仅选厨具时无需食材也能显示结果数")
+        session.toggleMethodGroup("汤羹")
+        XCTAssertEqual(session.matchCount(using: recommender), 1)
+        session.toggleAvoid("番茄")
+        XCTAssertEqual(session.matchCount(using: recommender), 0)
+        session.clearAvoid()
+        session.clearFilters()
+        session.keyword = "番茄炒蛋"
+        XCTAssertEqual(session.matchCount(using: recommender), 1)
+        session.toggleStuff("土豆")
+        XCTAssertEqual(session.matchCount(using: recommender), 0, "补选食材后改用推荐规则")
+    }
+
+    private var filterCountRecommender: Recommender {
+        Recommender(recipes: [
+            Recipe(id: 1, name: "番茄炒蛋", stuff: ["番茄", "鸡蛋"], difficulty: "简单", methods: ["炒"], tools: ["一口大锅"]),
+            Recipe(id: 2, name: "番茄汤", stuff: ["番茄", "盐"], difficulty: "普通", tags: ["汤"], methods: ["煮"], tools: ["一口大锅"]),
+            Recipe(id: 3, name: "辣炒番茄", stuff: ["番茄"], difficulty: "简单", tags: ["辣"], methods: ["炒"], tools: ["一口大锅"]),
+        ], normalizer: StuffNormalizer(aliases: [:]))
+    }
+
     func testFavoritesAndHistory() throws {
         // 要持有容器，否则它被释放后 context 会崩溃
         let container = Persistence.makeContainer(inMemory: true)
