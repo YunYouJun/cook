@@ -107,6 +107,23 @@ describe('yunle host layout', () => {
     expect(root.classList.contains('ylf-mode-titlebar')).toBe(false)
     expect(root.classList.contains('ylf-mode-immersive')).toBe(true)
   })
+
+  it('applies the macOS host environment without a capsule rectangle', () => {
+    const macEnv: YunleHostEnv = {
+      platform: 'macos',
+      appId: 'cook',
+      displayMode: 'titlebar',
+      trusted: true,
+      capsuleVisible: false,
+      titleBarVisible: true,
+      safeAreaInsets: { top: 0, bottom: 0, left: 0, right: 0 },
+    }
+    const root = document.documentElement
+    applyYunleHostLayout(root, macEnv, 1280)
+    expect(root.classList.contains('ylf-mode-titlebar')).toBe(true)
+    expect(root.style.getPropertyValue('--ion-safe-area-top')).toBe('0px')
+    expect(root.style.getPropertyValue('--cook-host-capsule-inset')).toBe('0px')
+  })
 })
 
 describe('yunle host haptic', () => {

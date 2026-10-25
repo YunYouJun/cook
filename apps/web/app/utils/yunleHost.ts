@@ -23,7 +23,7 @@ export interface YunleRect {
 }
 
 export interface YunleHostEnv {
-  platform: 'ios' | 'android'
+  platform: 'ios' | 'android' | 'macos'
   appId: string
   /** 旧版本 App 无此字段，按 immersive 处理 */
   displayMode?: YunleDisplayMode
@@ -31,7 +31,8 @@ export interface YunleHostEnv {
   capsuleVisible: boolean
   titleBarVisible?: boolean
   safeAreaInsets: YunleInsets
-  capsuleRect: YunleRect
+  /** Desktop hosts omit the rectangle when no capsule is available. */
+  capsuleRect?: YunleRect
 }
 
 export interface YunleJSAPI {
@@ -87,8 +88,10 @@ export function resolveDisplayMode(env: Pick<YunleHostEnv, 'displayMode'>): Yunl
  * 胶囊在视口内时，页面右侧需要让出的宽度；标题栏显示时胶囊在视口上方（y 为负），无需避让
  */
 export function capsuleInset(env: Pick<YunleHostEnv, 'capsuleVisible' | 'capsuleRect'>, viewportWidth: number): number {
+  if (!env.capsuleVisible || !env.capsuleRect)
+    return 0
   const { x, y, width, height } = env.capsuleRect
-  if (!env.capsuleVisible || width <= 0 || y + height <= 0)
+  if (width <= 0 || y + height <= 0)
     return 0
   return Math.max(0, Math.ceil(viewportWidth - x + CAPSULE_GAP))
 }
