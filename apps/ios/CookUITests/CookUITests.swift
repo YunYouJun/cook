@@ -309,6 +309,7 @@ final class CookUITests: XCTestCase {
 
         tap(app.buttons["筛选"])
         let pantry = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "家里常备")).firstMatch
+        for _ in 0..<4 where !pantry.isHittable { app.swipeUp() }
         tap(pantry)
         let oil = app.buttons["pantry.item.油"]
         let salt = app.buttons["pantry.item.盐"]
