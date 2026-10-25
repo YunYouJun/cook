@@ -1,0 +1,689 @@
+.cook-landing {
+  --sky-1: #55aaff;
+  --sky-2: #2563eb;
+  --sky-3: #1e40af;
+  --cloud: #ffffff;
+  --yolk: #facc15;
+  --ink: #0f2547;
+  --mist: #eef5ff;
+
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 16px 0;
+  color: var(--vp-c-text-1);
+}
+
+.dark .cook-landing {
+  --cloud: #e6f0ff;
+  --mist: #131c2e;
+}
+
+/* ---------- 首屏 ---------- */
+
+.cook-landing .sky {
+  position: relative;
+  display: grid;
+  gap: 40px;
+  padding: 40px 24px 32px;
+  border-radius: 36px;
+  color: #fff;
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(255, 255, 255, 0.18), transparent 60%),
+    linear-gradient(225deg, var(--sky-1) 0%, var(--sky-2) 55%, var(--sky-3) 100%);
+  overflow: hidden;
+}
+
+.dark .cook-landing .sky {
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(124, 192, 255, 0.16), transparent 60%),
+    linear-gradient(225deg, #1e293b 0%, #0b1120 100%);
+  box-shadow: inset 0 0 0 1px rgba(124, 192, 255, 0.14);
+}
+
+@media (min-width: 960px) {
+  .cook-landing .sky {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    align-items: center;
+    gap: 48px;
+    padding: 64px 56px 48px 64px;
+    min-height: 620px;
+  }
+}
+
+/* 像 App Store 里的一行：图标、名字和内测状态 */
+.cook-landing .app-id {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.cook-landing .app-icon {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  /* iOS 图标的连续圆角，22.37% */
+  border-radius: 22.37%;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.28),
+    0 12px 28px -10px rgba(8, 20, 60, 0.55);
+}
+
+.cook-landing .app-name {
+  margin: 0;
+  font-family: var(--cook-font-display);
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.cook-landing .app-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.cook-landing .status-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--yolk);
+}
+
+.cook-landing .status-dot.is-live {
+  background: #4ade80;
+}
+
+/* 一圈慢慢散开的光，表示「正在进行」 */
+.cook-landing .status-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ping {
+  70%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+.cook-landing .sky-title {
+  margin: 0;
+  font-family: var(--cook-font-display);
+  font-size: clamp(44px, 7vw, 76px);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: 0.02em;
+  text-wrap: balance;
+}
+
+.cook-landing .sky-lead {
+  max-width: 30em;
+  margin: 24px 0 0;
+  font-size: 17px;
+  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.cook-landing .sky-actions,
+.cook-landing .beta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.cook-landing .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.cook-landing .btn:not(.is-pending):active {
+  transform: scale(0.97);
+}
+
+.cook-landing .btn-yolk {
+  background: var(--yolk);
+  color: var(--ink);
+}
+
+.cook-landing .btn-yolk:not(.is-pending):hover {
+  background: #fde047;
+}
+
+.cook-landing .btn-ghost {
+  color: #fff;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.6);
+}
+
+.cook-landing .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.cook-landing .btn-sky {
+  background: var(--sky-2);
+  color: #fff;
+}
+
+.cook-landing .btn-sky:not(.is-pending):hover {
+  background: var(--sky-3);
+}
+
+.dark .cook-landing .btn-sky {
+  background: #3b82f6;
+}
+
+.cook-landing .btn.is-pending {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.cook-landing .sky-note {
+  margin: 16px 0 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.cook-landing .sky-note a {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cook-landing a:focus-visible,
+.cook-landing button:focus-visible {
+  outline: 3px solid var(--yolk);
+  outline-offset: 3px;
+}
+
+/* ---------- 锅和蒸汽 ---------- */
+
+.cook-landing .pot-demo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cook-landing .steam {
+  width: 100%;
+  min-height: 236px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.cook-landing .steam-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  margin: 0;
+  padding: 16px 0 12px;
+  list-style: none;
+}
+
+.cook-landing .cloud {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.55em 1.4em 0.6em;
+  border-radius: 999px;
+  background: var(--cloud);
+  color: var(--ink);
+  font-size: calc(19px - var(--i) * 1.5px);
+  line-height: 1.3;
+  text-align: center;
+  box-shadow: 0 10px 24px -14px rgba(15, 37, 71, 0.6);
+  transform: translateX(calc((var(--i) - 1.5) * 10px));
+  animation: rise 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  animation-delay: calc((3 - var(--i)) * 70ms);
+}
+
+/* 云朵上面鼓起的两团 */
+.cook-landing .cloud::before,
+.cook-landing .cloud::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  background: inherit;
+}
+
+.cook-landing .cloud::before {
+  width: 1.7em;
+  height: 1.7em;
+  top: -0.65em;
+  left: 18%;
+}
+
+.cook-landing .cloud::after {
+  width: 2.3em;
+  height: 2.3em;
+  top: -0.95em;
+  right: 20%;
+}
+
+.cook-landing .cloud-name {
+  font-family: var(--cook-font-display);
+  font-size: 1.15em;
+}
+
+.cook-landing .cloud-meta {
+  font-size: 12px;
+  color: #3e5b86;
+}
+
+.cook-landing .cloud-hint {
+  font-family: var(--cook-font-display);
+  font-size: 18px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 36px;
+    scale: 0.85;
+  }
+}
+
+.cook-landing .steam-leave-active {
+  transition:
+    opacity 0.18s ease,
+    translate 0.18s ease;
+}
+
+.cook-landing .steam-leave-to {
+  opacity: 0;
+  translate: 0 -16px;
+}
+
+.cook-landing .pot {
+  width: min(320px, 78%);
+  height: auto;
+  margin-top: -6px;
+  overflow: visible;
+  transform-origin: 50% 90%;
+}
+
+/* 食材落进锅里时，锅轻轻颠一下 */
+.cook-landing .pot.is-bump {
+  animation: catch 0.4s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+@keyframes catch {
+  35% {
+    transform: scale(1.04, 0.95) translateY(3px);
+  }
+}
+
+.cook-landing .pot-spoon {
+  stroke: var(--yolk);
+}
+
+.cook-landing .pot-spoon-head {
+  fill: var(--yolk);
+}
+
+.cook-landing .pot-lid,
+.cook-landing .pot-body {
+  fill: #fff;
+}
+
+.dark .cook-landing .pot-lid,
+.dark .cook-landing .pot-body {
+  fill: #7cc0ff;
+}
+
+/* SVG 用户单位，锅宽 100 */
+.cook-landing .pot-count {
+  font-family: var(--cook-font-display);
+  font-size: 9.5px;
+  fill: var(--sky-2);
+}
+
+.dark .cook-landing .pot-count {
+  fill: #0b1120;
+}
+
+.cook-landing .landing-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 520px;
+  margin-top: 28px;
+}
+
+.cook-landing .landing-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 14px;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.cook-landing .landing-chip:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.cook-landing .chip[aria-pressed='true'] {
+  background: var(--yolk);
+  color: var(--ink);
+}
+
+.cook-landing .landing-chip-clear {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+}
+
+.cook-landing .pot-caption {
+  max-width: 28em;
+  margin: 16px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.cook-landing .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- 下面几屏 ---------- */
+
+.cook-landing .screens,
+.cook-landing .app-only,
+.cook-landing .beta {
+  padding: 96px 8px 0;
+}
+
+.cook-landing .section-title {
+  margin: 0;
+  font-family: var(--cook-font-display);
+  font-size: clamp(32px, 4.5vw, 44px);
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+}
+
+.cook-landing .section-lead {
+  margin: 12px 0 0;
+  font-size: 17px;
+  color: var(--vp-c-text-2);
+}
+
+.cook-landing .demo-block {
+  margin-top: 56px;
+}
+
+/* 演示下面一排真机截图，证明不是做出来的效果图 */
+.cook-landing .shots {
+  margin: 72px 0 0;
+}
+
+.cook-landing .shot-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(150px, 1fr);
+  gap: 16px;
+  margin: 0 -24px;
+  padding: 0 24px 12px;
+  list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+
+@media (min-width: 960px) {
+  .cook-landing .shot-row {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0;
+    overflow: visible;
+  }
+}
+
+.cook-landing .shot {
+  aspect-ratio: 640 / 1391;
+  padding: 4px;
+  border-radius: 26px;
+  background: #0f172a;
+  scroll-snap-align: start;
+}
+
+.dark .cook-landing .shot {
+  background: #1e293b;
+}
+
+.cook-landing .shot img {
+  width: 100%;
+  height: 100%;
+  border-radius: 22px;
+  object-fit: cover;
+}
+
+.cook-landing .shot-dark,
+.dark .cook-landing .shot-light {
+  display: none;
+}
+
+.dark .cook-landing .shot-dark {
+  display: block;
+}
+
+.cook-landing .shots figcaption {
+  margin-top: 12px;
+  font-size: 13px;
+  text-align: center;
+  color: var(--vp-c-text-3);
+}
+
+.cook-landing .feature-list {
+  display: grid;
+  gap: 32px 48px;
+  margin: 40px 0 0;
+}
+
+@media (min-width: 640px) {
+  .cook-landing .feature-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .cook-landing .feature-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.cook-landing .feature dt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--cook-font-display);
+  font-size: 22px;
+}
+
+.cook-landing .feature-emoji {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--mist);
+  font-family: initial;
+  font-size: 22px;
+}
+
+.cook-landing .feature dd {
+  margin: 10px 0 0;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--vp-c-text-2);
+}
+
+.cook-landing .beta {
+  display: grid;
+  gap: 40px;
+}
+
+@media (min-width: 960px) {
+  .cook-landing .beta {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 64px;
+  }
+}
+
+.cook-landing .beta-steps {
+  display: grid;
+  gap: 24px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.cook-landing .beta-steps li {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  padding-left: 56px;
+  counter-increment: step;
+}
+
+.cook-landing .beta-steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: -2px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--yolk);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.cook-landing .beta-steps strong {
+  font-size: 18px;
+}
+
+.cook-landing .beta-steps span {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--vp-c-text-2);
+}
+
+.cook-landing .beta-steps a,
+.cook-landing .beta-notes a {
+  color: var(--vp-c-brand-1);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cook-landing .beta-pending {
+  font-size: 14px;
+  color: var(--vp-c-text-2);
+}
+
+.cook-landing .beta-notes {
+  padding: 28px;
+  border-radius: 28px;
+  background: var(--mist);
+}
+
+.cook-landing .beta-notes h3 {
+  margin: 0;
+  font-family: var(--cook-font-display);
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.cook-landing .beta-notes ul {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding-left: 1.2em;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--vp-c-text-2);
+}
+
+.cook-landing .docs-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 4px 32px;
+  margin: 96px 8px 0;
+  padding-top: 32px;
+  border-top: 1px solid var(--vp-c-divider);
+}
+
+.cook-landing .docs-links a {
+  display: grid;
+  gap: 2px;
+  padding: 10px 0;
+  text-decoration: none;
+}
+
+.cook-landing .docs-links strong {
+  color: var(--vp-c-text-1);
+  font-weight: 600;
+}
+
+.cook-landing .docs-links a:hover strong {
+  color: var(--vp-c-brand-1);
+}
+
+.cook-landing .docs-links span {
+  font-size: 14px;
+  color: var(--vp-c-text-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cook-landing .cloud,
+  .cook-landing .pot.is-bump,
+  .cook-landing .status-dot::after {
+    animation: none;
+  }
+
+  .cook-landing .steam-leave-active,
+  .cook-landing .btn,
+  .cook-landing .landing-chip {
+    transition: none;
+  }
+}
