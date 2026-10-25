@@ -1,0 +1,31 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cook-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dev",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "3333"
+      ],
+      "port": 3333
+    },
+    {
+      "name": "cook-dist",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4173",
+        "--bind",
+        "127.0.0.1",
+        "-d",
+        "dist"
+      ],
+      "port": 4173
+    }
+  ]
+}
