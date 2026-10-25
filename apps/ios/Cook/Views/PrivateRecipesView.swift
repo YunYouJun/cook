@@ -60,9 +60,10 @@ struct PrivateRecipesView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("新建菜谱", systemImage: "plus") { editor = RecipeEditorItem(recipe: nil) }
+                    .labelStyle(.iconOnly)
             }
         }
-        .searchable(text: $query, prompt: "菜名或食材")
+        .modifier(PrivateRecipeSearch(query: $query))
         .sheet(item: $editor) { item in PrivateRecipeEditor(original: item.recipe) }
         .sheet(item: $incoming) { item in PrivateRecipeImportView(recipes: item.recipes) }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.json, .plainText]) { result in
@@ -104,6 +105,75 @@ struct PrivateRecipesView: View {
             exporting = PrivateRecipeDocument(text: try PrivateRecipeFile(recipes: snapshot.recipes).export())
             showingExporter = true
         } catch { message = error.localizedDescription }
+    }
+}
+
+private struct PrivateRecipeSearch: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Binding var query: String
+
+    func body(content: Content) -> some View {
+        if horizontalSizeClass == .regular || ProcessInfo.processInfo.isiOSAppOnMac {
+            content.toolbar {
+                if #available(iOS 26.0, *) {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        PrivateRecipeSearchField(query: $query)
+                    }
+                    .sharedBackgroundVisibility(.hidden)
+                } else {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        PrivateRecipeSearchField(query: $query)
+                    }
+                }
+            }
+        } else {
+            content.searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "菜名或食材")
+        }
+    }
+}
+
+private struct PrivateRecipeSearchField: View {
+    @Binding var query: String
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            Button("搜索菜谱", systemImage: "magnifyingglass") { isFocused = true }
+                .labelStyle(.iconOnly)
+                .keyboardShortcut("f", modifiers: .command)
+
+            TextField("菜名或食材", text: $query)
+                .textFieldStyle(.plain)
+                // 用输入框的自然高度参与居中，避免系统搜索栏内部的垂直偏移。
+                .fixedSize(horizontal: false, vertical: true)
+                .focused($isFocused)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+                .onSubmit { isFocused = false }
+
+            if !query.isEmpty {
+                Button("清除搜索", systemImage: "xmark.circle.fill") {
+                    query = ""
+                    isFocused = true
+                }
+                .labelStyle(.iconOnly)
+            }
+        }
+        .font(.body)
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .frame(minWidth: 120, idealWidth: 180, maxWidth: 240)
+        .frame(minHeight: 44)
+        .contentShape(Capsule())
+        .onTapGesture { isFocused = true }
+        .onKeyPress(.escape) {
+            query = ""
+            isFocused = false
+            return .handled
+        }
+        .floatingGlass(in: Capsule())
     }
 }
 

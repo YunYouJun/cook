@@ -9,10 +9,16 @@ const vpConfig = getVitepressConfig({
 export default defineConfig(withYunlefun({
   ...vpConfig,
   lang: 'zh-CN',
-  title: 'Cook',
-  description: '食用手册',
+  title: '云食册',
+  cleanUrls: true,
+  description: '有什么食材，就做什么菜。云食册产品官网、iOS 发布信息与食用手册使用文档。',
   sitemap: {
-    hostname: 'https://docs.cook.yunle.fun',
+    hostname: 'https://cook.yunle.fun',
+  },
+  transformPageData(pageData) {
+    const path = pageData.relativePath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '')
+    pageData.frontmatter.head ??= []
+    pageData.frontmatter.head.push(['link', { rel: 'canonical', href: `https://cook.yunle.fun/${path}` }])
   },
   markdown: {
     ...vpConfig.markdown,
@@ -30,13 +36,18 @@ export default defineConfig(withYunlefun({
       text: '在 GitHub 上编辑此页',
     },
 
+    footer: {
+      message: '<a href="/terms">用户协议</a> · <a href="/privacy">iOS 隐私政策</a> · <a href="mailto:me@yunyoujun.cn">联系开发者</a>',
+      copyright: '© 2022–2026 云游君（YunYouJun） · <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">苏ICP备2023020936号</a>',
+    },
     nav: [
+      { text: '产品官网', link: '/' },
       { text: '使用指南', link: '/guide/getting-started' },
       { text: 'iOS 体验报名', link: '/guide/ios-beta#signup' },
       { text: '开发文档', link: '/dev/cli' },
       { text: '方案记录', link: '/decisions/' },
       { text: 'iOS 隐私政策', link: '/privacy' },
-      { text: '应用', link: 'https://cook.yunyoujun.cn' },
+      { text: '打开网页版', link: 'https://cook.yunyoujun.cn/', target: '_self' },
     ],
 
     sidebar: {
@@ -46,6 +57,7 @@ export default defineConfig(withYunlefun({
           items: [
             { text: '快速开始', link: '/guide/getting-started' },
             { text: '一句话找菜', link: '/guide/sentence-input' },
+            { text: '网页版域名与原有数据', link: '/guide/web-domain' },
             { text: '云食册 iOS 体验报名', link: '/guide/ios-beta#signup' },
           ],
         },
@@ -85,6 +97,7 @@ export default defineConfig(withYunlefun({
             { text: '0012 反馈渠道分流', link: '/decisions/0012-feedback-channels' },
             { text: '0013 私人菜谱与文件迁移', link: '/decisions/0013-private-recipes' },
             { text: '0014 个人食材和厨具', link: '/decisions/0014-personal-catalog' },
+            { text: '0015 官网与网页版域名分工', link: '/decisions/0015-product-site-domains' },
           ],
         },
       ],

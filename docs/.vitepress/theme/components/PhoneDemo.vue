@@ -34,7 +34,7 @@ const FRESH = [
 const chapters: { id: ChapterId, title: string, short: string, text: string, duration: number }[] = [
   { id: 'pick', title: '点几样食材', short: '点食材', text: '点一下冰箱里有的，食材飞进篮子，能做几道马上跳出来。', duration: 8200 },
   { id: 'sentence', title: '说一句话', short: '说句话', text: `打一句「${SENTENCE}」，自动拆成食材和口味。`, duration: 7600 },
-  { id: 'fridge', title: '快过期了提醒你', short: '临期提醒', text: '记下买回来的食材，临期那天推一条通知，点开就是能做的菜。', duration: 8400 },
+  { id: 'fridge', title: '快过期了提醒你', short: '临期提醒', text: '记下买回来的食材，主动开启提醒后，由设备在本地通知你。', duration: 8400 },
   { id: 'random', title: '今天吃什么', short: '随机', text: '拿不定主意就摇一摇手机，换一道。', duration: 7400 },
 ]
 
@@ -57,9 +57,11 @@ const icons = {
 }
 
 /** 随机页从这些菜里抽：视频口碑好、做法简单 */
-const pool: RecipeItem[] = catalog.filter(recipe => (recipe.score ?? 0) >= 70 && recipe.difficulty === '简单' && thumbnail(recipe) !== '🍽️')
+const preferredPool: RecipeItem[] = catalog.filter(recipe => (recipe.score ?? 0) >= 70 && recipe.difficulty === '简单' && thumbnail(recipe) !== '🍽️')
 
 // ---------- 界面状态 ----------
+
+const pool = preferredPool.length ? preferredPool : catalog
 
 const root = ref<HTMLElement>()
 const screenEl = ref<HTMLElement>()
@@ -88,7 +90,7 @@ const today = ref<Date>()
 
 const active = ref(0)
 const running = ref(false)
-const userPaused = ref(false)
+const userPaused = shallowRef(true)
 const reduced = ref(false)
 const progressKey = ref(0)
 
@@ -112,7 +114,7 @@ const resultGroups = computed(() => {
 let stopTween = () => {}
 watch(cookCount, (to) => {
   stopTween()
-  if (reduced.value)
+  if (reduced.value || !running.value)
     displayCount.value = to
   else
     stopTween = tweenNumber(displayCount.value, to, value => displayCount.value = value)
@@ -128,28 +130,39 @@ function addedText(daysAgo: number) {
 // ---------- 播放 ----------
 
 let runId = 0
-const timers = new Set<ReturnType<typeof setTimeout>>()
+let playbackController = new AbortController()
 
 function createCtx(fast: boolean): Ctx {
+  const signal = playbackController.signal
   return {
     fast,
-    wait: ms => fast
-      ? Promise.resolve()
-      : new Promise((resolve) => {
-          const timer = setTimeout(() => {
-            timers.delete(timer)
+    async wait(ms) {
+      signal.throwIfAborted()
+      if (!fast) {
+        await new Promise<void>((resolve, reject) => {
+          let timer: ReturnType<typeof setTimeout>
+          const abort = () => {
+            clearTimeout(timer)
+            reject(signal.reason)
+          }
+          timer = setTimeout(() => {
+            signal.removeEventListener('abort', abort)
             resolve()
           }, ms)
-          timers.add(timer)
-        }),
+          signal.addEventListener('abort', abort, { once: true })
+        })
+      }
+      signal.throwIfAborted()
+    },
   }
 }
 
-/** 取消正在播的一段：清掉计时器，等待中的脚本就停在原地 */
+// Settle pending waits and stop flights before starting another chapter.
 function cancel() {
   runId++
-  timers.forEach(clearTimeout)
-  timers.clear()
+  playbackController.abort()
+  playbackController = new AbortController()
+  stopTween()
 }
 
 function go(next: Screen) {
@@ -186,8 +199,12 @@ async function tap(ctx: Ctx, key: string) {
   const rect = el.getBoundingClientRect()
   touch.value = { x: rect.left + rect.width / 2 - base.left, y: rect.top + rect.height / 2 - base.top, n: touch.value.n + 1 }
   el.classList.add('is-pressed')
-  await ctx.wait(240)
-  el.classList.remove('is-pressed')
+  try {
+    await ctx.wait(240)
+  }
+  finally {
+    el.classList.remove('is-pressed')
+  }
 }
 
 function land(name: string) {
@@ -206,7 +223,7 @@ function pick(ctx: Ctx, name: string) {
     return
   }
   const id = runId
-  void flyEmoji(screenEl.value, emoji, chip.getBoundingClientRect(), target.getBoundingClientRect()).then(() => {
+  void flyEmoji(screenEl.value, emoji, chip.getBoundingClientRect(), target.getBoundingClientRect(), { signal: playbackController.signal }).then(() => {
     if (id === runId)
       land(name)
   })
@@ -297,26 +314,33 @@ const scripts: Record<ChapterId, (ctx: Ctx) => Promise<void>> = {
 
 async function play(index: number) {
   cancel()
+  const id = runId
   const chapter = chapters[index]!
   active.value = index
   reset(chapter.id)
-  if (reduced.value) {
-    running.value = false
-    await scripts[chapter.id](createCtx(true))
-    return
-  }
-  running.value = true
+  running.value = !reduced.value
   progressKey.value++
-  const ctx = createCtx(false)
-  const id = runId
-  await Promise.all([scripts[chapter.id](ctx), ctx.wait(chapter.duration)])
-  if (id === runId)
-    void play((index + 1) % chapters.length)
+  const ctx = createCtx(reduced.value)
+  try {
+    await Promise.all([scripts[chapter.id](ctx), ctx.wait(chapter.duration)])
+    if (id === runId) {
+      running.value = false
+      userPaused.value = true
+    }
+  }
+  catch (error) {
+    if (id !== runId)
+      return
+    running.value = false
+    userPaused.value = true
+    throw error
+  }
 }
 
 function stop() {
   cancel()
   running.value = false
+  displayCount.value = cookCount.value
 }
 
 let visible = false
@@ -339,23 +363,35 @@ function choose(index: number) {
 }
 
 function togglePause() {
-  userPaused.value = !userPaused.value
-  sync()
+  if (running.value) {
+    userPaused.value = true
+    stop()
+  }
+  else {
+    choose(active.value)
+  }
+}
+
+let motionQuery: MediaQueryList | undefined
+function updateMotion() {
+  reduced.value = motionQuery?.matches ?? false
+  userPaused.value = true
+  stop()
 }
 
 onMounted(() => {
   today.value = new Date()
   reduced.value = prefersReducedMotion()
-  if (reduced.value) {
-    void play(0)
-    return
+  motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  motionQuery.addEventListener('change', updateMotion)
+  if (typeof IntersectionObserver !== 'undefined') {
+    observer = new IntersectionObserver(([entry]) => {
+      visible = !!entry?.isIntersecting
+      sync()
+    }, { threshold: 0.35 })
   }
-  observer = new IntersectionObserver(([entry]) => {
-    visible = !!entry?.isIntersecting
-    sync()
-  }, { threshold: 0.35 })
   if (root.value)
-    observer.observe(root.value)
+    observer?.observe(root.value)
   document.addEventListener('visibilitychange', sync)
 })
 
@@ -363,12 +399,13 @@ onBeforeUnmount(() => {
   stop()
   stopTween()
   observer?.disconnect()
+  motionQuery?.removeEventListener('change', updateMotion)
   document.removeEventListener('visibilitychange', sync)
 })
 </script>
 
 <template>
-  <div ref="root" class="demo">
+  <div ref="root" class="demo" :class="{ 'is-paused': !running }">
     <div class="demo-side">
       <ol class="chapters" aria-label="演示内容">
         <li v-for="(chapter, index) in chapters" :key="chapter.id">
@@ -397,10 +434,11 @@ onBeforeUnmount(() => {
         {{ chapters[active]!.text }}
       </p>
       <div class="demo-foot">
-        <button v-if="!reduced" type="button" class="pause" @click="togglePause">
-          {{ userPaused ? '继续播放' : '暂停演示' }}
+        <button type="button" class="pause" @click="togglePause">
+          {{ reduced ? '查看本节结果' : running ? '暂停演示' : '播放 / 重播本节' }}
         </button>
-        <span>网页模拟的界面，菜谱和推荐结果是真实数据。</span>
+        <span>网页模拟界面，使用真实菜谱数据；不是 App 录屏。每次播放一节，暂停后重播。</span>
+        <noscript>演示需要 JavaScript；下方可查看真实截图。</noscript>
       </div>
     </div>
 
@@ -488,7 +526,7 @@ onBeforeUnmount(() => {
                 {{ group.label }}
               </p>
               <div class="card">
-                <div v-for="{ match, index } in group.items" :key="match.sourceIndex" class="row" :style="{ '--i': index }">
+                <div v-for="{ match, index } in group.items" :key="match.recipe.id ?? `${match.recipe.name}-${index}`" class="row" :style="{ '--i': index }">
                   <span class="row-emoji">{{ thumbnail(match.recipe) }}</span>
                   <span class="row-body">
                     <b>{{ match.recipe.name }}</b>
@@ -756,6 +794,7 @@ onBeforeUnmount(() => {
 }
 
 .pause {
+  min-height: 44px;
   padding: 4px 12px;
   border-radius: 999px;
   font-size: 13px;
@@ -786,7 +825,7 @@ onBeforeUnmount(() => {
   --p-glass: rgba(255, 255, 255, 0.72);
 
   flex: none;
-  width: 316px;
+  width: min(316px, 100%);
   padding: 8px;
   border-radius: 54px;
   background: #11161f;
@@ -1505,12 +1544,22 @@ onBeforeUnmount(() => {
 
 @media (max-width: 380px) {
   .phone {
-    width: 300px;
+    width: min(300px, 100%);
     padding: 6px;
   }
 }
 
+.demo.is-paused :deep(*) {
+  animation-play-state: paused !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
   .row,
   .see.is-bounce,
   .basket i,

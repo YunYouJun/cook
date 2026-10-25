@@ -102,7 +102,7 @@ struct CookView: View {
                     Chip(title: store.toolLabel(tool), isSelected: true) { session.toggleTool(tool) }
                 }
                 ForEach(store.food.tools, id: \.name) { item in
-                    Chip(title: store.toolLabel(item.name), isSelected: session.tool == item.name) {
+                    Chip(title: store.toolLabel(item.name), imageName: item.toolImageName, isSelected: session.tool == item.name) {
                         session.toggleTool(item.name)
                     }
                 }

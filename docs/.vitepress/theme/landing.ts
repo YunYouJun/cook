@@ -82,7 +82,9 @@ export const groupLabels = ['齐全', '差一种', '差两种']
  * 「飞进篮子」：沿一条先上扬再落下的二次贝塞尔弧线飞过去，最后三分之一才变小变淡。
  * 和 App 的 BasketFlight 同一条曲线；坐标都相对 layer。
  */
-export function flyEmoji(layer: HTMLElement, label: string, from: DOMRect, to: DOMRect, options: { size?: number, duration?: number, lift?: number } = {}) {
+export function flyEmoji(layer: HTMLElement, label: string, from: DOMRect, to: DOMRect, options: { size?: number, duration?: number, lift?: number, signal?: AbortSignal } = {}): Promise<void> {
+  if (options.signal?.aborted || prefersReducedMotion() || typeof layer.animate !== 'function')
+    return Promise.resolve()
   const base = layer.getBoundingClientRect()
   // 外层被 transform 缩放时，getBoundingClientRect 是缩放后的尺寸
   const scale = base.width / (layer.offsetWidth || base.width)
@@ -122,7 +124,13 @@ export function flyEmoji(layer: HTMLElement, label: string, from: DOMRect, to: D
     })
   }
   const animation = el.animate(frames, { duration: options.duration ?? 450, easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)', fill: 'forwards' })
-  return animation.finished.then(() => el.remove(), () => el.remove())
+  const cancel = () => animation.cancel()
+  options.signal?.addEventListener('abort', cancel, { once: true })
+  const cleanup = () => {
+    options.signal?.removeEventListener('abort', cancel)
+    el.remove()
+  }
+  return animation.finished.then(cleanup, cleanup)
 }
 
 /** 数字滚动到目标值，像 App 里的 numericText；减弱动态效果时直接跳 */

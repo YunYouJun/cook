@@ -24,6 +24,7 @@ tsx-*
 node_modules
 *.log
 dist
+/dist-site/
 .output
 .nuxt
 .env

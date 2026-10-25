@@ -29,6 +29,25 @@ final class PrivateRecipesUITests: XCTestCase {
         app.buttons["保存"].tap()
         let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", name)).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 10), "New context saves must update the live @Query list")
+        // Compact layouts use the system search field; wide layouts use a toolbar
+        // text field. Both must filter the live list and restore it after clearing.
+        let systemSearch = app.searchFields["菜名或食材"]
+        let search = systemSearch.exists ? systemSearch : app.textFields["菜名或食材"]
+        XCTAssertTrue(search.waitForExistence(timeout: 10))
+        search.tap()
+        search.typeText("不存在的食材")
+        let hiddenRow = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: row)
+        XCTAssertEqual(XCTWaiter().wait(for: [hiddenRow], timeout: 10), .completed)
+        let clear = app.buttons["清除搜索"]
+        if clear.exists {
+            clear.tap()
+        } else {
+            search.tap()
+            search.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: "不存在的食材".count))
+        }
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "Clearing the query must restore saved recipes")
+        search.tap()
+        search.typeText("\n")
         let listScreenshot = XCTAttachment(screenshot: app.screenshot())
         listScreenshot.name = "ios-private-recipes"
         listScreenshot.lifetime = .keepAlways

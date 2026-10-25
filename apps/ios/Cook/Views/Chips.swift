@@ -174,3 +174,17 @@ struct CheckRow: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
+
+/// 厨具图标只用于 iOS 展示，复用做法中已有的器具图形。
+extension StuffItem {
+    var toolImageName: String? {
+        switch name {
+        case "烤箱": return "method-bake"
+        case "空气炸锅": return "tool-air-fryer"
+        case "微波炉": return "method-microwave"
+        case "电饭煲": return "tool-rice-cooker"
+        case "一口大锅": return "method-stir-fry"
+        default: return nil
+        }
+    }
+}
