@@ -78,4 +78,4 @@ Schema 候选以实际 `NSManagedObjectModel`、Apple 映射和现有三类全�
 
 ### 公开政策及 App Store 元数据
 
-文档站隐私政策已加入源码并可构建。检查时 `https://cook.yunyoujun.cn/docs/privacy` 返回 HTTP 404，因此 App 只提供完整离线政策，没有链接到这个尚未发布的地址。2026-10-24 复核已确认 `https://cook-docs.pages.dev/privacy` 在普通浏览器中直接显示完整政策；应使用该可访问地址，App Store Connect 配置及 App 隐私申报仍需单独核验。历史 404 地址不再作为发布入口。
+文档站隐私政策已加入源码并可构建。检查时 `https://cook.yunyoujun.cn/docs/privacy` 返回 HTTP 404，因此 App 只提供完整离线政策，没有链接到这个尚未发布的地址。2026-10-24 复核已确认 `https://cook-docs.pages.dev/privacy` 在普通浏览器中直接显示完整政策；这是当时的验证地址。当前发布资料统一使用 `https://cook.yunle.fun/privacy`；2026-10-25 已更新并回读确认 App Store Connect 的隐私政策地址，旧 Pages 项目已删除，见[文档站部署](./docs-site.md)。App 隐私申报仍需单独核验。历史 404 地址不再作为发布入口。

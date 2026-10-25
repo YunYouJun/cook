@@ -54,12 +54,12 @@ The maintainer has not yet completed real production iCloud transfer and dual-de
 
 | 用途       | 地址与状态                                                                                   |
 | ---------- | -------------------------------------------------------------------------------------------- |
-| 隐私政策   | `https://docs.cook.yunle.fun/privacy`，包含私人菜谱和个人词典说明；原 Pages 地址继续可用     |
+| 隐私政策   | `https://cook.yunle.fun/privacy`，包含私人菜谱和个人词典说明；提交前核验官网页面             |
 | 支持中心   | `https://support.yunle.fun/?product=cook`，已验证 HTTP 200                                   |
 | 需求墙     | `https://support.yunle.fun/feedback?product=cook`，已验证 HTTP 200；公开建议，不接收私密数据 |
-| 内测说明页 | `https://docs.cook.yunle.fun/guide/ios-beta`，包含安装、测试范围、已知限制与反馈方式         |
+| 内测说明页 | `https://cook.yunle.fun/guide/ios-beta`，包含安装、测试范围、已知限制与反馈方式              |
 
-已有 Cloudflare Pages 项目 `cook-docs` 绑定 `docs.cook.yunle.fun`，使用 `vitepress-theme-yunlefun`；无需另建报名数据库或营销站。部署方式见 [文档站部署](./docs-site.md)。填写 Apple 材料前需确认正式域名的 HTTPS 与对应页面可访问。旧地址 `https://cook.yunyoujun.cn/docs/privacy` 返回 404，不可填入审核资料。
+官网与文档共用 `vitepress-theme-yunlefun`，无需另建报名数据库或营销站。旧文档 Pages 项目已于 2026-10-25 删除，旧域名由独立 Worker 永久重定向到官网，部署与验收记录见[文档站部署](./docs-site.md)。App Store Connect 与 TestFlight 的 `zh-Hans` 隐私政策地址已更新为官网并回读确认，TestFlight 营销地址也已更新为官网内测说明页。后续填写 Apple 材料前仍需核验官网 HTTPS、页面内容与平台保存值。旧地址 `https://cook.yunyoujun.cn/docs/privacy` 返回 404，不可填入审核资料。
 
 ## 开放前待办
 

@@ -89,9 +89,9 @@ jobs:
       - run: pnpm run build
       - name: Build documentation
         run: pnpm run docs:build
-      - name: Verify product site composition
+      - name: Verify product site composition and legacy redirect
         run: |
-          node --test test/productSiteBuild.test.mjs
+          node --test test/docsRedirect.test.mjs test/productSiteBuild.test.mjs
           node scripts/compose-product-site.mjs
 
   test:

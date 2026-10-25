@@ -11,7 +11,8 @@
 
 - `cook.yunle.fun` 根路径作为云食册官网，复用文档中的食材入锅与手机演示设计，和使用指南、开发文档、隐私政策共用一套 VitePress 站点。
 - `cook.yunyoujun.cn` 继续提供食用手册网页版，官网的主要使用入口明确跳到该域名。
-- `docs.cook.yunle.fun` 保持旧文档链接兼容，使用同一份源内容，canonical 指向新官网；永久重定向须等新域名文档上线验证后再配置。
+- `docs.cook.yunle.fun` 仅保留历史链接兼容：由独立的 Cloudflare Worker `cook-docs-redirect` 按原路径与查询参数返回 HTTP 301，目标为 `https://cook.yunle.fun`。2026-10-25 验证官网内容、独立重定向和托管证书后，已删除 Cloudflare Pages `cook-docs`，不再维护第二份站点部署。
+- App、仓库公开链接及平台资料中的文档 URL 统一使用官网；App Store Connect 原先保存的 `cook-docs.pages.dev` 隐私政策地址与 TestFlight 的旧域名链接均已更新并回读，GitHub 仓库主页也已改为官网。具体操作与验收记录见[官网、文档与网页版部署](/dev/docs-site)。
 - 微信审核已经填写的 `cook.yunyoujun.cn/about/` 和协议继续保留；本次不重新修改微信申请地址。
 - 下载入口按真实发布状态提供。尚未上架或没有公开安装邀请时，提供版本状态与体验报名说明，不制造下载链接。
 

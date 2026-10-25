@@ -1,0 +1,13 @@
+{
+  "name": "cook-docs-redirect",
+  "main": "index.mjs",
+  "account_id": "1c4b352e9e5f7d5655da259e1404ca80",
+  "compatibility_date": "2026-10-25",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "docs.cook.yunle.fun",
+      "custom_domain": true
+    }
+  ]
+}

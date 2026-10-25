@@ -9,11 +9,11 @@
 
 ### 网页版本
 
-- 网站链接（Cloudflare）：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)
-  - 国内加速（腾讯云）：[cook.yunle.fun](https://cook.yunle.fun)
+- 官网与文档：[cook.yunle.fun](https://cook.yunle.fun)
+- 网页应用：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)
 - 开发版（Vercel）：[cook.yunle.app](https://cook.yunle.app)
 
-本仓库不再配置 Netlify 自动部署；其余网站入口和部署配置保持不变。
+本仓库不再配置 Netlify 自动部署；当前部署配置见[文档站点部署说明](./docs/dev/docs-site.md)。
 
 ### 小程序版本
 
@@ -45,7 +45,7 @@
 
 ## 开发
 
-**开发文档**：<https://docs.cook.yunle.fun/>
+**开发文档**：<https://cook.yunle.fun/>
 
 详细的环境配置、飞书数据拉取等说明请查看开发文档。
 
@@ -76,7 +76,7 @@ pnpm fetch
 pnpm convert
 ```
 
-更多 CLI 使用说明请查看 [Cook CLI 文档](https://docs.cook.yunle.fun/dev/cli)。
+更多 CLI 使用说明请查看 [Cook CLI 文档](https://cook.yunle.fun/dev/cli)。
 
 ### 开发 APP
 

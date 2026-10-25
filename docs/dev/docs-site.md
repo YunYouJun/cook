@@ -2,13 +2,13 @@
 
 ## 域名分工
 
-| 地址                  | 用途                                          | 部署产物               |
-| --------------------- | --------------------------------------------- | ---------------------- |
-| `cook.yunle.fun`      | 云食册产品官网、iOS 发布信息和使用 / 开发文档 | `dist-site`            |
-| `cook.yunyoujun.cn`   | 食用手册网页版                                | `dist`                 |
-| `docs.cook.yunle.fun` | 旧文档入口，保持原文档路径可访问              | `docs/.vitepress/dist` |
+| 地址                  | 用途                                          | 部署产物                   |
+| --------------------- | --------------------------------------------- | -------------------------- |
+| `cook.yunle.fun`      | 云食册产品官网、iOS 发布信息和使用 / 开发文档 | `dist-site`                |
+| `cook.yunyoujun.cn`   | 食用手册网页版                                | `dist`                     |
+| `docs.cook.yunle.fun` | 旧文档入口，按原路径永久重定向到官网          | 独立重定向服务，无站点构建 |
 
-文档和产品首页共用 `docs` 中的一份 VitePress 源码、导航和搜索，标准地址（canonical）与 sitemap 使用 `https://cook.yunle.fun`。`docs.cook.yunle.fun` 兼容旧链接，不维护第二套内容。微信开放平台已经提交的 `https://cook.yunyoujun.cn/about/` 及其用户协议保留可用，审核期间不因本次域名分工而删除。
+文档和产品首页共用 `docs` 中的一份 VitePress 源码、导航和搜索，标准地址（canonical）与 sitemap 使用 `https://cook.yunle.fun`。App、公开页面、README 和平台资料中的文档链接统一使用官网。旧文档域名只承担历史链接兼容，不再部署第二份内容。微信开放平台已经提交的 `https://cook.yunyoujun.cn/about/` 及其用户协议保留可用，审核期间不因本次域名分工而删除。
 
 ## 本地开发与构建
 
@@ -42,13 +42,40 @@ pnpm build:site
 
 ### 网页版：EdgeOne `yunyoujun-cook`
 
-网页版使用独立的 Upload 项目，输出仍为 `dist`。官网改版不应把 `dist-site` 上传到此项目，也不应覆盖网页版或审核中的 `/about/`。现有版本发布流程仍按仓库 release workflow 执行。
+网页版使用独立的 Upload 项目，输出仍为 `dist`。`scripts/copy-web-output.ts` 将根目录 `edgeone.json` 一并复制到上传产物，使授权回调的 `no-store` / `no-referrer` 等响应头随直接上传生效。官网改版不应把 `dist-site` 上传到此项目，也不应覆盖网页版或审核中的 `/about/`。现有版本发布流程仍按仓库 release workflow 执行。
 
-### 旧文档域名：Cloudflare Pages `cook-docs`
+### 旧文档域名退役
 
-继续复用 `cook-docs` 项目，生产分支 `main`，输出 `docs/.vitepress/dist`。`docs.cook.yunle.fun` 的自定义域及 `CNAME docs.cook → cook-docs.pages.dev` 保留；`docs/public/CNAME` 记录这一兼容域，实际绑定由平台和 DNS 管理。
+`docs.cook.yunle.fun` 已通过 YunLeFun 账户中独立的 Cloudflare Worker `cook-docs-redirect` 返回 HTTP 301，目标固定为 `https://cook.yunle.fun`，保留请求路径与查询参数。例如 `/guide/ios-beta?source=legacy` 跳到 `https://cook.yunle.fun/guide/ios-beta?source=legacy`，不统一跳到首页，也不依赖已删除的 Pages 项目。
 
-旧域名暂时提供同一份官网 / 文档构建，并指向新域名的 canonical。完成新官网上线验证后，可以再设置逐路径永久重定向；不要在新域名还没有文档内容时提前切走隐私政策、体验报名等链接。
+源码位于 [workers/docs-redirect/index.mjs](https://github.com/YunYouJun/cook/blob/main/workers/docs-redirect/index.mjs)，部署配置位于 [workers/docs-redirect/wrangler.jsonc](https://github.com/YunYouJun/cook/blob/main/workers/docs-redirect/wrangler.jsonc)。配置将 `docs.cook.yunle.fun` 声明为 Custom Domain，关闭 `workers.dev` 入口；Worker 只改写目标协议、主机和端口，不请求 Pages 源站。
+
+从仓库根目录使用已授权的 YunLeFun Cloudflare 账户部署：
+
+```bash
+pnpm dlx wrangler@4.152.0 deploy --config workers/docs-redirect/wrangler.jsonc --no-bundle
+```
+
+Worker 使用 Custom Domain 绑定旧域名，由 Cloudflare 为该绑定自动管理独立的 TLS 证书。区域免费 Universal SSL 的 `*.yunle.fun` 证书不覆盖更深一级的 `docs.cook.yunle.fun`，不能把旧 Pages 证书或一级通配符证书当作迁移后的 HTTPS 保障；必须等待 Worker 自定义域证书生效并实际验证。
+
+**迁移记录（2026-10-25）：** App Store Connect 的 `zh-Hans` App 信息隐私政策地址已从 `https://cook-docs.pages.dev/privacy` 更新为 `https://cook.yunle.fun/privacy`，并通过 API 回读确认。iOS 版本的营销地址 `https://cook.yunle.fun/` 与支持地址 `https://support.yunle.fun/?product=cook` 已核验，无需修改。TestFlight 的 `zh-Hans` 隐私政策与营销地址也已分别更新为 `https://cook.yunle.fun/privacy` 和 `https://cook.yunle.fun/guide/ios-beta`，并回读确认。GitHub 仓库主页已更新为 `https://cook.yunle.fun/`。
+
+- Worker 版本 `d1701c13-3653-4a90-8803-38aa8ddfddcd` 已部署，Custom Domain 与权威 DNS 均已切换到独立 Worker。
+- 独立托管证书状态为 active，实际 TLS 证书 SAN 包含 `docs.cook.yunle.fun`，本次回读的有效期截止到 `2027-01-23 08:51:07 GMT`。证书由 Cloudflare 自动续期，不依赖旧 Pages。
+- 删除前，18 项 HTTP / HTTPS 路径、查询参数、编码路径及不存在路径检查均返回准确的 301 与 `Location`；4 个官网目标页面返回 200。浏览器验证最终地址为 `https://cook.yunle.fun/guide/ios-beta?source=legacy#ios`，查询参数与片段均保留。
+- 因 Cloudflare 的项目删除限制，先清理 311 个历史部署，再删除 `cook-docs` 项目；17:03（Asia/Shanghai）项目列表回读确认该项目已不存在。17:06 删除后命令行复测 `/privacy`，curl、Googlebot、bingbot 三种 User-Agent 均得到 301。
+- 随后浏览器对根路径、隐私政策、协议、内测说明、CLI 文档、`.html` 地址、带查询参数与片段的指南、不存在路径及编码路径完成 9 项复测，每次附加唯一查询参数以避开旧重定向缓存。最终地址均为官网且完整保留路径、查询参数和测试片段；不存在路径与编码测试路径显示官网 404 标题。这组浏览器结果验证最终 URL 与页面标题，不据此推断中间 HTTP 状态。
+- 复测期间，本机命令行连接旧域名及其他 Cloudflare 主机出现 TLS reset，同时浏览器带新查询参数的访问正常。本记录保留这一访问差异，不推断原因，也不将浏览器成功表述为所有命令行连接均正常。
+
+维护与复验顺序：
+
+1. 先验证官网的隐私政策、用户协议、使用指南和内测说明页已上线，HTTPS、内容与路径正确。
+2. 配置独立重定向服务及旧域名的 DNS / TLS。原绑定为 `CNAME docs.cook → cook-docs.pages.dev`；迁移后不能继续依赖这个 Pages 源站或它的证书。保留旧域名和有效证书，让历史链接继续可用。
+3. 核验 HTTP / HTTPS 的根路径、`/privacy`、`/terms`、`/guide/ios-beta`、`/dev/cli`、带查询参数及编码路径的请求均返回正确 301 和 `Location`，没有循环；不存在的路径也原样跳转，由官网返回 404。
+4. 将 App Store Connect、TestFlight 和微信开放平台中实际保存的旧文档 URL 更新为官网地址并回读。尤其检查 `https://cook-docs.pages.dev/privacy`：历史验收记录曾将其写入 App Store Connect，旧自定义域的重定向不能兼容这个提供商地址。已有网页版审核页和 Universal Links 继续使用原地址。
+5. 确认独立重定向已生效、平台不再使用旧 Pages 地址后，再解绑旧 Pages 自定义域并删除 `cook-docs` 项目。删除后复测旧域名的 301 与官网页面。
+
+移除旧的 `docs/public/CNAME`，不把它改成官网域名。官网由 EdgeOne 自定义域配置管理，不需要 GitHub Pages 的 CNAME 文件；避免把旧部署标记复制到新的产物或绑定无关的 GitHub Pages 根站点。
 
 ## 迁移约束与验收
 
@@ -61,6 +88,7 @@ pnpm build:site
 - `/guide/getting-started`、`/guide/ios-beta`、`/privacy`、`/terms` 可访问，中文搜索可用。
 - 原域名 `/home`、`/settings`、`/auth/callback`、`/.well-known/apple-app-site-association` 和 `/sw.js` 保留。
 - `cook.yunyoujun.cn` 的网页版、`/about/` 与 `/about/terms.html` 保持可用。
-- 旧文档隐私政策及体验报名链接仍可访问。
+- 旧文档域名在删除 Pages 项目后仍按原路径与查询参数返回 301，隐私政策及体验报名链接最终可访问。
+- 平台资料中的文档链接已改为官网；历史 Pages 部署记录只作为证据，不再作为填写指南。
 
 `yunle.fun` 网站页脚使用该域名在云乐坊官网公开的备案号；不要复制 `yunyoujun.cn` 的个人域名备案号。网站备案不等于 App 备案或微信能力审核通过。只有取得实际 App Store / TestFlight 安装链接并决定开放后，才更新下载入口。
