@@ -51,6 +51,24 @@
   outline: 3px solid var(--vp-c-brand-1);
   outline-offset: 4px;
 }
+/* Keep the full navigation usable before the mobile menu breakpoint. */
+@media (min-width: 768px) and (max-width: 959px) {
+  .VPNavBarSearch .VPNavBarSearchButton {
+    justify-content: center;
+    width: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0;
+  }
+  .VPNavBarSearch .VPNavBarSearchButton .text,
+  .VPNavBarSearch .VPNavBarSearchButton .keys {
+    display: none;
+  }
+  .VPNavBarMenu .VPNavBarMenuLink {
+    padding-inline: 4px;
+  }
+}
+
 @media (max-width: 380px) {
   .cook-landing {
     padding-inline: 8px;
