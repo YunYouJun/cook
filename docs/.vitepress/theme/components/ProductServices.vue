@@ -16,12 +16,13 @@ const docs = [
         现在，先做一顿饭
       </h2>
       <p class="section-lead">
-        食用手册网页版已经可以使用。云食册 iOS {{ iosVersion }} 正在准备发布，需要 iOS 17 / iPadOS 17 或更新版本。
+        食用手册网页版打开即用。云食册 iOS {{ iosVersion }} 已开放 TestFlight 外测，需要 iOS 17 / iPadOS 17 或更新版本。
       </p>
-      <p><strong>iOS 版尚未在 App Store 上架，暂无公开 TestFlight 安装邀请。</strong>首批体验报名已开放，报名不代表获得安装资格；审核与验收完成后再分批邀请。</p>
+      <p><strong>首批开放 30 个体验名额，通过公开链接自助加入。</strong>可用名额以 TestFlight 页面为准；iOS 版尚未在 App Store 正式上架。</p>
       <div class="service-actions">
-        <a class="service-button vp-raw" :href="links.web" target="_self">打开食用手册网页版</a>
-        <a class="service-link" :href="links.signup">了解 iOS 体验报名</a>
+        <a class="service-button vp-raw" :href="links.testflight" target="_blank" rel="noopener noreferrer">安装 iOS 测试版</a>
+        <a class="service-link" :href="links.betaGuide">查看测试说明</a>
+        <a class="service-link vp-raw" :href="links.web" target="_self">打开网页版</a>
       </div>
       <p class="service-note">
         以前在 cook.yunle.fun 用过网页版？<a class="service-link" href="/guide/web-domain">查看旧版数据导出与迁移说明</a>。

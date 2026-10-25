@@ -49,7 +49,7 @@ function missingText(missing: string[]) {
           </p>
           <p class="app-status">
             <span class="status-dot" aria-hidden="true" />
-            <span>网页版可用 · iOS 准备中</span>
+            <span>网页版可用 · iOS 外测中</span>
           </p>
         </div>
       </div>
@@ -60,11 +60,11 @@ function missingText(missing: string[]) {
         选几样冰箱里有的，从 {{ total }} 道菜谱里找做饭灵感。食用手册网页版打开即用，原生 iOS 版「云食册」把自己的厨房装进口袋。
       </p>
       <div class="sky-actions">
-        <a class="btn btn-yolk vp-raw" :href="links.web" target="_self">打开食用手册网页版</a>
-        <a class="btn btn-ghost" href="/guide/getting-started">阅读使用指南</a>
+        <a class="btn btn-yolk vp-raw" :href="links.testflight" target="_blank" rel="noopener noreferrer">安装 iOS 测试版</a>
+        <a class="btn btn-ghost vp-raw" :href="links.web" target="_self">打开食用手册网页版</a>
       </div>
       <p class="sky-note">
-        基础做菜功能无需登录。iOS {{ iosVersion }} 尚未在 App Store 上架。<a href="#availability">查看版本与体验报名</a>
+        基础做菜功能无需登录。iOS {{ iosVersion }} 已开放首批 30 人 TestFlight 测试。<a :href="links.betaGuide">查看测试范围与安装说明</a>
       </p>
     </div>
 

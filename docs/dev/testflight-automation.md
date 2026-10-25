@@ -1,6 +1,6 @@
 # TestFlight 外测自动化
 
-首批外测采用 **准备精确候选 → Apple 审核 → 完成该候选的验收 → 30 人自助加入**。当前候选为 `2.0.0 (7)`，Apple 构建 ID 为 `3f9e3992-bceb-4687-9346-875bf527fe0c`；2026-10-26 已上传并回读为 `VALID / APP_STORE_ELIGIBLE / BETA_APPROVED`，八项模拟器策略验收及维护者确认已绑定，开放门禁为零阻塞。首批外测组仅关联构建 7，0 位测试者，自动通知与公开邀请关闭；30 人为首次开放上限。具体证据和未实测范围见[验收记录](./ios-candidate-7-validation.md)。
+首批外测采用 **准备精确候选 → Apple 审核 → 完成该候选的验收 → 30 人自助加入**。当前候选为 `2.0.0 (7)`，Apple 构建 ID 为 `3f9e3992-bceb-4687-9346-875bf527fe0c`；2026-10-26 已上传并回读为 `VALID / APP_STORE_ELIGIBLE / BETA_APPROVED`，八项模拟器策略验收及维护者确认已绑定，开放门禁为零阻塞。首批外测组仅关联构建 7；公开邀请已开启并回读确认上限 30 人，自动通知关闭。真实入口为[加入 TestFlight](https://testflight.apple.com/join/KTTJNhDh)，具体可用名额以 Apple 页面为准。具体证据和未实测范围见[验收记录](./ios-candidate-7-validation.md)。
 
 ## 手动发布
 

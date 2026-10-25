@@ -15,7 +15,7 @@ description: 云食册与食用手册的服务内容、使用规则、数据与�
 
 产品提供根据食材和厨具查找菜谱、查看做法来源、收藏与浏览记录、随机菜单等功能；iOS 版还提供私人菜谱、冰箱食材记录和本地临期提醒。不同平台、系统和版本的功能可能不同，以实际可用界面与相应说明为准。
 
-**云食册 iOS 版目前尚未在 App Store 上架。**本网站展示的 iOS 界面来自开发版本，不表示已经提供公开下载、TestFlight 邀请、付费订阅或其他尚未公布的服务。食用手册网页版可通过 <a class="vp-raw" href="https://cook.yunyoujun.cn/" target="_self">食用手册网页版</a>使用。
+**云食册 iOS 版目前尚未在 App Store 上架。**iOS 版通过 TestFlight 提供小范围体验，安装入口、名额和测试范围见[体验测试说明](/guide/ios-beta#testflight)。本网站展示的 iOS 界面来自开发版本，未公布的功能与付费服务不构成提供承诺。食用手册网页版可通过 <a class="vp-raw" href="https://cook.yunyoujun.cn/" target="_self">食用手册网页版</a>使用。
 
 ## 二、账号与功能选择
 
