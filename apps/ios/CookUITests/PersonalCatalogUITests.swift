@@ -58,6 +58,21 @@ final class PersonalCatalogUITests: XCTestCase {
         ingredient.tap()
         XCTAssertTrue(ingredient.isSelected || ingredient.value as? String == "已选")
         capture(app, "ios-custom-ingredient-selected")
+
+        app.buttons["筛选"].tap()
+        let avoid = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "忌口")).firstMatch
+        for _ in 0..<4 where !avoid.isHittable { app.swipeUp() }
+        XCTAssertTrue(avoid.waitForExistence(timeout: 10))
+        avoid.tap()
+        let avoidSearch = app.searchFields["搜索食材或别名"]
+        XCTAssertTrue(avoidSearch.waitForExistence(timeout: 10))
+        avoidSearch.tap()
+        avoidSearch.typeText("鹰嘴豆")
+        let excluded = app.buttons["avoid.item.鹰嘴豆"]
+        XCTAssertTrue(excluded.waitForExistence(timeout: 10), "个人食材仍可在忌口选择器中搜索")
+        excluded.tap()
+        XCTAssertTrue(app.buttons["avoid.remove.鹰嘴豆"].waitForExistence(timeout: 10))
+        capture(app, "ios-custom-ingredient-excluded")
     }
 
     @MainActor

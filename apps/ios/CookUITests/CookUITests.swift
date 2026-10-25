@@ -257,6 +257,159 @@ final class CookUITests: XCTestCase {
         element.tap()
     }
 
+    @MainActor
+    func testFilterCountUpdatesWithoutClosingSheet() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launch()
+
+        tap(app.buttons["筛选"])
+        let hint = app.descendants(matching: .any)["filter.selectionHint"].firstMatch
+        wait(hint, "exists == true")
+        let count = app.descendants(matching: .any)["filter.resultCount"].firstMatch
+        XCTAssertFalse(count.exists)
+        tap(app.buttons["完成"])
+        wait(hint, "exists == false")
+
+        tap(app.buttons["番茄"])
+        tap(app.buttons["鸡蛋"])
+        tap(app.buttons["筛选"])
+        wait(count, "exists == true")
+        let initialLabel = count.label
+        let stirFry = app.buttons["炒菜"]
+        tap(stirFry)
+        wait(stirFry, "isSelected == true")
+        let changed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", initialLabel), object: count)
+        XCTAssertEqual(XCTWaiter().wait(for: [changed], timeout: timeout), .completed)
+        XCTAssertTrue(app.buttons["完成"].exists, "结果数量在弹层内即时更新")
+        capture(app, "ios-filter-live-count")
+        tap(app.buttons["清除"])
+        let restored = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", initialLabel), object: count)
+        XCTAssertEqual(XCTWaiter().wait(for: [restored], timeout: timeout), .completed)
+        tap(app.buttons["完成"])
+        wait(stirFry, "exists == false")
+
+        if app.windows.firstMatch.horizontalSizeClass != .regular {
+            let results = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "看看能做什么")).firstMatch
+            wait(results, "exists == true")
+            // isNumber 也会把「什么」的「什」识别成数字，只比较界面显示的十进制数字。
+            let resultCount = results.label.filter { $0.isASCII && $0.isNumber }
+            let previewCount = initialLabel.filter { $0.isASCII && $0.isNumber }
+            XCTAssertEqual(resultCount, previewCount, "筛选预览和结果入口数量一致")
+        }
+    }
+
+    @MainActor
+    func testPantryShelfRemembersChoicesAndRestoresDefaults() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launch()
+
+        tap(app.buttons["筛选"])
+        let pantry = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "家里常备")).firstMatch
+        for _ in 0..<4 where !pantry.isHittable { app.swipeUp() }
+        tap(pantry)
+        let oil = app.buttons["pantry.item.油"]
+        let salt = app.buttons["pantry.item.盐"]
+        let pepper = app.buttons["pantry.item.胡椒粉"]
+        let ginger = app.buttons["pantry.item.姜"]
+        wait(oil, "isSelected == true")
+        wait(salt, "isSelected == true")
+        tap(pepper)
+        wait(pepper, "isSelected == true")
+        tap(oil)
+        wait(oil, "isSelected == false")
+        // 半屏弹层先滚到下一层，懒加载的葱姜蒜进入视口后才有无障碍元素。
+        if !ginger.exists { app.swipeUp() }
+        tap(ginger)
+        wait(ginger, "isSelected == true")
+
+        tap(app.buttons["BackButton"].firstMatch)
+        wait(pantry, "label CONTAINS '等 3 种'")
+        tap(pantry)
+        wait(oil, "isSelected == false")
+        wait(pepper, "isSelected == true")
+        if !ginger.exists { app.swipeUp() }
+        wait(ginger, "isSelected == true")
+        tap(app.buttons["恢复默认"])
+        if !oil.exists { app.swipeDown() }
+        wait(oil, "isSelected == true")
+        wait(salt, "isSelected == true")
+        wait(pepper, "isSelected == false")
+        wait(ginger, "isSelected == false")
+        wait(app.buttons["恢复默认"], "isEnabled == false")
+        capture(app, "ios-pantry-defaults")
+    }
+
+    @MainActor
+    func testAvoidPickerSearchKeepsSelectionsAvailableForRemoval() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launch()
+        tap(app.buttons["筛选"])
+        let avoid = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "忌口")).firstMatch
+        if !avoid.exists { app.swipeUp() }
+        tap(avoid)
+        let search = app.searchFields["搜索食材或别名"]
+
+        for (index, entry) in [("西红柿", "番茄"), ("虾", "虾")].enumerated() {
+            let (query, name) = entry
+            tap(search)
+            if index > 0 {
+                tap(search.buttons["清除文本"])
+                tap(search)
+            }
+            search.typeText(query)
+            let item = app.buttons["avoid.item.\(name)"]
+            tap(item)
+            wait(item, "isSelected == true")
+            wait(app.buttons["avoid.remove.\(name)"], "exists == true")
+        }
+        tap(search)
+        tap(search.buttons["清除文本"])
+        tap(search)
+        search.typeText("不存在的食材")
+        wait(app.staticTexts["avoid.noSearchResults"], "exists == true")
+        let tomato = app.buttons["avoid.remove.番茄"]
+        let shrimp = app.buttons["avoid.remove.虾"]
+        wait(tomato, "exists == true")
+        wait(shrimp, "exists == true")
+        tap(tomato)
+        wait(tomato, "exists == false")
+        wait(shrimp, "exists == true")
+        capture(app, "ios-avoid-selection-during-search")
+
+        let closeSearch = app.buttons.matching(NSPredicate(format: "label IN %@", ["关闭", "取消"])).firstMatch
+        if closeSearch.exists {
+            tap(closeSearch)
+        } else {
+            tap(search)
+            search.typeText("\n")
+            let clearSearch = search.buttons["清除文本"]
+            if clearSearch.exists { tap(clearSearch) }
+        }
+        tap(app.buttons["BackButton"].firstMatch)
+        wait(avoid, "label CONTAINS '虾'")
+        tap(avoid)
+        wait(shrimp, "exists == true")
+        let clear = app.navigationBars["忌口"].buttons["清空"]
+        tap(clear)
+        wait(app.staticTexts["avoid.emptySelection"], "exists == true")
+        wait(shrimp, "exists == false")
+        wait(clear, "isEnabled == false")
+    }
+
+    @MainActor
+    private func capture(_ app: XCUIApplication, _ name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     /// 等控件满足条件，超时就让用例失败，失败信息里写明是哪个控件、等的什么
     @MainActor
     private func wait(_ element: XCUIElement, _ condition: String, file: StaticString = #filePath, line: UInt = #line) {
