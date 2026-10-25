@@ -24,6 +24,12 @@ const categories = appFeedbackCategories.map(item => ({ value: item.category, la
         <p class="receipt-id">
           反馈编号：{{ receipt.id }}
         </p>
+        <template v-if="receipt.ticketUrl">
+          <YlfButton tag="a" :href="receipt.ticketUrl" rel="noreferrer">
+            查看私密工单与回复
+          </YlfButton>
+          <p>请保存私密链接，不要转发。你可以在工单页补充信息、确认已读；微信通知开通后也可在那里开启。</p>
+        </template>
         <YlfButton variant="secondary" @click="receipt = undefined">
           继续反馈
         </YlfButton>
