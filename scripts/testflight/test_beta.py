@@ -15,6 +15,8 @@ class BetaTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.directory = Path(self.temp.name)
         self.c = beta.read(Path(__file__).with_name('candidate.json'))
+        # Keep default production-policy tests independent of the live candidate policy.
+        self.c.pop('acceptancePolicy', None)
         evidence = self.directory / 'device-evidence.txt'
         evidence.write_text('Synthetic device evidence for isolated gate tests, never production.')
         check = {'passed': True, 'testedAt': '2026-10-01T00:00:00Z',
