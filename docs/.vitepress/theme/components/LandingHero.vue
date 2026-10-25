@@ -286,6 +286,10 @@ function missingText(missing: string[]) {
   color: var(--ink);
 }
 
+.btn-yolk:is(:hover, :focus-visible) {
+  color: var(--ink);
+}
+
 .btn-yolk:not(.is-pending):hover {
   background: #fde047;
 }
@@ -293,6 +297,10 @@ function missingText(missing: string[]) {
 .btn-ghost {
   color: #fff;
   box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.6);
+}
+
+.btn-ghost:is(:hover, :focus-visible) {
+  color: #fff;
 }
 
 .btn-ghost:hover {

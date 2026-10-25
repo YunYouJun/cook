@@ -113,6 +113,9 @@ const docs = [
   color: #fff;
   font-weight: 600;
 }
+.service-button:is(:hover, :focus-visible) {
+  color: #fff;
+}
 .service-link,
 .contact-links a {
   color: var(--vp-c-brand-1);
