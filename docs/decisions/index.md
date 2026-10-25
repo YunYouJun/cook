@@ -26,3 +26,4 @@
 | [0012](./0012-feedback-channels)     | 反馈渠道分流                         | 已采纳 |
 | [0013](./0013-private-recipes)       | 私人菜谱与跨端文件迁移               | 提议中 |
 | [0014](./0014-personal-catalog)      | 个人食材和厨具                       | 已实施 |
+| [0015](./0015-product-site-domains)  | 官网与网页版域名分工                 | 已采纳 |

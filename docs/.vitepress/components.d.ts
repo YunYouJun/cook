@@ -12,8 +12,13 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    CookLanding: typeof import('./theme/components/CookLanding.vue')['default']
     DocsProjectCard: typeof import('./../../node_modules/.pnpm/@yunyoujun+docs@0.1.14_vite@8.2.1_@types+node@25.9.5_esbuild@0.28.2_jiti@2.7.0_sass@1.1_36a5fa0507118b7279013ea35a3fd8ec/node_modules/@yunyoujun/docs/client/components/DocsProjectCard.vue')['default']
     DocsProjectList: typeof import('./../../node_modules/.pnpm/@yunyoujun+docs@0.1.14_vite@8.2.1_@types+node@25.9.5_esbuild@0.28.2_jiti@2.7.0_sass@1.1_36a5fa0507118b7279013ea35a3fd8ec/node_modules/@yunyoujun/docs/client/components/DocsProjectList.vue')['default']
+    LandingHero: typeof import('./theme/components/LandingHero.vue')['default']
+    PhoneDemo: typeof import('./theme/components/PhoneDemo.vue')['default']
+    ProductGallery: typeof import('./theme/components/ProductGallery.vue')['default']
+    ProductServices: typeof import('./theme/components/ProductServices.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }
@@ -21,8 +26,13 @@ declare module 'vue' {
 
 // For TSX support
 declare global {
+  const CookLanding: typeof import('./theme/components/CookLanding.vue')['default']
   const DocsProjectCard: typeof import('./../../node_modules/.pnpm/@yunyoujun+docs@0.1.14_vite@8.2.1_@types+node@25.9.5_esbuild@0.28.2_jiti@2.7.0_sass@1.1_36a5fa0507118b7279013ea35a3fd8ec/node_modules/@yunyoujun/docs/client/components/DocsProjectCard.vue')['default']
   const DocsProjectList: typeof import('./../../node_modules/.pnpm/@yunyoujun+docs@0.1.14_vite@8.2.1_@types+node@25.9.5_esbuild@0.28.2_jiti@2.7.0_sass@1.1_36a5fa0507118b7279013ea35a3fd8ec/node_modules/@yunyoujun/docs/client/components/DocsProjectList.vue')['default']
+  const LandingHero: typeof import('./theme/components/LandingHero.vue')['default']
+  const PhoneDemo: typeof import('./theme/components/PhoneDemo.vue')['default']
+  const ProductGallery: typeof import('./theme/components/ProductGallery.vue')['default']
+  const ProductServices: typeof import('./theme/components/ProductServices.vue')['default']
   const RouterLink: typeof import('vue-router')['RouterLink']
   const RouterView: typeof import('vue-router')['RouterView']
 }

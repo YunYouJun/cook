@@ -1,0 +1,58 @@
+/* Colors follow the Cook app icon; display typography uses local fonts. */
+:root {
+  --vp-c-brand-1: #2563eb;
+  --vp-c-brand-2: #3b82f6;
+  --vp-c-brand-3: #2563eb;
+  --vp-c-brand-soft: rgba(85, 170, 255, 0.16);
+  --cook-font-display: 'Kaiti SC', 'STKaiti', 'KaiTi', 'Songti SC', 'SimSun', serif;
+}
+.dark {
+  --vp-c-brand-1: #7cc0ff;
+  --vp-c-brand-2: #55aaff;
+  --vp-c-brand-3: #3b82f6;
+  --vp-c-brand-soft: rgba(124, 192, 255, 0.16);
+}
+.cook-landing {
+  --sky-1: #55aaff;
+  --sky-2: #2563eb;
+  --sky-3: #1e40af;
+  --cloud: #fff;
+  --yolk: #facc15;
+  --ink: #0f2547;
+  --mist: #eef5ff;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 16px 0;
+  color: var(--vp-c-text-1);
+}
+.dark .cook-landing {
+  --cloud: #e6f0ff;
+  --mist: #131c2e;
+}
+.cook-landing .screens,
+.cook-landing .app-only {
+  padding: 96px 8px 0;
+}
+.cook-landing .section-title {
+  margin: 0;
+  font-family: var(--cook-font-display);
+  font-size: clamp(32px, 4.5vw, 44px);
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+}
+.cook-landing .section-lead {
+  margin: 12px 0 0;
+  font-size: 17px;
+  line-height: 1.8;
+  color: var(--vp-c-text-2);
+}
+.cook-landing :is(a, button, summary):focus-visible {
+  outline: 3px solid var(--vp-c-brand-1);
+  outline-offset: 4px;
+}
+@media (max-width: 380px) {
+  .cook-landing {
+    padding-inline: 8px;
+  }
+}

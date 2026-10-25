@@ -11,6 +11,7 @@
   "scripts": {
     "build": "pnpm run convert && pnpm -C apps/web run generate && tsx scripts/copy-web-output.ts",
     "build:full": "pnpm run fetch && pnpm -C apps/web run generate && tsx scripts/copy-web-output.ts",
+    "build:site": "pnpm run build && pnpm run docs:build && node scripts/compose-product-site.mjs",
     "build:nuxt": "pnpm -C apps/web run build",
     "build:android": "bash ./scripts/android/build.sh",
     "convert": "pnpm -C packages/cook run convert",

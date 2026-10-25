@@ -1,27 +1,12 @@
 ---
-# https://vitepress.dev/reference/default-theme-home-page
 layout: home
-
-hero:
-  name: "Cook"
-  text: "食用手册"
-  tagline: 今天吃什么
-  actions:
-    - theme: brand
-      text: 开始使用
-      link: https://cook.yunyoujun.cn
-    - theme: alt
-      text: 使用说明
-      link: /guide/getting-started
-    - theme: alt
-      text: 报名 iOS 体验
-      link: /guide/ios-beta#signup
-
-features:
-  - title: 用现有食材找菜
-    details: 选择食材和厨具，或输入一句话，看看今天能做什么。
-  - title: 从做法到开火
-    details: 阅读图文做法、打开视频来源，收藏想做和常做的菜。
-  - title: 随手记录自己的厨房
-    details: 云食册 iOS 版支持冰箱食材、临期提醒、私人菜谱和个人食材厨具管理。
+title: 云食册 · 食用手册
+titleTemplate: 有什么食材，就做什么菜
+description: 云食册是食用手册的原生 iOS 应用。根据已有食材找菜，查看产品真实界面、使用指南、用户协议和隐私政策。网页版可直接使用；iOS 2.0.0 尚未在 App Store 上架，体验报名已开放，暂无公开 TestFlight 安装邀请。
 ---
+
+<script setup lang="ts">
+import CookLanding from './.vitepress/theme/components/CookLanding.vue'
+</script>
+
+<CookLanding />
