@@ -1,6 +1,6 @@
 # TestFlight 外测自动化
 
-首批外测采用 **准备精确候选 → Apple 审核 → 完成该候选的验收 → 30 人自助加入**。当前候选为 `2.0.0 (7)`，Apple 构建 ID 为 `3f9e3992-bceb-4687-9346-875bf527fe0c`；2026-10-26 已上传并回读为 `VALID / APP_STORE_ELIGIBLE / BETA_APPROVED`，八项模拟器策略验收及维护者确认已绑定，开放门禁为零阻塞。首批外测组仅关联构建 7，0 位测试者，自动通知与公开邀请关闭；30 人为首次开放上限。具体证据和未实测范围见[验收记录](./ios-candidate-7-validation.md)。
+首批外测采用 **准备精确候选 → Apple 审核 → 完成该候选的验收 → 30 人自助加入**。当前候选为 `2.0.0 (7)`，Apple 构建 ID 为 `3f9e3992-bceb-4687-9346-875bf527fe0c`；2026-10-26 已上传并回读为 `VALID / APP_STORE_ELIGIBLE / BETA_APPROVED`，八项模拟器策略验收及维护者确认已绑定，开放门禁为零阻塞。首批外测组仅关联构建 7；公开邀请已开启并回读确认上限 30 人，自动通知关闭。真实入口为[加入 TestFlight](https://testflight.apple.com/join/KTTJNhDh)，具体可用名额以 Apple 页面为准。具体证据和未实测范围见[验收记录](./ios-candidate-7-validation.md)。
 
 ## 手动发布
 
@@ -22,6 +22,8 @@ python3 scripts/testflight/beta.py reconcile --apply
 # 拉取所有构建的 TestFlight 反馈和崩溃反馈记录
 python3 scripts/testflight/beta.py feedback
 ```
+
+Apple 审核批准后，如果添加构建时关闭了自动通知，还需由维护者对精确构建执行 `asc testflight notifications send --build-id BUILD_ID` 开始测试，再验证公开邀请页确实显示当前应用并允许加入。审核通过、链接开关开启和落地页可加入分别核对；本轮在外部成员为 0 时完成开始测试。参见 [Apple 开始外测说明](https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers/#notify-external-testers-after-your-build-is-approved)。
 
 此入口处理已上传候选的外测发布。新版本编译、签名、验包和上传继续遵循 [构建流程](./ios-testflight.md) 与
 [外测准备](./ios-external-testflight.md)。完成后更新 `scripts/testflight/candidate.json` 的精确构建 ID、版本、源码 SHA 和 IPA SHA-256。

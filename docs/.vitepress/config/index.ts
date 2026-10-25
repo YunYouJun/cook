@@ -43,7 +43,7 @@ export default defineConfig(withYunlefun({
     nav: [
       { text: '产品官网', link: '/' },
       { text: '使用指南', link: '/guide/getting-started' },
-      { text: 'iOS 体验报名', link: '/guide/ios-beta#signup' },
+      { text: 'iOS 测试安装', link: '/guide/ios-beta#testflight' },
       { text: '开发文档', link: '/dev/cli' },
       { text: '方案记录', link: '/decisions/' },
       { text: 'iOS 隐私政策', link: '/privacy' },
@@ -58,7 +58,7 @@ export default defineConfig(withYunlefun({
             { text: '快速开始', link: '/guide/getting-started' },
             { text: '一句话找菜', link: '/guide/sentence-input' },
             { text: '网页版域名与原有数据', link: '/guide/web-domain' },
-            { text: '云食册 iOS 体验报名', link: '/guide/ios-beta#signup' },
+            { text: '云食册 iOS 测试安装', link: '/guide/ios-beta#testflight' },
           ],
         },
       ],

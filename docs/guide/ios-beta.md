@@ -1,43 +1,49 @@
 ---
 title: 云食册 iOS 体验测试
-description: 报名云食册首批 iPhone / iPad 体验测试，了解 TestFlight 邀请、安装方式、测试重点和反馈渠道。
+description: 通过 TestFlight 公开链接加入云食册首批 30 人 iPhone / iPad 外测，了解安装方式、测试范围和反馈渠道。
 ---
 
 # 云食册 iOS 体验测试
 
 有什么食材，就做什么菜。云食册是「食用手册」的原生 iPhone / iPad 应用：选食材和厨具找菜、查看做法、收藏菜谱，也可以记录冰箱和自己的菜谱。
 
-::: info 开放状态
-首批体验报名已开放，构建 2.0.0 (7) 已通过 Apple 外测审核并完成本轮验收，TestFlight 安装邀请尚未开放。启用邀请后本页会同步更新安装入口；填写报名表不代表已获得安装资格。
+::: info 首批 TestFlight 外测已开放
+当前版本 **2.0.0 (7)**，首批上限 **30 人**。通过下方公开链接自助加入，可用名额以 TestFlight 页面为准。
 :::
 
-## 报名首批体验 {#signup}
+## 加入首批体验 {#testflight}
 
-首批计划邀请 **30 位社区体验用户**，需要 iOS 17 / iPadOS 17 或更新版本的 iPhone / iPad。只有一台设备也可以报名；愿意协助双设备同步、文件备份或无障碍测试的用户，可以在表中注明。
+**[通过 TestFlight 加入测试 →](https://testflight.apple.com/join/KTTJNhDh)**
 
-**[填写飞书报名表 →](https://yunlefun.feishu.cn/share/base/shrcnE5rquh26ltScdox1tL1mvQ)**
+需要 iOS 17 / iPadOS 17 或更新版本的 iPhone / iPad。打开链接即可加入，报名表为可选的测试意向与回访登记。只有一台设备也可以参加；如果名额已满，请以 TestFlight 显示的状态为准。
 
-约 1 分钟，无需登录飞书。请填写昵称、可收信的联系邮箱、设备型号和系统版本；测试意向和双设备测试为选填。我们会通过登记的邮箱联系测试安排，报名不保证入选或立即收到邀请。
-
-### 这是内部测试还是外部测试？
-
-这次是面向社区的小范围 **TestFlight 外部测试**。即使私下邀请、人数很少，普通体验用户也无需加入开发者团队。
-
-Apple 的“内部测试”面向 App Store Connect 团队成员，最多 100 人，并涉及相应的后台访问权限。团队协作者的内部名单由开发者单独管理，不通过本报名表授予权限。参见 [Apple 内部测试说明](https://developer.apple.com/help/app-store-connect/test-a-beta-version/add-internal-testers/)。
-
-### 报名信息如何使用？ {#signup-privacy}
-
-报名内容及提交时间保存在飞书，仅由开发者及经授权的协作者用于本次测试筛选、邀请和问题回访，不公开名单。填写入口只用于提交报名，其他填写者无法查看报名记录。
-
-联系邮箱填写常用邮箱即可，不要求提供 Apple 账号邮箱。请勿填写账号密码、验证码、身份证或设备序列号。需要修改、退出或删除报名，可通过登记邮箱联系 [me@yunyoujun.cn](mailto:me@yunyoujun.cn)。飞书提供表单与数据存储服务，访问时也适用其隐私政策。
+iOS 版目前通过 TestFlight 提供小范围测试，尚未在 App Store 正式上架。
 
 ## 怎么安装
 
-1. 准备 iOS 17 / iPadOS 17 或更新版本的 iPhone / iPad，从 App Store 安装 [TestFlight](https://apps.apple.com/app/testflight/id899247664)。
-2. 收到邀请后，在设备上打开邀请，进入 TestFlight，核对应用名称「云食册 - 食用手册」并安装。
+1. 从 App Store 安装 [TestFlight](https://apps.apple.com/app/testflight/id899247664)。
+2. 在 iPhone / iPad 上打开[云食册公开邀请](https://testflight.apple.com/join/KTTJNhDh)，进入 TestFlight，核对应用名称「云食册 - 食用手册」，接受邀请并安装。
 3. 已安装云食册的用户直接更新；更新前可在 App 内导出收藏、历史、私人菜谱及个人食材/厨具配置。请保留重要数据的备份。
 
 核心功能不需要注册账号。选食材、搜索、推荐和已内置的文字做法可以离线使用；配图、在线视频与发送反馈需要网络。测试版本有使用期限，以 TestFlight 显示为准。
+
+## 可选：登记测试意向 {#signup}
+
+愿意协助双设备同步、文件备份或无障碍测试，或者希望参与后续回访，可以填写登记表。填写与否不影响通过上方链接加入本轮测试。
+
+**[填写飞书登记表 →](https://yunlefun.feishu.cn/share/base/shrcnE5rquh26ltScdox1tL1mvQ)**
+
+约 1 分钟，无需登录飞书。请填写昵称、可收信的联系邮箱、设备型号和系统版本；测试意向和双设备测试为选填。登记用于后续测试联络与问题回访，不保证获得额外名额。
+
+### 这是内部测试还是外部测试？
+
+这次是面向社区的小范围 **TestFlight 外部测试**。普通体验用户无需加入开发者团队；使用本页公开邀请即可参加。
+
+### 登记信息如何使用？ {#signup-privacy}
+
+登记内容及提交时间保存在飞书，仅由开发者及经授权的协作者用于本次测试联络和问题回访，不公开名单。填写入口只用于提交登记，其他填写者无法查看记录。
+
+联系邮箱填写常用邮箱即可，不要求提供 Apple 账号邮箱。请勿填写账号密码、验证码、身份证或设备序列号。需要修改、退出或删除登记，可通过登记邮箱联系 [me@yunyoujun.cn](mailto:me@yunyoujun.cn)。飞书提供表单与数据存储服务，访问时也适用其隐私政策。
 
 ## 这次想请你试什么
 

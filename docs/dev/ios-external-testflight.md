@@ -4,7 +4,7 @@
 
 本页用于外测，现有 [内部发布流程](./ios-testflight.md) 继续使用原配置。2026-10-24 准备的首个外测候选为 **2.0.0 (5)**，基于 main `9bdbcf25dc6ef4f0774d81873021b38fbd6b2507`，包含 #138 的厨具界面改进。候选源码 `8a12512ccf6e1437eae8c99cee8b028621fafdfe` 只增加构建号与独立导出配置，应用逻辑与该 main 相同。
 
-2026-10-26 更新：当前外测候选已切换为 **2.0.0 (7)**，同一已验包 IPA 上传后回读为 `VALID / APP_STORE_ELIGIBLE`，Beta Review 为 `APPROVED / BETA_APPROVED`。八项模拟器策略验收及维护者确认已绑定到真实 Apple 构建 ID；首批外测组仅保留构建 7，0 位测试者，自动通知与公开邀请关闭，开放门禁零阻塞。具体结果见[候选验收记录](./ios-candidate-7-validation.md)。下文构建 5 的待办保留历史含义；构建 7 按[模拟器验收策略](./testflight-automation.md#开放门禁)记录覆盖范围，不将模拟器结果写成生产 CloudKit 或 Apple 账号切换通过。
+2026-10-26 更新：当前外测候选已切换为 **2.0.0 (7)**，同一已验包 IPA 上传后回读为 `VALID / APP_STORE_ELIGIBLE`，Beta Review 为 `APPROVED / BETA_APPROVED`。八项模拟器策略验收及维护者确认已绑定到真实 Apple 构建 ID；首批外测组仅保留构建 7，公开邀请已开启并回读确认上限 30 人，自动通知关闭，开放门禁零阻塞。真实入口为[加入 TestFlight](https://testflight.apple.com/join/KTTJNhDh)。具体结果见[候选验收记录](./ios-candidate-7-validation.md)。下文构建 5 的待办保留历史含义；构建 7 按[模拟器验收策略](./testflight-automation.md#开放门禁)记录覆盖范围，不将模拟器结果写成生产 CloudKit 或 Apple 账号切换通过。
 
 2026-10-24 已上传并回读为 `VALID / APP_STORE_ELIGIBLE / READY_FOR_BETA_SUBMISSION`，尚未提交 Beta 审核或向普通用户开放。每次后续上传前重新查询构建号，确认未被其他发布占用。
 
