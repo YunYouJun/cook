@@ -1,10 +1,9 @@
-/* Colors follow the Cook app icon; display typography uses local fonts. */
+/* A cloud kitchen welcome, followed by the quieter native app showcase. */
 :root {
   --vp-c-brand-1: #2563eb;
   --vp-c-brand-2: #3b82f6;
   --vp-c-brand-3: #2563eb;
   --vp-c-brand-soft: rgba(85, 170, 255, 0.16);
-  --cook-font-display: 'Kaiti SC', 'STKaiti', 'KaiTi', 'Songti SC', 'SimSun', serif;
 }
 .dark {
   --vp-c-brand-1: #7cc0ff;
@@ -13,21 +12,90 @@
   --vp-c-brand-soft: rgba(124, 192, 255, 0.16);
 }
 .cook-landing {
-  --sky-1: #55aaff;
-  --sky-2: #2563eb;
-  --sky-3: #1e40af;
-  --cloud: #fff;
-  --yolk: #facc15;
-  --ink: #0f2547;
-  --mist: #eef5ff;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 16px 16px 0;
+  --cook-font-body: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
+  --cook-font-display: 'Yuanti SC', 'YouYuan', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --cook-heading-weight: 700;
+  --cook-heading-spacing: 0;
+  --sky-1: #82b5f2;
+  --sky-2: #3469e0;
+  --sky-3: #2552ba;
+  --cloud: #edf2ff;
+  --yolk: #f2c84b;
+  --ink: #26385f;
+  --mist: #e2efff;
+  --cook-hero-background: #edf6ff;
+  --cook-hero-text: #163355;
+  --cook-hero-muted: #526b88;
+  --cook-panel-background: #f8fbff;
+  --cook-panel-border: #cfddeb;
+  --cook-chip-background: #fffefa;
+  --cook-chip-hover: #fff3cb;
+  --cook-chip-selected: #e4edff;
+  --cook-chip-selected-text: #284f9d;
+  --cook-chip-selected-border: #3469e0;
+  --cook-action-text: #fff;
+  --cook-action-secondary: #e1edfc;
+  --cook-pot-fill: #83b8f6;
+  --cook-control-radius: 18px;
+  --cook-cloud-radius: 999px;
+  --cook-cloud-border: transparent;
+  --cook-cloud-bumps: block;
+  --cook-cloud-offset: 10px;
+  --cook-control-shadow: 0 3px 0 var(--cook-panel-border);
+  --cook-panel-shadow: 0 5px 0 var(--cook-panel-border);
+  --cook-ticket-background: #fffdf7;
+  --cook-ticket-text: #253750;
+  --cook-ticket-muted: #667184;
+  --cook-ticket-dish: #f3eee3;
+  --cook-dock-shadow: #dae6f3;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 clamp(16px, 4vw, 64px);
+  background: var(--cook-hero-background);
   color: var(--vp-c-text-1);
+  font-family: var(--cook-font-body);
+  -webkit-font-smoothing: antialiased;
 }
+
 .dark .cook-landing {
-  --cloud: #e6f0ff;
-  --mist: #131c2e;
+  --sky-2: #a6bdff;
+  --sky-3: #c2d1ff;
+  --cloud: #35445e;
+  --ink: #eef2ff;
+  --mist: #303b53;
+  --cook-hero-background: #202b43;
+  --cook-hero-text: #f4f3eb;
+  --cook-hero-muted: #bec7db;
+  --cook-panel-background: #29364d;
+  --cook-panel-border: #53617b;
+  --cook-chip-background: #33415c;
+  --cook-chip-hover: #405171;
+  --cook-chip-selected: #f2cd65;
+  --cook-chip-selected-text: #26385f;
+  --cook-chip-selected-border: #f2cd65;
+  --cook-action-text: #233457;
+  --cook-action-secondary: #394863;
+  --cook-pot-fill: #8db6ed;
+  --cook-panel-shadow: none;
+  --cook-ticket-background: #2b3441;
+  --cook-ticket-text: #e7edf7;
+  --cook-ticket-muted: #bec8d8;
+  --cook-ticket-dish: #3d4758;
+  --cook-dock-shadow: #0c192c;
+}
+
+.cook-landing .landing-header,
+.cook-landing #product-main {
+  max-width: 1280px;
+  margin-inline: auto;
+}
+.cook-landing .landing-details {
+  --cook-font-display: var(--cook-font-body);
+  --cook-heading-weight: 650;
+  --cook-heading-spacing: -0.035em;
+  max-width: 1120px;
+  margin-inline: auto;
 }
 .cook-landing .screens,
 .cook-landing .app-only {
@@ -37,9 +105,9 @@
   margin: 0;
   font-family: var(--cook-font-display);
   font-size: clamp(32px, 4.5vw, 44px);
-  font-weight: 400;
+  font-weight: var(--cook-heading-weight);
   line-height: 1.25;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--cook-heading-spacing);
 }
 .cook-landing .section-lead {
   margin: 12px 0 0;
@@ -69,8 +137,8 @@
   }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 639px) {
   .cook-landing {
-    padding-inline: 8px;
+    padding-inline: 16px;
   }
 }

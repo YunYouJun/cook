@@ -156,6 +156,7 @@ const appOnly = [
   gap: 12px;
   font-family: var(--cook-font-display);
   font-size: 22px;
+  font-weight: 600;
 }
 
 .feature-emoji {

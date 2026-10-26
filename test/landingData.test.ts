@@ -17,6 +17,12 @@ const originalRecommend = createRecipeRecommender(recipes)
 const demoRecommend = createRecipeRecommender(compact)
 
 describe('landing page recommendation data', () => {
+  it('keeps working recipe destinations for the kitchen menu', () => {
+    expect(compact.map(recipe => ({ bv: recipe.bv, link: recipe.link })))
+      .toEqual(recipes.map(recipe => ({ bv: recipe.bv, link: recipe.link })))
+    expect(compact.some(recipe => recipe.bv || recipe.link)).toBe(true)
+  })
+
   it('preserves identifiers for recipes that share the same display name', () => {
     expect(new Set(recipes.map(recipe => recipe.name)).size).toBeLessThan(recipes.length)
     expect(compact.map(recipe => recipe.id)).toEqual(recipes.map(recipe => recipe.id))

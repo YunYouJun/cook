@@ -12,10 +12,15 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    CloudKitchen: typeof import('./theme/components/CloudKitchen.vue')['default']
+    CloudKitchenHero: typeof import('./theme/components/CloudKitchenHero.vue')['default']
     CookLanding: typeof import('./theme/components/CookLanding.vue')['default']
     DocsProjectCard: typeof import('./../../node_modules/.pnpm/@yunyoujun+docs@0.1.14_vite@8.2.1_@types+node@25.9.5_esbuild@0.28.2_jiti@2.7.0_sass@1.1_36a5fa0507118b7279013ea35a3fd8ec/node_modules/@yunyoujun/docs/client/components/DocsProjectCard.vue')['default']
     DocsProjectList: typeof import('./../../node_modules/.pnpm/@yunyoujun+docs@0.1.14_vite@8.2.1_@types+node@25.9.5_esbuild@0.28.2_jiti@2.7.0_sass@1.1_36a5fa0507118b7279013ea35a3fd8ec/node_modules/@yunyoujun/docs/client/components/DocsProjectList.vue')['default']
+    IngredientGallery: typeof import('./theme/components/IngredientGallery.vue')['default']
+    LandingHeader: typeof import('./theme/components/LandingHeader.vue')['default']
     LandingHero: typeof import('./theme/components/LandingHero.vue')['default']
+    LandingIngredients: typeof import('./theme/components/LandingIngredients.vue')['default']
     PhoneDemo: typeof import('./theme/components/PhoneDemo.vue')['default']
     ProductGallery: typeof import('./theme/components/ProductGallery.vue')['default']
     ProductServices: typeof import('./theme/components/ProductServices.vue')['default']
@@ -26,10 +31,15 @@ declare module 'vue' {
 
 // For TSX support
 declare global {
+  const CloudKitchen: typeof import('./theme/components/CloudKitchen.vue')['default']
+  const CloudKitchenHero: typeof import('./theme/components/CloudKitchenHero.vue')['default']
   const CookLanding: typeof import('./theme/components/CookLanding.vue')['default']
   const DocsProjectCard: typeof import('./../../node_modules/.pnpm/@yunyoujun+docs@0.1.14_vite@8.2.1_@types+node@25.9.5_esbuild@0.28.2_jiti@2.7.0_sass@1.1_36a5fa0507118b7279013ea35a3fd8ec/node_modules/@yunyoujun/docs/client/components/DocsProjectCard.vue')['default']
   const DocsProjectList: typeof import('./../../node_modules/.pnpm/@yunyoujun+docs@0.1.14_vite@8.2.1_@types+node@25.9.5_esbuild@0.28.2_jiti@2.7.0_sass@1.1_36a5fa0507118b7279013ea35a3fd8ec/node_modules/@yunyoujun/docs/client/components/DocsProjectList.vue')['default']
+  const IngredientGallery: typeof import('./theme/components/IngredientGallery.vue')['default']
+  const LandingHeader: typeof import('./theme/components/LandingHeader.vue')['default']
   const LandingHero: typeof import('./theme/components/LandingHero.vue')['default']
+  const LandingIngredients: typeof import('./theme/components/LandingIngredients.vue')['default']
   const PhoneDemo: typeof import('./theme/components/PhoneDemo.vue')['default']
   const ProductGallery: typeof import('./theme/components/ProductGallery.vue')['default']
   const ProductServices: typeof import('./theme/components/ProductServices.vue')['default']

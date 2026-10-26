@@ -10,10 +10,12 @@
     "docs:preview": "vitepress preview"
   },
   "dependencies": {
-    "@yunyoujun/docs": "^0.1.14"
+    "@yunyoujun/docs": "^0.1.14",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@shikijs/vitepress-twoslash": "^3.23.0",
+    "@types/three": "^0.186.0",
     "sass": "^1.102.0",
     "typedoc": "^0.28.20",
     "typedoc-plugin-markdown": "^4.12.0",

@@ -108,13 +108,14 @@ const docs = [
   align-items: center;
   min-height: 48px;
   padding: 8px 24px;
-  border-radius: 999px;
-  background: #2563eb;
-  color: #fff;
+  border-radius: var(--cook-control-radius);
+  background: var(--sky-2);
+  box-shadow: var(--cook-control-shadow);
+  color: var(--cook-action-text);
   font-weight: 600;
 }
 .service-button:is(:hover, :focus-visible) {
-  color: #fff;
+  color: var(--cook-action-text);
 }
 .service-link,
 .contact-links a {
@@ -129,6 +130,7 @@ const docs = [
 .faq-title {
   font-family: var(--cook-font-display);
   font-size: 24px;
+  font-weight: 600;
   margin: 0 0 16px;
 }
 .faq details {

@@ -23,6 +23,8 @@ struct CookView: View {
     @State private var columns: NavigationSplitViewVisibility = .all
     /// 展开了「更多」的分组标题，用逗号连起来存，下次打开保持原样
     @AppStorage("cook.food.moreExpanded") private var moreExpanded = ""
+    @AppStorage("cook.presentation") private var presentation = CookPresentation.list
+    @State private var kitchenPath = NavigationPath()
 
     var body: some View {
         let matchCount = session.matchCount(using: store.recommender) ?? 0
@@ -31,7 +33,13 @@ struct CookView: View {
         let extras = session.selectedStuff.filter { !store.isCatalogStuff($0) }
 
         Group {
-            if sizeClass == .regular {
+            if presentation == .kitchen {
+                NavigationStack(path: $kitchenPath) {
+                    CloudKitchenView(presentation: $presentation, showResults: { kitchenPath.append(ResultsRoute()) })
+                        .navigationDestination(for: ResultsRoute.self) { _ in ResultsView() }
+                        .recipeDestinations()
+                }
+            } else if sizeClass == .regular {
                 NavigationSplitView(columnVisibility: $columns) {
                     chooser(warnings: warnings, extras: extras, emptySignal: emptySignal)
                         .navigationSplitViewColumnWidth(min: 320, ideal: 400, max: 480)
@@ -139,11 +147,12 @@ struct CookView: View {
                 }
                 .accessibilityValue(count > 0 ? "已选 \(count) 项" : "")
             }
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("清空") {
                     withAnimation(.snappy) { session.clearStuff() }
                 }
                 .disabled(!session.hasSelection)
+                CookPresentationToggle(selection: $presentation)
             }
         }
         // 选了食材却一道菜都没有，停留 3 秒后匿名记一次，用来发现缺哪些菜；条件一变就重新计时

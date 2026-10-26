@@ -75,6 +75,8 @@ export default defineConfig(withYunlefun({
             { text: '菜谱数据', link: '/dev/data' },
             { text: '私人菜谱与文件迁移', link: '/dev/private-recipes' },
             { text: '图文做法配图', link: '/dev/recipe-images' },
+            { text: '食材模型展柜', link: '/dev/ingredient-models' },
+            { text: '云厨房实现', link: '/dev/cloud-kitchen' },
             { text: 'iOS App 打磨目标', link: '/dev/ios-roadmap' },
           ],
         },

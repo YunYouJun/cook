@@ -10,6 +10,8 @@ export interface LandingRecipe {
   t: string[]
   g?: string[]
   c?: number
+  b?: string
+  l?: string
 }
 
 export interface LandingData {
@@ -27,6 +29,8 @@ export function compactRecipe(recipe: RecipeItem): LandingRecipe {
     t: recipe.tools,
     g: recipe.tags,
     c: recipe.score,
+    b: recipe.bv,
+    l: recipe.link,
   }
 }
 
@@ -40,5 +44,7 @@ export function expandRecipe(recipe: LandingRecipe): RecipeItem {
     tools: recipe.t,
     tags: recipe.g,
     score: recipe.c,
+    bv: recipe.b,
+    link: recipe.l,
   }
 }
