@@ -105,7 +105,7 @@ struct RecipeTextContent: View {
                 .frame(maxWidth: .infinity)
             }
             .background(Color(uiColor: .systemGroupedBackground))
-            .scrollEdgeBar(edge: .top) {
+            .safeAreaInset(edge: .top, spacing: 0) {
                 if !presentation.steps.isEmpty {
                     RecipeStepProgress(recipeID: recipe.id, steps: presentation.steps, jump: jump)
                 }

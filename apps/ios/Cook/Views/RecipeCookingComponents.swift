@@ -300,6 +300,7 @@ struct RecipeStepProgress: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
+        .background(.bar)
         .accessibilityElement(children: .contain)
         .confirmationDialog("重新记录操作步骤？", isPresented: $confirmingReset, titleVisibility: .visible) {
             Button("重置步骤", role: .destructive) { workbench.clearSteps(recipeID: recipeID) }
