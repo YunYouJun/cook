@@ -105,7 +105,7 @@ struct RecipeTextContent: View {
                 .frame(maxWidth: .infinity)
             }
             .background(Color(uiColor: .systemGroupedBackground))
-            .safeAreaInset(edge: .top, spacing: 0) {
+            .scrollEdgeBar(edge: .top) {
                 if !presentation.steps.isEmpty {
                     RecipeStepProgress(recipeID: recipe.id, steps: presentation.steps, jump: jump)
                 }
@@ -139,13 +139,19 @@ struct RecipeTextContent: View {
                     .padding(16)
                     .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
             }
-            ForEach(steps) { step in
-                RecipeStepCard(step: step, instruction: usage.instruction(for: step), servings: amounts.servings,
-                               highlighted: stepLocation?.id == step.id,
-                               completed: completed.contains(step.id), current: nextStep == step.id) {
-                    workbench.toggleStep(step.id, recipeID: recipe.id)
+            VStack(spacing: 10) {
+                ForEach(steps) { step in
+                    RecipeStepCard(step: step, instruction: usage.instruction(for: step), servings: amounts.servings,
+                                   highlighted: stepLocation?.id == step.id,
+                                   completed: completed.contains(step.id), current: nextStep == step.id) {
+                        let advances = nextStep == step.id
+                        workbench.toggleStep(step.id, recipeID: recipe.id)
+                        if advances, let next = presentation.steps.first(where: { !completed.contains($0.id) }) {
+                            jump(next)
+                        }
+                    }
+                    .id(StepAnchor(id: step.id))
                 }
-                .id(StepAnchor(id: step.id))
             }
         } else if let rows = presentation.quantities[offset] {
             if presentation.supplementalQuantities.isEmpty, offset == presentation.quantities.keys.min(), amounts.supportsServings {
@@ -177,8 +183,8 @@ struct RecipeTextContent: View {
                 RecipeSupplementaryHeading()
             } else {
                 Text(markdown(heading == "计算" ? "用量参考" : heading))
-                    .font(.title3.bold())
-                    .padding(.top, 8)
+                    .font(.headline)
+                    .padding(.top, 12)
                     .accessibilityAddTraits(.isHeader)
             }
         case let .paragraph(paragraph):
@@ -194,6 +200,9 @@ struct RecipeTextContent: View {
                     }
                 } else {
                     Text(markdown(paragraph))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineSpacing(3)
                 }
             }
         case let .list(ordered, start, items):
