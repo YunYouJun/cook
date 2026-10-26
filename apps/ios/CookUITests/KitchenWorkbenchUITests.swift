@@ -288,15 +288,34 @@ final class KitchenWorkbenchUITests: XCTestCase {
         capture(app, "recipe-overview")
         app.buttons["recipe.continueStep"].tap()
         let step = app.buttons["recipe.step.1"]
-        let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: step)
-        XCTAssertEqual(XCTWaiter.wait(for: [hittable], timeout: 10), .completed)
-        step.tap()
+        waitForVisibleStep(step, in: app)
+        XCTAssertGreaterThan(step.frame.width, 250, "整条卡片都是按钮，而非只有编号")
+        let currentTop = step.frame.minY
+        // 特意点击正文右侧的留白，防止回归为只有文字或编号可点。
+        step.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5)).tap()
         XCTAssertEqual(step.value as? String, "已完成")
         XCTAssertEqual(progress.label, "已完成 1 / 11 步")
-        step.tap()
+        let next = app.buttons["recipe.step.2"]
+        waitForVisibleStep(next, in: app)
+        XCTAssertEqual(next.frame.minY, currentTop, accuracy: 1, "下一步自动滚动到原来当前步骤的位置")
+        XCTAssertEqual(app.buttons["recipe.continueStep"].label, "继续第 2 步")
+
+        // 自动推进后回看上一条；点击正文可撤销，撤销时不强制滚动。
+        let window = app.windows.firstMatch
+        for _ in 0..<4 {
+            // XCTest 会把固定进度栏后面的行也报告为 hittable，需确认整行已离开遮挡区域。
+            if step.frame.minY >= app.buttons["recipe.continueStep"].frame.maxY + 20 { break }
+            window.coordinate(withNormalizedOffset: CGVector(dx: 0.30, dy: 0.45))
+                .press(forDuration: 0.1, thenDragTo: window.coordinate(withNormalizedOffset: CGVector(dx: 0.30, dy: 0.70)))
+        }
+        waitForVisibleStep(step, in: app)
+        let previousFrame = step.frame
+        app.staticTexts["recipe.stepText.1"].tap()
         XCTAssertEqual(step.value as? String, "未完成")
         XCTAssertEqual(progress.label, "已完成 0 / 11 步")
-        step.tap()
+        XCTAssertEqual(step.frame, previousFrame, "撤销时保留阅读位置，状态变化不改变卡片高度")
+        app.staticTexts["recipe.stepText.1"].tap()
+        waitForVisibleStep(next, in: app)
         capture(app, "recipe-step-progress")
         app.buttons["kitchen.close"].tap()
         app.terminate()
@@ -309,10 +328,47 @@ final class KitchenWorkbenchUITests: XCTestCase {
         let resets = app.buttons.matching(identifier: "重置步骤")
         resets.element(boundBy: resets.count - 1).tap()
         XCTAssertEqual(progress.label, "已完成 0 / 11 步")
+
+        app.buttons["recipe.continueStep"].tap()
+        for number in 1...11 {
+            let current = app.buttons["recipe.step.\(number)"]
+            waitForVisibleStep(current, in: app)
+            current.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5)).tap()
+            XCTAssertEqual(current.value as? String, "已完成")
+            XCTAssertEqual(progress.label, "已完成 \(number) / 11 步")
+        }
+        XCTAssertTrue(app.staticTexts["做好了，开饭吧"].exists)
+        XCTAssertFalse(app.buttons["recipe.continueStep"].exists)
+        capture(app, "recipe-steps-finished")
     }
 
     @MainActor
-    private func openKitchen(_ app: XCUIApplication) {
+    func testWholeRowsAdvanceAcrossRecipeSections() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launch()
+        openKitchen(app, recipeName: "尖椒炒牛肉")
+        let progress = app.staticTexts["recipe.stepProgress"]
+        XCTAssertEqual(progress.label, "已完成 0 / 13 步")
+        app.buttons["recipe.continueStep"].tap()
+
+        let instructions = ["蒜剁成蒜泥", "葱切段", "姜切成姜片", "尖椒切成段", "牛肉放入碗中"]
+        for (index, instruction) in instructions.enumerated() {
+            // 章节内编号会重新开始，使用正文区分不同章节的同号步骤。
+            let step = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "recipe.step.", instruction)).firstMatch
+            waitForVisibleStep(step, in: app)
+            if index == 1 { capture(app, "pepper-beef-current-step") }
+            if index == 4 { capture(app, "pepper-beef-next-section") }
+            step.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5)).tap()
+            XCTAssertEqual(step.value as? String, "已完成")
+            XCTAssertEqual(progress.label, "已完成 \(index + 1) / 13 步")
+        }
+    }
+
+    @MainActor
+    private func openKitchen(_ app: XCUIApplication, recipeName: String = "番茄炒蛋") {
         let library = app.buttons.matching(NSPredicate(format: "label == %@", "菜谱")).firstMatch
         XCTAssertTrue(library.waitForExistence(timeout: 20))
         library.tap()
@@ -323,8 +379,8 @@ final class KitchenWorkbenchUITests: XCTestCase {
         }
         XCTAssertTrue(search.waitForExistence(timeout: 10))
         search.tap()
-        search.typeText("番茄炒蛋\n")
-        let recipe = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch
+        search.typeText("\(recipeName)\n")
+        let recipe = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", recipeName)).firstMatch
         XCTAssertTrue(recipe.waitForExistence(timeout: 10))
         recipe.tap()
         // 浮层侧栏会遮挡详情；先通过原生按钮收起，再点击工作台入口。

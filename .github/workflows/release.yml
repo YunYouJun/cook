@@ -30,15 +30,8 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Include EdgeOne Pages configuration
-        run: cp edgeone.json dist/edgeone.json
-
-      # deploy to edgeone
-      # see https://edgeone.ai/zh/document/180255338996572160?product=edgedeveloperplatform
-      - name: Deploy to EdgeOne Pages
-        run: npx --yes edgeone@1.6.23 makers deploy dist -n yunyoujun-cook -e production -a global -t ${{ secrets.EDGEONE_API_TOKEN }}
-        env:
-          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
+      # EdgeOne builds and deploys main through its Git integration.
+      # Tags publish release artifacts without replacing the production website.
 
       - name: Release
         uses: softprops/action-gh-release@v3
