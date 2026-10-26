@@ -110,11 +110,12 @@ struct MoreChip: View {
                     .imageScale(.small)
                     .accessibilityHidden(true)
                 Text(isExpanded ? "收起" : "更多 \(hidden) 种")
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             .font(.subheadline)
-            .padding(.horizontal, 10)
+            // 网格最窄只有 92pt；给完整的数量文案留出空间，避免单行时仍被截断。
+            .padding(.horizontal, 4)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, minHeight: 44)
             .foregroundStyle(.tint)
