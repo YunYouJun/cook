@@ -28,3 +28,4 @@
 | [0014](./0014-personal-catalog)                        | 个人食材和厨具                       | 已实施 |
 | [0015](./0015-product-site-domains)                    | 官网与网页版域名分工                 | 已采纳 |
 | [0016](./0016-native-android-and-capacitor-retirement) | 原生 Android 与 Capacitor 外壳退役   | 已采纳 |
+| [0017](./0017-offline-video-checks)                    | 离线视频校验与按需复核               | 已采纳 |
