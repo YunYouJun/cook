@@ -31,6 +31,7 @@ struct KitchenWorkbenchView: View {
                 )
                 let compact = frames.mode == .compact
                 ZStack(alignment: .top) {
+                    // 紧凑模式的两块面板重叠以保留阅读位置；可见面板也需位于无障碍命中层级最上方。
                     KitchenPaneLayout(frames: frames) {
                         instructions
                             .scrollEdgeBar(edge: .bottom) {
@@ -40,11 +41,13 @@ struct KitchenWorkbenchView: View {
                             .opacity(!compact || pane == .recipe ? 1 : 0)
                             .allowsHitTesting(!compact || pane == .recipe)
                             .accessibilityHidden(compact && pane != .recipe)
+                            .zIndex(!compact || pane == .recipe ? 1 : 0)
                         preparation(tabletop: frames.mode == .tabletop)
                             .clipped()
                             .opacity(!compact || pane == .preparation ? 1 : 0)
                             .allowsHitTesting(!compact || pane == .preparation)
                             .accessibilityHidden(compact && pane != .preparation)
+                            .zIndex(!compact || pane == .preparation ? 1 : 0)
                     }
                     if !frames.divider.isEmpty {
                         Rectangle().fill(.separator)
