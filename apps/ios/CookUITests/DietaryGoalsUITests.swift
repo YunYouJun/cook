@@ -1,10 +1,12 @@
+import UIKit
 import XCTest
 
 final class DietaryGoalsUITests: XCTestCase {
     @MainActor
-    private func app() -> XCUIApplication {
+    private func app(contentSize: UIContentSizeCategory = .large) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-dietary", "-ui-testing-reset-presentation"]
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-dietary", "-ui-testing-reset-presentation",
+                               "-UIPreferredContentSizeCategoryName", contentSize.rawValue]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
         let presentation = app.buttons["cook.presentation"]
@@ -49,7 +51,7 @@ final class DietaryGoalsUITests: XCTestCase {
     private func openRandom(_ app: XCUIApplication) {
         // iPad floating tabs use Cell/Other roles instead of TabBar/Button on newer SDKs.
         let random = app.descendants(matching: .any).matching(identifier: "dice").firstMatch
-        let randomButton = app.buttons["随机"]
+        let randomButton = app.buttons["随机"].firstMatch
         if !random.exists && !randomButton.exists {
             let collapsedTab = app.tabBars.buttons.firstMatch
             if collapsedTab.exists {
@@ -151,7 +153,19 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     func testNativeGoalPickerAccessibilityAndReviewedSummary() throws {
-        let app = app()
+        try verifyNativeGoalFlow(contentSize: .large, auditTypes: [.contrast, .dynamicType, .hitRegion, .sufficientElementDescription, .textClipped, .trait])
+    }
+
+    @MainActor
+    func testLargestTextCanChooseRememberReadAndRoll() throws {
+        // Contrast is audited at standard text size, where every choice fits in the viewport.
+        // At the largest size, the simulator samples offscreen labels against the underlying window.
+        try verifyNativeGoalFlow(contentSize: .accessibilityExtraExtraExtraLarge, auditTypes: [.dynamicType, .hitRegion, .sufficientElementDescription, .textClipped, .trait])
+    }
+
+    @MainActor
+    private func verifyNativeGoalFlow(contentSize: UIContentSizeCategory, auditTypes: XCUIAccessibilityAuditType) throws {
+        let app = app(contentSize: contentSize)
         app.buttons["dietary.openPicker"].firstMatch.tap()
         let option = app.buttons["dietary.goal.less-added-sugar"]
         for _ in 0..<8 {
@@ -161,7 +175,7 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(option.isHittable)
         option.tap()
         // Audit the actual native sheet without suppressing any reported issues.
-        try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .sufficientElementDescription, .textClipped, .trait]) { issue in
+        try app.performAccessibilityAudit(for: auditTypes) { issue in
             print("Dietary accessibility audit: \(issue.element?.debugDescription ?? "unidentified element") — \(issue.detailedDescription)")
             return false
         }

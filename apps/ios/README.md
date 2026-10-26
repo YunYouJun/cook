@@ -50,6 +50,8 @@ CI 的 `ios` job 在 iPhone 和 iPad 模拟器上先后跑单元测试和 UI 测
 
 标注源为 `packages/data/recipe-dietary.json`，运行 `pnpm dietary:validate` 检查 schema、来源和覆盖。CookCore 核对配方字段、图文指纹与用量文件 SHA-256 后才采用标注；数据缺失、过期或不兼容时继续支持普通推荐。实施范围、审核记录和后续跨端计划见 [饮食目标计划](../../specs/dietary-goals/README.md)。
 
+目标列表在字号变化时重算行高，随机页支持原生滚动。`DietaryGoalsUITests` 分别固定标准与最大辅助字号：标准字号检查六项可访问性审计，最大字号检查缩放、裁切与语义；两种场景都实际选择、记忆、阅读并进入随机页。验证平台、结果和真实限制见 [验证记录](../../specs/dietary-goals/validation.md)，工程收尾与发布前人工条件见 [收尾清单](../../specs/dietary-goals/closeout.md)。
+
 ## 反馈入口
 
 「我的 → 帮助与反馈」中的「需求墙」直接打开 `https://support.yunle.fun/feedback?product=cook`，保留 Cook 筛选；「支持中心」打开支持中心首页。意见反馈仍在 App 内私密提交，失败时保留内容并提供支持中心私密反馈入口，菜谱纠错保持原流程。

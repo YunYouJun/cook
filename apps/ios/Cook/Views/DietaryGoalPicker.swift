@@ -105,13 +105,26 @@ struct DietaryGoalSelectionSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") { dismiss() }
-                        .foregroundStyle(Color.primary)
-                        .accessibilityIdentifier("dietary.done")
+                    confirmationButton
                 }
             }
         }
         .sensoryFeedback(.selection, trigger: session.dietaryGoal)
+    }
+
+    @ViewBuilder
+    private var confirmationButton: some View {
+        let button = Button("完成") { dismiss() }
+            .accessibilityIdentifier("dietary.done")
+        if #available(iOS 26.0, *) {
+            // Keep text opaque over the new toolbar material; older toolbars use their native tint.
+            button
+                .buttonStyle(.borderedProminent)
+                .tint(Color.primary)
+                .foregroundStyle(Color(uiColor: .systemBackground))
+        } else {
+            button.foregroundStyle(Color.primary)
+        }
     }
 
     private func choice(_ goal: DietaryGoal?) -> some View {
