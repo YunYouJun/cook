@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://cook.yunyoujun.cn/schema/video-stats.schema.json",
-  "title": "菜谱视频的 B 站数据（video-stats.json），由 pnpm check:videos --stats 生成",
+  "title": "菜谱视频的 B 站数据（video-stats.json），保留历史评分数据，更新须单独审阅",
   "type": "object",
   "required": ["updatedAt", "videos"],
   "additionalProperties": false,

@@ -1,7 +1,7 @@
 /* A cloud kitchen welcome, followed by the quieter native app showcase. */
 :root {
   --vp-c-brand-1: #2563eb;
-  --vp-c-brand-2: #3b82f6;
+  --vp-c-brand-2: #1d4ed8;
   --vp-c-brand-3: #2563eb;
   --vp-c-brand-soft: rgba(85, 170, 255, 0.16);
 }
@@ -57,7 +57,17 @@
   font-family: var(--cook-font-body);
   -webkit-font-smoothing: antialiased;
 }
-
+/* Custom product sections own their spacing; prose defaults must not move UI elements. */
+.cook-landing :is(h1, h2, h3, p, ul, ol, li, figure, dl, dt, dd, summary, img) {
+  margin: 0;
+}
+.cook-landing li + li {
+  margin-top: 0;
+}
+.cook-landing :is(h1, h2, h3) {
+  padding: 0;
+  border: 0;
+}
 .dark .cook-landing {
   --sky-2: #a6bdff;
   --sky-3: #c2d1ff;

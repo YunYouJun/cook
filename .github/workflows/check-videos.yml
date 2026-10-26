@@ -1,13 +1,31 @@
 name: Check Videos
 
 on:
-  schedule:
-    - cron: '0 2 * * 1' # 每周一 10:00（北京时间）
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/check-videos.yml
+      - scripts/check-video-links.ts
+      - scripts/lib/video-check.ts
+      - test/videoCheck.test.ts
+      - packages/data/recipe.csv
+      - packages/cook/src/utils/**
+      - package.json
+      - pnpm-lock.yaml
+  pull_request:
+    paths:
+      - .github/workflows/check-videos.yml
+      - scripts/check-video-links.ts
+      - scripts/lib/video-check.ts
+      - test/videoCheck.test.ts
+      - packages/data/recipe.csv
+      - packages/cook/src/utils/**
+      - package.json
+      - pnpm-lock.yaml
   workflow_dispatch:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   check:
@@ -19,21 +37,16 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-
       - run: pnpm install --frozen-lockfile
-
-      - name: Check bilibili videos
-        run: pnpm run check:videos --out report.md
-
-      - name: Update dead video issue
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Validate local recipe data
+        run: pnpm run validate
+      - name: Test video checks with mocked responses
+        run: pnpm exec vitest run test/videoCheck.test.ts packages/cook/src/utils/bilibili.test.ts
+      - name: Generate offline coverage report
         run: |
-          gh label create dead-video --color d73a4a --description '菜谱视频失效' --force
-          gh label create recipe-data --color 0e8a16 --description '菜谱数据' --force
-          number=$(gh issue list --label dead-video --state open --json number --jq '.[0].number')
-          if [ -n "$number" ]; then
-            gh issue edit "$number" --body-file report.md
-          else
-            gh issue create --title '失效视频巡检' --label dead-video --label recipe-data --body-file report.md
-          fi
+          pnpm run check:videos --out artifacts/video-report.md
+          cat artifacts/video-report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: video-report-offline
+          path: artifacts/video-report.md
