@@ -27,6 +27,12 @@ struct HelpSettingsView: View {
                              url: "https://support.yunle.fun/feedback?product=cook")
                     .accessibilityIdentifier("help.requests")
             }
+            Section {
+                externalLink("App Store 评价", subtitle: "分享你使用云食册的体验", image: Image(systemName: "star.bubble"), color: .orange,
+                             url: "https://apps.apple.com/app/id6824589542?action=write-review",
+                             accessibilityHint: "打开 App Store 撰写评价")
+                    .accessibilityIdentifier("help.appStoreReview")
+            }
         }
         .navigationTitle("帮助与反馈")
         .navigationBarTitleDisplayMode(.inline)
