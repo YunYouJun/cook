@@ -67,7 +67,10 @@ struct AboutSettingsView: View {
             Section {
                 LabeledContent("版本", value: appVersion)
                 LabeledContent("菜谱", value: "\(store.recipes.count) 道")
-                LabeledContent("数据版本", value: store.data.meta.dataVersion)
+                NavigationLink { RecipeDataSettingsView() } label: {
+                    LabeledContent("数据版本", value: store.data.meta.dataVersion)
+                }
+                .accessibilityIdentifier("about.recipeData")
                 Link("更新日志", destination: URL(string: "https://docs.yunyoujun.cn/projects/cook/changelog")!)
                 Link("网页版：食用手册", destination: URL(string: "https://cook.yunyoujun.cn")!)
             }
