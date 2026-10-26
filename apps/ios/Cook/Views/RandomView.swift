@@ -39,54 +39,60 @@ struct RandomView: View {
         let pool = pool
 
         NavigationStack {
-            VStack(spacing: 20) {
-                GroupBox { DietaryGoalPickerButton() }
-                Spacer(minLength: 0)
-                if let recipe {
-                    NavigationLink(value: RecipeRoute(recipe: recipe, dietaryGoal: session.dietaryGoal)) {
-                        card(recipe)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(shuffling != nil)
-                    .accessibilityHint("打开菜谱详情")
-                    .accessibilityIdentifier("random.openRecipe")
-                    .id(recipe.id)
-                    .transition(reduceMotion ? .opacity : .asymmetric(
-                        insertion: .scale(scale: 0.9).combined(with: .opacity),
-                        removal: .opacity
-                    ))
-                } else {
-                    ContentUnavailableView(
-                        "没有符合条件的菜",
-                        systemImage: "dice",
-                        description: Text("换几样食材，或者放宽忌口和筛选。")
-                    )
-                }
-                Spacer(minLength: 0)
-                VStack(spacing: 10) {
-                    Text(scopeText(count: pool.count))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .contentTransition(.numericText())
-                    Button(action: roll) {
-                        Label {
-                            Text("换一道")
-                        } icon: {
-                            Image(systemName: "dice")
-                                .symbolEffect(.bounce, value: rolls)
+            GeometryReader { geometry in
+                ScrollView {
+                    VStack(spacing: 20) {
+                        GroupBox { DietaryGoalPickerButton() }
+                        Spacer(minLength: 0)
+                        if let recipe {
+                            NavigationLink(value: RecipeRoute(recipe: recipe, dietaryGoal: session.dietaryGoal)) {
+                                card(recipe)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(shuffling != nil)
+                            .accessibilityHint("打开菜谱详情")
+                            .accessibilityIdentifier("random.openRecipe")
+                            .id(recipe.id)
+                            .transition(reduceMotion ? .opacity : .asymmetric(
+                                insertion: .scale(scale: 0.9).combined(with: .opacity),
+                                removal: .opacity
+                            ))
+                        } else {
+                            ContentUnavailableView(
+                                "没有符合条件的菜",
+                                systemImage: "dice",
+                                description: Text(store.dietaryUnavailableMessage(for: session.dietaryGoal) ?? "换几样食材，或者放宽忌口和筛选。")
+                            )
                         }
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
+                        Spacer(minLength: 0)
+                        VStack(spacing: 10) {
+                            Text(scopeText(count: pool.count))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .contentTransition(.numericText())
+                            Button(action: roll) {
+                                Label {
+                                    Text("换一道")
+                                } icon: {
+                                    Image(systemName: "dice")
+                                        .symbolEffect(.bounce, value: rolls)
+                                }
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                            }
+                            .prominentButtonStyle()
+                            .controlSize(.large)
+                            .disabled(pool.isEmpty)
+                            .accessibilityHint("也可以摇一摇手机")
+                            .accessibilityIdentifier("random.roll")
+                        }
                     }
-                    .prominentButtonStyle()
-                    .controlSize(.large)
-                    .disabled(pool.isEmpty)
-                    .accessibilityHint("也可以摇一摇手机")
+                    .padding()
+                    .frame(maxWidth: 600)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: geometry.size.height)
                 }
             }
-            .padding()
-            .frame(maxWidth: 600)
-            .frame(maxWidth: .infinity)
             .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle("今天吃什么")
             .recipeDestinations()

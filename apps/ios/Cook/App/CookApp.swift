@@ -43,6 +43,10 @@ struct CookApp: App {
         _workbench = State(initialValue: KitchenWorkbench(defaults: inMemory ? nil : .standard, notifications: inMemory ? .disabled : .live))
         #if DEBUG
             if uiTesting {
+                // Reset the fixture without a launch-domain override that would lock later UI changes.
+                if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-presentation") {
+                    UserDefaults.standard.set(CookPresentation.list.rawValue, forKey: "cook.presentation")
+                }
                 let dietaryDefaults = UserDefaults(suiteName: "cook.dietary.ui-tests")!
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-dietary") {
                     dietaryDefaults.removePersistentDomain(forName: "cook.dietary.ui-tests")

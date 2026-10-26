@@ -157,7 +157,7 @@ struct ResultsView: View {
         ContentUnavailableView {
             Label("暂无符合条件的已核对做法", systemImage: "fork.knife")
         } description: {
-            Text(store.dietaryUnavailableMessage ?? "试试更换食材、厨具或筛选。你的忌口会继续保留。")
+            Text(store.dietaryUnavailableMessage(for: session.dietaryGoal) ?? "试试更换食材、厨具或筛选。你的忌口会继续保留。")
         } actions: {
             Button("取消饮食目标") { session.selectDietaryGoal(nil) }
                 .accessibilityIdentifier("dietary.clearGoal")

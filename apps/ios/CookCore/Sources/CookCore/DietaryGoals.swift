@@ -40,7 +40,7 @@ public enum DietaryGoal: String, CaseIterable, Codable, Hashable, Sendable, Iden
     public var symbol: String {
         switch self {
         case .weightAware: return "scalemass"
-        case .lessAddedSugar: return "spoon"
+        case .lessAddedSugar: return "cube"
         case .balancedPairing: return "fork.knife"
         }
     }

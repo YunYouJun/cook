@@ -4,7 +4,7 @@ final class DietaryGoalsUITests: XCTestCase {
     @MainActor
     private func app() -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-dietary"]
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-dietary", "-ui-testing-reset-presentation"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
         let presentation = app.buttons["cook.presentation"]
@@ -46,6 +46,24 @@ final class DietaryGoalsUITests: XCTestCase {
     }
 
     @MainActor
+    private func openRandom(_ app: XCUIApplication) {
+        // iPad floating tabs use Cell/Other roles instead of TabBar/Button on newer SDKs.
+        let random = app.descendants(matching: .any).matching(identifier: "dice").firstMatch
+        let randomButton = app.buttons["随机"]
+        if !random.exists && !randomButton.exists {
+            let collapsedTab = app.tabBars.buttons.firstMatch
+            if collapsedTab.exists {
+                collapsedTab.tap()
+            } else {
+                app.descendants(matching: .any).matching(identifier: "frying.pan").firstMatch.tap()
+            }
+        }
+        let target = randomButton.exists ? randomButton : random
+        XCTAssertTrue(target.waitForExistence(timeout: 5))
+        target.tap()
+    }
+
+    @MainActor
     func testGoalBrowsingOpensReviewedTextAndPreservesGoalInRandom() {
         let app = app()
         select("less-added-sugar", in: app)
@@ -71,20 +89,7 @@ final class DietaryGoalsUITests: XCTestCase {
         attachment.name = "dietary-reviewed-source"
         attachment.lifetime = .keepAlways
         add(attachment)
-        // iPad floating tabs use Cell/Other roles instead of TabBar/Button on newer SDKs.
-        let random = app.descendants(matching: .any).matching(identifier: "dice").firstMatch
-        let randomButton = app.buttons["随机"]
-        if !random.exists && !randomButton.exists {
-            let collapsedTab = app.tabBars.buttons.firstMatch
-            if collapsedTab.exists {
-                collapsedTab.tap()
-            } else {
-                app.descendants(matching: .any).matching(identifier: "frying.pan").firstMatch.tap()
-            }
-        }
-        let target = randomButton.exists ? randomButton : random
-        XCTAssertTrue(target.waitForExistence(timeout: 5))
-        target.tap()
+        openRandom(app)
         XCTAssertTrue(app.buttons["dietary.openPicker"].firstMatch.value as? String == "减少添加糖")
         app.buttons["random.openRecipe"].tap()
         XCTAssertTrue(app.buttons["dietary.openReviewedRecipe"].waitForExistence(timeout: 10))
@@ -143,4 +148,68 @@ final class DietaryGoalsUITests: XCTestCase {
         let recipe = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
         XCTAssertTrue(recipe.waitForExistence(timeout: 15))
     }
+
+    @MainActor
+    func testNativeGoalPickerAccessibilityAndReviewedSummary() throws {
+        let app = app()
+        app.buttons["dietary.openPicker"].firstMatch.tap()
+        let option = app.buttons["dietary.goal.less-added-sugar"]
+        for _ in 0..<8 {
+            if option.exists && option.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(option.isHittable)
+        option.tap()
+        // Audit the actual native sheet without suppressing any reported issues.
+        try app.performAccessibilityAudit(for: [.contrast, .dynamicType, .hitRegion, .sufficientElementDescription, .textClipped, .trait]) { issue in
+            print("Dietary accessibility audit: \(issue.element?.debugDescription ?? "unidentified element") — \(issue.detailedDescription)")
+            return false
+        }
+        let toggle = app.switches["dietary.remember"]
+        for _ in 0..<8 {
+            if toggle.exists && toggle.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(toggle.isHittable)
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        XCTAssertEqual(toggle.value as? String, "1")
+        let picker = XCTAttachment(screenshot: app.screenshot())
+        picker.name = "dietary-accessibility-picker"
+        picker.lifetime = .keepAlways
+        add(picker)
+        app.buttons["dietary.done"].tap()
+        showResults(app)
+        let recipe = app.buttons["dietary.recipe.333"]
+        for _ in 0..<25 {
+            if recipe.exists && recipe.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(recipe.isHittable)
+        recipe.tap()
+        let source = app.buttons["dietary.openReviewedRecipe"]
+        XCTAssertTrue(source.waitForExistence(timeout: 10))
+        source.tap()
+        let reason = app.staticTexts["dietary.reviewReason"]
+        XCTAssertTrue(reason.waitForExistence(timeout: 10))
+        XCTAssertTrue(reason.label.contains("未额外添加糖"))
+        let summary = XCTAttachment(screenshot: app.screenshot())
+        summary.name = "dietary-accessibility-summary"
+        summary.lifetime = .keepAlways
+        add(summary)
+        openRandom(app)
+        let randomRecipe = app.buttons["random.openRecipe"]
+        XCTAssertTrue(randomRecipe.waitForExistence(timeout: 10))
+        let roll = app.buttons["random.roll"]
+        for _ in 0..<12 {
+            if roll.exists && roll.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(roll.isHittable)
+        XCTAssertTrue(roll.isEnabled)
+        let random = XCTAttachment(screenshot: app.screenshot())
+        random.name = "dietary-accessibility-random"
+        random.lifetime = .keepAlways
+        add(random)
+    }
+
 }
