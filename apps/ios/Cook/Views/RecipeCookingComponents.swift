@@ -169,6 +169,7 @@ struct RecipeQuantityTable: View {
 }
 
 struct RecipeStepCard: View {
+    @ScaledMetric(relativeTo: .body) private var markerSize = 32.0
     let step: RecipePresentation.Step
     var instruction: RecipeInstructionAmounts? = nil
     var servings: Int = 1
@@ -178,68 +179,80 @@ struct RecipeStepCard: View {
     let toggle: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        VStack(spacing: 0) {
             Button(action: toggle) {
-                ZStack {
-                    Circle().fill(completed ? Color.green : current ? Color.accentColor : Color.secondary.opacity(0.12))
-                    if completed {
-                        Image(systemName: "checkmark").font(.headline).foregroundStyle(.white)
-                    } else {
-                        Text("\(step.number)").font(.headline.monospacedDigit())
-                            .foregroundStyle(current ? Color.white : Color.primary)
+                HStack(alignment: .top, spacing: 12) {
+                    ZStack {
+                        Circle().fill(completed ? Color.green.opacity(0.12) : current ? Color.accentColor : Color.secondary.opacity(0.08))
+                        if completed {
+                            Image(systemName: "checkmark")
+                                .font(.subheadline.weight(.semibold)).foregroundStyle(.green)
+                        } else {
+                            Text("\(step.number)").font(.subheadline.weight(.semibold).monospacedDigit())
+                                .foregroundStyle(current ? Color.white : Color.secondary)
+                        }
                     }
-                }
-                .frame(width: 36, height: 36)
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("第 \(step.number) 步")
-            .accessibilityValue(completed ? "已完成" : "未完成")
-            .accessibilityHint(completed ? "轻点撤销完成" : "轻点标记完成")
-            .accessibilityIdentifier("recipe.step.\(step.number)")
+                    .frame(width: markerSize, height: markerSize)
+                    .frame(minHeight: 44)
+                    .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 8) {
-                if current {
-                    Text("接下来").font(.caption.weight(.semibold)).foregroundStyle(Color.accentColor)
-                } else if completed {
-                    Text("已完成").font(.caption).foregroundStyle(.green)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(recipeMarkdown(instruction?.text ?? step.text))
+                            .font(.body)
+                            .foregroundStyle(completed ? Color.secondary : Color.primary)
+                            .lineSpacing(3)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("recipe.stepText.\(step.number)")
+                        if instruction?.hasAdjustedAmounts == true {
+                            Text("用量提示（当前 \(servings) 份）")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        if instruction?.hasUnresolvedFormula == true {
+                            Text("部分用量需按原文确认")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(minHeight: 44, alignment: .leading)
                 }
-                Text(recipeMarkdown(instruction?.text ?? step.text))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
-                    .accessibilityIdentifier("recipe.stepText.\(step.number)")
-                if instruction?.hasAdjustedAmounts == true {
-                    Text("用量提示（当前 \(servings) 份）")
-                        .font(.caption).foregroundStyle(.secondary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.accentColor.opacity(highlighted ? 0.09 : current ? 0.04 : 0))
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(highlighted ? Color.accentColor : current ? Color.accentColor.opacity(0.35) : Color.clear,
+                                      lineWidth: highlighted ? 2 : 1)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
                 }
-                if instruction?.hasUnresolvedFormula == true {
-                    Text("部分用量需按原文确认")
-                        .font(.caption).foregroundStyle(.secondary)
+                // 将文字、编号和四周留白都纳入同一个原生按钮的热区。
+                .contentShape(RoundedRectangle(cornerRadius: 16))
+            }
+            .buttonStyle(RecipeStepButtonStyle())
+            .accessibilityLabel(Text("第 \(step.number) 步，") + Text(recipeMarkdown(instruction?.text ?? step.text)))
+            .accessibilityValue(completed ? "已完成" : "未完成")
+            .accessibilityHint(completed ? "轻点撤销完成" : current ? "轻点完成并前往下一步" : "轻点标记完成")
+            .accessibilityIdentifier("recipe.step.\(step.number)")
+            .contextMenu {
+                Button("复制步骤", systemImage: "doc.on.doc") {
+                    UIPasteboard.general.string = instruction?.text ?? step.text
                 }
             }
-            .padding(.vertical, 7)
-            // 单行文字与 44 点编号按钮居中，多行内容仍保持原有的顶部留白。
-            .frame(minHeight: 44, alignment: .leading)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(highlighted ? Color.accentColor.opacity(0.08) : Color.clear)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(highlighted ? Color.accentColor : current ? Color.accentColor.opacity(0.55) : Color.clear,
-                              lineWidth: highlighted ? 2 : 1.5)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("recipe.stepCard.\(step.number)")
         .accessibilityValue(highlighted ? "已定位" : "")
+    }
+}
+
+private struct RecipeStepButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.opacity(configuration.isPressed ? 0.65 : 1)
     }
 }
 
@@ -278,6 +291,8 @@ struct RecipeStepProgress: View {
                         .frame(minWidth: 44, minHeight: 44)
                 }
             }
+            // 重置按钮出现前后保留相同高度，避免步骤在完成或撤销时上下跳动。
+            .frame(minHeight: 44)
             ProgressView(value: Double(count), total: Double(max(steps.count, 1)))
                 .tint(count == steps.count ? .green : .accentColor)
                 .accessibilityLabel("烹饪进度")
@@ -285,7 +300,6 @@ struct RecipeStepProgress: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .background(.bar)
         .accessibilityElement(children: .contain)
         .confirmationDialog("重新记录操作步骤？", isPresented: $confirmingReset, titleVisibility: .visible) {
             Button("重置步骤", role: .destructive) { workbench.clearSteps(recipeID: recipeID) }
@@ -300,13 +314,34 @@ func recipeMarkdown(_ text: String) -> AttributedString {
     return (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
 }
 
-#Preview("步骤 · 进行中") {
-    let text = RecipeText(blocks: [.heading("操作"), .list(ordered: true, start: 1, items: ["西红柿洗净", "可选：去皮\n• 开水烫表皮，再放入冷水中剥皮"])])
-    let steps = RecipePresentation(text: text).steps
-    VStack {
-        RecipeStepCard(step: steps[0], completed: true, current: false, toggle: {})
-        RecipeStepCard(step: steps[1], completed: false, current: true, toggle: {})
+private struct RecipeStepCardsPreview: View {
+    private let steps = RecipePresentation(text: RecipeText(blocks: [
+        .heading("操作"),
+        .list(ordered: true, start: 1, items: ["蒜剁成蒜泥", "葱切段", "姜切成姜片", "加姜、盐、酱油、糖进行腌制 30–40 分钟"]),
+    ])).steps
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("配菜处理").font(.headline).padding(.bottom, 6)
+                ForEach(steps) { step in
+                    RecipeStepCard(step: step, completed: step.number == 1, current: step.number == 2, toggle: {})
+                }
+            }
+            .padding()
+        }
+        .background(Color(uiColor: .systemGroupedBackground))
     }
-    .padding()
-    .background(Color(uiColor: .systemGroupedBackground))
+}
+
+#Preview("步骤 · 进行中") {
+    RecipeStepCardsPreview()
+}
+
+#Preview("步骤 · 深色") {
+    RecipeStepCardsPreview().preferredColorScheme(.dark)
+}
+
+#Preview("步骤 · 辅助字号") {
+    RecipeStepCardsPreview().environment(\.dynamicTypeSize, .accessibility3)
 }
