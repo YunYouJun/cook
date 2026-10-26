@@ -42,6 +42,11 @@ final class DietaryGoalsTests: XCTestCase {
         XCTAssertThrowsError(try catalog { $0["amountsFingerprint"] = String(repeating: "0", count: 64) })
     }
 
+    func testAmountDigestMatchesStandardSHA256Vectors() {
+        XCTAssertEqual(DietaryCatalog.amountsFingerprint(Data()), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+        XCTAssertEqual(DietaryCatalog.amountsFingerprint(Data("abc".utf8)), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+    }
+
     func testStaleEntriesCannotBeUsedToMeetCoverageThreshold() throws {
         let catalog = try catalog { document in
             var entries = document["recipes"] as! [String: Any]
@@ -89,6 +94,20 @@ final class DietaryGoalsTests: XCTestCase {
         var fake = try XCTUnwrap(data.recipes.first { $0.id == 333 })
         fake.name = "A private recipe with a colliding ID"
         XCTAssertNil(catalog.entry(for: fake, goal: .lessAddedSugar))
+    }
+
+    func testNoSpicyUsesReviewedIngredientsWhenLegacyTagsAreMissing() throws {
+        let data = try SharedFixtureTests.loadData()
+        let recommender = Recommender(recipes: data.recipes, normalizer: data.normalizer)
+        let catalog = try catalog()
+        let plain = RecommendationOptions(stuff: [])
+        XCTAssertTrue(catalog.candidates(plain, goal: .balancedPairing, using: recommender).contains { $0.id == 693 })
+        let noSpicy = RecommendationOptions(stuff: [], noSpicy: true)
+        let candidates = catalog.candidates(noSpicy, goal: .balancedPairing, using: recommender)
+        XCTAssertFalse(candidates.contains { [670, 693, 777, 788, 861].contains($0.id) })
+        XCTAssertTrue(candidates.contains { $0.id == 333 })
+        let matching = RecommendationOptions(stuff: ["鸡蛋"], noSpicy: true)
+        XCTAssertFalse(catalog.recommend(matching, goal: .balancedPairing, using: recommender).contains { $0.recipe.id == 693 })
     }
 
     func testAvoidPreferencesIncludeGarlicMushroomAndOptionalVegetableAliases() throws {

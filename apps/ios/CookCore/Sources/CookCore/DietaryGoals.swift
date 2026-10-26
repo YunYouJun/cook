@@ -1,4 +1,8 @@
-import CryptoKit
+#if os(Linux)
+    import Crypto
+#else
+    import CryptoKit
+#endif
 import Foundation
 
 /// Voluntary cooking preferences; these do not prescribe a medical diet.
@@ -248,7 +252,8 @@ public struct DietaryCatalog: Sendable {
 
     private func eligible(_ recipe: Recipe, goal: DietaryGoal, options: RecommendationOptions, normalizer: StuffNormalizer) -> Bool {
         guard let entry = entry(for: recipe, goal: goal) else { return false }
-        let avoided = Set(normalizer.unique(options.avoid ?? []))
+        // Legacy tags omit some preparation-only chili; use the reviewed ingredients as well.
+        let avoided = Set(normalizer.unique((options.avoid ?? []) + (options.noSpicy == true ? ["辣椒"] : [])))
         guard !avoided.isEmpty else { return true }
         return entry.unresolvedIngredients.isEmpty && avoided.isDisjoint(with: normalizer.unique(entry.avoidIngredients))
     }
