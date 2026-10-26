@@ -106,6 +106,9 @@ struct DietaryGoalSelectionSheet: View {
                 }
             }
         }
+        // 明确整个弹窗的模态边界，辅助功能聚焦当前选择容器。
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isModal)
         .sensoryFeedback(.selection, trigger: session.dietaryGoal)
     }
 

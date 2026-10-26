@@ -207,13 +207,23 @@ final class DietaryGoalsUITests: XCTestCase {
         }
         XCTAssertTrue(option.isHittable)
         option.tap()
+        let auditScreen = XCTAttachment(screenshot: app.screenshot())
+        auditScreen.name = "dietary-picker-before-audits"
+        auditScreen.lifetime = .keepAlways
+        add(auditScreen)
+        let auditHierarchy = XCTAttachment(string: app.debugDescription)
+        auditHierarchy.name = "dietary-picker-hierarchy-before-audits"
+        auditHierarchy.lifetime = .keepAlways
+        add(auditHierarchy)
         // Keep each category within the simulator's audit deadline on slower CI hosts.
         // Every selected category runs and every reported issue still fails the test.
         for auditType in auditTypes {
+            print("Starting dietary accessibility audit: \(auditType.rawValue), content size: \(contentSize.rawValue)")
             try app.performAccessibilityAudit(for: auditType) { issue in
                 print("Dietary accessibility audit: \(issue.element?.debugDescription ?? "unidentified element") — \(issue.detailedDescription)")
                 return false
             }
+            print("Passed dietary accessibility audit: \(auditType.rawValue)")
         }
         let toggle = app.switches["dietary.remember"]
         for _ in 0..<8 {
