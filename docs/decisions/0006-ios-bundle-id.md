@@ -20,7 +20,7 @@
 - 原生 iOS App 的 bundle id 为 `fun.yunle.cook`，测试 target 为 `fun.yunle.cook.tests`、`fun.yunle.cook.uitests`。
 - CloudKit 容器为 `iCloud.fun.yunle.cook`。容器建了就删不掉，所以上传 TestFlight 前一并定下来。
 - 在 App Store Connect 新建「云食册」条目，版本从 2.0.0（build 1）开始。
-- Capacitor 壳（`capacitor.config.ts`、`android/`）和 Web 的 `apple-app-site-association` 暂不改，等 Capacitor 版移除时一起处理。
+- Capacitor 壳（`capacitor.config.ts`、`android/`）和 Web 的 `apple-app-site-association` 暂不改，等 Capacitor 版移除时一起处理。此清理安排已由 2026-10-26 的 [0016](./0016-native-android-and-capacitor-retirement) 取代，本文保留当时决定。
 
 ## 影响
 

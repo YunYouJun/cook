@@ -1,6 +1,6 @@
 # 0003 原生 iOS App 与 monorepo 结构
 
-- 状态：已采纳（bundle id 部分被 [0006](./0006-ios-bundle-id) 取代）
+- 状态：已采纳（bundle id 部分被 [0006](./0006-ios-bundle-id) 取代；外壳清理时机与 Android 路线被 [0016](./0016-native-android-and-capacitor-retirement) 取代）
 - 日期：2026-10-18
 - 关联：调整 [#98](https://github.com/YunYouJun/cook/issues/98) 的阶段 4
 

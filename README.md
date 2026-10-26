@@ -80,7 +80,7 @@ pnpm convert
 
 ### 开发 APP
 
-> [Local Development](https://ionic.nuxtjs.org/cookbook/local-development)
+Web 保留 Nuxt + Ionic；原生 iOS 使用 SwiftUI，位于 [`apps/ios`](./apps/ios/README.md)。旧 Capacitor 外壳已移除，原生 Android 将使用 Kotlin + Jetpack Compose，见 [Android 分阶段计划](./docs/dev/android-roadmap.md) 和 [移动应用开发](./docs/dev/app.md)。
 
 ## 部署
 

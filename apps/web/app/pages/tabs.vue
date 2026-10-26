@@ -1,7 +1,4 @@
 <script lang="ts" setup>
-import { App } from '@capacitor/app'
-import { Capacitor } from '@capacitor/core'
-import { useBackButton } from '@ionic/vue'
 import { tabRootPaths } from '../config'
 
 useHead({
@@ -9,7 +6,6 @@ useHead({
 })
 
 const router = useRouter()
-const ionRouter = useIonRouter()
 
 function isTabRootPath(path: string) {
   return tabRootPaths.includes(path)
@@ -29,19 +25,6 @@ function onTabClick(tab: string) {
   const content = tabsRef.value?.$el.querySelector<HTMLIonContentElement>('.ion-page:not(.ion-page-hidden) ion-content')
   void content?.scrollToTop(reducedMotion.value ? 0 : 300)
 }
-
-onMounted(() => {
-  if (Capacitor.getPlatform() === 'android') {
-    useBackButton(10, () => {
-      if (isTabRootPath(router.currentRoute.value.path)) {
-        App.minimizeApp()
-      }
-      else {
-        ionRouter.back()
-      }
-    })
-  }
-})
 </script>
 
 <template>

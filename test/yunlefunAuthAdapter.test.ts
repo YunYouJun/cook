@@ -1,29 +1,11 @@
 import type { AcquisitionContext, SsoAuthorizationResult } from '@yunlefun/sso'
 import type { YunlefunSsoConfig } from '../apps/web/app/utils/yunlefunSsoConfig'
-import { Browser } from '@capacitor/browser'
-import { Preferences } from '@capacitor/preferences'
 import { SsoIdentityAdoptionError } from '@yunlefun/sso/browser'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   createCloudbaseIdentityAdapter,
-  createNativeYunlefunAuthorizationAdapter,
   createWebYunlefunAuthorizationAdapter,
 } from '../apps/web/app/adapters/yunlefunAuth'
-
-vi.mock('@capacitor/browser', () => ({
-  Browser: {
-    close: vi.fn(),
-    open: vi.fn(),
-  },
-}))
-
-vi.mock('@capacitor/preferences', () => ({
-  Preferences: {
-    get: vi.fn(async () => ({ value: null })),
-    remove: vi.fn(),
-    set: vi.fn(),
-  },
-}))
 
 const config: YunlefunSsoConfig = {
   cloudbaseEnv: 'yunlefun-production',
@@ -133,43 +115,5 @@ describe('cloudbase identity adapter', () => {
     })
 
     await expect(identity.signOut()).rejects.toThrow('CloudBase sign-out failed')
-  })
-})
-
-describe('native authorization adapter', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('clears the pending transaction when authorization is cancelled', async () => {
-    const nativeConfig: YunlefunSsoConfig = {
-      ...config,
-      redirect: {
-        ...config.redirect,
-        clientId: 'cook-mobile',
-        redirectUri: 'https://cook.yunyoujun.cn/auth/callback?platform=native',
-      },
-    }
-    const adapter = createNativeYunlefunAuthorizationAdapter(nativeConfig, async () => null)
-
-    await adapter.start()
-    expect(Preferences.set).toHaveBeenCalledOnce()
-    expect(Browser.open).toHaveBeenCalledOnce()
-
-    await adapter.cancel()
-    expect(Preferences.remove).toHaveBeenCalledWith({
-      key: 'cook:sso:v3:native-transaction',
-    })
-  })
-
-  it('serializes acquisition into the actual native browser SSO URL', async () => {
-    const adapter = createNativeYunlefunAuthorizationAdapter(config, async () => null, () => acquisition)
-    await adapter.start()
-    const url = new URL(vi.mocked(Browser.open).mock.calls[0]![0].url)
-    expect(JSON.parse(url.searchParams.get('acquisition')!)).toEqual(acquisition)
-    expect(url.searchParams.get('client_id')).toBe('cook-web')
-    expect(url.searchParams.get('code_challenge_method')).toBe('S256')
-    const transaction = JSON.parse(vi.mocked(Preferences.set).mock.calls[0]![0].value)
-    expect(transaction.acquisition).toEqual(acquisition)
   })
 })

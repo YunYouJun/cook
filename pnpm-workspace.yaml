@@ -16,8 +16,6 @@ trustPolicyExclude:
   - semver@6.3.1
   # Google Workbox 7.4.1 pins this exact pre-release build helper.
   - '@trickfilm400/rollup-plugin-off-main-thread@3.0.0-pre1'
-  # Official Ionic repository, maintainers, signature, and integrity verified.
-  - '@capacitor/haptics@8.0.2'
 
 packages:
   - apps/*
@@ -25,14 +23,11 @@ packages:
   - packages/*
 
 overrides:
-  # Patched transitive versions for Ionic CLI security advisories.
-  '@ionic/cli>tar': 7.5.22
-  # @nuxtjs/ionic 1.0.2 has not refreshed its Capacitor dependency range yet.
-  '@nuxtjs/ionic>@capacitor/cli': 8.5.0
-  '@nuxtjs/ionic>@capacitor/core': 8.5.0
-  external-editor>tmp: 0.2.7
-  # Capacitor CLI's xcode helper only uses the stable uuid API.
-  xcode>uuid: 11.1.1
+  # @nuxtjs/ionic's Web integration does not use native build tooling.
+  # Keep Ionic UI/router while excluding the retired Capacitor shell and CLIs.
+  '@nuxtjs/ionic@1.0.2>@capacitor/cli': '-'
+  '@nuxtjs/ionic@1.0.2>@capacitor/core': '-'
+  '@nuxtjs/ionic@1.0.2>@ionic/cli': '-'
 
 peerDependencyRules:
   # UnoCSS exposes an optional Webpack adapter; this project builds with Vite.

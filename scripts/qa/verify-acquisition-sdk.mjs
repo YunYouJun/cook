@@ -34,8 +34,8 @@ try {
   renameSync(dependency, previous)
   replaced = true
   symlinkSync(join(temporary, 'package'), dependency, 'dir')
-  runCookTool('vitest', ['run', 'test/acquisition.test.ts', 'test/yunlefunAuthAdapter.test.ts', 'test/nativeSso.test.ts', 'test/yunlefunAuth.test.ts', 'test/yunlefunSsoConfig.test.ts'])
-  runCookTool('eslint', ['apps/web/app/utils/acquisition.ts', 'apps/web/app/plugins/acquisition.client.ts', 'apps/web/app/plugins/yunlefun-auth.client.ts', 'apps/web/app/adapters/yunlefunAuth.ts', 'apps/web/app/utils/nativeSso.ts', 'test/acquisition.test.ts', 'test/yunlefunAuthAdapter.test.ts', 'test/nativeSso.test.ts', 'scripts/qa/verify-acquisition-sdk.mjs'])
+  runCookTool('vitest', ['run', 'test/acquisition.test.ts', 'test/yunlefunAuthAdapter.test.ts', 'test/yunlefunAuth.test.ts', 'test/yunlefunSsoConfig.test.ts'])
+  runCookTool('eslint', ['apps/web/app/utils/acquisition.ts', 'apps/web/app/plugins/acquisition.client.ts', 'apps/web/app/plugins/yunlefun-auth.client.ts', 'apps/web/app/adapters/yunlefunAuth.ts', 'test/acquisition.test.ts', 'test/yunlefunAuthAdapter.test.ts', 'scripts/qa/verify-acquisition-sdk.mjs'])
   if (process.argv.includes('--build'))
     runCookTool('nuxt', ['build'])
   if (process.argv.includes('--typecheck'))

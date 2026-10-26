@@ -79,46 +79,37 @@ pnpm preview
 
 ### 移动应用
 
-#### iOS
+原生 iOS 位于 `apps/ios`，使用 SwiftUI。需要 Xcode 和 XcodeGen：
 
 ```bash
-# 构建 iOS 应用
-pnpm build:ios
-
-# 在 Xcode 中打开
-open ios/App/App.xcworkspace
+pnpm convert
+xcodegen generate --spec apps/ios/project.yml
+open apps/ios/Cook.xcodeproj
 ```
 
-#### Android
+完整运行、签名和测试说明见 [iOS README](https://github.com/YunYouJun/cook/blob/main/apps/ios/README.md)。
 
-```bash
-# 构建 Android 应用
-pnpm build:android
-
-# 在 Android Studio 中打开
-# File > Open > android/
-```
+历史 Capacitor 工程及构建命令已移除；原生 Android 计划使用 Kotlin + Jetpack Compose，尚未创建工程。技术栈和分阶段待办见 [Android 开发计划](/dev/android-roadmap)。
 
 ## 项目结构
 
-```
+```text
 cook/
-├── app/                # 应用源码
-│   ├── components/     # Vue 组件
-│   ├── composables/    # 组合式函数
-│   ├── data/           # 菜谱数据 (CSV + JSON)
-│   ├── pages/          # 页面路由
-│   └── utils/          # 工具函数
-├── docs/               # 文档网站
+├── apps/
+│   ├── web/            # Nuxt + Ionic 网页与静态资源
+│   └── ios/            # 原生 SwiftUI 应用与 CookCore
+├── docs/               # 产品官网与开发文档
 ├── packages/
-│   └── cook/           # CLI 工具
-├── android/            # Android 应用
-├── ios/                # iOS 应用
-└── public/             # 静态资源
+│   ├── data/           # 共享 CSV、JSON、Schema 与测试用例
+│   └── cook/           # TypeScript 核心与 CLI
+├── cloudfunctions/     # 反馈与数据同步服务
+└── scripts/            # 构建与数据工具
 ```
+
+未来的原生 Android 工程放在 `apps/android`。
 
 ## 下一步
 
 - 📖 查看 [CLI 文档](/dev/cli) 了解数据管理
-- 📱 查看 [移动应用开发](/dev/app) 了解跨平台构建
+- 📱 查看 [移动应用开发](/dev/app) 了解原生客户端与 Web 的分工
 - 🍳 开始添加你喜欢的菜谱!

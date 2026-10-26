@@ -1,5 +1,3 @@
-import { Capacitor } from '@capacitor/core'
-import { StatusBar, Style } from '@capacitor/status-bar'
 import { ionDarkClass } from '~/constants'
 
 /**
@@ -13,24 +11,14 @@ export const useDarkMode = createSharedComposable(() => {
   const color = useColorMode()
   const isDark = computed(() => color.value === 'dark')
 
-  async function setLightMode() {
+  function setLightMode() {
     document.documentElement.classList.remove(ionDarkClass)
     syncThemeColor('#f2f2f6')
-
-    if (Capacitor.isNativePlatform()) {
-      await StatusBar.setStyle({ style: Style.Light })
-      await StatusBar.setBackgroundColor({ color: '#f2f2f6ff' })
-    }
   }
 
-  async function setDarkMode() {
+  function setDarkMode() {
     document.documentElement.classList.add(ionDarkClass)
     syncThemeColor('#000000')
-
-    if (Capacitor.isNativePlatform()) {
-      await StatusBar.setStyle({ style: Style.Dark })
-      await StatusBar.setBackgroundColor({ color: '#ff000000' })
-    }
   }
 
   return {
@@ -39,7 +27,7 @@ export const useDarkMode = createSharedComposable(() => {
     setLightMode,
     setDarkMode,
 
-    async toggleDark() {
+    toggleDark() {
       const targetMode = color.value === 'dark' ? 'light' : 'dark'
       color.preference = targetMode
 
