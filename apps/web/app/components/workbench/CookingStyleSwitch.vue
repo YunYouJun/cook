@@ -34,7 +34,7 @@ defineExpose({ focus })
     selected-text="视图"
     :toggle-icon="ioniconsChevronDown"
     interface="popover"
-    :interface-options="{ header: '做菜视图', side: 'bottom', alignment: 'end' }"
+    :interface-options="{ header: '做菜视图', side: 'bottom', alignment: 'center' }"
     @ion-change="pendingStyle = $event.detail.value"
     @ion-dismiss="applySelection"
   >
