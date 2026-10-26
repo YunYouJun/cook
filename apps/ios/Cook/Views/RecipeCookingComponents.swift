@@ -287,9 +287,16 @@ struct RecipeStepProgress: View {
                         .accessibilityIdentifier("recipe.continueStep")
                 }
                 if count > 0 {
-                    Button("重置步骤", systemImage: "arrow.counterclockwise") { confirmingReset = true }
-                        .labelStyle(.iconOnly)
-                        .frame(minWidth: 44, minHeight: 44)
+                    Button {
+                        confirmingReset = true
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                            // 将最小触控区域放在标签内，避免只命中图标。
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel("重置步骤")
+                    .accessibilityIdentifier("recipe.resetSteps")
                 }
             }
             // 重置按钮出现前后保留相同高度，避免步骤在完成或撤销时上下跳动。

@@ -324,9 +324,17 @@ final class KitchenWorkbenchUITests: XCTestCase {
         openKitchen(app)
         XCTAssertEqual(progress.label, "已完成 1 / 11 步")
         XCTAssertEqual(app.buttons["recipe.continueStep"].label, "继续第 2 步")
-        app.buttons["重置步骤"].tap()
-        let resets = app.buttons.matching(identifier: "重置步骤")
-        resets.element(boundBy: resets.count - 1).tap()
+        let resetControl = app.buttons["recipe.resetSteps"]
+        XCTAssertGreaterThanOrEqual(resetControl.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(resetControl.frame.height, 44)
+        resetControl.tap()
+        // Native confirmation actions may discard SwiftUI identifiers. Exclude the trigger
+        // explicitly and wait for the separate action, on both sheets and iPad popovers.
+        let resetConfirmation = app.buttons.matching(NSPredicate(
+            format: "label == %@ AND identifier != %@", "重置步骤", "recipe.resetSteps"
+        )).firstMatch
+        XCTAssertTrue(resetConfirmation.waitForExistence(timeout: 10))
+        resetConfirmation.tap()
         XCTAssertEqual(progress.label, "已完成 0 / 11 步")
 
         app.buttons["recipe.continueStep"].tap()
