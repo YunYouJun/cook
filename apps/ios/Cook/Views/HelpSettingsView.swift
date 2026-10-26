@@ -16,10 +16,14 @@ struct HelpSettingsView: View {
                 .accessibilityIdentifier("help.contribution")
             }
             Section {
-                externalLink("支持中心", subtitle: "访问云乐坊支持服务", symbol: "questionmark.circle", color: .blue,
+                externalLink("微信客服", subtitle: "通过微信联系云乐坊客服", image: Image("wechat").renderingMode(.template), color: .green,
+                             url: "https://work.weixin.qq.com/kfid/kfc9d4dcc4b6bd1c69e",
+                             accessibilityHint: "打开微信客服页面")
+                    .accessibilityIdentifier("help.wechatSupport")
+                externalLink("支持中心", subtitle: "访问云乐坊支持服务", image: Image(systemName: "questionmark.circle"), color: .blue,
                              url: "https://support.yunle.fun/?product=cook")
                     .accessibilityIdentifier("help.support")
-                externalLink("需求墙", subtitle: "查看公开建议，为想要的功能投票", symbol: "lightbulb", color: .purple,
+                externalLink("需求墙", subtitle: "查看公开建议，为想要的功能投票", image: Image(systemName: "lightbulb"), color: .purple,
                              url: "https://support.yunle.fun/feedback?product=cook")
                     .accessibilityIdentifier("help.requests")
             }
@@ -28,10 +32,11 @@ struct HelpSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func externalLink(_ title: String, subtitle: String, symbol: String, color: Color, url: String) -> some View {
+    private func externalLink(_ title: String, subtitle: String, image: Image, color: Color, url: String,
+                              accessibilityHint: String = "在浏览器中打开") -> some View {
         Link(destination: URL(string: url)!) {
             HStack(spacing: 12) {
-                SettingsRowLabel(title, symbol: symbol, color: color, subtitle: subtitle)
+                SettingsRowLabel(title, image: image, color: color, subtitle: subtitle)
                 Image(systemName: "arrow.up.right")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -40,27 +45,31 @@ struct HelpSettingsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityHint("在浏览器中打开")
+        .accessibilityHint(accessibilityHint)
     }
 }
 
 struct SettingsRowLabel: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let title: String
-    let symbol: String
+    let image: Image
     let color: Color
     let subtitle: String?
 
     init(_ title: String, symbol: String, color: Color, subtitle: String? = nil) {
+        self.init(title, image: Image(systemName: symbol), color: color, subtitle: subtitle)
+    }
+
+    init(_ title: String, image: Image, color: Color, subtitle: String? = nil) {
         self.title = title
-        self.symbol = symbol
+        self.image = image
         self.color = color
         self.subtitle = subtitle
     }
 
     var body: some View {
         HStack(alignment: dynamicTypeSize.isAccessibilitySize ? .top : .center, spacing: 12) {
-            Image(systemName: symbol)
+            image
                 .resizable()
                 .scaledToFit()
                 .fontWeight(.medium)
@@ -85,4 +94,19 @@ struct SettingsRowLabel: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
+}
+
+#Preview("帮助与反馈 · 浅色") {
+    NavigationStack { HelpSettingsView() }
+        .preferredColorScheme(.light)
+}
+
+#Preview("帮助与反馈 · 深色") {
+    NavigationStack { HelpSettingsView() }
+        .preferredColorScheme(.dark)
+}
+
+#Preview("帮助与反馈 · 大字体") {
+    NavigationStack { HelpSettingsView() }
+        .environment(\.dynamicTypeSize, .accessibility5)
 }

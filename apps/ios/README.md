@@ -44,7 +44,9 @@ CI 的 `ios` job 在 iPhone 和 iPad 模拟器上先后跑单元测试和 UI 测
 
 「我的 → 帮助与反馈」中的「需求墙」直接打开 `https://support.yunle.fun/feedback?product=cook`，保留 Cook 筛选；「支持中心」打开支持中心首页。意见反馈仍在 App 内私密提交，失败时保留内容并提供支持中心私密反馈入口，菜谱纠错保持原流程。
 
-帮助页的四个入口共用设置列表的图标样式，并附用途说明；外部页面显示外链箭头。「意见反馈」保留问题、功能建议、求菜和其他类型，切换类型不会改变页面标题。「菜谱投稿」固定填写菜名、视频或图文链接以及可选补充说明，校验网页链接与完整内容的 500 字限额；提交时复用 `recipe` 类别，以「菜谱投稿」及字段名称标识内容。两种表单复用私密提交、联系方式和失败兜底，失败保留各字段草稿。
+帮助页的入口共用设置列表的图标样式，并附用途说明；外部页面显示外链箭头。「微信客服」使用与网页版 `links.wecomKf` 相同的 `https://work.weixin.qq.com/kfid/kfc9d4dcc4b6bd1c69e`，通过系统打开微信客服页面。「意见反馈」保留问题、功能建议、求菜和其他类型，切换类型不会改变页面标题。「菜谱投稿」固定填写菜名、视频或图文链接以及可选补充说明，校验网页链接与完整内容的 500 字限额；提交时复用 `recipe` 类别，以「菜谱投稿」及字段名称标识内容。两种表单复用私密提交、联系方式和失败兜底，失败保留各字段草稿。
+
+「微信客服」使用白色微信双气泡标识，沿用设置页 18 pt 图形、28 pt 圆角底板与系统绿色；SVG 以模板图像渲染。图形来自 [Simple Icons 的 WeChat 图标](https://github.com/simple-icons/simple-icons/blob/develop/icons/wechat.svg)，项目采用 [CC0 1.0](https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md)；仅随 App 内置这一枚资源，不新增图标库依赖。
 
 原生入口的发布与实际分发构建验收由 [#133](https://github.com/YunYouJun/cook/issues/133) 跟踪，源码合并不代表已经分发。
 
