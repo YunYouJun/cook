@@ -12,6 +12,7 @@ struct CookView: View {
     @Environment(FeedbackClient.self) private var feedback
     @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }, sort: \FridgeItem.expiresAt) private var fridgeItems: [FridgeItem]
     @State private var showingFilters = false
+    @State private var showingDietaryGoals = false
     /// 冰箱快捷入口按它判断哪些过期了，跨过零点时刷新
     @State private var now = Date()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -35,7 +36,7 @@ struct CookView: View {
         Group {
             if presentation == .kitchen {
                 NavigationStack(path: $kitchenPath) {
-                    CloudKitchenView(presentation: $presentation, showResults: { kitchenPath.append(ResultsRoute()) })
+                    CloudKitchenView(presentation: $presentation, showingDietaryGoals: $showingDietaryGoals, showResults: { kitchenPath.append(ResultsRoute()) })
                         .navigationDestination(for: ResultsRoute.self) { _ in ResultsView() }
                         .recipeDestinations()
                 }
@@ -64,6 +65,7 @@ struct CookView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingDietaryGoals) { DietaryGoalSelectionSheet() }
         .overlay {
             BasketFlightLayer(animator: basket)
         }
@@ -82,7 +84,7 @@ struct CookView: View {
     private func chooser(warnings: [IncompatibleRule], extras: [String], emptySignal: String?) -> some View {
         List {
             Section {
-                DietaryGoalPickerButton()
+                DietaryGoalPickerButton(isPresented: $showingDietaryGoals)
             } footer: {
                 if let goal = session.dietaryGoal { Text(goal.subtitle) }
             }
@@ -462,6 +464,7 @@ struct ResultsRoute: Hashable {}
 
 /// 筛选：做法、难度、不吃辣，以及家里常备和忌口
 struct FilterSheet: View {
+    @State private var showingDietaryGoals = false
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
     @Environment(\.dismiss) private var dismiss
@@ -472,7 +475,7 @@ struct FilterSheet: View {
 
         NavigationStack {
             List {
-                Section { DietaryGoalPickerButton() }
+                Section { DietaryGoalPickerButton(isPresented: $showingDietaryGoals) }
                 ChipSection(title: "做法", note: session.methodGroups.isEmpty ? nil : "只看这些做法") {
                     ForEach(Recommender.methodGroups, id: \.label) { group in
                         Chip(title: group.label, imageName: group.imageName, isSelected: session.methodGroups.contains(group.label)) {
@@ -500,6 +503,7 @@ struct FilterSheet: View {
                     Text("家里常备、忌口和不吃辣会记住，下次打开还在。")
                 }
             }
+            .accessibilityIdentifier("filter.options")
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 resultSummary(matchCount: matchCount)
             }
@@ -515,6 +519,7 @@ struct FilterSheet: View {
                 }
             }
         }
+        .sheet(isPresented: $showingDietaryGoals) { DietaryGoalSelectionSheet() }
         .sensoryFeedback(.selection, trigger: session.activeFilterCount)
     }
 

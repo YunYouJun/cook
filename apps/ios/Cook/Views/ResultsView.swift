@@ -8,6 +8,7 @@ struct ResultsView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
     @Environment(FavoriteActions.self) private var favoriteActions
+    @State private var showingDietaryGoals = false
     @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }) private var favorites: [Favorite]
 
     static let modes: [RecommendationMode] = [.loose, .strict, .survival]
@@ -54,6 +55,8 @@ struct ResultsView: View {
                 recommendList(favoriteIds: favoriteIds)
             }
         }
+        // The result list can disappear when a goal is cleared; keep its presenter above that branch.
+        .sheet(isPresented: $showingDietaryGoals) { DietaryGoalSelectionSheet() }
         .navigationTitle(session.dietaryGoal?.title ?? "能做的菜")
         .searchable(text: $session.keyword, placement: .navigationBarDrawer(displayMode: .always), prompt: "按菜名筛选")
         .sensoryFeedback(.selection, trigger: session.selectedStuff)
@@ -66,7 +69,7 @@ struct ResultsView: View {
         let suggestions = Recommender.unlockSuggestions(matches)
 
         return List {
-            Section { DietaryGoalPickerButton() }
+            Section { DietaryGoalPickerButton(isPresented: $showingDietaryGoals) }
             Section {
                 Picker("推荐方式", selection: $session.mode) {
                     ForEach(Self.modes, id: \.self) { mode in
@@ -122,13 +125,14 @@ struct ResultsView: View {
                 }
             }
         }
+        .accessibilityIdentifier("dietary.results")
         .animation(.snappy, value: matches.map(\.recipe.id))
     }
 
     private func goalList(favoriteIds: Set<Int>) -> some View {
         let recipes = session.candidates(in: store)
         return List {
-            Section { DietaryGoalPickerButton() } footer: {
+            Section { DietaryGoalPickerButton(isPresented: $showingDietaryGoals) } footer: {
                 if let goal = session.dietaryGoal {
                     Text(goal.explanation)
                 }
@@ -150,6 +154,7 @@ struct ResultsView: View {
                 Text("可继续选择食材和厨具；选择食材后，推荐方式才参与筛选。")
             }
         }
+        .accessibilityIdentifier("dietary.results")
         .animation(.snappy, value: recipes.map(\.id))
     }
 

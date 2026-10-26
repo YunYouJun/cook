@@ -5,6 +5,7 @@ import SwiftUI
 /// are the same ones used by the ingredient list.
 struct CloudKitchenView: View {
     @Binding var presentation: CookPresentation
+    @Binding var showingDietaryGoals: Bool
     let showResults: () -> Void
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
@@ -51,7 +52,7 @@ struct CloudKitchenView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
 
-                    GroupBox { DietaryGoalPickerButton() }
+                    GroupBox { DietaryGoalPickerButton(isPresented: $showingDietaryGoals) }
                         .padding(.horizontal, 20)
                         .padding(.top, 16)
 

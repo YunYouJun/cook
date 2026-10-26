@@ -9,6 +9,7 @@ struct RandomView: View {
     @Environment(CookSession.self) private var session
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var recipe: Recipe?
+    @State private var showingDietaryGoals = false
     @State private var rolls = 0
     /// 换菜时快速闪过的几道菜，像摇骰子；nil 时显示选中的菜
     @State private var shuffling: String?
@@ -42,7 +43,7 @@ struct RandomView: View {
             GeometryReader { geometry in
                 ScrollView {
                     VStack(spacing: 20) {
-                        GroupBox { DietaryGoalPickerButton() }
+                        GroupBox { DietaryGoalPickerButton(isPresented: $showingDietaryGoals) }
                         Spacer(minLength: 0)
                         if let recipe {
                             NavigationLink(value: RecipeRoute(recipe: recipe, dietaryGoal: session.dietaryGoal)) {
@@ -124,6 +125,7 @@ struct RandomView: View {
             .sensoryFeedback(.selection, trigger: shuffling) { _, new in new != nil }
             .sensoryFeedback(.impact(weight: .medium), trigger: landings)
         }
+        .sheet(isPresented: $showingDietaryGoals) { DietaryGoalSelectionSheet() }
     }
 
     private func card(_ recipe: Recipe) -> some View {

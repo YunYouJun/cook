@@ -351,7 +351,11 @@ final class CookUITests: XCTestCase {
         app.launch()
         tap(app.buttons["筛选"])
         let avoid = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "忌口")).firstMatch
-        if !avoid.exists { app.swipeUp() }
+        let options = app.descendants(matching: .any).matching(identifier: "filter.options").firstMatch
+        for _ in 0..<6 {
+            if avoid.exists && avoid.isHittable { break }
+            options.swipeUp()
+        }
         tap(avoid)
         let search = app.searchFields["搜索食材或别名"]
 

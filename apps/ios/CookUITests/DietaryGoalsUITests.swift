@@ -126,7 +126,20 @@ final class DietaryGoalsUITests: XCTestCase {
         select("less-added-sugar", in: app)
         let beef = app.buttons["牛肉"]
         XCTAssertTrue(beef.waitForExistence(timeout: 10))
+        // Keep the whole chip above the fixed action bar before tapping it.
+        let action = app.buttons["cook.showResults"]
+        for _ in 0..<8 {
+            if beef.isHittable && (!action.exists || beef.frame.maxY < action.frame.minY) { break }
+            let window = app.windows.firstMatch
+            window.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.65))
+                .press(forDuration: 0.1,
+                       thenDragTo: window.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.5)),
+                       withVelocity: .slow, thenHoldForDuration: 0.2)
+        }
+        XCTAssertTrue(beef.isHittable)
         beef.tap()
+        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: beef)
+        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed)
         showResults(app)
         let cancel = app.buttons["dietary.clearGoal"]
         XCTAssertTrue(cancel.waitForExistence(timeout: 10))
@@ -134,6 +147,26 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertFalse(app.buttons["dietary.clearGoal"].exists)
         XCTAssertEqual(app.buttons["dietary.openPicker"].firstMatch.value as? String, "不限目标")
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已选：牛肉")).firstMatch.exists)
+    }
+
+    @MainActor
+    func testClearingGoalFromResultsKeepsPickerPresentedUntilDone() {
+        let app = app()
+        select("less-added-sugar", in: app)
+        showResults(app)
+        let results = app.descendants(matching: .any).matching(identifier: "dietary.results").firstMatch
+        let picker = results.buttons["dietary.openPicker"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 10))
+        picker.tap()
+        let none = app.buttons["dietary.goal.none"]
+        XCTAssertTrue(none.waitForExistence(timeout: 10))
+        none.tap()
+        XCTAssertTrue(none.isSelected)
+        let done = app.buttons["dietary.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.switches["dietary.remember"].isEnabled)
+        done.tap()
+        XCTAssertTrue(app.staticTexts["先选几样食材"].waitForExistence(timeout: 10))
     }
 
     @MainActor
@@ -164,7 +197,7 @@ final class DietaryGoalsUITests: XCTestCase {
     }
 
     @MainActor
-    private func verifyNativeGoalFlow(contentSize: UIContentSizeCategory, auditTypes: XCUIAccessibilityAuditType) throws {
+    private func verifyNativeGoalFlow(contentSize: UIContentSizeCategory, auditTypes: [XCUIAccessibilityAuditType]) throws {
         let app = app(contentSize: contentSize)
         app.buttons["dietary.openPicker"].firstMatch.tap()
         let option = app.buttons["dietary.goal.less-added-sugar"]
@@ -174,10 +207,13 @@ final class DietaryGoalsUITests: XCTestCase {
         }
         XCTAssertTrue(option.isHittable)
         option.tap()
-        // Audit the actual native sheet without suppressing any reported issues.
-        try app.performAccessibilityAudit(for: auditTypes) { issue in
-            print("Dietary accessibility audit: \(issue.element?.debugDescription ?? "unidentified element") — \(issue.detailedDescription)")
-            return false
+        // Keep each category within the simulator's audit deadline on slower CI hosts.
+        // Every selected category runs and every reported issue still fails the test.
+        for auditType in auditTypes {
+            try app.performAccessibilityAudit(for: auditType) { issue in
+                print("Dietary accessibility audit: \(issue.element?.debugDescription ?? "unidentified element") — \(issue.detailedDescription)")
+                return false
+            }
         }
         let toggle = app.switches["dietary.remember"]
         for _ in 0..<8 {

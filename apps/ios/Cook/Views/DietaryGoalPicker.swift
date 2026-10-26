@@ -6,12 +6,10 @@ import SwiftUI
 struct DietaryGoalPickerButton: View {
     @Environment(CookSession.self) private var session
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @State private var sheet: Sheet?
-
-    private enum Sheet: String, Identifiable { case goals; var id: String { rawValue } }
+    @Binding var isPresented: Bool
 
     var body: some View {
-        Button { sheet = .goals } label: {
+        Button { isPresented = true } label: {
             HStack {
                 if dynamicTypeSize.isAccessibilitySize {
                     VStack(alignment: .leading, spacing: 4) {
@@ -34,7 +32,6 @@ struct DietaryGoalPickerButton: View {
         .accessibilityLabel("饮食目标")
         .accessibilityIdentifier("dietary.openPicker")
         .accessibilityValue(session.dietaryGoal?.title ?? "不限目标")
-        .sheet(item: $sheet) { _ in DietaryGoalSelectionSheet() }
     }
 
     private var selectionTitle: some View {
