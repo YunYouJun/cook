@@ -132,8 +132,10 @@ final class KitchenWorkbenchUITests: XCTestCase {
             let bottom = timer.exists ? timer.frame.minY : window.maxY
             // 目标原先可能在屏幕上方，正确定位反而会增大 y；验证可见区域与动画完成。
             // 不在滚动动画中询问点击位置，避免 XCTest 对被裁剪按钮抛出定位错误。
-            return !frame.isEmpty && frame == previousFrame && window.contains(frame)
-                && frame.minY >= headerBottom && frame.maxY <= bottom
+            guard !frame.isEmpty && frame == previousFrame && window.contains(frame)
+                && frame.minY >= headerBottom && frame.maxY <= bottom else { return false }
+            // The model frame can settle before the native hit-test state during a scroll.
+            return step.isHittable
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [located], timeout: 10), .completed)
         XCTAssertTrue(step.isHittable)

@@ -43,7 +43,7 @@ final class CookUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "云乐坊账号的登录和退出不会改变这些数据")).firstMatch.exists)
         // 基础功能不要求账号，登录入口不会挡住菜谱筛选。
         tap(app.buttons["做菜"].firstMatch)
-        tap(app.buttons["番茄"])
+        selectCookingIngredient("番茄")
         wait(app.buttons["番茄"], "isSelected == true")
     }
 
@@ -61,7 +61,7 @@ final class CookUITests: XCTestCase {
             // 明确检查 VoiceOver label。iOS 26.5 的快捷 identifier 查询曾返回不存在，
             // 但同一失败现场的完整无障碍树和截图均包含该按钮。
             let stuff = app.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch
-            tap(stuff)
+            selectCookingIngredient(name)
             wait(stuff, "isSelected == true")
         }
 
@@ -103,8 +103,8 @@ final class CookUITests: XCTestCase {
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launch()
-        tap(app.buttons["番茄"])
-        tap(app.buttons["鸡蛋"])
+        selectCookingIngredient("番茄")
+        selectCookingIngredient("鸡蛋")
         let showResults = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "看看能做什么")).firstMatch
         if app.windows.firstMatch.horizontalSizeClass != .regular { tap(showResults) }
         tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch)
@@ -176,8 +176,14 @@ final class CookUITests: XCTestCase {
         XCTAssertTrue(failed.buttons["打开邮件草稿"].exists)
         tap(failed.buttons["取消"])
         wait(failed, "exists == false")
+        // A small screen may have recycled the earlier Form rows while the keyboard was open.
+        let form = app.descendants(matching: .any).matching(identifier: "feedback.form").firstMatch
+        wait(form, "exists == true")
+        for _ in 0..<6 where !name.exists || !name.isHittable { form.swipeDown() }
         XCTAssertEqual(name.value as? String, "Tomato eggs")
+        for _ in 0..<6 where !source.exists || !source.isHittable { form.swipeUp() }
         XCTAssertEqual(source.value as? String, "https://example.com/recipe")
+        for _ in 0..<6 where !details.exists || !details.isHittable { form.swipeUp() }
         XCTAssertEqual(details.value as? String, "Easy to cook")
         XCTAssertTrue(submit.isEnabled)
     }
@@ -229,8 +235,8 @@ final class CookUITests: XCTestCase {
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launch()
-        tap(app.buttons["番茄"])
-        tap(app.buttons["鸡蛋"])
+        selectCookingIngredient("番茄")
+        selectCookingIngredient("鸡蛋")
         if app.windows.firstMatch.horizontalSizeClass != .regular {
             tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "看看能做什么")).firstMatch)
         }
@@ -238,7 +244,12 @@ final class CookUITests: XCTestCase {
         tap(recipe)
         tap(app.navigationBars.buttons["收藏"])
         wait(app.buttons["取消收藏"], "exists == true")
-        tap(app.buttons["菜谱"].firstMatch)
+        let library = app.buttons.matching(NSPredicate(format: "label IN %@", ["菜谱", "book"])).firstMatch
+        if !library.exists {
+            // A real scroll can collapse the native tab bar to its selected item.
+            tap(app.tabBars.buttons.firstMatch)
+        }
+        tap(library)
         tap(app.segmentedControls.buttons["最近浏览"])
         wait(recipe, "exists == true")
         tap(app.buttons["清空"])
@@ -260,7 +271,38 @@ final class CookUITests: XCTestCase {
         wait(recipe, "exists == true")
     }
 
-    /// 等控件出现再点；在屏幕外时 tap() 会自己滚过去
+    /// 食材需要完全离开固定底栏遮挡，不能依赖 XCTest 的自动滚动。
+    @MainActor
+    private func selectCookingIngredient(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
+        let app = XCUIApplication()
+        let ingredient = app.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch
+        wait(ingredient, "exists == true", file: file, line: line)
+        let window = app.windows.firstMatch
+        let action = app.buttons["cook.showResults"]
+        let navigationBar = app.navigationBars.firstMatch
+        var scrolled = false
+        for _ in 0..<8 {
+            let top = navigationBar.exists ? navigationBar.frame.maxY + 8 : window.frame.minY + 8
+            let bottom = action.exists ? action.frame.minY - 8 : window.frame.maxY - 8
+            if ingredient.isHittable && ingredient.frame.minY >= top && ingredient.frame.maxY <= bottom { break }
+            let above = ingredient.frame.minY < top
+            window.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: above ? 0.35 : 0.65))
+                .press(forDuration: 0.1,
+                       thenDragTo: window.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.5)),
+                       withVelocity: .slow, thenHoldForDuration: 0.2)
+            scrolled = true
+        }
+        XCTAssertTrue(ingredient.isHittable, "食材应能直接点击", file: file, line: line)
+        if action.exists {
+            XCTAssertLessThanOrEqual(ingredient.frame.maxY, action.frame.minY - 8,
+                                     "食材应完整露在固定操作栏上方", file: file, line: line)
+        }
+        if scrolled { capture(app, "revealed-ingredient-\(name)") }
+        tap(ingredient, file: file, line: line)
+        wait(ingredient, "isSelected == true", file: file, line: line)
+    }
+
+    /// 等控件出现再点；调用方负责先使其离开遮挡区域。
     @MainActor
     private func tap(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         wait(element, "exists == true", file: file, line: line)
@@ -282,8 +324,8 @@ final class CookUITests: XCTestCase {
         tap(app.buttons["完成"])
         wait(hint, "exists == false")
 
-        tap(app.buttons["番茄"])
-        tap(app.buttons["鸡蛋"])
+        selectCookingIngredient("番茄")
+        selectCookingIngredient("鸡蛋")
         tap(app.buttons["筛选"])
         wait(count, "exists == true")
         let initialLabel = count.label
@@ -319,7 +361,12 @@ final class CookUITests: XCTestCase {
 
         tap(app.buttons["筛选"])
         let pantry = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "家里常备")).firstMatch
-        for _ in 0..<4 where !pantry.isHittable { app.swipeUp() }
+        let options = app.descendants(matching: .any).matching(identifier: "filter.options").firstMatch
+        for _ in 0..<6 {
+            if pantry.exists && pantry.isHittable && options.frame.contains(pantry.frame) { break }
+            options.swipeUp()
+        }
+        XCTAssertTrue(options.frame.contains(pantry.frame), "常备调料入口应完整进入弹层的可见列表")
         tap(pantry)
         let oil = app.buttons["pantry.item.油"]
         let salt = app.buttons["pantry.item.盐"]
@@ -535,9 +582,9 @@ final class CookUITests: XCTestCase {
         app.launchEnvironment["COOK_UI_TEST_FAVORITE_FAILURES"] = "2"
         app.launch()
         XCTAssertTrue(app.buttons["番茄"].waitForExistence(timeout: timeout))
-        tap(app.buttons["番茄"])
+        selectCookingIngredient("番茄")
         wait(app.buttons["番茄"], "isSelected == true")
-        tap(app.buttons["鸡蛋"])
+        selectCookingIngredient("鸡蛋")
         wait(app.buttons["鸡蛋"], "isSelected == true")
         let showResults = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "看看能做什么")).firstMatch
         if app.windows.firstMatch.horizontalSizeClass != .regular { tap(showResults) }
