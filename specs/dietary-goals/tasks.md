@@ -1,6 +1,6 @@
 # 饮食目标推荐：实施任务
 
-状态：iOS 首版已实现，待审阅，尚未发布。2026-10-27 按维护者要求优先原生 iOS，当前执行下方 I0～I4，后面的 T0～T7 保留为完整跨端计划。
+状态：iOS 首版已实现，待审阅，尚未发布。2026-10-27 按维护者要求优先原生 iOS，I0～I4 已交付，当前按 [iOS 收尾 goal](./closeout.md) 继续核对；后面的 T0～T7 保留为原始跨端任务分解，不代表当前 iOS 尚未实施。
 
 ## 当前 iOS 任务
 
@@ -14,7 +14,11 @@
 
 依赖顺序：T0 → T1 → T2 → T3 → T4／T5 → T6 → T7。T4 与 T5 可在共享契约冻结后分别实施；每次 PR 保持可独立验证，功能在发布门槛前保持关闭。
 
-## T0：冻结审核规则与可行范围（G0）
+## 原始跨端任务分解
+
+以下清单保留原始设计依赖，勾选状态不作为本轮交付状态。已交付范围以 I0～I4、收尾 goal 和验证记录为准；Web、在线更新和跨端一致性仍需后续增量实施。
+
+### T0：冻结审核规则与可行范围（G0）
 
 - [ ] 写明三个目标的通过、失败、未知条件，特别区分添加糖与总糖、添加油与总脂肪、搭配提示与营养达标。
 - [ ] 选择 10 道试标样本，覆盖明确人数、每人份、份数缺失、油量范围、适量油、复合酱汁、可选糖、不同视频与图文、大杂烩等情况。
@@ -24,7 +28,7 @@
 
 需求：R3、R4、R5、R6、R8、R11。完成标准：存在可重复执行的审核手册与试标报告，不存在用未确认的营养阈值决定首发的情况。
 
-## T1：建立可追溯的审核数据（G1）
+### T1：建立可追溯的审核数据（G1）
 
 - [ ] 新增 `recipe-dietary.json`、schema、共享类型及审核说明，采用稳定目标 ID 与三态结果。
 - [ ] 新增离线校验器及 `pnpm dietary:validate`，验证 ID、锚点、来源指纹、原料完整性、份数、数值、理由代码、政策版本和覆盖率。
@@ -37,7 +41,7 @@
 
 建议 PR 1：`feat(data): add reviewed dietary annotations and validation`。首个 PR 可包含少量试标数据，但保持功能关闭；扩充至发布数量可后续同类 PR 完成。
 
-## T2：让数据在两端可加载、可更新、可撤回（G1）
+### T2：让数据在两端可加载、可更新、可撤回（G1）
 
 - [ ] 生成带独立 dietaryVersion 的运行包，包含审核子集、展示内容与对应图文快照。
 - [ ] 在 meta 中添加可选扩展描述，接入 `convert`、Web 发布及缓存；饮食标注单独变化也触发更新。
@@ -50,7 +54,7 @@
 
 建议 PR 2：`feat(data): distribute versioned dietary recipe snapshots`。
 
-## T3：实现一致的目标候选与推荐（G1）
+### T3：实现一致的目标候选与推荐（G1）
 
 - [ ] 新增 TS 目标模块与 CookCore 对应类型／规则，使用独立上下文保持既有无目标推荐不变。
 - [ ] 实现无食材目标目录、有食材交集、完整原料忌口排除、大杂烩排除和私人菜谱隔离。
@@ -63,7 +67,7 @@
 
 建议 PR 3：`feat(recommend): support reviewed dietary goal candidates`。
 
-## T4：完成 Web 用户流程（G2）
+### T4：完成 Web 用户流程（G2）
 
 - [ ] 接入 recipe store、做菜筛选、经典结果、工作台、工具候选及随机页面，显示当前单选目标和范围说明。
 - [ ] 新增按需加载的审核图文详情；主按钮对应快照，其他来源不继承审核标注。
@@ -77,7 +81,7 @@
 
 建议 PR 4：`feat(web): add dietary goal selection and reviewed recipe details`。
 
-## T5：完成 iOS 原生流程（G3）
+### T5：完成 iOS 原生流程（G3）
 
 - [ ] 在 `CookSession`、结果与随机入口接入目标，经典和厨房视图显示同一状态。
 - [ ] 复用原生 Chips、图文与份数组件展示审核上下文；加载同版快照，避免回退到未核对视频。
@@ -90,7 +94,7 @@
 
 建议 PR 5：`feat(ios): add dietary goals to native cooking flows`。
 
-## T6：执行发布验收（G4）
+### T6：执行发布验收（G4）
 
 - [ ] 生成审核覆盖报告：每目标通过／失败／未知／过期数量、独立菜谱数、份数和油量覆盖。
 - [ ] 验证关闭目标后普通推荐与基线一致，收藏、历史、私人菜谱保持可访问。
@@ -104,7 +108,7 @@
 
 建议 PR 6：`feat(dietary): enable verified goals after release acceptance`。只有该 PR 打开已验收目标；此前 PR 中入口保持关闭。发布操作沿用现有项目流程。
 
-## T7：发布后人工复盘与后续 issue
+### T7：发布后人工复盘与后续 issue
 
 - [ ] 更新帮助与数据审核说明，解释各目标的具体含义，保留纠错入口。
 - [ ] 累计至少两周且有 500 次目标结果页曝光后，人工查看总体使用漏斗与无结果情况，结合用户主动反馈判断扩充方向。
@@ -115,7 +119,7 @@
 
 ## 验证命令与执行约定
 
-以下是实施阶段的检查清单；本次仅写文档，不运行功能测试或声称这些能力已通过。
+以下为原始完整方案的检查命令。iOS 首版已执行的命令、平台和结果见 [验证记录](./validation.md)；尚未接入的 Web、在线更新等能力不计为通过。
 
 ```bash
 # Existing data and shared fixtures; review generated differences before committing.
@@ -123,7 +127,7 @@ pnpm validate
 pnpm amounts:check
 pnpm fixtures
 
-# New command to be added in T1.
+# Dietary annotation validation added in the iOS first version.
 pnpm dietary:validate
 
 # Existing project checks; select focused tests while developing each PR.
