@@ -4,6 +4,31 @@ import SwiftUI
 // 按 HIG：玻璃只用在浮在内容上面的控件（底部按钮、提示条），菜谱卡片这类内容本身不用。
 
 extension View {
+    /// 自定义固定栏参与系统滚动边缘效果；旧系统继续使用材质背景。
+    @ViewBuilder
+    func scrollEdgeBar<Bar: View>(edge: VerticalEdge, @ViewBuilder content: () -> Bar) -> some View {
+        if #available(iOS 26.0, *) {
+            safeAreaBar(edge: edge, spacing: 0, content: content)
+        } else {
+            safeAreaInset(edge: edge, spacing: 0) {
+                content().background(.bar)
+            }
+        }
+    }
+
+    /// 固定栏使用系统柔和边缘；没有工具栏的底端按剩余内容显示渐隐。
+    @ViewBuilder
+    func softScrollEdges(enabled: Bool = true) -> some View {
+        if !enabled {
+            self
+        } else if #available(iOS 26.0, *) {
+            scrollEdgeEffectStyle(.soft, for: .vertical)
+                .modifier(ScrollBottomFade())
+        } else {
+            modifier(ScrollBottomFade())
+        }
+    }
+
     /// 页面底部的主按钮
     @ViewBuilder
     func prominentButtonStyle() -> some View {
@@ -37,6 +62,34 @@ extension View {
             tabBarMinimizeBehavior(.onScrollDown)
         } else {
             self
+        }
+    }
+}
+
+private struct ScrollBottomFade: ViewModifier {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @State private var hasMoreBelow = false
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content
+                .onScrollGeometryChange(for: Bool.self) { geometry in
+                    geometry.contentOffset.y + geometry.containerSize.height
+                        < geometry.contentSize.height + geometry.contentInsets.bottom - 1
+                } action: { _, hasMore in
+                    hasMoreBelow = hasMore
+                }
+                .overlay(alignment: .bottom) {
+                    if hasMoreBelow && !reduceTransparency {
+                        let background = Color(uiColor: .systemGroupedBackground)
+                        LinearGradient(colors: [background.opacity(0), background], startPoint: .top, endPoint: .bottom)
+                            .frame(height: 24)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
+        } else {
+            content
         }
     }
 }

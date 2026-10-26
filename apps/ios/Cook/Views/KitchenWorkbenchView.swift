@@ -32,7 +32,7 @@ struct KitchenWorkbenchView: View {
                 ZStack(alignment: .top) {
                     KitchenPaneLayout(frames: frames) {
                         instructions
-                            .safeAreaInset(edge: .bottom, spacing: 0) {
+                            .scrollEdgeBar(edge: .bottom) {
                                 if compact { timerShortcut }
                             }
                             .clipped()
@@ -63,6 +63,8 @@ struct KitchenWorkbenchView: View {
                     }
                 }
             }
+            // 折痕避让区域沿用内容底色，保留系统间距并自动适配深色模式。
+            .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle(recipe.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -131,7 +133,6 @@ struct KitchenWorkbenchView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .background(.bar)
             .accessibilityIdentifier("kitchen.timerShortcut")
         }
     }
@@ -219,12 +220,12 @@ struct KitchenPreparationView: View {
             }
         }
         .contentMargins(.top, tabletop ? 8 : nil, for: .scrollContent)
-        .safeAreaInset(edge: .top, spacing: 0) {
+        .softScrollEdges()
+        .scrollEdgeBar(edge: .top) {
             if tabletop, !dynamicTypeSize.isAccessibilitySize {
                 KitchenTimerPanel(recipe: recipe, compact: true)
                     .padding(.horizontal)
                     .padding(.vertical, 10)
-                    .background(.bar)
             }
         }
         .listSectionSpacing(16)
