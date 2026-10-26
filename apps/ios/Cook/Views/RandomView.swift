@@ -19,15 +19,13 @@ struct RandomView: View {
 
     /// 候选菜。和 Web 的 randomPool 一致，只是不看结果页的菜名搜索
     private var pool: [Recipe] {
-        var options = session.options
-        options.keyword = nil
-        if !session.selectedStuff.isEmpty {
-            return store.recommender.recommend(options).map(\.recipe)
-        }
-        return store.recommender.candidates(options)
+        session.candidates(in: store, ignoringKeyword: true)
     }
 
     private func scopeText(count: Int) -> String {
+        if let goal = session.dietaryGoal {
+            return "按“\(goal.title)”和当前条件，从 \(count) 道已核对做法里挑"
+        }
         if !session.selectedStuff.isEmpty {
             return "从已选食材能做的 \(count) 道菜里挑"
         }
@@ -42,14 +40,16 @@ struct RandomView: View {
 
         NavigationStack {
             VStack(spacing: 20) {
+                GroupBox { DietaryGoalPickerButton() }
                 Spacer(minLength: 0)
                 if let recipe {
-                    NavigationLink(value: RecipeRoute(recipe: recipe)) {
+                    NavigationLink(value: RecipeRoute(recipe: recipe, dietaryGoal: session.dietaryGoal)) {
                         card(recipe)
                     }
                     .buttonStyle(.plain)
                     .disabled(shuffling != nil)
                     .accessibilityHint("打开菜谱详情")
+                    .accessibilityIdentifier("random.openRecipe")
                     .id(recipe.id)
                     .transition(reduceMotion ? .opacity : .asymmetric(
                         insertion: .scale(scale: 0.9).combined(with: .opacity),
@@ -99,6 +99,15 @@ struct RandomView: View {
             }
             .onDisappear {
                 isVisible = false
+                shuffleTask?.cancel()
+                shuffling = nil
+            }
+            .onChange(of: pool.map(\.id)) { _, ids in
+                shuffleTask?.cancel()
+                shuffling = nil
+                if recipe.map({ !ids.contains($0.id) }) ?? true {
+                    recipe = store.randomRecipe(from: pool)
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
                 if isVisible, !pool.isEmpty {
@@ -144,6 +153,12 @@ struct RandomView: View {
             Text(store.meta(for: recipe))
                 .foregroundStyle(.secondary)
                 .redacted(reason: shuffling == nil ? [] : .placeholder)
+            if let goal = session.dietaryGoal, let entry = store.dietaryCatalog?.entry(for: recipe, goal: goal) {
+                Text(entry.reason(for: goal))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
             // 卡片本身能点，用一行带箭头的提示说明这一点
             Label("看做法", systemImage: "chevron.right")
                 .labelStyle(TrailingIconLabelStyle())

@@ -1,0 +1,85 @@
+import CookCore
+import SwiftData
+import XCTest
+@testable import Cook
+
+@MainActor
+final class DietarySessionTests: XCTestCase {
+    // mainContext 不能延长容器的生命周期；每个测试实例持有自己的内存容器。
+    private lazy var container = Persistence.makeContainer(inMemory: true)
+
+    private func defaults() -> (UserDefaults, String) {
+        let name = "cook.dietary.tests.\(UUID().uuidString)"
+        return (UserDefaults(suiteName: name)!, name)
+    }
+
+    func testSelectingAGoalDoesNotCreateSyncedPreferencesOrPersistWithoutOptIn() throws {
+        let (defaults, name) = defaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let context = container.mainContext
+        let session = CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults)
+        session.selectDietaryGoal(.lessAddedSugar)
+        XCTAssertTrue(session.hasSelection)
+        XCTAssertEqual(session.activeFilterCount, 1)
+        XCTAssertNil(defaults.string(forKey: CookSession.dietaryGoalKey))
+        XCTAssertNil(CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults).dietaryGoal)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Preferences>()), 0)
+        XCTAssertFalse(context.hasChanges)
+    }
+
+    func testRememberClearThisMealAndExplicitCancellationHaveDistinctPersistence() throws {
+        let (defaults, name) = defaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let context = container.mainContext
+        let session = CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults)
+        session.selectDietaryGoal(.lessAddedSugar)
+        session.rememberDietaryGoal(true)
+        session.selectDietaryGoal(.balancedPairing)
+        XCTAssertEqual(defaults.string(forKey: CookSession.dietaryGoalKey), DietaryGoal.balancedPairing.rawValue)
+        session.clearStuff()
+        XCTAssertNil(session.dietaryGoal)
+        XCTAssertEqual(session.rememberedDietaryGoal, .balancedPairing)
+        let reloaded = CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults)
+        XCTAssertEqual(reloaded.dietaryGoal, .balancedPairing)
+        reloaded.selectDietaryGoal(nil)
+        XCTAssertNil(defaults.string(forKey: CookSession.dietaryGoalKey))
+        XCTAssertFalse(reloaded.remembersDietaryGoal)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Preferences>()), 0)
+    }
+
+    func testGoalCountBrowsingRandomAndIngredientMatchesUseTheSameReviewedPool() throws {
+        let store = try RecipeStore.loadBundled(inMemory: true)
+        let context = container.mainContext
+        let session = CookSession(defaultPantry: store.data.pantry.defaults, context: context)
+        XCTAssertNil(session.matchCount(in: store))
+        session.selectDietaryGoal(.lessAddedSugar)
+        XCTAssertEqual(session.matchCount(in: store), 12)
+        XCTAssertEqual(session.candidates(in: store).count, 12)
+        session.keyword = "菠菜"
+        XCTAssertEqual(session.candidates(in: store).map(\.id), [630])
+        XCTAssertEqual(session.candidates(in: store, ignoringKeyword: true).count, 12)
+        session.keyword = ""
+        session.addStuff("牛肉")
+        XCTAssertTrue(session.matches(in: store).isEmpty)
+        XCTAssertTrue(session.candidates(in: store).isEmpty)
+        session.selectDietaryGoal(nil)
+        XCTAssertFalse(session.matches(in: store).isEmpty)
+        XCTAssertEqual(session.matches(in: store), store.recommender.recommend(session.options))
+    }
+
+    func testClearingFiltersPreservesAvoidPreferencesAndDoesNotRestoreRememberedGoalInSession() throws {
+        let (defaults, name) = defaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let context = container.mainContext
+        let session = CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults)
+        session.toggleAvoid("猪肉")
+        session.selectDietaryGoal(.lessAddedSugar)
+        session.rememberDietaryGoal(true)
+        session.toggleMethodGroup("蒸")
+        session.clearFilters()
+        XCTAssertEqual(session.avoid, ["猪肉"])
+        XCTAssertNil(session.dietaryGoal)
+        XCTAssertEqual(session.rememberedDietaryGoal, .lessAddedSugar)
+        XCTAssertEqual(session.activeFilterCount, 0)
+    }
+}

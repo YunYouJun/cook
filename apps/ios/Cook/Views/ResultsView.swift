@@ -46,24 +46,27 @@ struct ResultsView: View {
                     systemImage: "frying.pan",
                     description: Text("在左边选食材或厨具，能做的菜会出现在这里。")
                 )
+            } else if session.selectedStuff.isEmpty, session.dietaryGoal != nil {
+                goalList(favoriteIds: favoriteIds)
             } else if session.selectedStuff.isEmpty, let tool = session.tool {
                 toolList(tool, favoriteIds: favoriteIds)
             } else {
                 recommendList(favoriteIds: favoriteIds)
             }
         }
-        .navigationTitle("能做的菜")
+        .navigationTitle(session.dietaryGoal?.title ?? "能做的菜")
         .searchable(text: $session.keyword, placement: .navigationBarDrawer(displayMode: .always), prompt: "按菜名筛选")
         .sensoryFeedback(.selection, trigger: session.selectedStuff)
     }
 
     private func recommendList(favoriteIds: Set<Int>) -> some View {
         @Bindable var session = session
-        let matches = store.recommender.recommend(session.options)
+        let matches = session.matches(in: store)
         let ranks = Dictionary(matches.enumerated().map { ($1.recipe.id, $0) }, uniquingKeysWith: { first, _ in first })
         let suggestions = Recommender.unlockSuggestions(matches)
 
         return List {
+            Section { DietaryGoalPickerButton() }
             Section {
                 Picker("推荐方式", selection: $session.mode) {
                     ForEach(Self.modes, id: \.self) { mode in
@@ -87,11 +90,15 @@ struct ResultsView: View {
             }
 
             if matches.isEmpty {
-                ContentUnavailableView(
-                    "没有找到能做的菜",
-                    systemImage: "fork.knife",
-                    description: Text("换几样食材，或者把推荐方式改成「全部推荐」。")
-                )
+                if session.dietaryGoal != nil {
+                    goalEmptyState
+                } else {
+                    ContentUnavailableView(
+                        "没有找到能做的菜",
+                        systemImage: "fork.knife",
+                        description: Text("换几样食材，或者把推荐方式改成「全部推荐」。")
+                    )
+                }
             }
 
             ForEach(0 ..< Self.groupLabels.count, id: \.self) { missing in
@@ -99,8 +106,8 @@ struct ResultsView: View {
                 if !items.isEmpty {
                     Section {
                         ForEach(items, id: \.recipe.id) { match in
-                            NavigationLink(value: RecipeRoute(recipe: match.recipe, match: match, rank: ranks[match.recipe.id])) {
-                                RecipeRow(recipe: match.recipe, match: match)
+                            NavigationLink(value: RecipeRoute(recipe: match.recipe, match: match, rank: ranks[match.recipe.id], dietaryGoal: session.dietaryGoal)) {
+                                RecipeRow(recipe: match.recipe, match: match, dietaryGoal: session.dietaryGoal)
                             }
                             .recipeActions(match.recipe, isFavorite: favoriteIds.contains(match.recipe.id), store: store) {
                                 favoriteActions.set(match.recipe.id, isFavorite: !favoriteIds.contains(match.recipe.id))
@@ -116,6 +123,45 @@ struct ResultsView: View {
             }
         }
         .animation(.snappy, value: matches.map(\.recipe.id))
+    }
+
+    private func goalList(favoriteIds: Set<Int>) -> some View {
+        let recipes = session.candidates(in: store)
+        return List {
+            Section { DietaryGoalPickerButton() } footer: {
+                if let goal = session.dietaryGoal {
+                    Text(goal.explanation)
+                }
+            }
+            if recipes.isEmpty { goalEmptyState }
+            Section {
+                ForEach(recipes) { recipe in
+                    NavigationLink(value: RecipeRoute(recipe: recipe, dietaryGoal: session.dietaryGoal)) {
+                        RecipeRow(recipe: recipe, dietaryGoal: session.dietaryGoal)
+                    }
+                    .accessibilityIdentifier("dietary.recipe.\(recipe.id)")
+                    .recipeActions(recipe, isFavorite: favoriteIds.contains(recipe.id), store: store) {
+                        favoriteActions.set(recipe.id, isFavorite: !favoriteIds.contains(recipe.id))
+                    }
+                }
+            } header: {
+                if !recipes.isEmpty { Text("已核对做法 · \(recipes.count)") }
+            } footer: {
+                Text("可继续选择食材和厨具；选择食材后，推荐方式才参与筛选。")
+            }
+        }
+        .animation(.snappy, value: recipes.map(\.id))
+    }
+
+    private var goalEmptyState: some View {
+        ContentUnavailableView {
+            Label("暂无符合条件的已核对做法", systemImage: "fork.knife")
+        } description: {
+            Text(store.dietaryUnavailableMessage ?? "试试更换食材、厨具或筛选。你的忌口会继续保留。")
+        } actions: {
+            Button("取消饮食目标") { session.selectDietaryGoal(nil) }
+                .accessibilityIdentifier("dietary.clearGoal")
+        }
     }
 
     /// 没选食材、只选了厨具：用这个厨具能做的菜，忌口和筛选照样生效（和 Web 的 toolRecipes 一致）
@@ -207,6 +253,7 @@ struct RecipeRow: View {
     @Environment(RecipeStore.self) private var store
     let recipe: Recipe
     var match: RecipeMatch? = nil
+    var dietaryGoal: DietaryGoal? = nil
 
     var body: some View {
         HStack(spacing: 12) {
@@ -220,6 +267,12 @@ struct RecipeRow: View {
                 Text(store.meta(for: recipe))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                if let dietaryGoal, let entry = store.dietaryCatalog?.entry(for: recipe, goal: dietaryGoal) {
+                    Text(entry.reason(for: dietaryGoal))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if let match, !match.missingStuff.isEmpty {
                     Text("还缺 \(match.missingStuff.joined(separator: "、"))")
                         .font(.footnote)

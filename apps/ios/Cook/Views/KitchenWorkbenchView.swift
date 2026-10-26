@@ -10,6 +10,7 @@ struct KitchenWorkbenchView: View {
     @State private var pane: Pane = .recipe
     @State private var layout: LayoutChoice = .automatic
     let recipe: Recipe
+    var dietaryGoal: DietaryGoal? = nil
 
     private enum Pane: String, CaseIterable {
         case recipe = "做法"
@@ -98,7 +99,7 @@ struct KitchenWorkbenchView: View {
     @ViewBuilder
     private var instructions: some View {
         if let text = store.text(for: recipe) {
-            RecipeTextContent(recipe: recipe, text: text, preparationInSidebar: true)
+            RecipeTextContent(recipe: recipe, text: text, preparationInSidebar: true, dietaryGoal: dietaryGoal)
                 .accessibilityIdentifier("kitchen.instructions")
         } else {
             ContentUnavailableView {

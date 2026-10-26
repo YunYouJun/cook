@@ -1,0 +1,6338 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": 1,
+  "amountsFingerprint": "5eacea8726d04b968f561cb3a75af5a014e8225975d87f126f2ece063f968859",
+  "enabledGoals": [
+    "less-added-sugar",
+    "balanced-pairing"
+  ],
+  "recipes": {
+    "333": {
+      "recipeFingerprint": "e5a3180531a0c7d8",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/西葫芦炒鸡蛋/西葫芦炒鸡蛋.md",
+      "sourceFingerprint": "175f351179e37fc4",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "西葫芦",
+        "鸡蛋",
+        "西红柿",
+        "食用盐",
+        "食用油"
+      ],
+      "avoidIngredients": [
+        "西葫芦",
+        "鸡蛋",
+        "西红柿",
+        "食用盐",
+        "食用油",
+        "盐",
+        "食盐",
+        "油"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": [
+        {
+          "block": 5,
+          "item": 0,
+          "text": "西葫芦"
+        },
+        {
+          "block": 5,
+          "item": 1,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 5,
+          "item": 2,
+          "text": "西红柿（可选）"
+        },
+        {
+          "block": 5,
+          "item": 3,
+          "text": "食用盐"
+        },
+        {
+          "block": 5,
+          "item": 4,
+          "text": "食用油"
+        }
+      ],
+      "foodGroups": [
+        "vegetables",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "pass",
+          "reason": "no-added-sugar",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "西葫芦"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "西红柿（可选）"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "食用盐"
+            },
+            {
+              "block": 5,
+              "item": 4,
+              "text": "食用油"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "西葫芦"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "西红柿（可选）"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "食用盐"
+            },
+            {
+              "block": 5,
+              "item": 4,
+              "text": "食用油"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "西葫芦"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "西红柿（可选）"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "食用盐"
+            },
+            {
+              "block": 5,
+              "item": 4,
+              "text": "食用油"
+            }
+          ]
+        }
+      }
+    },
+    "489": {
+      "recipeFingerprint": "286db683266b8998",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/罗宋汤.md",
+      "sourceFingerprint": "dd5acaa67ca1fac7",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "蔬菜高汤",
+        "牛肉高汤",
+        "牛肉",
+        "番茄",
+        "番茄膏",
+        "番茄罐头",
+        "马铃薯",
+        "洋葱",
+        "胡萝卜",
+        "欧芹",
+        "包菜",
+        "红肠",
+        "橄榄油",
+        "植物油",
+        "盐",
+        "黑胡椒",
+        "水",
+        "牛腩肉",
+        "牛尾肉"
+      ],
+      "avoidIngredients": [
+        "蔬菜高汤",
+        "牛肉高汤",
+        "牛肉",
+        "番茄",
+        "番茄膏",
+        "番茄罐头",
+        "马铃薯",
+        "洋葱",
+        "胡萝卜",
+        "欧芹",
+        "包菜",
+        "红肠",
+        "橄榄油",
+        "植物油",
+        "盐",
+        "黑胡椒",
+        "水",
+        "牛腩肉",
+        "牛尾肉",
+        "猪肉",
+        "土豆",
+        "油",
+        "食用盐",
+        "食盐",
+        "胡椒"
+      ],
+      "unresolvedIngredients": [
+        "蔬菜高汤",
+        "牛肉高汤",
+        "番茄膏",
+        "番茄罐头",
+        "红肠"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "蔬菜高汤（欧芹、胡萝卜、洋葱三件套）"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "牛肉高汤（可用〇汤宝代替）"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "番茄（番茄膏、番茄罐头）"
+        },
+        {
+          "block": 7,
+          "item": 4,
+          "text": "马铃薯 400 g"
+        },
+        {
+          "block": 7,
+          "item": 8,
+          "text": "包菜 200 g"
+        },
+        {
+          "block": 7,
+          "item": 9,
+          "text": "红肠 100 - 200 g"
+        },
+        {
+          "block": 7,
+          "item": 10,
+          "text": "橄榄油 5 mL （橄榄油用于蔬菜的烹制，可以用植物油代替）"
+        },
+        {
+          "block": 7,
+          "item": 12,
+          "text": "盐 18 g"
+        },
+        {
+          "block": 7,
+          "item": 13,
+          "text": "黑胡椒 3 g"
+        },
+        {
+          "block": 13,
+          "item": 3,
+          "text": "加水没过食材，中火烹制 1 小时"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "牛肉（可选牛腩肉或牛尾肉）"
+        }
+      ],
+      "foodGroups": [
+        "staple",
+        "protein",
+        "vegetables"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "蔬菜高汤（欧芹、胡萝卜、洋葱三件套）"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "牛肉高汤（可用〇汤宝代替）"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "番茄（番茄膏、番茄罐头）"
+            },
+            {
+              "block": 7,
+              "item": 4,
+              "text": "马铃薯 400 g"
+            },
+            {
+              "block": 7,
+              "item": 8,
+              "text": "包菜 200 g"
+            },
+            {
+              "block": 7,
+              "item": 9,
+              "text": "红肠 100 - 200 g"
+            },
+            {
+              "block": 7,
+              "item": 10,
+              "text": "橄榄油 5 mL （橄榄油用于蔬菜的烹制，可以用植物油代替）"
+            },
+            {
+              "block": 7,
+              "item": 12,
+              "text": "盐 18 g"
+            },
+            {
+              "block": 7,
+              "item": 13,
+              "text": "黑胡椒 3 g"
+            },
+            {
+              "block": 13,
+              "item": 3,
+              "text": "加水没过食材，中火烹制 1 小时"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "牛肉（可选牛腩肉或牛尾肉）"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "蔬菜高汤（欧芹、胡萝卜、洋葱三件套）"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "牛肉高汤（可用〇汤宝代替）"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "番茄（番茄膏、番茄罐头）"
+            },
+            {
+              "block": 7,
+              "item": 4,
+              "text": "马铃薯 400 g"
+            },
+            {
+              "block": 7,
+              "item": 8,
+              "text": "包菜 200 g"
+            },
+            {
+              "block": 7,
+              "item": 9,
+              "text": "红肠 100 - 200 g"
+            },
+            {
+              "block": 7,
+              "item": 10,
+              "text": "橄榄油 5 mL （橄榄油用于蔬菜的烹制，可以用植物油代替）"
+            },
+            {
+              "block": 7,
+              "item": 12,
+              "text": "盐 18 g"
+            },
+            {
+              "block": 7,
+              "item": 13,
+              "text": "黑胡椒 3 g"
+            },
+            {
+              "block": 13,
+              "item": 3,
+              "text": "加水没过食材，中火烹制 1 小时"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "牛肉（可选牛腩肉或牛尾肉）"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "蔬菜高汤（欧芹、胡萝卜、洋葱三件套）"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "牛肉高汤（可用〇汤宝代替）"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "番茄（番茄膏、番茄罐头）"
+            },
+            {
+              "block": 7,
+              "item": 4,
+              "text": "马铃薯 400 g"
+            },
+            {
+              "block": 7,
+              "item": 8,
+              "text": "包菜 200 g"
+            },
+            {
+              "block": 7,
+              "item": 9,
+              "text": "红肠 100 - 200 g"
+            },
+            {
+              "block": 7,
+              "item": 10,
+              "text": "橄榄油 5 mL （橄榄油用于蔬菜的烹制，可以用植物油代替）"
+            },
+            {
+              "block": 7,
+              "item": 12,
+              "text": "盐 18 g"
+            },
+            {
+              "block": 7,
+              "item": 13,
+              "text": "黑胡椒 3 g"
+            },
+            {
+              "block": 13,
+              "item": 3,
+              "text": "加水没过食材，中火烹制 1 小时"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "牛肉（可选牛腩肉或牛尾肉）"
+            }
+          ]
+        }
+      }
+    },
+    "567": {
+      "recipeFingerprint": "393a4506a0ea7f0e",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/洋葱炒鸡蛋/洋葱炒鸡蛋.md",
+      "sourceFingerprint": "15c6d447ae3bbcb5",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "鸡蛋",
+        "洋葱",
+        "食用油",
+        "盐",
+        "葱",
+        "料酒"
+      ],
+      "avoidIngredients": [
+        "鸡蛋",
+        "洋葱",
+        "食用油",
+        "盐",
+        "葱",
+        "料酒",
+        "油",
+        "食用盐",
+        "食盐",
+        "小葱",
+        "大葱"
+      ],
+      "unresolvedIngredients": [
+        "料酒"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "洋葱"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "食用油"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "盐"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "料酒"
+        }
+      ],
+      "foodGroups": [
+        "vegetables",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "洋葱"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "料酒"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "洋葱"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "料酒"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "洋葱"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "料酒"
+            }
+          ]
+        }
+      }
+    },
+    "630": {
+      "recipeFingerprint": "43b2991347412559",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/菠菜炒鸡蛋/菠菜炒鸡蛋.md",
+      "sourceFingerprint": "c498a7cc00444be1",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "菠菜",
+        "鸡蛋",
+        "食用油",
+        "食用盐",
+        "饮用水"
+      ],
+      "avoidIngredients": [
+        "菠菜",
+        "鸡蛋",
+        "食用油",
+        "食用盐",
+        "饮用水",
+        "油",
+        "盐",
+        "食盐"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": [
+        {
+          "block": 5,
+          "item": 0,
+          "text": "菠菜"
+        },
+        {
+          "block": 5,
+          "item": 1,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 5,
+          "item": 2,
+          "text": "食用油"
+        },
+        {
+          "block": 5,
+          "item": 3,
+          "text": "食用盐"
+        },
+        {
+          "block": 10,
+          "item": 6,
+          "text": "加入 5g 盐、100ml 饮用水，大火 翻炒 10 秒"
+        }
+      ],
+      "foodGroups": [
+        "vegetables",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "pass",
+          "reason": "no-added-sugar",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "菠菜"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "食用盐"
+            },
+            {
+              "block": 10,
+              "item": 6,
+              "text": "加入 5g 盐、100ml 饮用水，大火 翻炒 10 秒"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "菠菜"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "食用盐"
+            },
+            {
+              "block": 10,
+              "item": 6,
+              "text": "加入 5g 盐、100ml 饮用水，大火 翻炒 10 秒"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "菠菜"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "食用盐"
+            },
+            {
+              "block": 10,
+              "item": 6,
+              "text": "加入 5g 盐、100ml 饮用水，大火 翻炒 10 秒"
+            }
+          ]
+        }
+      }
+    },
+    "670": {
+      "recipeFingerprint": "ce00d783b04caca6",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/印度土豆花菜.md",
+      "sourceFingerprint": "2178ee1be6f762d5",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "土豆",
+        "花菜",
+        "洋葱",
+        "番茄",
+        "生姜",
+        "大蒜",
+        "青辣椒",
+        "香菜",
+        "食用油",
+        "孜然籽",
+        "姜黄粉",
+        "红辣椒粉",
+        "香菜粉",
+        "印度综合香料粉",
+        "盐",
+        "水"
+      ],
+      "avoidIngredients": [
+        "土豆",
+        "花菜",
+        "洋葱",
+        "番茄",
+        "生姜",
+        "大蒜",
+        "青辣椒",
+        "香菜",
+        "食用油",
+        "孜然籽",
+        "姜黄粉",
+        "红辣椒粉",
+        "香菜粉",
+        "印度综合香料粉",
+        "盐",
+        "水",
+        "辣椒",
+        "姜",
+        "蒜",
+        "油",
+        "食用盐",
+        "食盐"
+      ],
+      "unresolvedIngredients": [
+        "印度综合香料粉"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "土豆"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "花菜（菜花）"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "洋葱"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "番茄"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "生姜"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "大蒜"
+        },
+        {
+          "block": 4,
+          "item": 6,
+          "text": "青辣椒"
+        },
+        {
+          "block": 4,
+          "item": 7,
+          "text": "香菜"
+        },
+        {
+          "block": 4,
+          "item": 8,
+          "text": "食用油"
+        },
+        {
+          "block": 4,
+          "item": 9,
+          "text": "孜然籽"
+        },
+        {
+          "block": 4,
+          "item": 10,
+          "text": "姜黄粉"
+        },
+        {
+          "block": 4,
+          "item": 11,
+          "text": "红辣椒粉"
+        },
+        {
+          "block": 4,
+          "item": 12,
+          "text": "香菜粉"
+        },
+        {
+          "block": 4,
+          "item": 13,
+          "text": "印度综合香料粉(Garam Masala)"
+        },
+        {
+          "block": 4,
+          "item": 14,
+          "text": "盐"
+        },
+        {
+          "block": 12,
+          "item": 0,
+          "text": "这道菜是干炒风格(Dry)，不需要加水。如果觉得太干容易粘锅，可以加入极少量水（约 15-30ml），但不宜过多。"
+        }
+      ],
+      "foodGroups": [
+        "staple",
+        "vegetables"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "土豆"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "花菜（菜花）"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "洋葱"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "番茄"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "生姜"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "大蒜"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "青辣椒"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "香菜"
+            },
+            {
+              "block": 4,
+              "item": 8,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 9,
+              "text": "孜然籽"
+            },
+            {
+              "block": 4,
+              "item": 10,
+              "text": "姜黄粉"
+            },
+            {
+              "block": 4,
+              "item": 11,
+              "text": "红辣椒粉"
+            },
+            {
+              "block": 4,
+              "item": 12,
+              "text": "香菜粉"
+            },
+            {
+              "block": 4,
+              "item": 13,
+              "text": "印度综合香料粉(Garam Masala)"
+            },
+            {
+              "block": 4,
+              "item": 14,
+              "text": "盐"
+            },
+            {
+              "block": 12,
+              "item": 0,
+              "text": "这道菜是干炒风格(Dry)，不需要加水。如果觉得太干容易粘锅，可以加入极少量水（约 15-30ml），但不宜过多。"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "土豆"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "花菜（菜花）"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "洋葱"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "番茄"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "生姜"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "大蒜"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "青辣椒"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "香菜"
+            },
+            {
+              "block": 4,
+              "item": 8,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 9,
+              "text": "孜然籽"
+            },
+            {
+              "block": 4,
+              "item": 10,
+              "text": "姜黄粉"
+            },
+            {
+              "block": 4,
+              "item": 11,
+              "text": "红辣椒粉"
+            },
+            {
+              "block": 4,
+              "item": 12,
+              "text": "香菜粉"
+            },
+            {
+              "block": 4,
+              "item": 13,
+              "text": "印度综合香料粉(Garam Masala)"
+            },
+            {
+              "block": 4,
+              "item": 14,
+              "text": "盐"
+            },
+            {
+              "block": 12,
+              "item": 0,
+              "text": "这道菜是干炒风格(Dry)，不需要加水。如果觉得太干容易粘锅，可以加入极少量水（约 15-30ml），但不宜过多。"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "土豆"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "花菜（菜花）"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "洋葱"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "番茄"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "生姜"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "大蒜"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "青辣椒"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "香菜"
+            },
+            {
+              "block": 4,
+              "item": 8,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 9,
+              "text": "孜然籽"
+            },
+            {
+              "block": 4,
+              "item": 10,
+              "text": "姜黄粉"
+            },
+            {
+              "block": 4,
+              "item": 11,
+              "text": "红辣椒粉"
+            },
+            {
+              "block": 4,
+              "item": 12,
+              "text": "香菜粉"
+            },
+            {
+              "block": 4,
+              "item": 13,
+              "text": "印度综合香料粉(Garam Masala)"
+            },
+            {
+              "block": 4,
+              "item": 14,
+              "text": "盐"
+            },
+            {
+              "block": 12,
+              "item": 0,
+              "text": "这道菜是干炒风格(Dry)，不需要加水。如果觉得太干容易粘锅，可以加入极少量水（约 15-30ml），但不宜过多。"
+            }
+          ]
+        }
+      }
+    },
+    "677": {
+      "recipeFingerprint": "316601060b418ff8",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/清炒花菜.md",
+      "sourceFingerprint": "3f8831cc66d70e3b",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "花菜",
+        "大蒜",
+        "盐",
+        "食用油",
+        "饮用水"
+      ],
+      "avoidIngredients": [
+        "花菜",
+        "大蒜",
+        "盐",
+        "食用油",
+        "饮用水",
+        "蒜",
+        "食用盐",
+        "食盐",
+        "油"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "花菜"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "大蒜"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "盐"
+        },
+        {
+          "block": 8,
+          "item": 3,
+          "text": "食用油 15 ml"
+        },
+        {
+          "block": 8,
+          "item": 4,
+          "text": "饮用水 50 ml （用于炒制过程）"
+        }
+      ],
+      "foodGroups": [
+        "vegetables"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "pass",
+          "reason": "no-added-sugar",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "花菜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "大蒜"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "盐"
+            },
+            {
+              "block": 8,
+              "item": 3,
+              "text": "食用油 15 ml"
+            },
+            {
+              "block": 8,
+              "item": 4,
+              "text": "饮用水 50 ml （用于炒制过程）"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "花菜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "大蒜"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "盐"
+            },
+            {
+              "block": 8,
+              "item": 3,
+              "text": "食用油 15 ml"
+            },
+            {
+              "block": 8,
+              "item": 4,
+              "text": "饮用水 50 ml （用于炒制过程）"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "花菜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "大蒜"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "盐"
+            },
+            {
+              "block": 8,
+              "item": 3,
+              "text": "食用油 15 ml"
+            },
+            {
+              "block": 8,
+              "item": 4,
+              "text": "饮用水 50 ml （用于炒制过程）"
+            }
+          ]
+        }
+      }
+    },
+    "689": {
+      "recipeFingerprint": "813cde03f63633d5",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/蒜蓉炒芹菜/蒜蓉炒芹菜.md",
+      "sourceFingerprint": "fed8dc44db2b6538",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "芹菜",
+        "猪油",
+        "食用油",
+        "蒜",
+        "盐"
+      ],
+      "avoidIngredients": [
+        "芹菜",
+        "猪油",
+        "食用油",
+        "蒜",
+        "盐",
+        "猪肉",
+        "油",
+        "大蒜",
+        "食用盐",
+        "食盐"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": [
+        {
+          "block": 5,
+          "item": 0,
+          "text": "芹菜（香芹最佳）"
+        },
+        {
+          "block": 5,
+          "item": 1,
+          "text": "猪油（没有可用食用油替代，但猪油风味更佳）"
+        },
+        {
+          "block": 5,
+          "item": 2,
+          "text": "蒜"
+        },
+        {
+          "block": 5,
+          "item": 3,
+          "text": "盐"
+        }
+      ],
+      "foodGroups": [
+        "vegetables"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "pass",
+          "reason": "no-added-sugar",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "芹菜（香芹最佳）"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "猪油（没有可用食用油替代，但猪油风味更佳）"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "蒜"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "盐"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "芹菜（香芹最佳）"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "猪油（没有可用食用油替代，但猪油风味更佳）"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "蒜"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "盐"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "芹菜（香芹最佳）"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "猪油（没有可用食用油替代，但猪油风味更佳）"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "蒜"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "盐"
+            }
+          ]
+        }
+      }
+    },
+    "693": {
+      "recipeFingerprint": "03d4ca8c3f0b8290",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/金针菇日本豆腐煲.md",
+      "sourceFingerprint": "ad0ce24521f4a440",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "金针菇",
+        "日本豆腐",
+        "小米椒",
+        "生抽",
+        "蚝油",
+        "盐",
+        "糖",
+        "食用油",
+        "蒜",
+        "老抽",
+        "水"
+      ],
+      "avoidIngredients": [
+        "金针菇",
+        "日本豆腐",
+        "小米椒",
+        "生抽",
+        "蚝油",
+        "盐",
+        "糖",
+        "食用油",
+        "蒜",
+        "老抽",
+        "水",
+        "鸡蛋",
+        "大豆",
+        "酱油",
+        "辣椒",
+        "食用盐",
+        "食盐",
+        "油",
+        "大蒜"
+      ],
+      "unresolvedIngredients": [
+        "日本豆腐",
+        "生抽",
+        "蚝油",
+        "老抽"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "金针菇"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "日本豆腐（玉子豆腐）"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "小米椒"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "生抽"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "蚝油"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "盐"
+        },
+        {
+          "block": 4,
+          "item": 6,
+          "text": "糖"
+        },
+        {
+          "block": 4,
+          "item": 7,
+          "text": "食用油"
+        },
+        {
+          "block": 7,
+          "item": 3,
+          "text": "蒜 2-3 瓣"
+        },
+        {
+          "block": 7,
+          "item": 6,
+          "text": "老抽 3ml"
+        },
+        {
+          "block": 9,
+          "item": 1,
+          "text": "切蒜成蒜末；将生抽，蚝油，老抽，糖，100ml 水调汁备用。"
+        }
+      ],
+      "foodGroups": [
+        "vegetables",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "fail",
+          "reason": "added-sugar",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 6,
+              "text": "糖"
+            },
+            {
+              "block": 7,
+              "item": 7,
+              "text": "糖 3g"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "金针菇"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "日本豆腐（玉子豆腐）"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "小米椒"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "蚝油"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "糖"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "食用油"
+            },
+            {
+              "block": 7,
+              "item": 3,
+              "text": "蒜 2-3 瓣"
+            },
+            {
+              "block": 7,
+              "item": 6,
+              "text": "老抽 3ml"
+            },
+            {
+              "block": 9,
+              "item": 1,
+              "text": "切蒜成蒜末；将生抽，蚝油，老抽，糖，100ml 水调汁备用。"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "金针菇"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "日本豆腐（玉子豆腐）"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "小米椒"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "蚝油"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "糖"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "食用油"
+            },
+            {
+              "block": 7,
+              "item": 3,
+              "text": "蒜 2-3 瓣"
+            },
+            {
+              "block": 7,
+              "item": 6,
+              "text": "老抽 3ml"
+            },
+            {
+              "block": 9,
+              "item": 1,
+              "text": "切蒜成蒜末；将生抽，蚝油，老抽，糖，100ml 水调汁备用。"
+            }
+          ]
+        }
+      }
+    },
+    "696": {
+      "recipeFingerprint": "1c49c59f01258cff",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/韭菜炒蛋/韭菜炒蛋.md",
+      "sourceFingerprint": "10003acff7ec790b",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "韭菜",
+        "鸡蛋",
+        "食用油",
+        "盐"
+      ],
+      "avoidIngredients": [
+        "韭菜",
+        "鸡蛋",
+        "食用油",
+        "盐",
+        "油",
+        "食用盐",
+        "食盐"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "韭菜"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "食用油"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "盐"
+        }
+      ],
+      "foodGroups": [
+        "vegetables",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "pass",
+          "reason": "no-added-sugar",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "韭菜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "盐"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "韭菜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "盐"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "韭菜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "盐"
+            }
+          ]
+        }
+      }
+    },
+    "701": {
+      "recipeFingerprint": "c7f492750e797d22",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/冬瓜桑拿鸡.md",
+      "sourceFingerprint": "23a597b3522a9ba3",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "鸡肉",
+        "姜丝",
+        "生抽",
+        "蚝油",
+        "盐",
+        "食用油",
+        "冬瓜",
+        "虫草花",
+        "水"
+      ],
+      "avoidIngredients": [
+        "鸡肉",
+        "姜丝",
+        "生抽",
+        "蚝油",
+        "盐",
+        "食用油",
+        "冬瓜",
+        "虫草花",
+        "水",
+        "姜",
+        "生姜",
+        "食用盐",
+        "食盐",
+        "油"
+      ],
+      "unresolvedIngredients": [
+        "生抽",
+        "蚝油"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "鸡肉"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "姜丝"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "生抽"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "蚝油"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "盐"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "食用油"
+        },
+        {
+          "block": 4,
+          "item": 6,
+          "text": "冬瓜"
+        },
+        {
+          "block": 4,
+          "item": 7,
+          "text": "虫草花"
+        },
+        {
+          "block": 9,
+          "item": 4,
+          "text": "水烧开后放入蒸锅，上汽后蒸 15 分钟，出锅即可"
+        }
+      ],
+      "foodGroups": [
+        "vegetables",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡肉"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "姜丝"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "蚝油"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "冬瓜"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "虫草花"
+            },
+            {
+              "block": 9,
+              "item": 4,
+              "text": "水烧开后放入蒸锅，上汽后蒸 15 分钟，出锅即可"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡肉"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "姜丝"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "蚝油"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "冬瓜"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "虫草花"
+            },
+            {
+              "block": 9,
+              "item": 4,
+              "text": "水烧开后放入蒸锅，上汽后蒸 15 分钟，出锅即可"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡肉"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "姜丝"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "蚝油"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "冬瓜"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "虫草花"
+            },
+            {
+              "block": 9,
+              "item": 4,
+              "text": "水烧开后放入蒸锅，上汽后蒸 15 分钟，出锅即可"
+            }
+          ]
+        }
+      }
+    },
+    "702": {
+      "recipeFingerprint": "5aedefa2baf4fc10",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/冬瓜酿肉/冬瓜酿肉.md",
+      "sourceFingerprint": "a4394158e4d21588",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "冬瓜",
+        "猪肉末",
+        "鸡蛋",
+        "葱",
+        "姜",
+        "胡椒粉",
+        "生抽",
+        "淀粉",
+        "水",
+        "盐"
+      ],
+      "avoidIngredients": [
+        "冬瓜",
+        "猪肉末",
+        "鸡蛋",
+        "葱",
+        "姜",
+        "胡椒粉",
+        "生抽",
+        "淀粉",
+        "水",
+        "盐",
+        "猪肉",
+        "酱油",
+        "小葱",
+        "大葱",
+        "生姜",
+        "胡椒",
+        "食用盐",
+        "食盐"
+      ],
+      "unresolvedIngredients": [
+        "生抽"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 5,
+          "item": 0,
+          "text": "冬瓜"
+        },
+        {
+          "block": 5,
+          "item": 1,
+          "text": "猪肉末"
+        },
+        {
+          "block": 5,
+          "item": 2,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 5,
+          "item": 3,
+          "text": "葱"
+        },
+        {
+          "block": 5,
+          "item": 4,
+          "text": "葱姜末"
+        },
+        {
+          "block": 5,
+          "item": 5,
+          "text": "胡椒粉"
+        },
+        {
+          "block": 5,
+          "item": 6,
+          "text": "生抽"
+        },
+        {
+          "block": 5,
+          "item": 7,
+          "text": "淀粉"
+        },
+        {
+          "block": 9,
+          "item": 7,
+          "text": "水淀粉 25g（淀粉 25g,水 50ml）"
+        },
+        {
+          "block": 9,
+          "item": 9,
+          "text": "盐 20g"
+        }
+      ],
+      "foodGroups": [
+        "vegetables",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "冬瓜"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "猪肉末"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "葱"
+            },
+            {
+              "block": 5,
+              "item": 4,
+              "text": "葱姜末"
+            },
+            {
+              "block": 5,
+              "item": 5,
+              "text": "胡椒粉"
+            },
+            {
+              "block": 5,
+              "item": 6,
+              "text": "生抽"
+            },
+            {
+              "block": 5,
+              "item": 7,
+              "text": "淀粉"
+            },
+            {
+              "block": 9,
+              "item": 7,
+              "text": "水淀粉 25g（淀粉 25g,水 50ml）"
+            },
+            {
+              "block": 9,
+              "item": 9,
+              "text": "盐 20g"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "冬瓜"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "猪肉末"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "葱"
+            },
+            {
+              "block": 5,
+              "item": 4,
+              "text": "葱姜末"
+            },
+            {
+              "block": 5,
+              "item": 5,
+              "text": "胡椒粉"
+            },
+            {
+              "block": 5,
+              "item": 6,
+              "text": "生抽"
+            },
+            {
+              "block": 5,
+              "item": 7,
+              "text": "淀粉"
+            },
+            {
+              "block": 9,
+              "item": 7,
+              "text": "水淀粉 25g（淀粉 25g,水 50ml）"
+            },
+            {
+              "block": 9,
+              "item": 9,
+              "text": "盐 20g"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "冬瓜"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "猪肉末"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "葱"
+            },
+            {
+              "block": 5,
+              "item": 4,
+              "text": "葱姜末"
+            },
+            {
+              "block": 5,
+              "item": 5,
+              "text": "胡椒粉"
+            },
+            {
+              "block": 5,
+              "item": 6,
+              "text": "生抽"
+            },
+            {
+              "block": 5,
+              "item": 7,
+              "text": "淀粉"
+            },
+            {
+              "block": 9,
+              "item": 7,
+              "text": "水淀粉 25g（淀粉 25g,水 50ml）"
+            },
+            {
+              "block": 9,
+              "item": 9,
+              "text": "盐 20g"
+            }
+          ]
+        }
+      }
+    },
+    "731": {
+      "recipeFingerprint": "6c746709a72fa531",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/澳门湿版免治牛肉饭/澳门湿版免治牛肉饭.md",
+      "sourceFingerprint": "221c5fd5950ae4fa",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "牛肉末",
+        "猪肉末",
+        "洋葱",
+        "鸡蛋",
+        "黄油",
+        "食用油",
+        "小葱",
+        "生抽",
+        "老抽",
+        "番茄酱",
+        "白糖",
+        "料酒",
+        "黑胡椒",
+        "淀粉",
+        "米饭",
+        "清水"
+      ],
+      "avoidIngredients": [
+        "牛肉末",
+        "猪肉末",
+        "洋葱",
+        "鸡蛋",
+        "黄油",
+        "食用油",
+        "小葱",
+        "生抽",
+        "老抽",
+        "番茄酱",
+        "白糖",
+        "料酒",
+        "黑胡椒",
+        "淀粉",
+        "米饭",
+        "清水",
+        "牛肉",
+        "猪肉",
+        "酱油",
+        "牛油",
+        "牛奶",
+        "油",
+        "葱",
+        "胡椒"
+      ],
+      "unresolvedIngredients": [
+        "生抽",
+        "老抽",
+        "番茄酱",
+        "料酒"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 5,
+          "item": 0,
+          "text": "牛肉末（可以用稍微肥一点的猪肉末代替）"
+        },
+        {
+          "block": 5,
+          "item": 1,
+          "text": "洋葱"
+        },
+        {
+          "block": 5,
+          "item": 2,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 5,
+          "item": 3,
+          "text": "黄油（可用普通食用油代替）"
+        },
+        {
+          "block": 5,
+          "item": 4,
+          "text": "小葱（可选）"
+        },
+        {
+          "block": 5,
+          "item": 5,
+          "text": "生抽"
+        },
+        {
+          "block": 5,
+          "item": 6,
+          "text": "老抽"
+        },
+        {
+          "block": 5,
+          "item": 7,
+          "text": "番茄酱"
+        },
+        {
+          "block": 5,
+          "item": 8,
+          "text": "白糖"
+        },
+        {
+          "block": 5,
+          "item": 9,
+          "text": "料酒"
+        },
+        {
+          "block": 5,
+          "item": 10,
+          "text": "黑胡椒"
+        },
+        {
+          "block": 5,
+          "item": 11,
+          "text": "淀粉"
+        },
+        {
+          "block": 5,
+          "item": 12,
+          "text": "米饭"
+        },
+        {
+          "block": 9,
+          "item": 9,
+          "text": "清水 50ml"
+        }
+      ],
+      "foodGroups": [
+        "staple",
+        "protein",
+        "vegetables"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "fail",
+          "reason": "added-sugar",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 8,
+              "text": "白糖"
+            },
+            {
+              "block": 9,
+              "item": 6,
+              "text": "白糖 半汤匙"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "牛肉末（可以用稍微肥一点的猪肉末代替）"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "洋葱"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "黄油（可用普通食用油代替）"
+            },
+            {
+              "block": 5,
+              "item": 4,
+              "text": "小葱（可选）"
+            },
+            {
+              "block": 5,
+              "item": 5,
+              "text": "生抽"
+            },
+            {
+              "block": 5,
+              "item": 6,
+              "text": "老抽"
+            },
+            {
+              "block": 5,
+              "item": 7,
+              "text": "番茄酱"
+            },
+            {
+              "block": 5,
+              "item": 8,
+              "text": "白糖"
+            },
+            {
+              "block": 5,
+              "item": 9,
+              "text": "料酒"
+            },
+            {
+              "block": 5,
+              "item": 10,
+              "text": "黑胡椒"
+            },
+            {
+              "block": 5,
+              "item": 11,
+              "text": "淀粉"
+            },
+            {
+              "block": 5,
+              "item": 12,
+              "text": "米饭"
+            },
+            {
+              "block": 9,
+              "item": 9,
+              "text": "清水 50ml"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "牛肉末（可以用稍微肥一点的猪肉末代替）"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "洋葱"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "黄油（可用普通食用油代替）"
+            },
+            {
+              "block": 5,
+              "item": 4,
+              "text": "小葱（可选）"
+            },
+            {
+              "block": 5,
+              "item": 5,
+              "text": "生抽"
+            },
+            {
+              "block": 5,
+              "item": 6,
+              "text": "老抽"
+            },
+            {
+              "block": 5,
+              "item": 7,
+              "text": "番茄酱"
+            },
+            {
+              "block": 5,
+              "item": 8,
+              "text": "白糖"
+            },
+            {
+              "block": 5,
+              "item": 9,
+              "text": "料酒"
+            },
+            {
+              "block": 5,
+              "item": 10,
+              "text": "黑胡椒"
+            },
+            {
+              "block": 5,
+              "item": 11,
+              "text": "淀粉"
+            },
+            {
+              "block": 5,
+              "item": 12,
+              "text": "米饭"
+            },
+            {
+              "block": 9,
+              "item": 9,
+              "text": "清水 50ml"
+            }
+          ]
+        }
+      }
+    },
+    "748": {
+      "recipeFingerprint": "29cf91cfdfdb516e",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/肉饼炖蛋.md",
+      "sourceFingerprint": "0126dd9f363bd6bb",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "猪肉末",
+        "鸡蛋",
+        "料酒",
+        "生抽",
+        "白胡椒粉",
+        "芝麻香油",
+        "水"
+      ],
+      "avoidIngredients": [
+        "猪肉末",
+        "鸡蛋",
+        "料酒",
+        "生抽",
+        "白胡椒粉",
+        "芝麻香油",
+        "水",
+        "猪肉",
+        "胡椒",
+        "油",
+        "香油",
+        "芝麻"
+      ],
+      "unresolvedIngredients": [
+        "料酒",
+        "生抽"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "猪肉末"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "料酒"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "生抽"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "白胡椒粉"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "芝麻香油"
+        },
+        {
+          "block": 8,
+          "item": 2,
+          "text": "锅中加水至 1/4 高度，水烧开后，将盘子放入锅中，盖上锅盖，蒸 15 分钟。"
+        }
+      ],
+      "foodGroups": [
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "猪肉末"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "料酒"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "白胡椒粉"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "芝麻香油"
+            },
+            {
+              "block": 8,
+              "item": 2,
+              "text": "锅中加水至 1/4 高度，水烧开后，将盘子放入锅中，盖上锅盖，蒸 15 分钟。"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "猪肉末"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "料酒"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "白胡椒粉"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "芝麻香油"
+            },
+            {
+              "block": 8,
+              "item": 2,
+              "text": "锅中加水至 1/4 高度，水烧开后，将盘子放入锅中，盖上锅盖，蒸 15 分钟。"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "猪肉末"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "料酒"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "白胡椒粉"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "芝麻香油"
+            },
+            {
+              "block": 8,
+              "item": 2,
+              "text": "锅中加水至 1/4 高度，水烧开后，将盘子放入锅中，盖上锅盖，蒸 15 分钟。"
+            }
+          ]
+        }
+      }
+    },
+    "777": {
+      "recipeFingerprint": "66a3d55902d5abb4",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/黄瓜炒肉.md",
+      "sourceFingerprint": "9665ae6514353402",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "黄瓜",
+        "猪瘦肉",
+        "食用油",
+        "生抽",
+        "盐",
+        "蒜",
+        "小米辣"
+      ],
+      "avoidIngredients": [
+        "黄瓜",
+        "猪瘦肉",
+        "食用油",
+        "生抽",
+        "盐",
+        "蒜",
+        "小米辣",
+        "猪肉",
+        "酱油",
+        "油",
+        "食用盐",
+        "食盐",
+        "大蒜",
+        "辣椒"
+      ],
+      "unresolvedIngredients": [
+        "生抽"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "黄瓜"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "猪瘦肉"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "食用油"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "生抽"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "盐"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "蒜"
+        },
+        {
+          "block": 4,
+          "item": 6,
+          "text": "小米辣"
+        }
+      ],
+      "foodGroups": [
+        "vegetables",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "黄瓜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "猪瘦肉"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "蒜"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "小米辣"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "黄瓜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "猪瘦肉"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "蒜"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "小米辣"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "黄瓜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "猪瘦肉"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "蒜"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "小米辣"
+            }
+          ]
+        }
+      }
+    },
+    "788": {
+      "recipeFingerprint": "d6be1d0b78c18ff2",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/aquatic/葱油桂鱼/葱油桂鱼.md",
+      "sourceFingerprint": "d6362191749cff1f",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "桂鱼",
+        "小葱",
+        "小米辣",
+        "姜",
+        "料酒",
+        "植物油",
+        "盐",
+        "蒸鱼豉油",
+        "清水",
+        "鲈鱼",
+        "多宝鱼"
+      ],
+      "avoidIngredients": [
+        "桂鱼",
+        "小葱",
+        "小米辣",
+        "姜",
+        "料酒",
+        "植物油",
+        "盐",
+        "蒸鱼豉油",
+        "清水",
+        "鲈鱼",
+        "多宝鱼",
+        "鱼",
+        "酱油",
+        "葱",
+        "辣椒",
+        "生姜",
+        "油",
+        "食用盐",
+        "食盐"
+      ],
+      "unresolvedIngredients": [
+        "料酒",
+        "蒸鱼豉油"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "桂鱼"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "小葱"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "小米辣"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "姜"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "料酒"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "植物油"
+        },
+        {
+          "block": 4,
+          "item": 6,
+          "text": "盐"
+        },
+        {
+          "block": 4,
+          "item": 7,
+          "text": "蒸鱼豉油"
+        },
+        {
+          "block": 4,
+          "item": 9,
+          "text": "清水"
+        },
+        {
+          "block": 11,
+          "text": "经过若干次测试，成功率 100%，这道菜容错性很高，无论是什么省份、什么口味的人都能兼容。另外，本套教程虽然叫葱油桂鱼的做法，但原料本身不仅限于桂鱼，可以用鲈鱼、多宝鱼等海鱼代替（淡水鱼本身寄生虫会比海鱼多一点，不建议使用淡水鱼，淡水鱼的做法请参考《红烧鱼》等教程），耦合性低、可扩展性强。"
+        }
+      ],
+      "foodGroups": [
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "桂鱼"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "小葱"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "小米辣"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "姜"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "料酒"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "植物油"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "蒸鱼豉油"
+            },
+            {
+              "block": 4,
+              "item": 9,
+              "text": "清水"
+            },
+            {
+              "block": 11,
+              "text": "经过若干次测试，成功率 100%，这道菜容错性很高，无论是什么省份、什么口味的人都能兼容。另外，本套教程虽然叫葱油桂鱼的做法，但原料本身不仅限于桂鱼，可以用鲈鱼、多宝鱼等海鱼代替（淡水鱼本身寄生虫会比海鱼多一点，不建议使用淡水鱼，淡水鱼的做法请参考《红烧鱼》等教程），耦合性低、可扩展性强。"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "桂鱼"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "小葱"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "小米辣"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "姜"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "料酒"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "植物油"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "蒸鱼豉油"
+            },
+            {
+              "block": 4,
+              "item": 9,
+              "text": "清水"
+            },
+            {
+              "block": 11,
+              "text": "经过若干次测试，成功率 100%，这道菜容错性很高，无论是什么省份、什么口味的人都能兼容。另外，本套教程虽然叫葱油桂鱼的做法，但原料本身不仅限于桂鱼，可以用鲈鱼、多宝鱼等海鱼代替（淡水鱼本身寄生虫会比海鱼多一点，不建议使用淡水鱼，淡水鱼的做法请参考《红烧鱼》等教程），耦合性低、可扩展性强。"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "桂鱼"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "小葱"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "小米辣"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "姜"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "料酒"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "植物油"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "蒸鱼豉油"
+            },
+            {
+              "block": 4,
+              "item": 9,
+              "text": "清水"
+            },
+            {
+              "block": 11,
+              "text": "经过若干次测试，成功率 100%，这道菜容错性很高，无论是什么省份、什么口味的人都能兼容。另外，本套教程虽然叫葱油桂鱼的做法，但原料本身不仅限于桂鱼，可以用鲈鱼、多宝鱼等海鱼代替（淡水鱼本身寄生虫会比海鱼多一点，不建议使用淡水鱼，淡水鱼的做法请参考《红烧鱼》等教程），耦合性低、可扩展性强。"
+            }
+          ]
+        }
+      }
+    },
+    "789": {
+      "recipeFingerprint": "f89c365bfa95a7c8",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/aquatic/蒜蓉虾/蒜蓉虾.md",
+      "sourceFingerprint": "7dc94517a69a8266",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "海虾",
+        "蒜蓉酱",
+        "食用油",
+        "生抽",
+        "热水"
+      ],
+      "avoidIngredients": [
+        "海虾",
+        "蒜蓉酱",
+        "食用油",
+        "生抽",
+        "热水",
+        "虾",
+        "酱油",
+        "油"
+      ],
+      "unresolvedIngredients": [
+        "蒜蓉酱",
+        "生抽"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "海虾"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "蒜蓉酱"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "食用油"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "生抽"
+        },
+        {
+          "block": 9,
+          "item": 2,
+          "text": "锅中倒入热水，将盘子放入锅中，大火蒸 3 分钟"
+        }
+      ],
+      "foodGroups": [
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "海虾"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "蒜蓉酱"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "生抽"
+            },
+            {
+              "block": 9,
+              "item": 2,
+              "text": "锅中倒入热水，将盘子放入锅中，大火蒸 3 分钟"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "海虾"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "蒜蓉酱"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "生抽"
+            },
+            {
+              "block": 9,
+              "item": 2,
+              "text": "锅中倒入热水，将盘子放入锅中，大火蒸 3 分钟"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "海虾"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "蒜蓉酱"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "生抽"
+            },
+            {
+              "block": 9,
+              "item": 2,
+              "text": "锅中倒入热水，将盘子放入锅中，大火蒸 3 分钟"
+            }
+          ]
+        }
+      }
+    },
+    "798": {
+      "recipeFingerprint": "b7afcac32b434fd8",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/山药南瓜炖鸡汤.md",
+      "sourceFingerprint": "d041c4996a4beb09",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "鸡肉",
+        "姜",
+        "料酒",
+        "板栗",
+        "山药",
+        "小南瓜",
+        "红枣",
+        "盐",
+        "水"
+      ],
+      "avoidIngredients": [
+        "鸡肉",
+        "姜",
+        "料酒",
+        "板栗",
+        "山药",
+        "小南瓜",
+        "红枣",
+        "盐",
+        "水",
+        "生姜",
+        "食用盐",
+        "食盐"
+      ],
+      "unresolvedIngredients": [
+        "料酒"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "鸡肉"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "姜"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "料酒（焯水用）"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "板栗"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "山药"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "小南瓜"
+        },
+        {
+          "block": 4,
+          "item": 6,
+          "text": "红枣"
+        },
+        {
+          "block": 4,
+          "item": 7,
+          "text": "盐（出锅调味）"
+        }
+      ],
+      "foodGroups": [
+        "staple",
+        "protein",
+        "vegetables"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡肉"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "姜"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "料酒（焯水用）"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "板栗"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "山药"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "小南瓜"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "红枣"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "盐（出锅调味）"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡肉"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "姜"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "料酒（焯水用）"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "板栗"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "山药"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "小南瓜"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "红枣"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "盐（出锅调味）"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "pass",
+          "reason": "portion-oil-reference",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡肉"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "姜"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "料酒（焯水用）"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "板栗"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "山药"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "小南瓜"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "红枣"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "盐（出锅调味）"
+            }
+          ]
+        }
+      },
+      "portionOil": {
+        "referenceServings": 2,
+        "batchOilGrams": {
+          "lower": 0,
+          "upper": 0
+        },
+        "servingEvidence": [
+          {
+            "block": 6,
+            "text": "每份（一份恰好够 2 人食用）："
+          }
+        ],
+        "oilEvidence": [
+          {
+            "block": 4,
+            "item": 0,
+            "text": "鸡肉"
+          },
+          {
+            "block": 4,
+            "item": 1,
+            "text": "姜"
+          },
+          {
+            "block": 4,
+            "item": 2,
+            "text": "料酒（焯水用）"
+          },
+          {
+            "block": 4,
+            "item": 3,
+            "text": "板栗"
+          },
+          {
+            "block": 4,
+            "item": 4,
+            "text": "山药"
+          },
+          {
+            "block": 4,
+            "item": 5,
+            "text": "小南瓜"
+          },
+          {
+            "block": 4,
+            "item": 6,
+            "text": "红枣"
+          },
+          {
+            "block": 4,
+            "item": 7,
+            "text": "盐（出锅调味）"
+          }
+        ]
+      }
+    },
+    "800": {
+      "recipeFingerprint": "a53181f27fc72371",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/排骨苦瓜汤/排骨苦瓜汤.md",
+      "sourceFingerprint": "35d355e07cd5614c",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "排骨",
+        "苦瓜",
+        "虾皮",
+        "生姜",
+        "水",
+        "盐",
+        "白胡椒",
+        "瑶柱"
+      ],
+      "avoidIngredients": [
+        "排骨",
+        "苦瓜",
+        "虾皮",
+        "生姜",
+        "水",
+        "盐",
+        "白胡椒",
+        "瑶柱",
+        "猪肉",
+        "虾",
+        "贝类",
+        "姜",
+        "食用盐",
+        "食盐",
+        "胡椒"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": [
+        {
+          "block": 7,
+          "item": 0,
+          "text": "排骨"
+        },
+        {
+          "block": 7,
+          "item": 1,
+          "text": "苦瓜"
+        },
+        {
+          "block": 7,
+          "item": 2,
+          "text": "虾皮"
+        },
+        {
+          "block": 10,
+          "item": 3,
+          "text": "生姜 5~10g（可选，用于焯水时去腥）"
+        },
+        {
+          "block": 12,
+          "item": 2,
+          "text": "苦瓜中间切为两半，清除干净内部的种子和苦瓜瓤，切为 0.5 ± 0.3 cm 的苦瓜条，洗净\n使用汤锅进行烹饪\n• 汤锅倒入水 1100ml 和排骨，大火\n• 等待水沸腾后将苦瓜和虾皮下锅转小火，放等待 120~240 分钟（在 120 分钟之后可以捞出一块肉进行品尝，若肉可以较为轻松的从骨头上分离即可关火）\n• 出锅时加盐和白胡椒，推荐量为每 250ml 0.3 到 0.6g 盐，0.1 到 0.5g 白胡椒\n使用电压力锅进行烹饪\n• 倒入 1000ml 水和排骨，虾皮和苦瓜\n• 选择炖汤功能，进行烹饪（一般为加压烹饪 45 分钟）\n• 出锅，和汤锅一样进行加盐和胡椒"
+        },
+        {
+          "block": 14,
+          "item": 0,
+          "text": "可以使用其他带有鲜味的食材代替虾皮，如瑶柱"
+        }
+      ],
+      "foodGroups": [
+        "vegetables",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "pass",
+          "reason": "no-added-sugar",
+          "evidence": [
+            {
+              "block": 7,
+              "item": 0,
+              "text": "排骨"
+            },
+            {
+              "block": 7,
+              "item": 1,
+              "text": "苦瓜"
+            },
+            {
+              "block": 7,
+              "item": 2,
+              "text": "虾皮"
+            },
+            {
+              "block": 10,
+              "item": 3,
+              "text": "生姜 5~10g（可选，用于焯水时去腥）"
+            },
+            {
+              "block": 12,
+              "item": 2,
+              "text": "苦瓜中间切为两半，清除干净内部的种子和苦瓜瓤，切为 0.5 ± 0.3 cm 的苦瓜条，洗净\n使用汤锅进行烹饪\n• 汤锅倒入水 1100ml 和排骨，大火\n• 等待水沸腾后将苦瓜和虾皮下锅转小火，放等待 120~240 分钟（在 120 分钟之后可以捞出一块肉进行品尝，若肉可以较为轻松的从骨头上分离即可关火）\n• 出锅时加盐和白胡椒，推荐量为每 250ml 0.3 到 0.6g 盐，0.1 到 0.5g 白胡椒\n使用电压力锅进行烹饪\n• 倒入 1000ml 水和排骨，虾皮和苦瓜\n• 选择炖汤功能，进行烹饪（一般为加压烹饪 45 分钟）\n• 出锅，和汤锅一样进行加盐和胡椒"
+            },
+            {
+              "block": 14,
+              "item": 0,
+              "text": "可以使用其他带有鲜味的食材代替虾皮，如瑶柱"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 7,
+              "item": 0,
+              "text": "排骨"
+            },
+            {
+              "block": 7,
+              "item": 1,
+              "text": "苦瓜"
+            },
+            {
+              "block": 7,
+              "item": 2,
+              "text": "虾皮"
+            },
+            {
+              "block": 10,
+              "item": 3,
+              "text": "生姜 5~10g（可选，用于焯水时去腥）"
+            },
+            {
+              "block": 12,
+              "item": 2,
+              "text": "苦瓜中间切为两半，清除干净内部的种子和苦瓜瓤，切为 0.5 ± 0.3 cm 的苦瓜条，洗净\n使用汤锅进行烹饪\n• 汤锅倒入水 1100ml 和排骨，大火\n• 等待水沸腾后将苦瓜和虾皮下锅转小火，放等待 120~240 分钟（在 120 分钟之后可以捞出一块肉进行品尝，若肉可以较为轻松的从骨头上分离即可关火）\n• 出锅时加盐和白胡椒，推荐量为每 250ml 0.3 到 0.6g 盐，0.1 到 0.5g 白胡椒\n使用电压力锅进行烹饪\n• 倒入 1000ml 水和排骨，虾皮和苦瓜\n• 选择炖汤功能，进行烹饪（一般为加压烹饪 45 分钟）\n• 出锅，和汤锅一样进行加盐和胡椒"
+            },
+            {
+              "block": 14,
+              "item": 0,
+              "text": "可以使用其他带有鲜味的食材代替虾皮，如瑶柱"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "pass",
+          "reason": "portion-oil-reference",
+          "evidence": [
+            {
+              "block": 7,
+              "item": 0,
+              "text": "排骨"
+            },
+            {
+              "block": 7,
+              "item": 1,
+              "text": "苦瓜"
+            },
+            {
+              "block": 7,
+              "item": 2,
+              "text": "虾皮"
+            },
+            {
+              "block": 10,
+              "item": 3,
+              "text": "生姜 5~10g（可选，用于焯水时去腥）"
+            },
+            {
+              "block": 12,
+              "item": 2,
+              "text": "苦瓜中间切为两半，清除干净内部的种子和苦瓜瓤，切为 0.5 ± 0.3 cm 的苦瓜条，洗净\n使用汤锅进行烹饪\n• 汤锅倒入水 1100ml 和排骨，大火\n• 等待水沸腾后将苦瓜和虾皮下锅转小火，放等待 120~240 分钟（在 120 分钟之后可以捞出一块肉进行品尝，若肉可以较为轻松的从骨头上分离即可关火）\n• 出锅时加盐和白胡椒，推荐量为每 250ml 0.3 到 0.6g 盐，0.1 到 0.5g 白胡椒\n使用电压力锅进行烹饪\n• 倒入 1000ml 水和排骨，虾皮和苦瓜\n• 选择炖汤功能，进行烹饪（一般为加压烹饪 45 分钟）\n• 出锅，和汤锅一样进行加盐和胡椒"
+            },
+            {
+              "block": 14,
+              "item": 0,
+              "text": "可以使用其他带有鲜味的食材代替虾皮，如瑶柱"
+            }
+          ]
+        }
+      },
+      "portionOil": {
+        "referenceServings": 4,
+        "batchOilGrams": {
+          "lower": 0,
+          "upper": 0
+        },
+        "servingEvidence": [
+          {
+            "block": 9,
+            "text": "每次制作前需要确定计划做几份。一份正好够 4 个人吃。每份："
+          }
+        ],
+        "oilEvidence": [
+          {
+            "block": 7,
+            "item": 0,
+            "text": "排骨"
+          },
+          {
+            "block": 7,
+            "item": 1,
+            "text": "苦瓜"
+          },
+          {
+            "block": 7,
+            "item": 2,
+            "text": "虾皮"
+          },
+          {
+            "block": 10,
+            "item": 3,
+            "text": "生姜 5~10g（可选，用于焯水时去腥）"
+          },
+          {
+            "block": 12,
+            "item": 2,
+            "text": "苦瓜中间切为两半，清除干净内部的种子和苦瓜瓤，切为 0.5 ± 0.3 cm 的苦瓜条，洗净\n使用汤锅进行烹饪\n• 汤锅倒入水 1100ml 和排骨，大火\n• 等待水沸腾后将苦瓜和虾皮下锅转小火，放等待 120~240 分钟（在 120 分钟之后可以捞出一块肉进行品尝，若肉可以较为轻松的从骨头上分离即可关火）\n• 出锅时加盐和白胡椒，推荐量为每 250ml 0.3 到 0.6g 盐，0.1 到 0.5g 白胡椒\n使用电压力锅进行烹饪\n• 倒入 1000ml 水和排骨，虾皮和苦瓜\n• 选择炖汤功能，进行烹饪（一般为加压烹饪 45 分钟）\n• 出锅，和汤锅一样进行加盐和胡椒"
+          },
+          {
+            "block": 14,
+            "item": 0,
+            "text": "可以使用其他带有鲜味的食材代替虾皮，如瑶柱"
+          }
+        ]
+      }
+    },
+    "805": {
+      "recipeFingerprint": "c96155034e3e205b",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/紫菜蛋花汤.md",
+      "sourceFingerprint": "16180dab39b335d8",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "鸡蛋",
+        "紫菜",
+        "葱花",
+        "水",
+        "盐",
+        "油",
+        "虾仁",
+        "香油",
+        "虾皮",
+        "淀粉"
+      ],
+      "avoidIngredients": [
+        "鸡蛋",
+        "紫菜",
+        "葱花",
+        "水",
+        "盐",
+        "油",
+        "虾仁",
+        "香油",
+        "虾皮",
+        "淀粉",
+        "虾",
+        "葱",
+        "食用盐",
+        "食盐",
+        "芝麻油",
+        "芝麻"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "紫菜"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "葱花"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "水"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "盐"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "油"
+        },
+        {
+          "block": 4,
+          "item": 6,
+          "text": "虾仁（个人口味，可加可不加）"
+        },
+        {
+          "block": 9,
+          "item": 4,
+          "text": "关火，出锅前放入几滴香油，也有的会放入一点虾皮，味道也不错。"
+        },
+        {
+          "block": 11,
+          "item": 1,
+          "text": "如果喜欢浓稠口感，可加入 2g 淀粉."
+        }
+      ],
+      "foodGroups": [
+        "vegetables",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "pass",
+          "reason": "no-added-sugar",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "紫菜"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "葱花"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "水"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "油"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "虾仁（个人口味，可加可不加）"
+            },
+            {
+              "block": 9,
+              "item": 4,
+              "text": "关火，出锅前放入几滴香油，也有的会放入一点虾皮，味道也不错。"
+            },
+            {
+              "block": 11,
+              "item": 1,
+              "text": "如果喜欢浓稠口感，可加入 2g 淀粉."
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "紫菜"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "葱花"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "水"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "油"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "虾仁（个人口味，可加可不加）"
+            },
+            {
+              "block": 9,
+              "item": 4,
+              "text": "关火，出锅前放入几滴香油，也有的会放入一点虾皮，味道也不错。"
+            },
+            {
+              "block": 11,
+              "item": 1,
+              "text": "如果喜欢浓稠口感，可加入 2g 淀粉."
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "紫菜"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "葱花"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "水"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "油"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "虾仁（个人口味，可加可不加）"
+            },
+            {
+              "block": 9,
+              "item": 4,
+              "text": "关火，出锅前放入几滴香油，也有的会放入一点虾皮，味道也不错。"
+            },
+            {
+              "block": 11,
+              "item": 1,
+              "text": "如果喜欢浓稠口感，可加入 2g 淀粉."
+            }
+          ]
+        }
+      }
+    },
+    "809": {
+      "recipeFingerprint": "50b9f5ec3af4e2ef",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/黄瓜皮蛋汤.md",
+      "sourceFingerprint": "0fd1dff72ba46a50",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "黄瓜",
+        "皮蛋",
+        "大蒜",
+        "小葱",
+        "食用油",
+        "猪油",
+        "盐",
+        "鸡精",
+        "水",
+        "香油"
+      ],
+      "avoidIngredients": [
+        "黄瓜",
+        "皮蛋",
+        "大蒜",
+        "小葱",
+        "食用油",
+        "猪油",
+        "盐",
+        "鸡精",
+        "水",
+        "香油",
+        "鸡蛋",
+        "猪肉",
+        "蒜",
+        "葱",
+        "油",
+        "食用盐",
+        "食盐",
+        "芝麻油",
+        "芝麻"
+      ],
+      "unresolvedIngredients": [
+        "皮蛋",
+        "鸡精"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "黄瓜"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "皮蛋"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "大蒜"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "小葱"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "食用油（推荐猪油）"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "盐"
+        },
+        {
+          "block": 4,
+          "item": 6,
+          "text": "鸡精（可选）"
+        },
+        {
+          "block": 8,
+          "item": 7,
+          "text": "水 400-500 ml"
+        },
+        {
+          "block": 12,
+          "item": 2,
+          "text": "皮蛋切块时抹点香油不容易粘刀"
+        }
+      ],
+      "foodGroups": [
+        "vegetables",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "黄瓜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "皮蛋"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "大蒜"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "小葱"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "食用油（推荐猪油）"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "鸡精（可选）"
+            },
+            {
+              "block": 8,
+              "item": 7,
+              "text": "水 400-500 ml"
+            },
+            {
+              "block": 12,
+              "item": 2,
+              "text": "皮蛋切块时抹点香油不容易粘刀"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "黄瓜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "皮蛋"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "大蒜"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "小葱"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "食用油（推荐猪油）"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "鸡精（可选）"
+            },
+            {
+              "block": 8,
+              "item": 7,
+              "text": "水 400-500 ml"
+            },
+            {
+              "block": 12,
+              "item": 2,
+              "text": "皮蛋切块时抹点香油不容易粘刀"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "黄瓜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "皮蛋"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "大蒜"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "小葱"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "食用油（推荐猪油）"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "鸡精（可选）"
+            },
+            {
+              "block": 8,
+              "item": 7,
+              "text": "水 400-500 ml"
+            },
+            {
+              "block": 12,
+              "item": 2,
+              "text": "皮蛋切块时抹点香油不容易粘刀"
+            }
+          ]
+        }
+      }
+    },
+    "829": {
+      "recipeFingerprint": "a996298cf9d45b10",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/电饭煲三文鱼炊饭/电饭煲三文鱼炊饭.md",
+      "sourceFingerprint": "2121d3a51d946d26",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "有盐牛油",
+        "三文鱼",
+        "米",
+        "粟米",
+        "金菇",
+        "冬菇",
+        "水"
+      ],
+      "avoidIngredients": [
+        "有盐牛油",
+        "三文鱼",
+        "米",
+        "粟米",
+        "金菇",
+        "冬菇",
+        "水",
+        "鱼",
+        "牛奶",
+        "黄油",
+        "牛油",
+        "大米",
+        "米饭",
+        "菌菇",
+        "金针菇",
+        "香菇"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": [
+        {
+          "block": 5,
+          "item": 0,
+          "text": "有盐牛油"
+        },
+        {
+          "block": 5,
+          "item": 1,
+          "text": "三文鱼"
+        },
+        {
+          "block": 5,
+          "item": 2,
+          "text": "米"
+        },
+        {
+          "block": 5,
+          "item": 3,
+          "text": "粟米（可选）"
+        },
+        {
+          "block": 5,
+          "item": 4,
+          "text": "金菇（可选）"
+        },
+        {
+          "block": 5,
+          "item": 5,
+          "text": "冬菇（可选）"
+        },
+        {
+          "block": 9,
+          "item": 2,
+          "text": "水"
+        }
+      ],
+      "foodGroups": [
+        "staple",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "pass",
+          "reason": "no-added-sugar",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "有盐牛油"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "三文鱼"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "米"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "粟米（可选）"
+            },
+            {
+              "block": 5,
+              "item": 4,
+              "text": "金菇（可选）"
+            },
+            {
+              "block": 5,
+              "item": 5,
+              "text": "冬菇（可选）"
+            },
+            {
+              "block": 9,
+              "item": 2,
+              "text": "水"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "有盐牛油"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "三文鱼"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "米"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "粟米（可选）"
+            },
+            {
+              "block": 5,
+              "item": 4,
+              "text": "金菇（可选）"
+            },
+            {
+              "block": 5,
+              "item": 5,
+              "text": "冬菇（可选）"
+            },
+            {
+              "block": 9,
+              "item": 2,
+              "text": "水"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "有盐牛油"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "三文鱼"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "米"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "粟米（可选）"
+            },
+            {
+              "block": 5,
+              "item": 4,
+              "text": "金菇（可选）"
+            },
+            {
+              "block": 5,
+              "item": 5,
+              "text": "冬菇（可选）"
+            },
+            {
+              "block": 9,
+              "item": 2,
+              "text": "水"
+            }
+          ]
+        }
+      }
+    },
+    "840": {
+      "recipeFingerprint": "af6ca28b0411e50e",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/韭菜盒子.md",
+      "sourceFingerprint": "0700d2579e3d2d9e",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "韭菜",
+        "虾仁",
+        "鸡蛋",
+        "香油",
+        "盐",
+        "面粉",
+        "水",
+        "食用油",
+        "豆腐干"
+      ],
+      "avoidIngredients": [
+        "韭菜",
+        "虾仁",
+        "鸡蛋",
+        "香油",
+        "盐",
+        "面粉",
+        "水",
+        "食用油",
+        "豆腐干",
+        "虾",
+        "大豆",
+        "油",
+        "芝麻油",
+        "芝麻",
+        "食用盐",
+        "食盐",
+        "小麦"
+      ],
+      "unresolvedIngredients": [
+        "豆腐干"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "韭菜"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "虾仁"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "香油"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "盐"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "面粉"
+        },
+        {
+          "block": 10,
+          "item": 0,
+          "text": "将面粉放入大碗中，加入水，搅拌成光滑的面团，静置 30 分钟。"
+        },
+        {
+          "block": 10,
+          "item": 3,
+          "text": "热锅，加入食用油，放入包好的韭菜盒子，煎至两面金黄，约 3-4 分钟。"
+        },
+        {
+          "block": 12,
+          "item": 0,
+          "text": "制作时可根据个人口味添加豆腐干等配料。"
+        }
+      ],
+      "foodGroups": [
+        "staple",
+        "protein",
+        "vegetables"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "韭菜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "虾仁"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "香油"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "面粉"
+            },
+            {
+              "block": 10,
+              "item": 0,
+              "text": "将面粉放入大碗中，加入水，搅拌成光滑的面团，静置 30 分钟。"
+            },
+            {
+              "block": 10,
+              "item": 3,
+              "text": "热锅，加入食用油，放入包好的韭菜盒子，煎至两面金黄，约 3-4 分钟。"
+            },
+            {
+              "block": 12,
+              "item": 0,
+              "text": "制作时可根据个人口味添加豆腐干等配料。"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "韭菜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "虾仁"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "香油"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "面粉"
+            },
+            {
+              "block": 10,
+              "item": 0,
+              "text": "将面粉放入大碗中，加入水，搅拌成光滑的面团，静置 30 分钟。"
+            },
+            {
+              "block": 10,
+              "item": 3,
+              "text": "热锅，加入食用油，放入包好的韭菜盒子，煎至两面金黄，约 3-4 分钟。"
+            },
+            {
+              "block": 12,
+              "item": 0,
+              "text": "制作时可根据个人口味添加豆腐干等配料。"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "韭菜"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "虾仁"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "香油"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "面粉"
+            },
+            {
+              "block": 10,
+              "item": 0,
+              "text": "将面粉放入大碗中，加入水，搅拌成光滑的面团，静置 30 分钟。"
+            },
+            {
+              "block": 10,
+              "item": 3,
+              "text": "热锅，加入食用油，放入包好的韭菜盒子，煎至两面金黄，约 3-4 分钟。"
+            },
+            {
+              "block": 12,
+              "item": 0,
+              "text": "制作时可根据个人口味添加豆腐干等配料。"
+            }
+          ]
+        }
+      }
+    },
+    "844": {
+      "recipeFingerprint": "58f432fb6f247a41",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/太阳蛋.md",
+      "sourceFingerprint": "98937ffbd050c97d",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "鸡蛋",
+        "盐",
+        "油"
+      ],
+      "avoidIngredients": [
+        "鸡蛋",
+        "盐",
+        "油",
+        "食用盐",
+        "食盐"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "盐"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "油"
+        }
+      ],
+      "foodGroups": [
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "pass",
+          "reason": "no-added-sugar",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "油"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "油"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "油"
+            }
+          ]
+        }
+      }
+    },
+    "846": {
+      "recipeFingerprint": "cea0612a33b519e5",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/微波炉荷包蛋.md",
+      "sourceFingerprint": "38f4820af17584fd",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "鸡蛋",
+        "芝麻油",
+        "盐",
+        "饮用水"
+      ],
+      "avoidIngredients": [
+        "鸡蛋",
+        "芝麻油",
+        "盐",
+        "饮用水",
+        "油",
+        "香油",
+        "芝麻",
+        "食用盐",
+        "食盐"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "芝麻油"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "盐"
+        },
+        {
+          "block": 8,
+          "item": 1,
+          "text": "饮用水 35ml"
+        }
+      ],
+      "foodGroups": [
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "pass",
+          "reason": "no-added-sugar",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "芝麻油"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "盐"
+            },
+            {
+              "block": 8,
+              "item": 1,
+              "text": "饮用水 35ml"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "芝麻油"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "盐"
+            },
+            {
+              "block": 8,
+              "item": 1,
+              "text": "饮用水 35ml"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "芝麻油"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "盐"
+            },
+            {
+              "block": 8,
+              "item": 1,
+              "text": "饮用水 35ml"
+            }
+          ]
+        }
+      }
+    },
+    "849": {
+      "recipeFingerprint": "7e1f6433e24e7b18",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/水煮玉米.md",
+      "sourceFingerprint": "b485d9e2c34f3c4e",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "玉米",
+        "水",
+        "盐",
+        "糖"
+      ],
+      "avoidIngredients": [
+        "玉米",
+        "水",
+        "盐",
+        "糖",
+        "食用盐",
+        "食盐"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "新鲜玉米"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "水"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "盐"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "糖（可选）"
+        }
+      ],
+      "foodGroups": [
+        "staple"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "fail",
+          "reason": "added-sugar",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 4,
+              "text": "糖（可选）"
+            },
+            {
+              "block": 6,
+              "item": 3,
+              "text": "根据口味选择加或者不加糖（可选）"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "新鲜玉米"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "水"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "糖（可选）"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "新鲜玉米"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "水"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "糖（可选）"
+            }
+          ]
+        }
+      }
+    },
+    "850": {
+      "recipeFingerprint": "bd791c3ac7737795",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/溏心蛋.md",
+      "sourceFingerprint": "29a97d1a5d22203b",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "鸡蛋",
+        "水"
+      ],
+      "avoidIngredients": [
+        "鸡蛋",
+        "水"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "水"
+        }
+      ],
+      "foodGroups": [
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "pass",
+          "reason": "no-added-sugar",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "水"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "水"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "水"
+            }
+          ]
+        }
+      }
+    },
+    "851": {
+      "recipeFingerprint": "47941624b594630c",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/燕麦鸡蛋饼.md",
+      "sourceFingerprint": "85e8c4a07d79fb45",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "鸡蛋",
+        "燕麦",
+        "牛奶",
+        "蔬菜",
+        "黄油",
+        "盐",
+        "胡椒",
+        "菠菜"
+      ],
+      "avoidIngredients": [
+        "鸡蛋",
+        "燕麦",
+        "牛奶",
+        "蔬菜",
+        "黄油",
+        "盐",
+        "胡椒",
+        "菠菜",
+        "燕麦片",
+        "牛油",
+        "食用盐",
+        "食盐"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "燕麦"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "牛奶 50-100g，能够将燕麦搅拌粘稠即可"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "可根据口味选择增加 50g 蔬菜，如菠菜。"
+        },
+        {
+          "block": 8,
+          "item": 3,
+          "text": "平底锅中加入一层黄油并覆盖均匀。"
+        },
+        {
+          "block": 10,
+          "item": 0,
+          "text": "如果口味偏咸口，可以在搅拌鸡蛋液时加入盐，胡椒等调料。"
+        }
+      ],
+      "foodGroups": [
+        "staple",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "pass",
+          "reason": "no-added-sugar",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "燕麦"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "牛奶 50-100g，能够将燕麦搅拌粘稠即可"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "可根据口味选择增加 50g 蔬菜，如菠菜。"
+            },
+            {
+              "block": 8,
+              "item": 3,
+              "text": "平底锅中加入一层黄油并覆盖均匀。"
+            },
+            {
+              "block": 10,
+              "item": 0,
+              "text": "如果口味偏咸口，可以在搅拌鸡蛋液时加入盐，胡椒等调料。"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "燕麦"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "牛奶 50-100g，能够将燕麦搅拌粘稠即可"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "可根据口味选择增加 50g 蔬菜，如菠菜。"
+            },
+            {
+              "block": 8,
+              "item": 3,
+              "text": "平底锅中加入一层黄油并覆盖均匀。"
+            },
+            {
+              "block": 10,
+              "item": 0,
+              "text": "如果口味偏咸口，可以在搅拌鸡蛋液时加入盐，胡椒等调料。"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "燕麦"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "牛奶 50-100g，能够将燕麦搅拌粘稠即可"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "可根据口味选择增加 50g 蔬菜，如菠菜。"
+            },
+            {
+              "block": 8,
+              "item": 3,
+              "text": "平底锅中加入一层黄油并覆盖均匀。"
+            },
+            {
+              "block": 10,
+              "item": 0,
+              "text": "如果口味偏咸口，可以在搅拌鸡蛋液时加入盐，胡椒等调料。"
+            }
+          ]
+        }
+      }
+    },
+    "852": {
+      "recipeFingerprint": "a75c97032ff211b0",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/空气炸锅面包片.md",
+      "sourceFingerprint": "fdafaa24545bd0df",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "面包片"
+      ],
+      "avoidIngredients": [
+        "面包片",
+        "小麦"
+      ],
+      "unresolvedIngredients": [
+        "面包片"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "面包片"
+        }
+      ],
+      "foodGroups": [
+        "staple"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "面包片"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "面包片"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "面包片"
+            }
+          ]
+        }
+      }
+    },
+    "853": {
+      "recipeFingerprint": "a59b680515b295b9",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/美式炒蛋.md",
+      "sourceFingerprint": "1d2e951d11dbf030",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "鸡蛋",
+        "全脂牛奶",
+        "奶油",
+        "黄油",
+        "盐",
+        "番茄",
+        "洋葱",
+        "培根",
+        "芝士"
+      ],
+      "avoidIngredients": [
+        "鸡蛋",
+        "全脂牛奶",
+        "奶油",
+        "黄油",
+        "盐",
+        "番茄",
+        "洋葱",
+        "培根",
+        "芝士",
+        "牛奶",
+        "猪肉",
+        "牛油",
+        "食用盐",
+        "食盐"
+      ],
+      "unresolvedIngredients": [
+        "奶油",
+        "培根",
+        "芝士"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "全脂牛奶/奶油"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "黄油"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "盐"
+        },
+        {
+          "block": 11,
+          "item": 0,
+          "text": "想吃的更丰富可以在最后一步那里加上炒好的番茄丁，洋葱丁，培根丁，切好的芝士小丁，等等。(总之不会再出水的东东）"
+        }
+      ],
+      "foodGroups": [
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "全脂牛奶/奶油"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "黄油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "盐"
+            },
+            {
+              "block": 11,
+              "item": 0,
+              "text": "想吃的更丰富可以在最后一步那里加上炒好的番茄丁，洋葱丁，培根丁，切好的芝士小丁，等等。(总之不会再出水的东东）"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "全脂牛奶/奶油"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "黄油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "盐"
+            },
+            {
+              "block": 11,
+              "item": 0,
+              "text": "想吃的更丰富可以在最后一步那里加上炒好的番茄丁，洋葱丁，培根丁，切好的芝士小丁，等等。(总之不会再出水的东东）"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "全脂牛奶/奶油"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "黄油"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "盐"
+            },
+            {
+              "block": 11,
+              "item": 0,
+              "text": "想吃的更丰富可以在最后一步那里加上炒好的番茄丁，洋葱丁，培根丁，切好的芝士小丁，等等。(总之不会再出水的东东）"
+            }
+          ]
+        }
+      }
+    },
+    "854": {
+      "recipeFingerprint": "f514bce2dd07b6cb",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/蒸水蛋.md",
+      "sourceFingerprint": "871872774ebbba4a",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "鸡蛋",
+        "热水",
+        "盐",
+        "蒸鱼豉油",
+        "葱花",
+        "香油"
+      ],
+      "avoidIngredients": [
+        "鸡蛋",
+        "热水",
+        "盐",
+        "蒸鱼豉油",
+        "葱花",
+        "香油",
+        "酱油",
+        "食用盐",
+        "食盐",
+        "葱",
+        "油",
+        "芝麻油",
+        "芝麻"
+      ],
+      "unresolvedIngredients": [
+        "蒸鱼豉油"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "新鲜鸡蛋"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "热水"
+        },
+        {
+          "block": 6,
+          "item": 1,
+          "text": "盐 2g"
+        },
+        {
+          "block": 10,
+          "item": 1,
+          "text": "也可加入蒸鱼豉油，葱花香油作为佐料。"
+        }
+      ],
+      "foodGroups": [
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "新鲜鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "热水"
+            },
+            {
+              "block": 6,
+              "item": 1,
+              "text": "盐 2g"
+            },
+            {
+              "block": 10,
+              "item": 1,
+              "text": "也可加入蒸鱼豉油，葱花香油作为佐料。"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "新鲜鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "热水"
+            },
+            {
+              "block": 6,
+              "item": 1,
+              "text": "盐 2g"
+            },
+            {
+              "block": 10,
+              "item": 1,
+              "text": "也可加入蒸鱼豉油，葱花香油作为佐料。"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "新鲜鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "热水"
+            },
+            {
+              "block": 6,
+              "item": 1,
+              "text": "盐 2g"
+            },
+            {
+              "block": 10,
+              "item": 1,
+              "text": "也可加入蒸鱼豉油，葱花香油作为佐料。"
+            }
+          ]
+        }
+      }
+    },
+    "857": {
+      "recipeFingerprint": "a58834216604d13f",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/鸡蛋三明治.md",
+      "sourceFingerprint": "4ba66e00a7bd1b48",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "鸡蛋",
+        "吐司",
+        "培根",
+        "黄油",
+        "蛋黄酱",
+        "盐",
+        "黑胡椒",
+        "芝士",
+        "酸黄瓜"
+      ],
+      "avoidIngredients": [
+        "鸡蛋",
+        "吐司",
+        "培根",
+        "黄油",
+        "蛋黄酱",
+        "盐",
+        "黑胡椒",
+        "芝士",
+        "酸黄瓜",
+        "猪肉",
+        "牛奶",
+        "牛油",
+        "食用盐",
+        "食盐",
+        "胡椒"
+      ],
+      "unresolvedIngredients": [
+        "吐司",
+        "培根",
+        "蛋黄酱",
+        "芝士",
+        "酸黄瓜"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "鸡蛋"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "吐司"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "培根"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "黄油"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "蛋黄酱"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "盐"
+        },
+        {
+          "block": 4,
+          "item": 6,
+          "text": "黑胡椒"
+        },
+        {
+          "block": 10,
+          "item": 0,
+          "text": "也可加入芝士、酸黄瓜等食材"
+        }
+      ],
+      "foodGroups": [
+        "staple",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "吐司"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "培根"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "黄油"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "蛋黄酱"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "黑胡椒"
+            },
+            {
+              "block": 10,
+              "item": 0,
+              "text": "也可加入芝士、酸黄瓜等食材"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "吐司"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "培根"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "黄油"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "蛋黄酱"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "黑胡椒"
+            },
+            {
+              "block": 10,
+              "item": 0,
+              "text": "也可加入芝士、酸黄瓜等食材"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "鸡蛋"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "吐司"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "培根"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "黄油"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "蛋黄酱"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "盐"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "黑胡椒"
+            },
+            {
+              "block": 10,
+              "item": 0,
+              "text": "也可加入芝士、酸黄瓜等食材"
+            }
+          ]
+        }
+      }
+    },
+    "861": {
+      "recipeFingerprint": "d58115357e152285",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/素炒豆角.md",
+      "sourceFingerprint": "b0e4b06b381095b1",
+      "reviewedAt": "2026-10-26",
+      "ingredients": [
+        "豆角",
+        "小米椒",
+        "葱",
+        "蒜",
+        "生抽",
+        "老抽",
+        "耗油",
+        "盐",
+        "水",
+        "油"
+      ],
+      "avoidIngredients": [
+        "豆角",
+        "小米椒",
+        "葱",
+        "蒜",
+        "生抽",
+        "老抽",
+        "耗油",
+        "盐",
+        "水",
+        "油",
+        "酱油",
+        "蚝油",
+        "辣椒",
+        "小葱",
+        "大葱",
+        "大蒜",
+        "食用盐",
+        "食盐"
+      ],
+      "unresolvedIngredients": [
+        "生抽",
+        "老抽",
+        "耗油"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "豆角"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "小米椒"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "葱"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "蒜"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "生抽"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "老抽"
+        },
+        {
+          "block": 4,
+          "item": 6,
+          "text": "耗油"
+        },
+        {
+          "block": 4,
+          "item": 7,
+          "text": "盐"
+        },
+        {
+          "block": 9,
+          "item": 7,
+          "text": "倒入 150ml 水"
+        }
+      ],
+      "foodGroups": [
+        "vegetables"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "豆角"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "小米椒"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "葱"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "蒜"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "老抽"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "耗油"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "盐"
+            },
+            {
+              "block": 9,
+              "item": 7,
+              "text": "倒入 150ml 水"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "豆角"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "小米椒"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "葱"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "蒜"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "老抽"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "耗油"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "盐"
+            },
+            {
+              "block": 9,
+              "item": 7,
+              "text": "倒入 150ml 水"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "unknown",
+          "reason": "unverified-portion-oil",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "豆角"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "小米椒"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "葱"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "蒜"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "老抽"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "耗油"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "盐"
+            },
+            {
+              "block": 9,
+              "item": 7,
+              "text": "倒入 150ml 水"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "dataVersion": "d933a7d65a25"
+}

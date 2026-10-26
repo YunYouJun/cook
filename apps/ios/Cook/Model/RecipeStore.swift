@@ -28,6 +28,20 @@ final class RecipeStore {
     /// 内置数据目录，图文做法正文用到时才读
     @ObservationIgnored private let dataDirectory: URL?
     @ObservationIgnored private lazy var textLibrary: RecipeTextLibrary? = dataDirectory.flatMap { try? RecipeTextLibrary.load(from: $0) }
+    @ObservationIgnored private lazy var dietaryResult: Result<DietaryCatalog, Error> = Result {
+        guard let dataDirectory else { throw DietaryCatalogError.missingData }
+        return try DietaryCatalog.load(from: dataDirectory, recipes: data.recipes)
+    }
+
+    var dietaryCatalog: DietaryCatalog? { try? dietaryResult.get() }
+    var dietaryGoals: [DietaryGoal] { dietaryCatalog?.availableGoals ?? [] }
+    var dietaryUnavailableMessage: String? {
+        switch dietaryResult {
+        case .failure: return "饮食目标数据暂不可用，仍可按食材和厨具找菜。"
+        case .success(let catalog):
+            return catalog.availableGoals.isEmpty ? "目前有效核对的菜谱还不足以开放目标推荐，仍可按食材找菜。" : nil
+        }
+    }
 
     init(data: CookData, dataDirectory: URL? = nil, catalog: PersonalCatalogStore = PersonalCatalogStore()) {
         self.data = data

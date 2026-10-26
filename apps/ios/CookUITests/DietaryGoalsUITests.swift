@@ -1,0 +1,146 @@
+import XCTest
+
+final class DietaryGoalsUITests: XCTestCase {
+    @MainActor
+    private func app() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-reset-dietary"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launch()
+        let presentation = app.buttons["cook.presentation"]
+        XCTAssertTrue(presentation.waitForExistence(timeout: 15))
+        if presentation.label.contains("切换到列表") { presentation.tap() }
+        return app
+    }
+
+    @MainActor
+    private func select(_ goal: String, in app: XCUIApplication, remember: Bool = false) {
+        let picker = app.buttons["dietary.openPicker"].firstMatch
+        XCTAssertTrue(picker.waitForExistence(timeout: 15))
+        picker.tap()
+        let option = app.buttons["dietary.goal.\(goal)"]
+        XCTAssertTrue(option.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["dietary.goal.weight-aware"].exists)
+        option.tap()
+        if remember {
+            let toggle = app.switches["dietary.remember"]
+            XCTAssertTrue(toggle.isEnabled)
+            // SwiftUI exposes the labeled row as the switch; tap its trailing native control.
+            toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+            XCTAssertEqual(toggle.value as? String, "1")
+            let attachment = XCTAttachment(screenshot: app.screenshot())
+            attachment.name = "native-dietary-picker"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+        app.buttons["dietary.done"].tap()
+    }
+
+    @MainActor
+    private func showResults(_ app: XCUIApplication) {
+        if app.windows.firstMatch.horizontalSizeClass != .regular {
+            let button = app.buttons["cook.showResults"]
+            XCTAssertTrue(button.waitForExistence(timeout: 10))
+            button.tap()
+        }
+    }
+
+    @MainActor
+    func testGoalBrowsingOpensReviewedTextAndPreservesGoalInRandom() {
+        let app = app()
+        select("less-added-sugar", in: app)
+        showResults(app)
+        let row = app.buttons["dietary.recipe.333"]
+        for _ in 0..<5 {
+            if row.exists && row.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        let reviewed = app.buttons["dietary.openReviewedRecipe"]
+        XCTAssertTrue(reviewed.waitForExistence(timeout: 10))
+        app.buttons["recipe.openKitchen"].tap()
+        XCTAssertTrue(app.buttons["kitchen.close"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.otherElements["dietary.reviewSummary"].waitForExistence(timeout: 10))
+        app.buttons["kitchen.close"].tap()
+        reviewed.tap()
+        XCTAssertTrue(app.otherElements["dietary.reviewSummary"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["dietary.reviewReason"].label.contains("未额外添加糖"))
+        XCTAssertFalse(app.staticTexts["预估热量"].exists)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "dietary-reviewed-source"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        // iPad floating tabs use Cell/Other roles instead of TabBar/Button on newer SDKs.
+        let random = app.descendants(matching: .any).matching(identifier: "dice").firstMatch
+        let randomButton = app.buttons["随机"]
+        if !random.exists && !randomButton.exists {
+            let collapsedTab = app.tabBars.buttons.firstMatch
+            if collapsedTab.exists {
+                collapsedTab.tap()
+            } else {
+                app.descendants(matching: .any).matching(identifier: "frying.pan").firstMatch.tap()
+            }
+        }
+        let target = randomButton.exists ? randomButton : random
+        XCTAssertTrue(target.waitForExistence(timeout: 5))
+        target.tap()
+        XCTAssertTrue(app.buttons["dietary.openPicker"].firstMatch.value as? String == "减少添加糖")
+        app.buttons["random.openRecipe"].tap()
+        XCTAssertTrue(app.buttons["dietary.openReviewedRecipe"].waitForExistence(timeout: 10))
+    }
+
+    @MainActor
+    func testRememberedGoalAndExplicitCancellationAcrossLaunches() {
+        let app = app()
+        select("balanced-pairing", in: app, remember: true)
+        app.terminate()
+        app.launchArguments.removeAll { $0 == "-ui-testing-reset-dietary" }
+        app.launch()
+        let picker = app.buttons["dietary.openPicker"].firstMatch
+        XCTAssertTrue(picker.waitForExistence(timeout: 15))
+        XCTAssertEqual(picker.value as? String, "均衡搭配")
+        app.buttons["清空"].tap()
+        XCTAssertEqual(picker.value as? String, "不限目标")
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(picker.waitForExistence(timeout: 15))
+        XCTAssertEqual(picker.value as? String, "均衡搭配")
+        select("none", in: app)
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(picker.waitForExistence(timeout: 15))
+        XCTAssertEqual(picker.value as? String, "不限目标")
+    }
+
+    @MainActor
+    func testEmptyGoalResultsCanBeCancelledWithoutLosingSelectedIngredients() {
+        let app = app()
+        select("less-added-sugar", in: app)
+        let beef = app.buttons["牛肉"]
+        XCTAssertTrue(beef.waitForExistence(timeout: 10))
+        beef.tap()
+        showResults(app)
+        let cancel = app.buttons["dietary.clearGoal"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 10))
+        cancel.tap()
+        XCTAssertFalse(app.buttons["dietary.clearGoal"].exists)
+        XCTAssertEqual(app.buttons["dietary.openPicker"].firstMatch.value as? String, "不限目标")
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已选：牛肉")).firstMatch.exists)
+    }
+
+    @MainActor
+    func testCloudKitchenKeepsGoalAndCanBrowseWithoutIngredients() {
+        let app = app()
+        select("less-added-sugar", in: app)
+        app.buttons["cook.presentation"].tap()
+        let cook = app.buttons["kitchen.cook"]
+        XCTAssertTrue(cook.waitForExistence(timeout: 15))
+        XCTAssertTrue(cook.isEnabled)
+        XCTAssertTrue(cook.label.contains("12"))
+        XCTAssertEqual(app.buttons["dietary.openPicker"].firstMatch.value as? String, "减少添加糖")
+        cook.tap()
+        let recipe = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
+        XCTAssertTrue(recipe.waitForExistence(timeout: 15))
+    }
+}

@@ -5,6 +5,7 @@ import SwiftUI
 struct RecipeMetricsView: View {
     let presentation: RecipePresentation
     let difficulty: String?
+    var showsCalories = true
 
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), alignment: .leading)], spacing: 12) {
@@ -26,7 +27,7 @@ struct RecipeMetricsView: View {
                     Text(difficulty).font(.headline)
                 }
             }
-            if let calories = presentation.calories {
+            if showsCalories, let calories = presentation.calories {
                 metric("预估热量", icon: "flame", color: .orange) {
                     Text(calories).font(.headline).fixedSize(horizontal: false, vertical: true)
                 }

@@ -20,6 +20,11 @@ struct RecipeDetailView: View {
         route.recipe
     }
 
+    private var dietaryReview: DietaryCatalog.Entry? {
+        guard let goal = route.dietaryGoal else { return nil }
+        return store.dietaryCatalog?.entry(for: recipe, goal: goal)
+    }
+
     private var isFavorite: Bool {
         favorites.contains { $0.recipeId == recipe.id }
     }
@@ -58,6 +63,10 @@ struct RecipeDetailView: View {
         recipe.videoURL ?? textURL
     }
 
+    private var shareURL: URL? {
+        dietaryReview == nil ? webURL : textURL
+    }
+
     /// 图文做法链接（recipe.csv 的 link 列）
     private var textURL: URL? {
         guard let link = recipe.link, !link.isEmpty else { return nil }
@@ -79,6 +88,18 @@ struct RecipeDetailView: View {
             }
 
             Section {
+                if let goal = route.dietaryGoal, let review = dietaryReview,
+                   let text = store.dietaryCatalog?.text(for: recipe.id) {
+                    NavigationLink {
+                        RecipeTextView(recipe: recipe, text: text, dietaryGoal: goal)
+                    } label: {
+                        Label("查看已核对做法", systemImage: "doc.text.magnifyingglass")
+                    }
+                    .accessibilityIdentifier("dietary.openReviewedRecipe")
+                    Text(review.reason(for: goal))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
                 Button {
                     kitchenRecipe = recipe
                 } label: {
@@ -111,17 +132,17 @@ struct RecipeDetailView: View {
             Section {
                 if recipe.videoURL != nil {
                     Button(action: openVideo) {
-                        Label("去 B 站看做法", systemImage: "play.rectangle")
+                        Label(route.dietaryGoal == nil ? "去 B 站看做法" : "其他视频做法（未核对）", systemImage: "play.rectangle")
                     }
                 }
                 // 有内置正文时在 App 里看，不用等 GitHub 打开；正文页里也能打开原文
-                if let text = store.text(for: recipe) {
+                if let text = store.text(for: recipe), dietaryReview == nil {
                     NavigationLink {
                         RecipeTextView(recipe: recipe, text: text)
                     } label: {
                         Label("看图文做法", systemImage: "doc.text")
                     }
-                } else if let textURL {
+                } else if dietaryReview == nil, let textURL {
                     Button {
                         openURL(textURL)
                     } label: {
@@ -137,7 +158,7 @@ struct RecipeDetailView: View {
             }
         }
         .fullScreenCover(item: $kitchenRecipe) { recipe in
-            KitchenWorkbenchView(recipe: recipe)
+            KitchenWorkbenchView(recipe: recipe, dietaryGoal: dietaryReview == nil ? nil : route.dietaryGoal)
         }
         .sheet(item: $feedbackRecipe) { item in
             RecipeFeedbackView(recipe: item)
@@ -156,8 +177,8 @@ struct RecipeDetailView: View {
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                if let webURL {
-                    ShareLink(item: webURL, subject: Text(recipe.name)) {
+                if let shareURL {
+                    ShareLink(item: shareURL, subject: Text(recipe.name)) {
                         Label("分享", systemImage: "square.and.arrow.up")
                     }
                 }
@@ -167,7 +188,7 @@ struct RecipeDetailView: View {
         .task(id: recipe.id) {
             context.recordVisit(recipe.id)
             // 从推荐结果点进来时，匿名记录这组食材下点开了第几个，用来评估排序
-            if let rank = route.rank {
+            if route.dietaryGoal == nil, let rank = route.rank {
                 feedback.signalOpen(stuff: session.selectedStuff, tool: session.tool, mode: session.mode, recipeId: recipe.id, rank: rank)
             }
         }
