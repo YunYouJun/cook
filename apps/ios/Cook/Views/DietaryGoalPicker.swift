@@ -111,16 +111,14 @@ struct DietaryGoalSelectionSheet: View {
 
     @ViewBuilder
     private var confirmationButton: some View {
-        let button = Button("完成") { dismiss() }
-            .accessibilityIdentifier("dietary.done")
         if #available(iOS 26.0, *) {
-            // Keep text opaque over the new toolbar material; older toolbars use their native tint.
-            button
-                .buttonStyle(.borderedProminent)
-                .tint(Color.primary)
-                .foregroundStyle(Color(uiColor: .systemBackground))
+            Button(role: .confirm) { dismiss() }
+                .accessibilityLabel("完成")
+                .accessibilityIdentifier("dietary.done")
         } else {
-            button.foregroundStyle(Color.primary)
+            Button("完成") { dismiss() }
+                .foregroundStyle(Color.primary)
+                .accessibilityIdentifier("dietary.done")
         }
     }
 
