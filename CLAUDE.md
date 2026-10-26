@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Cook (食用手册) is a Chinese recipe web/mobile app for finding recipes based on available ingredients. Built with Nuxt 4 (Vue 3, CSR-only), Ionic UI, and Capacitor for native iOS/Android apps. The UI and content are in Chinese.
+Cook (食用手册) is a Chinese recipe web/mobile app for finding recipes based on available ingredients. Web uses Nuxt 4 (Vue 3, CSR-only) and Ionic UI; native iOS uses SwiftUI. The Capacitor shells have been retired; native Android is planned with Kotlin and Jetpack Compose. The UI and content are in Chinese.
 
 ## Common Commands
 
@@ -30,10 +30,10 @@ pnpm build                # Full production build (convert + nuxt generate)
 ### Mobile Development
 
 ```bash
-pnpm dev:ios              # iOS with live reload (cap run ios -l)
-pnpm dev:android          # Android dev
-pnpm ios                  # Open in Xcode
-pnpm android              # Open in Android Studio
+pnpm convert
+xcodegen generate --spec apps/ios/project.yml
+open apps/ios/Cook.xcodeproj
+swift test --package-path apps/ios/CookCore
 ```
 
 ## Architecture
@@ -46,15 +46,15 @@ Project decisions are recorded in `docs/decisions/` — read the relevant one be
 
 ### Monorepo Structure (pnpm workspaces)
 
-Layout follows `docs/decisions/0003-native-ios-monorepo.md`; the plan is in `docs/dev/ios-roadmap.md`.
+Layout follows `docs/decisions/0003-native-ios-monorepo.md` and `0016-native-android-and-capacitor-retirement.md`; plans are in `docs/dev/ios-roadmap.md` and `docs/dev/android-roadmap.md`. Android has no project yet; create it under `apps/android` when implementation starts.
 
 - **apps/ios/CookCore** — Swift Package porting the recommend/search/incompatible logic for the native iOS app; `swift test --package-path apps/ios/CookCore` (after `pnpm convert`) runs the shared fixtures. Change TS and Swift logic together
-- **apps/web** — Nuxt app (main application). Root scripts (`pnpm dev`, `pnpm build`, `pnpm typecheck`) proxy to it; `pnpm build` copies `apps/web/dist` to the root `dist/` that deploy targets and Capacitor read
+- **apps/web** — Nuxt app (main application). Root scripts (`pnpm dev`, `pnpm build`, `pnpm typecheck`) proxy to it; `pnpm build` copies `apps/web/dist` to the root `dist/` that deploy targets read. Keep Ionic UI and routing; the unused native CLIs from `@nuxtjs/ionic` are excluded with version-scoped pnpm overrides
 - **packages/data** — Data shared by Web and iOS: recipe CSV sources and the JSON generated from them (imported in the web app as `@cook/data/*`), the food dictionary (`food.json`), pantry defaults (`pantry.json`), ingredient aliases (`aliases.json`), sentence-input word lists (`query.json`), typical fridge shelf life per ingredient for the iOS fridge (`shelf-life.json`), text recipe bodies the iOS app shows offline (`recipe-text.json`, from `pnpm howtocook`), shared fixtures (`fixtures/*.json`, regenerate with `pnpm fixtures`; `fixtures/query.json` is hand-written), and JSON Schemas (`schema/`). `recipe-meta.json` carries `schemaVersion` (bump `DATA_SCHEMA_VERSION` in `packages/cook/src/utils/config.ts` and CookCore together on breaking shape changes) and `dataVersion` (content hash)
 - **packages/cook** — Types, recommendation/search logic (the TS core the iOS CookCore mirrors), and the CLI (`convert`, `fetch`)
 - **docs** — VitePress documentation site
 - **scripts** — Build/utility scripts
-- **Root** — Workspace tooling, tests (`test/`), Capacitor shell (`capacitor.config.ts`, `ios/`, `android/`), `cloudfunctions/`
+- **Root** — Workspace tooling, tests (`test/`) and `cloudfunctions/`; no legacy native shells
 
 ### App Source (`apps/web/app/`)
 
@@ -88,7 +88,7 @@ pnpm test -- test/recipe.test.ts
 
 ## Code Style
 
-Uses `@antfu/eslint-config` (flat config) with UnoCSS and formatters enabled. Pre-commit hook runs `lint-staged` via `simple-git-hooks`. Ignored paths include `packages/data/**/*.json`, `ios/`, `android/`, `dist/`.
+Uses `@antfu/eslint-config` (flat config) with UnoCSS and formatters enabled. Pre-commit hook runs `lint-staged` via `simple-git-hooks`. Ignored paths include `packages/data/**/*.json` and `dist/`.
 
 ## Environment Variables
 

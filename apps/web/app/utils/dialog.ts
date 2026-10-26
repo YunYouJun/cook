@@ -2,7 +2,7 @@ import { actionSheetController, alertController } from '@ionic/vue'
 import { yunleHaptic } from './yunleHost'
 
 /**
- * iOS 风格的弹窗：替代 @capacitor/dialog（Web 上会退化成 window.alert / confirm / prompt）
+ * Ionic 风格的弹窗，浏览器与云乐坊容器共用。
  */
 
 export async function showAlert(header: string, message: string): Promise<void> {

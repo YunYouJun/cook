@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { Capacitor } from '@capacitor/core'
-import { appName, appStoreId, iosAppName, links } from '~/constants'
+import { appStoreId, iosAppName, links } from '~/constants'
 
-const isIOSApp = Capacitor.getPlatform() === 'ios'
 const appStoreUrl = appStoreId ? `https://apps.apple.com/cn/app/id${appStoreId}` : ''
 </script>
 
@@ -21,11 +19,7 @@ const appStoreUrl = appStoreId ? `https://apps.apple.com/cn/app/id${appStoreId}`
       <TheAboutList />
 
       <ion-list :inset="true">
-        <ion-item v-if="isIOSApp">
-          <ion-label>{{ iosAppName }}</ion-label>
-          <ion-text>原{{ appName }}</ion-text>
-        </ion-item>
-        <ion-item v-else-if="appStoreUrl" :href="appStoreUrl" target="_blank">
+        <ion-item v-if="appStoreUrl" :href="appStoreUrl" target="_blank">
           <ion-label>iOS 版</ion-label>
           <ion-text class="inline-flex items-center justify-center">
             <div class="inline-flex" i-ri-apple-line />

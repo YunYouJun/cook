@@ -6,6 +6,14 @@ const {
   status,
 } = useYunlefunAuth()
 
+const router = useRouter()
+
+// Ionic restores its captured initial URL on Nuxt ready, after this page mounts.
+watch(() => router.currentRoute.value, async (route) => {
+  if (route.path === '/auth/callback' && route.query.platform === 'native' && route.hash)
+    await router.replace({ path: route.path, query: route.query, hash: '' })
+}, { immediate: true })
+
 onMounted(() => {
   void initialize()
 })
@@ -44,6 +52,9 @@ const message = computed(() => configurationMessage.value
           <ion-label class="ion-text-wrap">
             {{ message }}
           </ion-label>
+        </ion-item>
+        <ion-item v-if="configurationMessage || errorMessage" href="/my" detail>
+          <ion-label>返回我的</ion-label>
         </ion-item>
       </ion-list>
     </ion-content>

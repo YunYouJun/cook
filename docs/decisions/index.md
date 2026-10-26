@@ -10,20 +10,21 @@
 
 ## 列表
 
-| 编号                                 | 标题                                 | 状态   |
-| ------------------------------------ | ------------------------------------ | ------ |
-| [0001](./0001-recipe-data)           | 菜谱数据的来源、质量与反馈闭环       | 提议中 |
-| [0002](./0002-feedback-and-ids)      | 菜谱固定 id、应用内反馈与筛选信号    | 已采纳 |
-| [0003](./0003-native-ios-monorepo)   | 原生 iOS App 与 monorepo 结构        | 已采纳 |
-| [0004](./0004-ios-app-name)          | iOS App 命名为「云食册」             | 已采纳 |
-| [0005](./0005-app-icon)              | 应用图标「蒸汽成云」                 | 已采纳 |
-| [0006](./0006-ios-bundle-id)         | iOS App 使用 `fun.yunle.cook`        | 已采纳 |
-| [0007](./0007-ai-and-sentence-input) | AI 能力：先做整句识别，AI 只负责听懂 | 已采纳 |
-| [0008](./0008-ios-analytics)         | iOS App 的数据统计与反馈             | 已采纳 |
-| [0009](./0009-text-recipes)          | 支持图文做法，首批来自 HowToCook     | 提议中 |
-| [0010](./0010-recipe-quality-score)  | 用视频质量分决定同组菜谱的先后       | 已采纳 |
-| [0011](./0011-fridge-reminders)      | 冰箱食材与临期提醒                   | 已采纳 |
-| [0012](./0012-feedback-channels)     | 反馈渠道分流                         | 已采纳 |
-| [0013](./0013-private-recipes)       | 私人菜谱与跨端文件迁移               | 提议中 |
-| [0014](./0014-personal-catalog)      | 个人食材和厨具                       | 已实施 |
-| [0015](./0015-product-site-domains)  | 官网与网页版域名分工                 | 已采纳 |
+| 编号                                                   | 标题                                 | 状态   |
+| ------------------------------------------------------ | ------------------------------------ | ------ |
+| [0001](./0001-recipe-data)                             | 菜谱数据的来源、质量与反馈闭环       | 提议中 |
+| [0002](./0002-feedback-and-ids)                        | 菜谱固定 id、应用内反馈与筛选信号    | 已采纳 |
+| [0003](./0003-native-ios-monorepo)                     | 原生 iOS App 与 monorepo 结构        | 已采纳 |
+| [0004](./0004-ios-app-name)                            | iOS App 命名为「云食册」             | 已采纳 |
+| [0005](./0005-app-icon)                                | 应用图标「蒸汽成云」                 | 已采纳 |
+| [0006](./0006-ios-bundle-id)                           | iOS App 使用 `fun.yunle.cook`        | 已采纳 |
+| [0007](./0007-ai-and-sentence-input)                   | AI 能力：先做整句识别，AI 只负责听懂 | 已采纳 |
+| [0008](./0008-ios-analytics)                           | iOS App 的数据统计与反馈             | 已采纳 |
+| [0009](./0009-text-recipes)                            | 支持图文做法，首批来自 HowToCook     | 提议中 |
+| [0010](./0010-recipe-quality-score)                    | 用视频质量分决定同组菜谱的先后       | 已采纳 |
+| [0011](./0011-fridge-reminders)                        | 冰箱食材与临期提醒                   | 已采纳 |
+| [0012](./0012-feedback-channels)                       | 反馈渠道分流                         | 已采纳 |
+| [0013](./0013-private-recipes)                         | 私人菜谱与跨端文件迁移               | 提议中 |
+| [0014](./0014-personal-catalog)                        | 个人食材和厨具                       | 已实施 |
+| [0015](./0015-product-site-domains)                    | 官网与网页版域名分工                 | 已采纳 |
+| [0016](./0016-native-android-and-capacitor-retirement) | 原生 Android 与 Capacitor 外壳退役   | 已采纳 |

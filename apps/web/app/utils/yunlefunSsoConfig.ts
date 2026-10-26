@@ -9,8 +9,6 @@ export interface YunlefunSsoConfigInput {
   clientId?: string
   cloudbaseEnv?: string
   exchangeUrl?: string
-  nativeClientId?: string
-  nativeRedirectUri?: string
   redirectUri?: string
   redirectUris?: string | string[]
   scope?: string
@@ -19,7 +17,6 @@ export interface YunlefunSsoConfigInput {
 
 export interface YunlefunSsoConfigContext {
   currentOrigin: string
-  platform: 'native' | 'web'
 }
 
 export interface YunlefunSsoConfig {
@@ -39,22 +36,18 @@ export function resolveYunlefunSsoConfig(
   input: YunlefunSsoConfigInput,
   context: YunlefunSsoConfigContext,
 ): YunlefunSsoConfigResult {
-  const clientId = readSsoClientId(
-    context.platform === 'native' ? input.nativeClientId : input.clientId,
-  )
+  const clientId = readSsoClientId(input.clientId)
   const cloudbaseEnv = normalizeValue(input.cloudbaseEnv)
   const exchangeUrl = readSsoRedirectUri(input.exchangeUrl)
   const webRedirectUris = readWebRedirectUris(input.redirectUris ?? input.redirectUri)
-  const redirectUri = context.platform === 'native'
-    ? readSsoRedirectUri(input.nativeRedirectUri)
-    : webRedirectUris.find(uri => new URL(uri).origin === context.currentOrigin)
+  const redirectUri = webRedirectUris.find(uri => new URL(uri).origin === context.currentOrigin)
   const scope = readSsoScope(input.scope)
   const ssoOrigin = normalizeHttpsOrigin(input.ssoOrigin)
 
   if (!clientId
     || !CLOUDBASE_ENV_RE.test(cloudbaseEnv)
     || !exchangeUrl
-    || (context.platform === 'native' ? !redirectUri : webRedirectUris.length === 0)
+    || webRedirectUris.length === 0
     || scope.length === 0
     || !ssoOrigin) {
     return {
