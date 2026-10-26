@@ -16,7 +16,7 @@ pnpm feedback:pull        # Pull in-app feedback + search signals from CloudBase
 pnpm eval:search          # Evaluate recommendation ranking against real search signals
 pnpm howtocook <dir>      # Regenerate packages/data/recipe-text.json (in-app text recipes) and .cache/recipe-images from a HowToCook checkout
 pnpm images:upload        # Upload text-recipe images to Tencent COS (needs COS_* env; CI does this on main)
-pnpm check:videos --stats # Check bilibili videos and refresh packages/data/video-stats.json (quality score input; needs network that reaches bilibili)
+pnpm check:videos         # Offline video-id checks and coverage report; opt-in small online checks: docs/dev/data.md
 pnpm fixtures             # Regenerate shared Web/iOS fixtures: recommend, search, incompatible (after data, alias, ranking or search changes)
 pnpm dev                  # Dev server on http://localhost:3333
 pnpm lint                 # ESLint check (uses @antfu/eslint-config flat config)

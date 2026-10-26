@@ -5,7 +5,7 @@
 ```
 飞书电子表格 ──pnpm fetch──▶ packages/data/recipe.csv ──pnpm convert──▶ recipe.json / 分片 ──▶ IndexedDB ──▶ 筛选
                                     ▲
-          应用内反馈 / Issue / AI PR ┘   CI：pnpm validate     每周：pnpm check:videos
+          应用内反馈 / Issue / AI PR ┘   CI：pnpm validate     离线：pnpm check:videos
 ```
 
 `packages/data/recipe.csv` 是构建时实际使用的数据。数据源以后放在哪里见 [方案记录 0001](/decisions/0001-recipe-data)。
@@ -68,12 +68,33 @@ Web 和 iOS 菜谱纠错按实际来源提供“视频打不开”与“图文�
 2. **筛选信号**：应用匿名记录两类聚合数据，只有食材组合、厨具、模式和菜谱 id，不含账号：
    - 停在一组食材上却没有任何结果（说明缺这类菜，或别名没对上）；
    - 在某组食材下点开了第几个结果（排得太靠后说明排序可以改进）。
-3. **失效巡检**：`Check Videos` workflow 每周一调用 B 站接口检查全部视频，把失效列表写进带 `dead-video` 标签的 issue（已有就更新）。本地可运行 `pnpm check:videos`；加 `--stats` 会同时更新 `packages/data/video-stats.json`，再运行 `pnpm convert && pnpm fixtures` 就会刷新菜谱的质量分（同组菜按它排先后，见 [0010](../decisions/0010-recipe-quality-score)）。
-4. **AI 定期审查**：仓库里的 `recipe-data-review` skill（`skills/recipe-data-review/SKILL.md`）描述了完整流程：拉取应用内反馈和筛选信号、处理 `recipe-data` / `dead-video` issue、补全缺失字段、按评测结果优化筛选，跑校验，最后开一个 PR。它不绑定模型，Codex、Claude Code 或接了 DeepSeek 的 Agent 都能跑，在本地按计划执行即可，见下方「本地定时运行」。
+3. **视频检查**：`Check Videos` workflow 仅在相关变更或手动触发时运行离线静态校验、mock 测试和覆盖率报告，不访问 B 站、不更新 issue。在线复核仅在本机显式按需执行，见下方说明与 [0017](../decisions/0017-offline-video-checks)。已有评分数据保持不变。
+4. **AI 定期审查**：仓库里的 `recipe-data-review` skill（`skills/recipe-data-review/SKILL.md`）描述了完整流程：拉取应用内反馈和筛选信号、处理 `recipe-data` / `dead-video` issue、补全缺失字段、按评测结果优化筛选，跑校验，最后开一个 PR。它不绑定模型，Codex、Claude Code 或接了 DeepSeek 的 Agent 都能跑，在本地按需执行即可，见下方「本地按需审查」。
 5. **按主题补充**：`recipe-sourcing` skill（`skills/recipe-sourcing/SKILL.md`）描述了从 B 站、小红书等平台按主题搜罗菜谱的流程：网页搜索找 BV 号、逐个打开视频页核对、按数据规则追加并开 PR。
 6. **合并发布**：维护者审核 PR，合并后照常构建发布，`Closes #n` 自动关闭 issue。
 
-### 本地定时运行
+### 离线检查与按需视频复核
+
+```bash
+pnpm validate                               # 离线校验菜谱字段、链接格式等
+pnpm check:videos                           # 默认离线：0 次请求，不代表视频可用
+pnpm check:videos --out artifacts/videos.md # 保存独立报告
+# 仅在需要复核且获准联网时，在本机二选一（每次最多 20 个去重视频）：
+pnpm check:videos --online --ids BV1NE411Q7Jj
+pnpm check:videos --online --changed origin/main
+```
+
+`--changed` 只选择相对基准新增或更换的视频，按稳定菜谱 id 比较；未变的视频不会请求。未显式选择、超过 20 个、视频不在当前目录或格式不合法时拒绝联网，不提供 `--all`。CI 拒绝 `--online`，所有测试都使用 mock；不会引入账号 Cookie、凭据或匿名指纹预取请求。
+
+请求串行执行，前一次完成后至少等 5 秒，单次超时 15 秒。HTTP 412/429 或 API -412/-429 立即停止；连续 3 次超时/其他未知也停止，持久化至少 24 小时冷却。到期后仍需人工按需发起，不自动重试；不要清理冷却记录、换账号/IP 或创建批量循环绕过风控。
+
+`.cook/video-checks/state.json` 保存逐视频最后可信状态/日期及冷却期；7 天内可信结果复用缓存，本次记为「未检查」，不虚增本次覆盖率。未知或未检查保留上次可信结果；当前尝试写到独立 `latest.md`（或 `--out`），不写回 issue。状态损坏时直接报错；同一工作区有锁防止并发复核，进程异常退出后须先确认进程已停止再人工处理残留锁。状态文件在 `.cook/` 下，不提交、不跨机器自动同步；报告可以人工保存作为审阅依据。
+
+报告按去重视频统计四种状态，同时显示目录/所选范围可信覆盖率和逐视频可信检查日期；历史缓存不算本次确认。低覆盖率明确「巡检受阻或未完成」，0 确认失效不能推导为正常。HTTP 404 也不是确认失效；只有既有 API 分类中的 -404、62002、62012 表示不存在/不可见，仍需人工核实再处理，不自动删除菜谱或链接。
+
+旧的 `--stats` 全量写入入口已移除：本命令不修改 `packages/data/video-stats.json` 或评分。历史评分文件的 `updatedAt` 不是这次巡检的可信日期；日后需要更新评分时，须单独审阅有日期、有来源的变更。
+
+### 本地按需审查
 
 skill 通过软链接暴露给不同 Agent：`.agents/skills/`（Codex）、`.claude/skills/`（Claude Code）、`.codebuddy/skills/`。需要本机装好并登录 `gh`。
 
@@ -85,11 +106,7 @@ codex exec --full-auto "使用 recipe-data-review skill 做一次菜谱数据审
 claude -p "使用 recipe-data-review skill 做一次菜谱数据审查" --permission-mode acceptEdits
 ```
 
-每周跑一次即可，例如 crontab（周一 21:00，放在每周视频巡检之后）：
-
-```cron
-0 21 * * 1 cd ~/repos/cook && codex exec --full-auto "使用 recipe-data-review skill 做一次菜谱数据审查" >> ~/.cook-review.log 2>&1
-```
+不为视频检查创建定时任务。优先处理用户反馈和变更项；确有全目录复核需求时，建议最多每月一次，由维护者逐批确认范围并遵守冷却期，不循环批量补扫。
 
 Agent 只开 PR，不合并；没有改动时不开 PR。
 

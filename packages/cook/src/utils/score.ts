@@ -1,7 +1,7 @@
 import type { RecipeItem } from '../types/recipe'
 
 /**
- * 视频巡检时记下的 B 站数据（packages/data/video-stats.json），由 `pnpm check:videos --stats` 更新
+ * 视频巡检时记下的 B 站数据（packages/data/video-stats.json），保留既有结果；巡检不再自动更新，见决策 0017
  */
 export interface VideoStat {
   view: number
