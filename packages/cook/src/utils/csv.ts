@@ -63,7 +63,7 @@ export function parseRecipeCsv(csvData: string): RecipeItem[] {
     const bv = cleanBv(row[2])
     const difficulty = row[3]?.trim() as RecipeItem['difficulty']
     const tags = row[4] ? row[4].trim().split(SEP).filter(Boolean) : []
-    const methods = row[5] ? (row[5].trim().split(SEP).filter(Boolean)) as RecipeItem['methods'] : []
+    const methods = row[5] ? row[5].trim().split(SEP).filter(Boolean) : []
     const tools = row[6] ? row[6].trim().split(SEP).filter(Boolean) : []
     const id = parseRecipeId(row[7])
     // link 列可选：没有图文做法的行可以只写到 id
