@@ -42,7 +42,18 @@ pnpm build:site
 
 ### 网页版：EdgeOne `yunyoujun-cook`
 
-网页版使用独立的 Upload 项目，输出仍为 `dist`。`scripts/copy-web-output.ts` 将根目录 `edgeone.json` 一并复制到上传产物，使授权回调的 `no-store` / `no-referrer` 等响应头随直接上传生效。官网改版不应把 `dist-site` 上传到此项目，也不应覆盖网页版或审核中的 `/about/`。现有版本发布流程仍按仓库 release workflow 执行。
+- 项目 ID：`pages-d3ggorpihuk6`，Git 仓库 `YunYouJun/cook`。
+- 生产环境关联 `main`，自动部署开启；其他分支自动预览关闭，按需在控制台新建预览部署。
+- 框架预设：`Other`，根目录：`./`。
+- Node.js：`24.18.0`；安装命令：`pnpm install --frozen-lockfile`。
+- 构建命令：`pnpm run build`，输出目录：`dist`。
+- 自定义域：`cook.yunyoujun.cn`，加速区域保持全球可用区（含中国大陆）。
+
+2026-10-26 在原 Upload 项目的「项目设置 → Git 管理」中关联了已有授权的 GitHub 仓库，保留项目 ID、域名、证书和部署历史。控制台实际支持该关联操作；不需要删除项目或迁移域名。
+
+`main` 的新提交由 EdgeOne Git 集成构建并发布；仓库 Release workflow 仅生成版本发布和构建附件，不再通过 CLI 向生产项目上传，避免标签发布覆盖已上线的 `main`。首次接入或调整构建配置后，可在「构建部署 → 新建部署」选择目标分支验证；配置保存本身不会更新线上产物。
+
+Git 部署使用根目录 `edgeone.json`，保留授权回调的 `no-store` / `no-referrer` 等响应头。`scripts/copy-web-output.ts` 仍把该配置复制到 `dist`，使下载的发布产物也能用于直接上传。官网的 `dist-site` 不应发布到此项目，网页版和审核中的 `/about/` 保持独立。
 
 ### 旧文档域名退役
 
