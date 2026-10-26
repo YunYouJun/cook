@@ -5,7 +5,7 @@ final class RecipeAmountAnnotationsUITests: XCTestCase {
     func testBundledAnnotationScalesAndRestoresInWorkbench() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
         openBroccoli(app)

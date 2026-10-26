@@ -6,7 +6,7 @@ final class CloudKitchenUITests: XCTestCase {
     @MainActor
     func testKitchenAndListShareSelectionAndPotOpensRealRecipes() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launch()

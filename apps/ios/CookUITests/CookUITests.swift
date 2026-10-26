@@ -1,4 +1,14 @@
+import UIKit
 import XCTest
+
+extension XCUIApplication {
+    /// Ordinary scenarios start from the same view, goal and text size.
+    /// Reset flags leave presentation changes available to the actual UI.
+    static var standardCookingLaunchArguments: [String] {
+        ["-ui-testing", "-ui-testing-reset-presentation", "-ui-testing-reset-dietary",
+         "-UIPreferredContentSizeCategoryName", UIContentSizeCategory.large.rawValue]
+    }
+}
 
 /// 按 VoiceOver 读到的名字走一遍主流程：选食材 → 筛选 → 看看能做什么 → 打开菜谱 → 收藏。
 /// 这里只用无障碍标签找控件，标签不对或控件读不到，这个用例就会失败。CI 在 iPhone 和 iPad 模拟器上各跑一遍，覆盖窄屏和宽屏两种布局。
@@ -14,7 +24,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testAccountIsOptionalAndExplainsICloudDataBoundary() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
         tap(app.buttons["我的"].firstMatch)
@@ -40,7 +50,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testCookFlowByAccessibilityLabels() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         // 真机上跑时不去建 CloudKit 结构（见 CloudKitSchema），免得首屏多等几秒
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
@@ -89,7 +99,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testRecipeFeedbackKeepsRecipeAndDraftOnFailure() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launch()
@@ -118,7 +128,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testRecipeContributionHasDedicatedFieldsAndKeepsDraftOnFailure() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launchEnvironment["COOK_UI_TEST_FEEDBACK_ENVIRONMENT"] = "production"
@@ -175,7 +185,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testTestFeedbackFailureKeepsDraftWithoutProductionFallbacks() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launchEnvironment["COOK_UI_TEST_FEEDBACK_ENVIRONMENT"] = "test"
@@ -215,7 +225,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testClearingHistoryRequiresConfirmationAndKeepsFavorites() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launch()
@@ -260,7 +270,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testFilterCountUpdatesWithoutClosingSheet() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
 
@@ -303,7 +313,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testPantryShelfRemembersChoicesAndRestoresDefaults() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
 
@@ -346,7 +356,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testAvoidPickerSearchKeepsSelectionsAvailableForRemoval() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
         tap(app.buttons["筛选"])
@@ -483,7 +493,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testPrivacyPolicyAndConsentChoicesSurviveRelaunch() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_LEGACY_CONSENT"] = "1"
         app.launch()
         let decline = app.buttons["consent.decline"]
@@ -498,7 +508,7 @@ final class CookUITests: XCTestCase {
         wait(share, "value == '1'")
 
         app.terminate()
-        app.launchArguments = ["-ui-testing"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments
         app.launchEnvironment.removeValue(forKey: "COOK_UI_TEST_LEGACY_CONSENT")
         app.launch()
         XCTAssertTrue(app.buttons["我的"].firstMatch.waitForExistence(timeout: timeout))
@@ -520,7 +530,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testFavoriteFailureCanBeRetriedWithoutLosingState() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_UI_TEST_FAVORITE_FAILURES"] = "2"
         app.launch()
@@ -549,7 +559,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testFridgeRemainsUsableAfterDecliningStatistics() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launch()
         tap(app.buttons["consent.decline"])
         wait(app.buttons["consent.decline"], "exists == false")
