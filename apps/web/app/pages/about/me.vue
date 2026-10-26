@@ -40,7 +40,7 @@ import { links } from '~/constants'
         </ion-item>
 
         <ion-item :href="links.yyj.mp" target="_blank">
-          <div slot="start" class="inline-flex" i-ri-wechat-2-line />
+          <div slot="start" class="inline-flex" i-cook-wechat />
           <ion-label>公众号</ion-label>
           <ion-text class="inline-flex items-center justify-center">
             云游君

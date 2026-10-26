@@ -31,6 +31,12 @@ targets:
       - path: ../../docs/privacy.md
         type: file
         buildPhase: resources
+      - path: ../../packages/shared/Assets.xcassets
+        type: file
+        buildPhase: resources
+      - path: ../../packages/shared/links.json
+        type: file
+        buildPhase: resources
     dependencies:
       - package: CookCore
     preBuildScripts:

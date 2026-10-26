@@ -17,7 +17,7 @@ struct HelpSettingsView: View {
             }
             Section {
                 externalLink("微信客服", subtitle: "通过微信联系云乐坊客服", image: Image("wechat").renderingMode(.template), color: .green,
-                             url: "https://work.weixin.qq.com/kfid/kfc9d4dcc4b6bd1c69e",
+                             url: AppLinks.shared.wecomKf.absoluteString,
                              accessibilityHint: "打开微信客服页面")
                     .accessibilityIdentifier("help.wechatSupport")
                 externalLink("支持中心", subtitle: "访问云乐坊支持服务", image: Image(systemName: "questionmark.circle"), color: .blue,

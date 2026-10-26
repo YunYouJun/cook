@@ -64,6 +64,9 @@ const categories = appFeedbackCategories.map(item => ({ value: item.category, la
       </p>
     </form>
     <nav class="feedback-links" aria-label="其他反馈入口">
+      <a :href="links.wecomKf" target="_blank" rel="noopener noreferrer">
+        <span class="i-cook-wechat" aria-hidden="true" />微信客服 ↗
+      </a>
       <a :href="links.support" target="_blank" rel="noopener noreferrer">前往支持中心 ↗</a>
       <a :href="links.feedbackBoard" target="_blank" rel="noopener noreferrer">为产品建议投票 ↗</a>
     </nav>
@@ -161,6 +164,11 @@ h1 {
 .feedback-receipt {
   padding-block: 30px;
   text-align: center;
+}
+.feedback-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .feedback-receipt .receipt-id {
   font-size: 11px;

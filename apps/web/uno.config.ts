@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import {
   defineConfig,
   presetAttributify,
@@ -29,6 +30,13 @@ export default defineConfig({
     presetAttributify(),
     presetIcons({
       scale: 1.2,
+      collections: {
+        cook: {
+          // Web 用当前文字颜色生成遮罩，iOS 则由资产目录的模板模式控制颜色。
+          wechat: readFileSync(new URL('../../packages/shared/Assets.xcassets/wechat.imageset/icon.svg', import.meta.url), 'utf8')
+            .replace('<svg ', '<svg fill="currentColor" '),
+        },
+      },
     }),
     presetTypography(),
   ],

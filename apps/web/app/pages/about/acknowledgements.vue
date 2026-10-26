@@ -8,7 +8,7 @@ const ICON_MAP: Record<string, string> = {
   bilibili: 'i-ri-bilibili-line',
   weibo: 'i-ri-weibo-line',
   twitter: 'i-ri-twitter-x-line',
-  wechat: 'i-ri-wechat-2-line',
+  wechat: 'i-cook-wechat',
   blog: 'i-ri-article-line',
   website: 'i-ri-global-line',
   email: 'i-ri-mail-line',

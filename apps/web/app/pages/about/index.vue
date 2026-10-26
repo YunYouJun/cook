@@ -52,7 +52,7 @@ const appStoreUrl = appStoreId ? `https://apps.apple.com/cn/app/id${appStoreId}`
         <ion-item :href="links.yyj.mpArticle" target="_blank">
           <ion-label>关于食用手册的前世今生</ion-label>
           <ion-text class="inline-flex items-center justify-center">
-            <div class="inline-flex" i-ri-wechat-2-line />
+            <div class="inline-flex" i-cook-wechat />
             <span m="l-1" class="inline-flex">文章</span>
           </ion-text>
         </ion-item>
