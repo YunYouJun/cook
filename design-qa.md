@@ -4,6 +4,8 @@
 - Visual target: 「蒸汽成云」（[0005](docs/decisions/0005-app-icon.md)）
 - Surfaces: Web/PWA, Capacitor iOS launcher, Android launcher
 
+> Historical verification for 2026-10-19. The legacy launchers were removed on 2026-10-26 ([0016](docs/decisions/0016-native-android-and-capacitor-retirement.md)); current metadata tests cover Web and native SwiftUI assets. Native Android icon acceptance belongs to its future implementation.
+
 ## Visual fidelity
 
 - Follows the YunLeFun icon spec: sky gradient `#55AAFF → #2563EB`, cloud-white glyph, `#FACC15` accent, 64 × 64 reference grid.

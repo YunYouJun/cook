@@ -31,9 +31,7 @@ describe('yunlefun auth controller', () => {
     const identity = fakeIdentityAdapter()
     const controller = createYunlefunAuthController({
       identity,
-      native: fakeAuthorizationAdapter(),
-      platform: 'web',
-      web,
+      authorization: web,
     })
 
     await controller.initialize()
@@ -46,29 +44,17 @@ describe('yunlefun auth controller', () => {
     expect(identity.adopted).toEqual([authorization])
   })
 
-  it('opens the platform-appropriate authorization surface', async () => {
-    const web = fakeAuthorizationAdapter()
-    const native = fakeAuthorizationAdapter()
-    const webController = createYunlefunAuthController({
+  it('starts authorization through the supplied Web or host adapter', async () => {
+    const authorization = fakeAuthorizationAdapter()
+    const controller = createYunlefunAuthController({
+      authorization,
       identity: fakeIdentityAdapter(),
-      native,
-      platform: 'web',
-      web,
-    })
-    const nativeController = createYunlefunAuthController({
-      identity: fakeIdentityAdapter(),
-      native,
-      platform: 'native',
-      web,
     })
 
-    await webController.signIn()
-    await nativeController.signIn()
+    await controller.signIn()
 
-    expect(web.started).toBe(1)
-    expect(native.started).toBe(1)
-    expect(webController.snapshot().status).toBe('signing-in')
-    expect(nativeController.snapshot().status).toBe('signing-in')
+    expect(authorization.started).toBe(1)
+    expect(controller.snapshot().status).toBe('signing-in')
   })
 
   it('adopts a host authorization without leaving the current page', async () => {
@@ -76,9 +62,7 @@ describe('yunlefun auth controller', () => {
     const identity = fakeIdentityAdapter()
     const controller = createYunlefunAuthController({
       identity,
-      native: fakeAuthorizationAdapter(),
-      platform: 'web',
-      web,
+      authorization: web,
     })
 
     await controller.signIn()
@@ -95,9 +79,7 @@ describe('yunlefun auth controller', () => {
     const identity = fakeIdentityAdapter(account)
     const controller = createYunlefunAuthController({
       identity,
-      native: fakeAuthorizationAdapter(),
-      platform: 'web',
-      web: fakeAuthorizationAdapter(),
+      authorization: fakeAuthorizationAdapter(),
     })
     await controller.initialize()
 
@@ -119,9 +101,7 @@ describe('yunlefun auth controller', () => {
     }
     const controller = createYunlefunAuthController({
       identity,
-      native: fakeAuthorizationAdapter(),
-      platform: 'web',
-      web: fakeAuthorizationAdapter(),
+      authorization: fakeAuthorizationAdapter(),
     })
     await controller.initialize()
 
@@ -134,13 +114,11 @@ describe('yunlefun auth controller', () => {
     })
   })
 
-  it('adopts an authorization delivered after the native app resumes', async () => {
+  it('adopts an authorization delivered by the host', async () => {
     const identity = fakeIdentityAdapter()
     const controller = createYunlefunAuthController({
       identity,
-      native: fakeAuthorizationAdapter(),
-      platform: 'native',
-      web: fakeAuthorizationAdapter(),
+      authorization: fakeAuthorizationAdapter(),
     })
     await controller.initialize()
 

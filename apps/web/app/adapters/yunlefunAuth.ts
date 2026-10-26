@@ -3,22 +3,14 @@ import type {
   SsoAuthorizationResult,
 } from '@yunlefun/sso'
 import type {
-  NativeSsoTransaction,
-  NativeSsoTransactionStore,
-} from '~/utils/nativeSso'
-import type {
   YunlefunAccount,
   YunlefunAuthorizationAdapter,
-  YunlefunAuthorizationResult,
   YunlefunIdentityAdapter,
 } from '~/utils/yunlefunAuth'
 import type { YunlefunSsoConfig } from '~/utils/yunlefunSsoConfig'
-import { Browser } from '@capacitor/browser'
-import { Preferences } from '@capacitor/preferences'
 import {
   adoptSsoCode,
   consumeSsoRedirect,
-  sanitizeAcquisitionContext,
   startSsoRedirect,
 } from '@yunlefun/sso'
 import {
@@ -26,13 +18,6 @@ import {
   SsoIdentityAdoptionError,
 } from '@yunlefun/sso/browser'
 import { readCookAcquisition } from '~/utils/acquisition'
-import {
-  consumeNativeSsoCallback,
-  isNativeSsoCallbackUrl,
-  openNativeSsoRedirect,
-} from '~/utils/nativeSso'
-
-const NATIVE_TRANSACTION_KEY = 'cook:sso:v3:native-transaction'
 
 interface CloudbaseUser {
   avatar_url?: string
@@ -94,11 +79,6 @@ interface CloudbaseModule {
   }) => CloudbaseApp
 }
 
-export interface NativeYunlefunAuthorizationAdapter extends YunlefunAuthorizationAdapter {
-  cancel: () => Promise<void>
-  consumeUrl: (url: string) => Promise<YunlefunAuthorizationResult | null>
-}
-
 export interface CloudbaseIdentityDependencies {
   getAuth?: (env: string) => Promise<CloudbaseAuthClient>
 }
@@ -151,43 +131,6 @@ export function createWebYunlefunAuthorizationAdapter(
   }
 }
 
-export function createNativeYunlefunAuthorizationAdapter(
-  config: YunlefunSsoConfig,
-  initialUrl: () => Promise<string | null>,
-  readAcquisition: () => AcquisitionContext | null = readCookAcquisition,
-): NativeYunlefunAuthorizationAdapter {
-  const store = createNativeTransactionStore()
-
-  async function consumeUrl(url: string): Promise<YunlefunAuthorizationResult | null> {
-    if (!isNativeSsoCallbackUrl(url, config.redirect.redirectUri))
-      return null
-
-    const result = await consumeNativeSsoCallback(url, store)
-    await Browser.close().catch(() => undefined)
-    return result
-  }
-
-  return {
-    cancel: async () => store.clear(),
-    consumeInitial: async () => {
-      const url = await initialUrl()
-      return url ? consumeUrl(url) : null
-    },
-    consumeUrl,
-    start: async () => {
-      const acquisition = readAcquisition()
-      await openNativeSsoRedirect({
-        ...config.redirect,
-        prompt: 'consent',
-        ...(acquisition ? { acquisition } : {}),
-      }, store, async (url) => {
-        await Browser.open({ url })
-      })
-      return null
-    },
-  }
-}
-
 export function createCloudbaseIdentityAdapter(
   config: YunlefunSsoConfig,
   dependencies: CloudbaseIdentityDependencies = {},
@@ -208,32 +151,6 @@ export function createCloudbaseIdentityAdapter(
       const result = await auth.signOut()
       if (result?.error)
         throw new Error('CloudBase sign-out failed')
-    },
-  }
-}
-
-function createNativeTransactionStore(): NativeSsoTransactionStore {
-  return {
-    clear: async () => {
-      await Preferences.remove({ key: NATIVE_TRANSACTION_KEY })
-    },
-    load: async () => {
-      const { value } = await Preferences.get({ key: NATIVE_TRANSACTION_KEY })
-      if (!value)
-        return null
-
-      try {
-        return readNativeTransaction(JSON.parse(value) as unknown)
-      }
-      catch {
-        return null
-      }
-    },
-    save: async (transaction) => {
-      await Preferences.set({
-        key: NATIVE_TRANSACTION_KEY,
-        value: JSON.stringify(transaction),
-      })
     },
   }
 }
@@ -338,34 +255,4 @@ function normalizeAccount(user: CloudbaseUser | null | undefined): YunlefunAccou
 
 function firstString(...values: unknown[]): string | undefined {
   return values.find(value => typeof value === 'string' && value.trim())?.toString().trim()
-}
-
-function readNativeTransaction(value: unknown): NativeSsoTransaction | null {
-  if (!isRecord(value)
-    || typeof value.clientId !== 'string'
-    || typeof value.codeVerifier !== 'string'
-    || typeof value.createdAt !== 'number'
-    || typeof value.issuer !== 'string'
-    || typeof value.nonce !== 'string'
-    || typeof value.redirectUri !== 'string'
-    || !Array.isArray(value.scope)
-    || !value.scope.every(scope => typeof scope === 'string')) {
-    return null
-  }
-
-  const acquisition = sanitizeAcquisitionContext(value.acquisition)
-  return {
-    clientId: value.clientId,
-    codeVerifier: value.codeVerifier,
-    createdAt: value.createdAt,
-    issuer: value.issuer,
-    nonce: value.nonce,
-    redirectUri: value.redirectUri,
-    scope: value.scope,
-    ...(acquisition ? { acquisition } : {}),
-  }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
 }

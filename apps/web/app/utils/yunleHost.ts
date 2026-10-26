@@ -1,6 +1,6 @@
 /**
  * 云乐坊 App 内嵌容器（apps.yunle.fun）注入的 `window.ylf` JSAPI。
- * 普通浏览器与 Cook 自己的 Capacitor 外壳中不存在，所有调用都要特性检测。
+ * 普通浏览器中不存在，所有调用都要特性检测。
  *
  * @see https://github.com/YunLeFun/apps.yunle.fun/blob/main/docs/guide/jsapi.md
  */

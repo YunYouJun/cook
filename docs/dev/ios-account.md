@@ -30,7 +30,7 @@
 `ASWebAuthenticationSession.Callback.https` 从 iOS 17.4 起可用，需要 **webcredentials** 域名关联。最低安装版本继续为 iOS 17；17.0–17.3 仅账号入口提示升级，其他功能可正常使用。不降级到自定义 URL Scheme，也不在自建 WebView 中收集密码。
 
 1. 在 Apple Developer 的 `fun.yunle.cook` 标识符开启 Associated Domains，并更新签名描述文件。
-2. 将 `apps/web/public/.well-known/apple-app-site-association` 发布到 `https://cook.yunyoujun.cn/.well-known/apple-app-site-association`。新增 `webcredentials.apps` 的 `QT792GAY4C.fun.yunle.cook`；旧 Capacitor 的 `N3885VFNCL.cn.yunyoujun.cook` applinks 保留。
+2. 将 `apps/web/public/.well-known/apple-app-site-association` 发布到 `https://cook.yunyoujun.cn/.well-known/apple-app-site-association`。保留 `webcredentials.apps` 的 `QT792GAY4C.fun.yunle.cook` 和原生 `/auth/wechat/*` applinks；2026-10-26 按 [0016](../decisions/0016-native-android-and-capacitor-retirement) 从源码移除旧 Capacitor 应用关联。`/auth/callback?platform=native` 仍供当前系统授权会话使用，不能随旧外壳一并删除。
 3. 用正确的 `APPLE_DEVELOPMENT_TEAM` 生成工程。`project.yml` 已声明 `webcredentials:cook.yunyoujun.cn`，并为后续微信登录声明 `applinks:cook.yunyoujun.cn`；如果改签名团队，必须同步修改站点 AASA。
 4. 等 Apple 的关联域名缓存更新后，真机验证系统授权窗口和 HTTPS 回调。模拟器编译、协议测试均不能替代此步骤。
 

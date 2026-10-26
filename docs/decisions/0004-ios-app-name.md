@@ -23,6 +23,9 @@
 
 - iOS 主屏幕显示名 `云食册`（`CFBundleDisplayName`），App Store 名称 `云食册 - 食用手册`，副标题 `有什么食材，就做什么菜`。搜「食用手册」仍能搜到。
 - Web、PWA、Android 继续叫「食用手册」，`capacitor.config.ts` 的 `appName` 不变（它只在 `cap add` 时生效）。
+
+> 2026-10-26：[0016](./0016-native-android-and-capacitor-retirement) 决定移除历史 Capacitor 配置与 Android 外壳；新原生 Android 的命名和包身份在启动阶段核对。上文保留命名决定时的背景。
+
 - 两个名字互相指引，避免用户以为是两个产品：
   1. App Store 名称带上原名。
   2. Web 在 `appStoreId` 填写后输出 `apple-itunes-app` meta，Safari 顶部显示 App 横幅。

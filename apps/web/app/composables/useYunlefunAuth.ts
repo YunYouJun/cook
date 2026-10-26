@@ -1,18 +1,12 @@
-import type { NativeYunlefunAuthorizationAdapter } from '~/adapters/yunlefunAuth'
 import type {
   YunlefunAuthController,
   YunlefunAuthSnapshot,
 } from '~/utils/yunlefunAuth'
-import { App } from '@capacitor/app'
-import { Browser } from '@capacitor/browser'
-import { Capacitor } from '@capacitor/core'
 import {
   callCloudbaseFunction,
   createCloudbaseIdentityAdapter,
-  createNativeYunlefunAuthorizationAdapter,
   createWebYunlefunAuthorizationAdapter,
 } from '~/adapters/yunlefunAuth'
-import { stripNativeSsoCallbackHash } from '~/utils/nativeSso'
 import { createYunlefunAuthController } from '~/utils/yunlefunAuth'
 import { resolveYunlefunSsoConfig } from '~/utils/yunlefunSsoConfig'
 
@@ -21,8 +15,6 @@ interface YunlefunRuntimeConfig {
     yunlefunCloudbaseEnv?: string
     yunlefunSsoClientId?: string
     yunlefunSsoExchangeUrl?: string
-    yunlefunSsoNativeClientId?: string
-    yunlefunSsoNativeRedirectUri?: string
     yunlefunSsoOrigin?: string
     yunlefunSsoRedirectUri?: string
     yunlefunSsoRedirectUris?: string
@@ -32,10 +24,7 @@ interface YunlefunRuntimeConfig {
 
 let controller: YunlefunAuthController | undefined
 let cloudbaseEnv = ''
-let nativeAdapter: NativeYunlefunAuthorizationAdapter | undefined
 let initialization: Promise<void> | undefined
-let nativeUrlListenerInstalled = false
-let handlingNativeCallback = false
 
 export function useYunlefunAuth() {
   const runtimeConfig = useRuntimeConfig() as unknown as YunlefunRuntimeConfig
@@ -98,14 +87,11 @@ async function initializeOnce(
   if (!import.meta.client)
     return
 
-  const platform = Capacitor.isNativePlatform() ? 'native' : 'web'
-  if (platform === 'web'
-    && window.location.pathname === '/auth/callback'
+  // Native HTTPS callbacks (including SwiftUI) must not become Web transactions.
+  if (window.location.pathname === '/auth/callback'
     && new URLSearchParams(window.location.search).get('platform') === 'native') {
-    const sanitizedPath = stripNativeSsoCallbackHash(window.location.href)
-    if (sanitizedPath)
-      window.history.replaceState(window.history.state, '', sanitizedPath)
-    configurationMessage.value = '未能自动返回 Cook，请确认已安装最新版应用后重新授权'
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`)
+    configurationMessage.value = '未能返回云食册，请在应用中重新授权，或返回网页版登录'
     snapshot.value = {
       account: null,
       errorMessage: '',
@@ -118,15 +104,12 @@ async function initializeOnce(
     clientId: runtimeConfig.public.yunlefunSsoClientId,
     cloudbaseEnv: runtimeConfig.public.yunlefunCloudbaseEnv,
     exchangeUrl: runtimeConfig.public.yunlefunSsoExchangeUrl,
-    nativeClientId: runtimeConfig.public.yunlefunSsoNativeClientId,
-    nativeRedirectUri: runtimeConfig.public.yunlefunSsoNativeRedirectUri,
     redirectUri: runtimeConfig.public.yunlefunSsoRedirectUri,
     redirectUris: runtimeConfig.public.yunlefunSsoRedirectUris,
     scope: runtimeConfig.public.yunlefunSsoScope,
     ssoOrigin: runtimeConfig.public.yunlefunSsoOrigin,
   }, {
     currentOrigin: window.location.origin,
-    platform,
   })
 
   if (!result.ok) {
@@ -140,59 +123,14 @@ async function initializeOnce(
   }
 
   cloudbaseEnv = result.config.cloudbaseEnv
-  const web = createWebYunlefunAuthorizationAdapter(result.config)
-  nativeAdapter = createNativeYunlefunAuthorizationAdapter(result.config, async () => {
-    const launch = await App.getLaunchUrl()
-    return launch?.url ?? null
-  })
   controller = createYunlefunAuthController({
+    authorization: createWebYunlefunAuthorizationAdapter(result.config),
     identity: createCloudbaseIdentityAdapter(result.config),
-    native: nativeAdapter,
-    platform,
-    web,
   })
-
-  if (platform === 'native' && !nativeUrlListenerInstalled) {
-    nativeUrlListenerInstalled = true
-    await App.addListener('appUrlOpen', async ({ url }) => {
-      if (!controller || !nativeAdapter)
-        return
-
-      handlingNativeCallback = true
-      try {
-        const authorization = await nativeAdapter.consumeUrl(url)
-        if (!authorization)
-          return
-
-        await controller.handleAuthorization(authorization)
-        publishSnapshot(snapshot)
-        if (controller.snapshot().status === 'signed-in')
-          await navigateTo('/my', { replace: true })
-      }
-      finally {
-        handlingNativeCallback = false
-      }
-    })
-    await Browser.addListener('browserFinished', async () => {
-      if (!controller
-        || handlingNativeCallback
-        || controller.snapshot().status !== 'signing-in') {
-        return
-      }
-
-      await nativeAdapter?.cancel().catch(() => undefined)
-      await controller.handleAuthorization({
-        ok: false,
-        reason: 'access_denied',
-      })
-      publishSnapshot(snapshot)
-    })
-  }
 
   await controller.initialize()
   publishSnapshot(snapshot)
-  if (platform === 'web'
-    && window.location.pathname === '/auth/callback'
+  if (window.location.pathname === '/auth/callback'
     && controller.snapshot().status === 'signed-in') {
     await navigateTo('/my', { replace: true })
   }

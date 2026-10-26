@@ -6,7 +6,7 @@
 
 ## M0 仓库改成 monorepo
 
-- [x] 把 Nuxt 应用搬到 `apps/web`、菜谱 CSV 和生成的 JSON 搬到 `packages/data`，只改路径不改逻辑。根目录的 `pnpm build` 仍然输出到 `dist/`，CI、EdgeOne、Vercel、Docker、Capacitor 不用改配置。
+- [x] 把 Nuxt 应用搬到 `apps/web`、菜谱 CSV 和生成的 JSON 搬到 `packages/data`，只改路径不改逻辑。根目录的 `pnpm build` 仍然输出到 `dist/`，CI、EdgeOne、Vercel、Docker 不用改配置。
 - [x] 食材词典、常备调料、别名改成 `packages/data` 里的 JSON（`food.json`、`pantry.json`、`aliases.json`），Web 和 iOS 读同一份。
 - [x] 两端共用的推荐用例 `packages/data/fixtures/recommend.json`，`pnpm fixtures` 生成，`pnpm test` 检查是否过期。`packages/cook` 的推荐逻辑本身不依赖 Vue / Node，不再单独拆 `packages/core`。
 
@@ -95,8 +95,10 @@
 
 ## M5 收尾
 
-- 移除 Capacitor（`ios/`、`capacitor.config.ts`、`@capacitor/*`、`nativeSso` 等）；`android/` 去留单独决定。
-- 更新 #98 的阶段 4 和 `docs/dev/app.md`。
+- [x] 2026-10-26 按 [0016](/decisions/0016-native-android-and-capacitor-retirement) 提前移除历史 `ios/`、`android/`、Capacitor 配置、依赖、SSO 适配及脚本；保留 Ionic Web 和原生 `apps/ios`。Android 转向 [Kotlin + Compose 原生计划](./android-roadmap)。
+- [x] 同步 `docs/dev/app.md` 与 Android 路线图；源码完成不代表已合并或部署。
+- [x] 将本轮工作区清理状态与 Android 待办同步至 [#98](https://github.com/YunYouJun/cook/issues/98) 和 [#169](https://github.com/YunYouJun/cook/issues/169)，保留尚未合入 / 部署的边界。
+- [ ] 随下一次站点发布核验 AASA 和原生 HTTPS 回调。
 
 ## 分工说明
 

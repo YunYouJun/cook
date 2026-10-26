@@ -129,8 +129,6 @@ export default defineNuxtConfig({
       yunlefunCloudbaseEnv: process.env.NUXT_PUBLIC_YUNLEFUN_CLOUDBASE_ENV || 'yunlefun-8g7ybcxc7345c490',
       yunlefunSsoClientId: process.env.NUXT_PUBLIC_YUNLEFUN_SSO_CLIENT_ID || 'cook-web',
       yunlefunSsoExchangeUrl: process.env.NUXT_PUBLIC_YUNLEFUN_SSO_EXCHANGE_URL || 'https://api.yunle.fun/sso-ticket',
-      yunlefunSsoNativeClientId: process.env.NUXT_PUBLIC_YUNLEFUN_SSO_NATIVE_CLIENT_ID || 'cook-mobile',
-      yunlefunSsoNativeRedirectUri: process.env.NUXT_PUBLIC_YUNLEFUN_SSO_NATIVE_REDIRECT_URI || 'https://cook.yunyoujun.cn/auth/callback?platform=native',
       yunlefunSsoOrigin: process.env.NUXT_PUBLIC_YUNLEFUN_SSO_ORIGIN || 'https://www.yunle.fun',
       yunlefunSsoRedirectUri: process.env.NUXT_PUBLIC_YUNLEFUN_SSO_REDIRECT_URI || 'https://cook.yunyoujun.cn/auth/callback',
       yunlefunSsoRedirectUris: process.env.NUXT_PUBLIC_YUNLEFUN_SSO_REDIRECT_URIS || [

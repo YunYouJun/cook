@@ -79,7 +79,7 @@ https://cook.yunyoujun.cn/auth/wechat/
 
 以下配置已于 2026-10-25 发布，后续维护时保持一致：
 
-1. 在现有 AASA 的 `applinks.details` 中新增原生应用条目，保留已有 `webcredentials` 和旧 Capacitor 条目：
+1. 在现有 AASA 的 `applinks.details` 中保留原生应用条目与已有 `webcredentials`。2026-10-26 按 [0016](../decisions/0016-native-android-and-capacitor-retirement) 清理旧 Capacitor 条目，原生配置保持：
 
 ```json
 {

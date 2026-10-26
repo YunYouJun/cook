@@ -7,9 +7,6 @@ import { addRecipeHistory, clearRecipeHistories, recipeHistories, removeRecipeHi
 import { exportLocalUserData, importLocalUserData, localUserData } from '../apps/web/app/composables/store/userData'
 import { userDataMeta } from '../apps/web/app/composables/store/userDataMeta'
 
-vi.mock('@capacitor/browser', () => ({ Browser: {} }))
-vi.mock('@capacitor/preferences', () => ({ Preferences: {} }))
-
 const NOW = 1_800_000_000_000
 
 function recipe(name: string, id?: number): DbRecipeItem {

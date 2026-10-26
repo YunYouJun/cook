@@ -47,16 +47,14 @@ export interface YunlefunAuthController {
 }
 
 interface YunlefunAuthControllerOptions {
+  authorization: YunlefunAuthorizationAdapter
   identity: YunlefunIdentityAdapter
-  native: YunlefunAuthorizationAdapter
-  platform: 'native' | 'web'
-  web: YunlefunAuthorizationAdapter
 }
 
 export function createYunlefunAuthController(
   options: YunlefunAuthControllerOptions,
 ): YunlefunAuthController {
-  const authorization = options.platform === 'native' ? options.native : options.web
+  const authorization = options.authorization
   let initialized = false
   let state: YunlefunAuthSnapshot = {
     account: null,
