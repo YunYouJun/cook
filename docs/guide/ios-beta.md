@@ -69,6 +69,8 @@ iOS 版目前通过 TestFlight 提供小范围测试，尚未在 App Store 正�
 
 优先使用 **云食册 → 我的 → 意见反馈**，或者通过 TestFlight 发送反馈。应用内提交的意见进入团队的私密处理队列，不会自动发布到需求墙。
 
+使用 TestFlight 测试版时，也可以通过系统截屏反馈附上画面和问题说明。完整操作与入口缺失时的处理方式见[截图反馈指引](https://support.yunle.fun/testflight)，也可查看 [Apple 官方 TestFlight 指引](https://testflight.apple.com/)。
+
 反馈时请附上：应用版本和构建号、设备及系统版本、操作步骤、预期与实际结果；截图中的个人信息请先遮挡。数据保存或同步异常请尽量提供发生时间，并保留备份。
 
 也可以访问 [云乐坊支持中心](https://support.yunle.fun/?product=cook)。适合公开讨论的功能建议可提交到 [需求墙](https://support.yunle.fun/feedback?product=cook)，不要在那里发布私人菜谱、联系方式或账号信息。
