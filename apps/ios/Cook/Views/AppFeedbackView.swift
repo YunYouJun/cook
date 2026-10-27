@@ -25,6 +25,7 @@ struct AppFeedbackView: View {
     @State private var receipt: FeedbackClient.Receipt?
     @State private var submissionId: String?
     @State private var submittedBody = ""
+    @State private var isTestFlight = false
 
     init(purpose: Purpose = .feedback) {
         self.purpose = purpose
@@ -50,6 +51,9 @@ struct AppFeedbackView: View {
 
     var body: some View {
         Form {
+            if purpose == .feedback {
+                TestFlightFeedbackSection(appName: "云食册", isTestFlight: isTestFlight)
+            }
             if feedback.isTest {
                 Section { Text("测试模式：反馈仅进入独立测试队列，不会发送到正式支持中心。") }
             }
@@ -106,6 +110,7 @@ struct AppFeedbackView: View {
         .disabled(sending)
         .navigationTitle(purpose.title)
         .navigationBarTitleDisplayMode(.inline)
+        .task { isTestFlight = await TestFlightDistribution.current() }
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 if sending {
