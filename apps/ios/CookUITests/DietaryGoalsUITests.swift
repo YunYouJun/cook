@@ -27,8 +27,7 @@ final class DietaryGoalsUITests: XCTestCase {
         if remember {
             let toggle = app.switches["dietary.remember"]
             XCTAssertTrue(toggle.isEnabled)
-            // SwiftUI exposes the labeled row as the switch; tap its trailing native control.
-            toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+            tapNativeSwitch(toggle, in: app)
             XCTAssertEqual(toggle.value as? String, "1")
             let attachment = XCTAttachment(screenshot: app.screenshot())
             attachment.name = "native-dietary-picker"
@@ -231,7 +230,7 @@ final class DietaryGoalsUITests: XCTestCase {
             app.swipeUp()
         }
         XCTAssertTrue(toggle.isHittable)
-        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        tapNativeSwitch(toggle, in: app)
         XCTAssertEqual(toggle.value as? String, "1")
         let picker = XCTAttachment(screenshot: app.screenshot())
         picker.name = "dietary-accessibility-picker"
@@ -272,4 +271,18 @@ final class DietaryGoalsUITests: XCTestCase {
         add(random)
     }
 
+    @MainActor
+    private func tapNativeSwitch(_ toggle: XCUIElement, in app: XCUIApplication) {
+        // SwiftUI can wrap the native switch in a labeled Switch element.
+        for _ in 0..<8 {
+            let child = toggle.children(matching: .switch).firstMatch
+            let control = child.exists ? child : toggle
+            if control.exists && control.isHittable {
+                control.tap()
+                return
+            }
+            app.swipeUp()
+        }
+        XCTFail("记住目标的原生开关不可点击")
+    }
 }

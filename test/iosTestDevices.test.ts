@@ -22,6 +22,18 @@ describe('iOS CI destinations', () => {
     expect(selectIOSTestDevices(inventory, destinations)).toEqual({ iphone: newerPhone.udid, ipad: newerTablet.udid })
   })
 
+  it('keeps large iPad coverage when a newer runtime only has a phone', () => {
+    const largeTablet = { name: 'iPad Pro 13-inch (M5)', udid: '55555555-5555-5555-5555-555555555555', isAvailable: true }
+    const phoneOnly = { ...newerPhone, udid: '66666666-6666-6666-6666-666666666666' }
+    const devices = {
+      ...inventory,
+      'com.apple.CoreSimulator.SimRuntime.iOS-27-0': [newerPhone, newerTablet, largeTablet],
+      'com.apple.CoreSimulator.SimRuntime.iOS-27-1': [phoneOnly],
+    }
+    const destinations = [phone, tablet, newerPhone, newerTablet, largeTablet, phoneOnly].map(device => destination(device.udid)).join('\n')
+    expect(selectIOSTestDevices(devices, destinations)).toEqual({ iphone: newerPhone.udid, ipad: largeTablet.udid })
+  })
+
   it('fails instead of silently skipping iPad or using a placeholder', () => {
     expect(() => selectIOSTestDevices(inventory, `${destination(phone.udid)}\n{ platform:iOS Simulator, id:placeholder, name:Any iOS Simulator Device }`)).toThrow('No compatible iPhone/iPad pair')
   })

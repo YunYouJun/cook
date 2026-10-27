@@ -27,7 +27,8 @@ export function selectIOSTestDevices(devices: Record<string, SimulatorDevice[]>,
   for (const runtime of runtimes) {
     const supported = devices[runtime]!.filter(device => device.isAvailable && supportedIds.has(device.udid.toUpperCase()))
     const iphone = supported.find(device => device.name.startsWith('iPhone'))
-    const ipad = supported.find(device => device.name.startsWith('iPad'))
+    const ipad = supported.find(device => device.name === 'iPad Pro 13-inch (M5)')
+      ?? supported.find(device => device.name.startsWith('iPad'))
     if (iphone && ipad)
       return { iphone: iphone.udid, ipad: ipad.udid }
   }
