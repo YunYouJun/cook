@@ -273,10 +273,9 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     private func tapNativeSwitch(_ toggle: XCUIElement, in app: XCUIApplication) {
-        // SwiftUI can wrap the native switch in a labeled Switch element.
+        // The identifier covers the native control's visible touch area.
         for _ in 0..<8 {
-            let child = toggle.children(matching: .switch).firstMatch
-            let control = child.exists ? child : toggle
+            let control = toggle
             if control.exists && control.isHittable {
                 control.tap()
                 return

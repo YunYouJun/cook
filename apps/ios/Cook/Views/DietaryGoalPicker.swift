@@ -1,6 +1,7 @@
 import CookCore
 import SwiftData
 import SwiftUI
+import UIKit
 
 /// The same native selection sheet is reachable from both cooking presentations and results.
 struct DietaryGoalPickerButton: View {
@@ -47,6 +48,42 @@ struct DietaryGoalPickerButton: View {
     }
 }
 
+// Keep the accessible identity on the UIKit control itself. A SwiftUI Toggle in
+// a List also exposes a separate row-wide switch proxy on newer system versions.
+private struct DietaryRememberSwitch: UIViewRepresentable {
+    let isOn: Bool
+    let onChange: (Bool) -> Void
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeCoordinator() -> Coordinator { Coordinator(onChange: onChange) }
+
+    func makeUIView(context: Context) -> UISwitch {
+        let control = UISwitch()
+        control.accessibilityIdentifier = "dietary.remember"
+        control.accessibilityLabel = "记住这个目标"
+        control.addTarget(context.coordinator, action: #selector(Coordinator.valueChanged(_:)), for: .valueChanged)
+        return control
+    }
+
+    func updateUIView(_ control: UISwitch, context: Context) {
+        context.coordinator.onChange = onChange
+        control.isEnabled = isEnabled
+        if control.isOn != isOn { control.setOn(isOn, animated: false) }
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UISwitch, context: Context) -> CGSize? {
+        CGSize(width: uiView.intrinsicContentSize.width, height: max(44, uiView.intrinsicContentSize.height))
+    }
+
+    final class Coordinator: NSObject {
+        var onChange: (Bool) -> Void
+
+        init(onChange: @escaping (Bool) -> Void) { self.onChange = onChange }
+
+        @objc func valueChanged(_ control: UISwitch) { onChange(control.isOn) }
+    }
+}
+
 struct DietaryGoalSelectionSheet: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
@@ -79,15 +116,17 @@ struct DietaryGoalSelectionSheet: View {
                 }
 
                 Section {
-                    Toggle(isOn: Binding(
-                        get: { session.remembersDietaryGoal },
-                        set: { session.rememberDietaryGoal($0) }
-                    )) {
+                    HStack(spacing: 12) {
                         Text("记住这个目标")
                             .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityHidden(true)
+                        Spacer(minLength: 12)
+                        DietaryRememberSwitch(isOn: session.remembersDietaryGoal) {
+                            session.rememberDietaryGoal($0)
+                        }
                     }
+                    .accessibilityElement(children: .contain)
                     .disabled(session.dietaryGoal == nil && !session.remembersDietaryGoal)
-                    .accessibilityIdentifier("dietary.remember")
                 } footer: {
                     if let goal = session.rememberedDietaryGoal {
                         Text("下次默认选择“\(goal.title)”。仅保存在这台设备，选择“不限目标”会取消记忆。").foregroundStyle(Color.primary)
