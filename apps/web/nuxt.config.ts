@@ -106,7 +106,8 @@ export default defineNuxtConfig({
     '@yunlefun/ui/css',
     '~/styles/css-vars.scss',
     '~/styles/index.scss',
-    '~/styles/index.ts',
+    '@ionic/vue/css/palettes/dark.class.css',
+    '~/styles/ionic.css',
   ],
 
   router: {
