@@ -74,12 +74,12 @@ function navigate(event: MouseEvent, href: string) {
 
     <div class="desktop-sidebar-footer">
       <a class="desktop-sidebar-item" href="/settings" :title="collapsed ? '设置' : undefined" :aria-label="collapsed ? '设置' : undefined" :aria-current="path === '/settings' ? 'page' : undefined" @click="navigate($event, '/settings')">
-        <ion-icon :icon="ioniconsSettingsOutline" aria-hidden="true" />
+        <span class="i-f7-gear-alt desktop-sidebar-footer-icon" aria-hidden="true" />
         <span class="desktop-sidebar-label">设置</span>
       </a>
       <LegacyVersionLink :title="collapsed ? '切换到旧版' : undefined" aria-label="切换到旧版" />
       <button class="desktop-sidebar-toggle" type="button" :aria-label="collapsed ? '展开侧栏' : '收起侧栏'" :title="collapsed ? '展开侧栏' : '收起侧栏'" :aria-expanded="!collapsed" @click="collapsed = !collapsed">
-        <ion-icon :icon="collapsed ? ioniconsChevronForwardOutline : ioniconsChevronBackOutline" aria-hidden="true" />
+        <span class="i-f7-sidebar-left desktop-sidebar-footer-icon" aria-hidden="true" />
         <span class="desktop-sidebar-label">收起侧栏</span>
       </button>
     </div>
@@ -157,8 +157,7 @@ function navigate(event: MouseEvent, href: string) {
   white-space: nowrap;
   cursor: pointer;
 }
-.desktop-sidebar-item ion-icon,
-.desktop-sidebar-toggle ion-icon {
+.desktop-sidebar-item ion-icon {
   flex: none;
   width: 18px;
   height: 18px;
@@ -187,10 +186,14 @@ function navigate(event: MouseEvent, href: string) {
   color: var(--ion-text-color-step-400, #6d6d72);
   font-size: 12px;
 }
-.desktop-sidebar-toggle ion-icon {
+.desktop-sidebar-footer-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--ion-color-primary);
+}
+.desktop-sidebar-toggle .desktop-sidebar-footer-icon {
   color: inherit;
-  width: 14px;
-  height: 14px;
 }
 .desktop-sidebar :is(a, button):focus-visible {
   outline: 2px solid var(--ion-color-primary);
@@ -204,7 +207,7 @@ function navigate(event: MouseEvent, href: string) {
   padding: 0;
 }
 .is-collapsed :is(.desktop-sidebar-brand-copy, .desktop-sidebar-label, .desktop-sidebar-group),
-.is-collapsed :deep(.legacy-version-link > span) {
+.is-collapsed :deep(.legacy-version-label) {
   display: none;
 }
 .is-collapsed .desktop-sidebar-navigation > a:nth-of-type(5) {

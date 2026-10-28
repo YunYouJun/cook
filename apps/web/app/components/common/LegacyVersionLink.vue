@@ -4,8 +4,8 @@ import { links } from '~/constants/links'
 
 <template>
   <a class="legacy-version-link" :href="links.legacyCook">
-    <span>切换到旧版</span>
-    <ion-icon :icon="ioniconsOpenOutline" aria-hidden="true" />
+    <span class="legacy-version-label">切换到旧版</span>
+    <span class="i-f7-arrow-up-right-square legacy-version-icon" aria-hidden="true" />
   </a>
 </template>
 
@@ -23,9 +23,10 @@ import { links } from '~/constants/links'
   font-size: 13px;
   text-decoration: none;
 }
-.legacy-version-link ion-icon {
+.legacy-version-icon {
   flex: none;
-  font-size: 14px;
+  width: 20px;
+  height: 20px;
 }
 .legacy-version-link:hover {
   background: var(--cook-fill);
