@@ -5,6 +5,7 @@ import SwiftUI
 struct RecipeMetricsView: View {
     let presentation: RecipePresentation
     let difficulty: String?
+    var showsCalories = true
 
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), alignment: .leading)], spacing: 12) {
@@ -26,7 +27,7 @@ struct RecipeMetricsView: View {
                     Text(difficulty).font(.headline)
                 }
             }
-            if let calories = presentation.calories {
+            if showsCalories, let calories = presentation.calories {
                 metric("预估热量", icon: "flame", color: .orange) {
                     Text(calories).font(.headline).fixedSize(horizontal: false, vertical: true)
                 }
@@ -286,9 +287,16 @@ struct RecipeStepProgress: View {
                         .accessibilityIdentifier("recipe.continueStep")
                 }
                 if count > 0 {
-                    Button("重置步骤", systemImage: "arrow.counterclockwise") { confirmingReset = true }
-                        .labelStyle(.iconOnly)
-                        .frame(minWidth: 44, minHeight: 44)
+                    Button {
+                        confirmingReset = true
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                            // 将最小触控区域放在标签内，避免只命中图标。
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel("重置步骤")
+                    .accessibilityIdentifier("recipe.resetSteps")
                 }
             }
             // 重置按钮出现前后保留相同高度，避免步骤在完成或撤销时上下跳动。

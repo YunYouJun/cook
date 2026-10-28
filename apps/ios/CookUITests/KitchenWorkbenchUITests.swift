@@ -6,7 +6,7 @@ final class KitchenWorkbenchUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
         openKitchen(app)
@@ -77,7 +77,7 @@ final class KitchenWorkbenchUITests: XCTestCase {
     func testSupplementaryReferenceLocatesStepWithoutCompletingIt() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
         openKitchen(app)
@@ -132,8 +132,10 @@ final class KitchenWorkbenchUITests: XCTestCase {
             let bottom = timer.exists ? timer.frame.minY : window.maxY
             // 目标原先可能在屏幕上方，正确定位反而会增大 y；验证可见区域与动画完成。
             // 不在滚动动画中询问点击位置，避免 XCTest 对被裁剪按钮抛出定位错误。
-            return !frame.isEmpty && frame == previousFrame && window.contains(frame)
-                && frame.minY >= headerBottom && frame.maxY <= bottom
+            guard !frame.isEmpty && frame == previousFrame && window.contains(frame)
+                && frame.minY >= headerBottom && frame.maxY <= bottom else { return false }
+            // The model frame can settle before the native hit-test state during a scroll.
+            return step.isHittable
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [located], timeout: 10), .completed)
         XCTAssertTrue(step.isHittable)
@@ -143,7 +145,7 @@ final class KitchenWorkbenchUITests: XCTestCase {
     func testServingsSynchronizeQuantitiesPreparationAndRestore() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
         openKitchen(app)
@@ -214,7 +216,7 @@ final class KitchenWorkbenchUITests: XCTestCase {
     func testPreparationTimerLayoutAndReopening() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
         openKitchen(app)
@@ -278,7 +280,7 @@ final class KitchenWorkbenchUITests: XCTestCase {
     func testStepsCanBeCompletedUndoneAndRestored() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
         openKitchen(app)
@@ -324,9 +326,17 @@ final class KitchenWorkbenchUITests: XCTestCase {
         openKitchen(app)
         XCTAssertEqual(progress.label, "已完成 1 / 11 步")
         XCTAssertEqual(app.buttons["recipe.continueStep"].label, "继续第 2 步")
-        app.buttons["重置步骤"].tap()
-        let resets = app.buttons.matching(identifier: "重置步骤")
-        resets.element(boundBy: resets.count - 1).tap()
+        let resetControl = app.buttons["recipe.resetSteps"]
+        XCTAssertGreaterThanOrEqual(resetControl.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(resetControl.frame.height, 44)
+        resetControl.tap()
+        // Native confirmation actions may discard SwiftUI identifiers. Exclude the trigger
+        // explicitly and wait for the separate action, on both sheets and iPad popovers.
+        let resetConfirmation = app.buttons.matching(NSPredicate(
+            format: "label == %@ AND identifier != %@", "重置步骤", "recipe.resetSteps"
+        )).firstMatch
+        XCTAssertTrue(resetConfirmation.waitForExistence(timeout: 10))
+        resetConfirmation.tap()
         XCTAssertEqual(progress.label, "已完成 0 / 11 步")
 
         app.buttons["recipe.continueStep"].tap()
@@ -346,7 +356,7 @@ final class KitchenWorkbenchUITests: XCTestCase {
     func testWholeRowsAdvanceAcrossRecipeSections() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
         openKitchen(app, recipeName: "尖椒炒牛肉")
@@ -383,11 +393,11 @@ final class KitchenWorkbenchUITests: XCTestCase {
         let recipe = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", recipeName)).firstMatch
         XCTAssertTrue(recipe.waitForExistence(timeout: 10))
         recipe.tap()
+        // End search on either size class before entering the full-screen workbench.
+        let closeSearch = app.buttons.matching(NSPredicate(format: "label IN %@", ["关闭", "取消"])).firstMatch
+        if closeSearch.exists && closeSearch.isHittable { closeSearch.tap() }
         // 浮层侧栏会遮挡详情；先通过原生按钮收起，再点击工作台入口。
         if app.buttons["隐藏边栏"].exists {
-            // 搜索激活时侧栏按钮仍在辅助功能树里，但没有可点击位置。
-            let closeSearch = app.buttons["关闭"]
-            if closeSearch.isHittable { closeSearch.tap() }
             let sidebar = app.buttons["隐藏边栏"]
             let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: sidebar)
             XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 5), .completed)

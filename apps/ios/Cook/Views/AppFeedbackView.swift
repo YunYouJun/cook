@@ -120,6 +120,7 @@ struct AppFeedbackView: View {
                 }
             }
         }
+        .accessibilityIdentifier("feedback.form")
         .disabled(sending)
         .navigationTitle(purpose.title)
         .navigationBarTitleDisplayMode(.inline)

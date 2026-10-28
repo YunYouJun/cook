@@ -9,6 +9,7 @@ struct RandomView: View {
     @Environment(CookSession.self) private var session
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var recipe: Recipe?
+    @State private var showingDietaryGoals = false
     @State private var rolls = 0
     /// 换菜时快速闪过的几道菜，像摇骰子；nil 时显示选中的菜
     @State private var shuffling: String?
@@ -19,15 +20,13 @@ struct RandomView: View {
 
     /// 候选菜。和 Web 的 randomPool 一致，只是不看结果页的菜名搜索
     private var pool: [Recipe] {
-        var options = session.options
-        options.keyword = nil
-        if !session.selectedStuff.isEmpty {
-            return store.recommender.recommend(options).map(\.recipe)
-        }
-        return store.recommender.candidates(options)
+        session.candidates(in: store, ignoringKeyword: true)
     }
 
     private func scopeText(count: Int) -> String {
+        if let goal = session.dietaryGoal {
+            return "按“\(goal.title)”和当前条件，从 \(count) 道已核对做法里挑"
+        }
         if !session.selectedStuff.isEmpty {
             return "从已选食材能做的 \(count) 道菜里挑"
         }
@@ -41,52 +40,60 @@ struct RandomView: View {
         let pool = pool
 
         NavigationStack {
-            VStack(spacing: 20) {
-                Spacer(minLength: 0)
-                if let recipe {
-                    NavigationLink(value: RecipeRoute(recipe: recipe)) {
-                        card(recipe)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(shuffling != nil)
-                    .accessibilityHint("打开菜谱详情")
-                    .id(recipe.id)
-                    .transition(reduceMotion ? .opacity : .asymmetric(
-                        insertion: .scale(scale: 0.9).combined(with: .opacity),
-                        removal: .opacity
-                    ))
-                } else {
-                    ContentUnavailableView(
-                        "没有符合条件的菜",
-                        systemImage: "dice",
-                        description: Text("换几样食材，或者放宽忌口和筛选。")
-                    )
-                }
-                Spacer(minLength: 0)
-                VStack(spacing: 10) {
-                    Text(scopeText(count: pool.count))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .contentTransition(.numericText())
-                    Button(action: roll) {
-                        Label {
-                            Text("换一道")
-                        } icon: {
-                            Image(systemName: "dice")
-                                .symbolEffect(.bounce, value: rolls)
+            GeometryReader { geometry in
+                ScrollView {
+                    VStack(spacing: 20) {
+                        GroupBox { DietaryGoalPickerButton(isPresented: $showingDietaryGoals) }
+                        Spacer(minLength: 0)
+                        if let recipe {
+                            NavigationLink(value: RecipeRoute(recipe: recipe, dietaryGoal: session.dietaryGoal)) {
+                                card(recipe)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(shuffling != nil)
+                            .accessibilityHint("打开菜谱详情")
+                            .accessibilityIdentifier("random.openRecipe")
+                            .id(recipe.id)
+                            .transition(reduceMotion ? .opacity : .asymmetric(
+                                insertion: .scale(scale: 0.9).combined(with: .opacity),
+                                removal: .opacity
+                            ))
+                        } else {
+                            ContentUnavailableView(
+                                "没有符合条件的菜",
+                                systemImage: "dice",
+                                description: Text(store.dietaryUnavailableMessage(for: session.dietaryGoal) ?? "换几样食材，或者放宽忌口和筛选。")
+                            )
                         }
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
+                        Spacer(minLength: 0)
+                        VStack(spacing: 10) {
+                            Text(scopeText(count: pool.count))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .contentTransition(.numericText())
+                            Button(action: roll) {
+                                Label {
+                                    Text("换一道")
+                                } icon: {
+                                    Image(systemName: "dice")
+                                        .symbolEffect(.bounce, value: rolls)
+                                }
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                            }
+                            .prominentButtonStyle()
+                            .controlSize(.large)
+                            .disabled(pool.isEmpty)
+                            .accessibilityHint("也可以摇一摇手机")
+                            .accessibilityIdentifier("random.roll")
+                        }
                     }
-                    .prominentButtonStyle()
-                    .controlSize(.large)
-                    .disabled(pool.isEmpty)
-                    .accessibilityHint("也可以摇一摇手机")
+                    .padding()
+                    .frame(maxWidth: 600)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: geometry.size.height)
                 }
             }
-            .padding()
-            .frame(maxWidth: 600)
-            .frame(maxWidth: .infinity)
             .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle("今天吃什么")
             .recipeDestinations()
@@ -99,6 +106,15 @@ struct RandomView: View {
             }
             .onDisappear {
                 isVisible = false
+                shuffleTask?.cancel()
+                shuffling = nil
+            }
+            .onChange(of: pool.map(\.id)) { _, ids in
+                shuffleTask?.cancel()
+                shuffling = nil
+                if recipe.map({ !ids.contains($0.id) }) ?? true {
+                    recipe = store.randomRecipe(from: pool)
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
                 if isVisible, !pool.isEmpty {
@@ -109,6 +125,7 @@ struct RandomView: View {
             .sensoryFeedback(.selection, trigger: shuffling) { _, new in new != nil }
             .sensoryFeedback(.impact(weight: .medium), trigger: landings)
         }
+        .sheet(isPresented: $showingDietaryGoals) { DietaryGoalSelectionSheet() }
     }
 
     private func card(_ recipe: Recipe) -> some View {
@@ -144,6 +161,12 @@ struct RandomView: View {
             Text(store.meta(for: recipe))
                 .foregroundStyle(.secondary)
                 .redacted(reason: shuffling == nil ? [] : .placeholder)
+            if let goal = session.dietaryGoal, let entry = store.dietaryCatalog?.entry(for: recipe, goal: goal) {
+                Text(entry.reason(for: goal))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
             // 卡片本身能点，用一行带箭头的提示说明这一点
             Label("看做法", systemImage: "chevron.right")
                 .labelStyle(TrailingIconLabelStyle())

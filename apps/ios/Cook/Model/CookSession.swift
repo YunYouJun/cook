@@ -12,16 +12,64 @@ final class CookSession {
     var methodGroups: [String] = []
     var difficulty: [String] = []
     var keyword = ""
+    private(set) var dietaryGoal: DietaryGoal?
+    private(set) var rememberedDietaryGoal: DietaryGoal?
+    @ObservationIgnored private let dietaryDefaults: UserDefaults?
+    static let dietaryGoalKey = "cook.dietary.rememberedGoal"
 
     private let context: ModelContext
     private let defaults: PreferenceValues
     private var preferences: Preferences?
     private static let logger = Logger(subsystem: "fun.yunle.cook", category: "Preferences")
 
-    init(defaultPantry: [String], context: ModelContext) {
+    init(defaultPantry: [String], context: ModelContext, dietaryDefaults: UserDefaults? = nil) {
         self.context = context
+        self.dietaryDefaults = dietaryDefaults
+        let remembered = dietaryDefaults?.string(forKey: Self.dietaryGoalKey).flatMap(DietaryGoal.init(rawValue:))
+        dietaryGoal = remembered
+        rememberedDietaryGoal = remembered
         defaults = PreferenceValues(pantry: defaultPantry)
         refreshPreferences()
+    }
+
+    var remembersDietaryGoal: Bool { rememberedDietaryGoal != nil }
+
+    func selectDietaryGoal(_ goal: DietaryGoal?) {
+        dietaryGoal = goal
+        if goal == nil {
+            rememberDietaryGoal(false)
+        } else if remembersDietaryGoal {
+            rememberedDietaryGoal = goal
+            dietaryDefaults?.set(goal?.rawValue, forKey: Self.dietaryGoalKey)
+        }
+    }
+
+    func rememberDietaryGoal(_ remember: Bool) {
+        rememberedDietaryGoal = remember ? dietaryGoal : nil
+        if let rememberedDietaryGoal {
+            dietaryDefaults?.set(rememberedDietaryGoal.rawValue, forKey: Self.dietaryGoalKey)
+        } else {
+            dietaryDefaults?.removeObject(forKey: Self.dietaryGoalKey)
+        }
+    }
+
+    func matches(in store: RecipeStore, ignoringKeyword: Bool = false) -> [RecipeMatch] {
+        var options = self.options
+        if ignoringKeyword { options.keyword = nil }
+        if let dietaryGoal {
+            return store.dietaryCatalog?.recommend(options, goal: dietaryGoal, using: store.recommender) ?? []
+        }
+        return store.recommender.recommend(options)
+    }
+
+    func candidates(in store: RecipeStore, ignoringKeyword: Bool = false) -> [Recipe] {
+        if !selectedStuff.isEmpty { return matches(in: store, ignoringKeyword: ignoringKeyword).map(\.recipe) }
+        var options = self.options
+        if ignoringKeyword { options.keyword = nil }
+        if let dietaryGoal {
+            return store.dietaryCatalog?.candidates(options, goal: dietaryGoal, using: store.recommender) ?? []
+        }
+        return store.recommender.candidates(options)
     }
 
     /// 查询变化时重新绑定；只读、不保存，重复调用不会触发写入或查询循环。
@@ -54,7 +102,7 @@ final class CookSession {
 
     /// 做法、难度和不吃辣这几个筛选条件选了几个，做菜页的「筛选」按钮上显示
     var activeFilterCount: Int {
-        methodGroups.count + difficulty.count + (noSpicy ? 1 : 0)
+        methodGroups.count + difficulty.count + (noSpicy ? 1 : 0) + (dietaryGoal == nil ? 0 : 1)
     }
 
     var options: RecommendationOptions {
@@ -83,12 +131,18 @@ final class CookSession {
 
     /// 选了食材或厨具，就能去看结果
     var hasSelection: Bool {
-        !selectedStuff.isEmpty || tool != nil
+        !selectedStuff.isEmpty || tool != nil || dietaryGoal != nil
     }
 
     /// 做菜页和筛选弹层共用结果数；nil 表示还没选食材或厨具，区别于真正的零结果。
-    func matchCount(using recommender: Recommender) -> Int? {
+    func matchCount(in store: RecipeStore) -> Int? {
         guard hasSelection else { return nil }
+        if dietaryGoal != nil { return candidates(in: store).count }
+        return matchCount(using: store.recommender)
+    }
+
+    func matchCount(using recommender: Recommender) -> Int? {
+        guard !selectedStuff.isEmpty || tool != nil else { return nil }
         if selectedStuff.isEmpty, let tool {
             return recommender.recipes(using: tool, options: options).count
         }
@@ -106,6 +160,7 @@ final class CookSession {
     func clearStuff() {
         selectedStuff = []
         tool = nil
+        dietaryGoal = nil
     }
 
     /// 把一句话识别出的条件合进当前选择；忌口和「不吃辣」与手动勾选一样会一直保留（和 Web 的 applyQuery 一致）
@@ -162,6 +217,7 @@ final class CookSession {
     func clearFilters() {
         methodGroups = []
         difficulty = []
+        dietaryGoal = nil
         setNoSpicy(false)
     }
 

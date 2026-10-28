@@ -12,6 +12,7 @@ struct CookView: View {
     @Environment(FeedbackClient.self) private var feedback
     @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }, sort: \FridgeItem.expiresAt) private var fridgeItems: [FridgeItem]
     @State private var showingFilters = false
+    @State private var showingDietaryGoals = false
     /// 冰箱快捷入口按它判断哪些过期了，跨过零点时刷新
     @State private var now = Date()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -27,7 +28,7 @@ struct CookView: View {
     @State private var kitchenPath = NavigationPath()
 
     var body: some View {
-        let matchCount = session.matchCount(using: store.recommender) ?? 0
+        let matchCount = session.matchCount(in: store) ?? 0
         let emptySignal = emptySignalID(matchCount: matchCount)
         let warnings = findIncompatibleRules(session.selectedStuff, rules: store.data.incompatibleRules)
         let extras = session.selectedStuff.filter { !store.isCatalogStuff($0) }
@@ -35,7 +36,7 @@ struct CookView: View {
         Group {
             if presentation == .kitchen {
                 NavigationStack(path: $kitchenPath) {
-                    CloudKitchenView(presentation: $presentation, showResults: { kitchenPath.append(ResultsRoute()) })
+                    CloudKitchenView(presentation: $presentation, showingDietaryGoals: $showingDietaryGoals, showResults: { kitchenPath.append(ResultsRoute()) })
                         .navigationDestination(for: ResultsRoute.self) { _ in ResultsView() }
                         .recipeDestinations()
                 }
@@ -64,6 +65,7 @@ struct CookView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingDietaryGoals) { DietaryGoalSelectionSheet() }
         .overlay {
             BasketFlightLayer(animator: basket)
         }
@@ -81,6 +83,11 @@ struct CookView: View {
     /// 选食材的列表：两种布局共用，宽屏放在左栏，窄屏是导航的第一页
     private func chooser(warnings: [IncompatibleRule], extras: [String], emptySignal: String?) -> some View {
         List {
+            Section {
+                DietaryGoalPickerButton(isPresented: $showingDietaryGoals)
+            } footer: {
+                if let goal = session.dietaryGoal { Text(goal.subtitle) }
+            }
             if let notice {
                 InputNoticeRow(notice: notice) {
                     withAnimation(.snappy) { self.notice = nil }
@@ -223,7 +230,9 @@ struct CookView: View {
                 BasketStack(items: basketItems)
                 // 只让数字滚动，文字不跟着变形
                 HStack(spacing: 0) {
-                    if session.selectedStuff.isEmpty, let tool = session.tool {
+                    if session.selectedStuff.isEmpty, session.dietaryGoal != nil {
+                        Text("看看符合目标的做法（")
+                    } else if session.selectedStuff.isEmpty, let tool = session.tool {
                         Text("看看用\(store.toolLabel(tool))能做什么（")
                     } else if session.selectedStuff.isEmpty {
                         Text("先选几样食材")
@@ -246,6 +255,7 @@ struct CookView: View {
         }
         .prominentButtonStyle()
         .controlSize(.large)
+        .accessibilityIdentifier("cook.showResults")
         .disabled(!session.hasSelection)
         .modifier(BasketBounce(animator: basket))
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { basket.target = $0 }
@@ -276,7 +286,7 @@ struct CookView: View {
 
     /// 和 Web 一样，按菜名搜索时没有结果不算
     private func emptySignalID(matchCount: Int) -> String? {
-        guard matchCount == 0, !session.selectedStuff.isEmpty, session.keyword.isEmpty else {
+        guard session.dietaryGoal == nil, matchCount == 0, !session.selectedStuff.isEmpty, session.keyword.isEmpty else {
             return nil
         }
         return ([session.tool ?? "", session.mode.rawValue] + session.selectedStuff.sorted()).joined(separator: "|")
@@ -454,16 +464,18 @@ struct ResultsRoute: Hashable {}
 
 /// 筛选：做法、难度、不吃辣，以及家里常备和忌口
 struct FilterSheet: View {
+    @State private var showingDietaryGoals = false
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let matchCount = session.matchCount(using: store.recommender)
+        let matchCount = session.matchCount(in: store)
 
         NavigationStack {
             List {
+                Section { DietaryGoalPickerButton(isPresented: $showingDietaryGoals) }
                 ChipSection(title: "做法", note: session.methodGroups.isEmpty ? nil : "只看这些做法") {
                     ForEach(Recommender.methodGroups, id: \.label) { group in
                         Chip(title: group.label, imageName: group.imageName, isSelected: session.methodGroups.contains(group.label)) {
@@ -491,6 +503,7 @@ struct FilterSheet: View {
                     Text("家里常备、忌口和不吃辣会记住，下次打开还在。")
                 }
             }
+            .accessibilityIdentifier("filter.options")
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 resultSummary(matchCount: matchCount)
             }
@@ -506,6 +519,7 @@ struct FilterSheet: View {
                 }
             }
         }
+        .sheet(isPresented: $showingDietaryGoals) { DietaryGoalSelectionSheet() }
         .sensoryFeedback(.selection, trigger: session.activeFilterCount)
     }
 

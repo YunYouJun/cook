@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Cook 饮食做法核对数据 v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "policyVersion", "dataVersion", "amountsFingerprint", "enabledGoals", "recipes"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "policyVersion": { "const": 1 },
+    "dataVersion": { "type": "string", "pattern": "^[a-f0-9]{12}$" },
+    "amountsFingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "enabledGoals": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/goal" } },
+    "recipes": {
+      "type": "object",
+      "propertyNames": { "pattern": "^(0|[1-9][0-9]*)$" },
+      "additionalProperties": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "goal": { "enum": ["weight-aware", "less-added-sugar", "balanced-pairing"] },
+    "names": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["block", "text"],
+        "properties": {
+          "block": { "type": "integer", "minimum": 0 },
+          "item": { "type": "integer", "minimum": 0 },
+          "text": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason", "evidence"],
+      "properties": {
+        "status": { "enum": ["pass", "fail", "unknown"] },
+        "reason": { "enum": ["no-added-sugar", "added-sugar", "unverified-seasoning", "food-group-pairing", "portion-oil-reference", "unverified-portion-oil"] },
+        "evidence": { "$ref": "#/$defs/evidence" }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recipeFingerprint", "sourceLink", "sourceFingerprint", "reviewedAt", "ingredients", "avoidIngredients", "unresolvedIngredients", "ingredientEvidence", "foodGroups", "assessments"],
+      "properties": {
+        "recipeFingerprint": { "type": "string", "pattern": "^[a-f0-9]{16}$" },
+        "sourceLink": { "type": "string", "pattern": "^https://" },
+        "sourceFingerprint": { "type": "string", "pattern": "^[a-f0-9]{16}$" },
+        "reviewedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "ingredients": { "type": "array", "allOf": [{ "$ref": "#/$defs/names" }], "minItems": 1 },
+        "avoidIngredients": { "$ref": "#/$defs/names" },
+        "unresolvedIngredients": { "$ref": "#/$defs/names" },
+        "ingredientEvidence": { "$ref": "#/$defs/evidence" },
+        "foodGroups": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["staple", "protein", "vegetables"] } },
+        "assessments": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["weight-aware", "less-added-sugar", "balanced-pairing"],
+          "properties": {
+            "weight-aware": { "$ref": "#/$defs/assessment" },
+            "less-added-sugar": { "$ref": "#/$defs/assessment" },
+            "balanced-pairing": { "$ref": "#/$defs/assessment" }
+          }
+        },
+        "portionOil": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["referenceServings", "batchOilGrams", "servingEvidence", "oilEvidence"],
+          "properties": {
+            "referenceServings": { "type": "integer", "minimum": 1, "maximum": 20 },
+            "batchOilGrams": {
+              "type": "object", "additionalProperties": false, "required": ["lower", "upper"],
+              "properties": { "lower": { "type": "number", "minimum": 0 }, "upper": { "type": "number", "minimum": 0 } }
+            },
+            "servingEvidence": { "$ref": "#/$defs/evidence" },
+            "oilEvidence": { "$ref": "#/$defs/evidence" }
+          }
+        }
+      }
+    }
+  }
+}
