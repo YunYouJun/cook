@@ -170,7 +170,7 @@ export default defineNuxtConfig({
     },
     prerender: {
       crawlLinks: false,
-      routes: ['/', '/random', '/help', '/feedback', '/user', '/404', '/settings', '/auth/callback'],
+      routes: ['/', '/home', '/library', '/apps', '/my', '/catalog', '/recipes/favorites', '/recipes/history', '/random', '/help', '/feedback', '/user', '/404', '/settings', '/auth/callback'],
       ignore: ['/hi'],
     },
   },
