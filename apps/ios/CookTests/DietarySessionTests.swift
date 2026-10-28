@@ -17,7 +17,9 @@ final class DietarySessionTests: XCTestCase {
     func testGoalSymbolsAreAvailableOnTheRunningSystem() {
         for goal in DietaryGoal.allCases {
             XCTAssertNotNil(UIImage(systemName: goal.symbol), "Missing native symbol for \(goal.rawValue)")
+            XCTAssertNotNil(UIImage(systemName: DietaryGoalAppearance(goal: goal).symbol), "Missing goal appearance for \(goal.rawValue)")
         }
+        XCTAssertNotNil(UIImage(systemName: DietaryGoalAppearance(goal: nil).symbol), "Missing unrestricted goal appearance")
     }
 
     func testSelectingAGoalDoesNotCreateSyncedPreferencesOrPersistWithoutOptIn() throws {

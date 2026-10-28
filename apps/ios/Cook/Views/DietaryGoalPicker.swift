@@ -36,9 +36,13 @@ struct DietaryGoalPickerButton: View {
     }
 
     private var selectionTitle: some View {
-        Label("饮食目标", systemImage: "fork.knife.circle")
-            .foregroundStyle(Color.primary)
-            .fixedSize(horizontal: false, vertical: true)
+        Label {
+            Text("饮食目标")
+                .foregroundStyle(Color.primary)
+        } icon: {
+            DietaryGoalIcon(goal: session.dietaryGoal)
+        }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var selectionValue: some View {
@@ -167,10 +171,8 @@ struct DietaryGoalSelectionSheet: View {
     private func choice(_ goal: DietaryGoal?) -> some View {
         Button { session.selectDietaryGoal(goal) } label: {
             HStack(alignment: .center, spacing: 12) {
-                Image(systemName: goal?.symbol ?? "fork.knife")
-                    .foregroundStyle(.tint)
+                DietaryGoalIcon(goal: goal)
                     .frame(width: 24)
-                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(goal?.title ?? "不限目标")
                         .foregroundStyle(Color.primary)
@@ -232,7 +234,12 @@ struct DietaryReviewSummary: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } label: {
-            Label(goal.title, systemImage: goal.symbol)
+            Label {
+                Text(goal.title)
+                    .foregroundStyle(Color.primary)
+            } icon: {
+                DietaryGoalIcon(goal: goal)
+            }
         }
         .accessibilityIdentifier("dietary.reviewSummary")
     }
