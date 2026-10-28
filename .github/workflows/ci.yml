@@ -143,6 +143,17 @@ jobs:
             const result = spawnSync(process.execPath, ['scripts/test-support-artifact-runtime.mjs'], { stdio: 'inherit' })
             if (result.error || result.status !== 0) core.setFailed('The artifact runtime contract failed.')
 
+  web-acceptance:
+    needs: [lint, typecheck, build, test]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Require all Web jobs and every matrix entry to succeed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: node -e 'if (Object.values(JSON.parse(process.env.RESULTS)).some(job => job.result !== "success")) process.exit(1)'
+
   # iOS 的 CookCore 跑和 Web 共用的用例（ubuntu 镜像自带 Swift）
   swift:
     needs: changes

@@ -4,10 +4,10 @@ Support 是工单状态、用户沟通和送达回执的权威来源。GitHub �
 
 ## 执行链路
 
-`.github/workflows/support-sync.yml` 从受保护的 `main` 运行，在主分支提交、手动触发及每 15 分钟巡检时读取私密绑定。PR 无需合并即可关联；轮询只读取 PR 元数据，不执行 PR 源码或解释正文中的指令。合并时采用最终 merge/squash SHA，并通过 GitHub compare 核对它确实属于当前主分支。
+`.github/workflows/support-sync.yml` 从 `main` 运行，生产凭据只由限定 `main` 的 `support-cook` 环境提供，在主分支提交、手动触发及每 15 分钟巡检时读取私密绑定。PR 无需合并即可关联；轮询只读取 PR 元数据，不执行 PR 源码或解释正文中的指令。合并时采用最终 merge/squash SHA，并通过 GitHub compare 核对它确实属于当前主分支。
 
 1. 将 commit、PR 和可选 Issue 写入工单的 `changeRefs` 与内部处理记录；不因此解决或关闭工单。
-2. 要求同一主分支 SHA 的 lint、typecheck、build、test 成功。
+2. 锁定同一主分支 SHA 对应的 `ci.yml` 最新 main push 运行及当前 attempt，要求其中全部 lint、typecheck、build、test（含所有矩阵任务）成功；必须同时通过依赖这四项的 `web-acceptance` 聚合任务，以证明整个矩阵均已结束；其他工作流的同名 job 和旧运行结果不能替代。
 3. 查询真实 EdgeOne API，核实下面两个固定项目的当前生产部署为 `Success`、`UsedInProd`、`Production`、`Github`、`main`，且 SHA 与待验收版本一致。
 4. 读取两个正式域名的 `/.well-known/cook-build.json`，核对完整 SHA、产品、仓库、版本及 `dirty: false`，再检查实际应用 HTML 的 `feedbackBuild` 和启动资源。浏览器执行绑定指定的验收流程，结束后重新核对部署指针。
 5. 将真实部署及浏览器证据写入 `work.verification`，根据经过核对的修复事实和实际通过的验收项目生成解决回复；默认保存草稿，获得发送授权后自动发布。
@@ -49,7 +49,7 @@ GitHub 中现有 `Production – cook` 部署记录来自 Vercel，不作为 Edg
 
 `issue` 可省略。`requesterMessageAt` 取真实工单快照，不猜测。新增用户消息、人工状态／草稿／验证变更和关联修订冲突均停止自动推进，交由维护者核对；不能靠增加 `revision` 丢弃结果未知的操作。
 
-已实现的验收 profile：`app-smoke-v1` 验证真实选材与菜谱结果；`desktop-layout-v1` 另验证桌面侧栏、完整食材、常驻结果区、旧版入口、手机大按钮与结果抽屉。浏览器使用独立上下文并阻止生产写入。新的修复应添加与问题相符的 profile，不能仅凭首页 HTTP 200 宣称问题解决。
+已实现的验收 profile：`app-smoke-v1` 验证真实选材与菜谱结果；`desktop-layout-v1` 另验证桌面侧栏、完整食材、常驻结果区、旧版入口、手机大按钮与结果抽屉。浏览器使用独立上下文并阻止生产写入。新的修复应添加与问题相符的 profile，不能仅凭首页 HTTP 200 宣称问题解决。仅重跑失败任务时，当前 CI attempt 可能缺少先前成功的 Web job；此时门槛会停止，需要全量重跑 CI，不能借用旧 attempt 的结果。
 
 ## 启用范围与凭据
 

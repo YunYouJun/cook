@@ -50,15 +50,45 @@ test('rejects a foreign base repository, malformed SHA, wrong branch and failed 
   await assert.rejects(collectCookGitHubChanges(bindings, { fetch: async () => Response.json({ private: 'do not print' }, { status: 401 }) }), /evidence/)
 })
 
-test('production CI proof requires every trusted job for the exact deployed revision', async () => {
-  const runs = ['lint', 'typecheck', 'build', 'test (ubuntu-latest, 24)'].map(name => ({ name, app: { slug: 'github-actions' }, head_sha: main, status: 'completed', conclusion: 'success' }))
-  assert((await verifyCookChecks(main, { fetch: async () => Response.json({ check_runs: runs }) })).endsWith('/checks'))
-  for (const change of [
-    values => values.slice(1),
-    values => values.map(item => ({ ...item, conclusion: 'failure' })),
-    values => values.map(item => ({ ...item, head_sha: head })),
-    values => values.map(item => ({ ...item, app: { slug: 'external-app' } })),
-  ]) {
-    await assert.rejects(verifyCookChecks(main, { fetch: async () => Response.json({ check_runs: change(runs) }) }), /checks have not passed/)
+const ciRun = { id: 123, run_attempt: 2, path: '.github/workflows/ci.yml', event: 'push', head_branch: 'main', head_sha: main, repository: { full_name: repository }, head_repository: { full_name: repository } }
+const ciJobs = ['lint', 'typecheck', 'build', 'test (24, ubuntu-latest)', 'web-acceptance'].map(name => ({ name, status: 'completed', conclusion: 'success', run_id: 123, run_attempt: 2, head_sha: main }))
+function ciTransport(runs = [ciRun], jobs = ciJobs) {
+  return async (url) => {
+    if (url.includes('/workflows/ci.yml/runs?'))
+      return Response.json({ total_count: runs.length, workflow_runs: runs })
+    if (url.includes('/runs/123/attempts/2/jobs?'))
+      return Response.json({ total_count: jobs.length, jobs })
+    return Response.json({}, { status: 404 })
   }
+}
+
+test('production proof uses the latest exact CI run attempt and all Web jobs', async () => {
+  assert.equal(await verifyCookChecks(main, { fetch: ciTransport() }), `https://github.com/${repository}/actions/runs/123`)
+  for (const jobs of [ciJobs.slice(1), ciJobs.map(item => ({ ...item, conclusion: 'failure' })), [...ciJobs, { ...ciJobs[3], name: 'test (24, macos-latest)', conclusion: 'failure' }], ciJobs.map(item => ({ ...item, run_attempt: 1 }))])
+    await assert.rejects(verifyCookChecks(main, { fetch: ciTransport([ciRun], jobs) }))
+})
+
+test('production proof rejects untrusted runs and never falls back to an older run', async () => {
+  for (const change of [{ path: '.github/workflows/docker-image.yml' }, { event: 'pull_request' }, { head_branch: 'dev' }, { head_sha: head }, { head_repository: { full_name: 'other/cook' } }, { repository: { full_name: 'other/cook' } }])
+    await assert.rejects(verifyCookChecks(main, { fetch: ciTransport([{ ...ciRun, ...change }]) }))
+  await assert.rejects(verifyCookChecks(main, { fetch: ciTransport([{ ...ciRun, id: 124 }, ciRun]) }))
+})
+
+test('production proof reads every job page and rejects a failed later matrix job', async () => {
+  const first = [...ciJobs, ...Array.from({ length: 95 }, (_, index) => ({ ...ciJobs[0], name: `other-${index}` }))]
+  const last = [{ ...ciJobs[3], name: 'test (24, macos-latest)', conclusion: 'failure' }]
+  const fetch = async (url) => {
+    if (url.includes('/workflows/ci.yml/runs?'))
+      return Response.json({ total_count: 1, workflow_runs: [ciRun] })
+    return Response.json({ total_count: 101, jobs: new URL(url).searchParams.get('page') === '1' ? first : last })
+  }
+  await assert.rejects(verifyCookChecks(main, { fetch }), /checks have not passed/)
+})
+
+test('a successful aggregate proves the complete Web matrix has settled without waiting for native jobs', async () => {
+  for (const aggregate of [undefined, { ...ciJobs[4], status: 'queued', conclusion: null }, { ...ciJobs[4], conclusion: 'failure' }]) {
+    const jobs = [...ciJobs.slice(0, 4), ...(aggregate ? [aggregate] : [])]
+    await assert.rejects(verifyCookChecks(main, { fetch: ciTransport([ciRun], jobs) }), /checks have not passed/)
+  }
+  assert.equal(await verifyCookChecks(main, { fetch: ciTransport([ciRun], [...ciJobs, { ...ciJobs[0], name: 'ios', conclusion: 'failure' }]) }), `https://github.com/${repository}/actions/runs/123`)
 })

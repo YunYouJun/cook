@@ -77,24 +77,42 @@ export async function collectCookGitHubChanges(bindings, { token, fetch: send = 
   return { sha: main.sha, events: [...events.values()], verifiedChangeShas }
 }
 
-/** Require the actual main revision's build, lint, typecheck and test jobs before production acceptance. */
+/** Require all Web jobs from the latest exact-main CI push run and its current attempt. */
 export async function verifyCookChecks(sha, { token, fetch: send = globalThis.fetch } = {}) {
   if (!shaPattern.test(sha))
     invalid()
-  let response
-  try {
-    response = await send(`https://api.github.com/repos/${repository}/commits/${sha}/check-runs?per_page=100`, { redirect: 'error', signal: AbortSignal.timeout(15_000), headers: { accept: 'application/vnd.github+json', ...(token ? { authorization: `Bearer ${token}` } : {}) } })
+  async function get(path) {
+    try {
+      const response = await send(`https://api.github.com/repos/${repository}/${path}`, { redirect: 'error', signal: AbortSignal.timeout(15_000), headers: { accept: 'application/vnd.github+json', ...(token ? { authorization: `Bearer ${token}` } : {}) } })
+      if (!response.ok)
+        invalid()
+      return await response.json()
+    }
+    catch { invalid() }
   }
-  catch { invalid() }
-  if (!response.ok)
+  const history = await get(`actions/workflows/ci.yml/runs?event=push&branch=main&head_sha=${sha}&per_page=1`)
+  if (!Array.isArray(history?.workflow_runs) || !Number.isSafeInteger(history.total_count) || history.total_count < 1 || history.workflow_runs.length !== 1)
     invalid()
-  const result = await response.json()
-  if (!Array.isArray(result?.check_runs))
+  const run = history.workflow_runs[0]
+  if (!Number.isSafeInteger(run.id) || run.id < 1 || !Number.isSafeInteger(run.run_attempt) || run.run_attempt < 1 || run.path !== '.github/workflows/ci.yml' || run.event !== 'push' || run.head_branch !== 'main' || run.head_sha !== sha || run.repository?.full_name !== repository || run.head_repository?.full_name !== repository)
     invalid()
-  for (const name of ['lint', 'typecheck', 'build', 'test']) {
-    const check = result.check_runs.find(item => item.app?.slug === 'github-actions' && item.head_sha === sha && (item.name === name || (name === 'test' && item.name?.startsWith('test ('))))
-    if (!check || check.status !== 'completed' || check.conclusion !== 'success')
+  const jobs = []
+  let total
+  for (let page = 1; page <= 100; page++) {
+    const result = await get(`actions/runs/${run.id}/attempts/${run.run_attempt}/jobs?per_page=100&page=${page}`)
+    if (!Number.isSafeInteger(result?.total_count) || result.total_count < 0 || !Array.isArray(result.jobs) || result.jobs.length > 100 || (total !== undefined && total !== result.total_count))
+      invalid()
+    total = result.total_count
+    jobs.push(...result.jobs)
+    if (result.jobs.length < 100)
+      break
+  }
+  if (jobs.length !== total || jobs.some(job => job.run_id !== run.id || job.run_attempt !== run.run_attempt || job.head_sha !== sha))
+    invalid()
+  for (const name of ['lint', 'typecheck', 'build', 'test', 'web-acceptance']) {
+    const matching = jobs.filter(job => job.name === name || (name === 'test' && job.name?.startsWith('test (')))
+    if (!matching.length || matching.some(job => job.status !== 'completed' || job.conclusion !== 'success'))
       throw Object.assign(new Error('Main revision checks have not passed'), { code: 'CHECKS_NOT_READY' })
   }
-  return `https://github.com/${repository}/commit/${sha}/checks`
+  return `https://github.com/${repository}/actions/runs/${run.id}`
 }
