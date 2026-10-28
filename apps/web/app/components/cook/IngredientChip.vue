@@ -24,12 +24,12 @@ defineProps<{
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-height: 44px;
-  padding: 8px 12px;
-  border-radius: 17px;
+  min-height: var(--ingredient-chip-height, 44px);
+  padding: var(--ingredient-chip-padding, 8px 12px);
+  border-radius: var(--ingredient-chip-radius, 17px);
   background: var(--cook-fill);
   color: var(--ion-text-color, #000);
-  font-size: 15px;
+  font-size: var(--ingredient-chip-font-size, 15px);
   line-height: 1.4;
   transition:
     transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),

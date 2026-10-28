@@ -16,6 +16,7 @@ useHead({
 
 const rStore = useRecipeStore()
 const { style: cookingStyle, pantry: workbenchPantry, canPersist } = useCookingStyle()
+const desktop = useMediaQuery('(min-width: 1024px)')
 const active = shallowRef(false)
 onIonViewDidEnter(() => {
   active.value = true
@@ -77,21 +78,21 @@ watchDebounced(
 </script>
 
 <template>
-  <ion-page>
-    <ion-header :key="cookingStyle" :translucent="true" :class="{ 'workbench-header': cookingStyle === 'workbench' }">
+  <ion-page class="cooking-page">
+    <ion-header :key="cookingStyle" :translucent="true" :class="{ 'workbench-header': cookingStyle === 'workbench' || desktop }">
       <ion-toolbar>
         <ion-title>做菜</ion-title>
         <ion-buttons slot="end">
-          <CookingStyleSwitch ref="styleSwitch" :model-value="cookingStyle" @update:model-value="changeCookingStyle" />
-          <ion-button :disabled="!hasSelection" @click="reset">
+          <CookingStyleSwitch ref="styleSwitch" :desktop="desktop" :model-value="cookingStyle" @update:model-value="changeCookingStyle" />
+          <ion-button class="cooking-clear" :disabled="!hasSelection" @click="reset">
             清空
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content ref="contentRef" :fullscreen="true" :class="{ 'workbench-content': cookingStyle === 'workbench' }" :style="{ '--padding-bottom': `${cookingStyle === 'classic' ? panelInset + 16 : 16}px` }">
-      <ion-header v-show="cookingStyle === 'classic'" :collapse="cookingStyle === 'classic' ? 'condense' : undefined">
+    <ion-content ref="contentRef" :fullscreen="true" :class="{ 'workbench-content': cookingStyle === 'workbench', 'desktop-classic-content': desktop && cookingStyle === 'classic' }" :style="{ '--padding-bottom': `${cookingStyle === 'classic' && !desktop ? panelInset + 16 : 16}px` }">
+      <ion-header v-show="cookingStyle === 'classic' && !desktop" :collapse="cookingStyle === 'classic' && !desktop ? 'condense' : undefined">
         <ion-toolbar>
           <ion-title :size="cookingStyle === 'classic' ? 'large' : undefined">
             做菜
@@ -102,16 +103,24 @@ watchDebounced(
       <p v-if="!canPersist" class="style-storage-note" role="status">
         浏览器暂时无法保存样式偏好，本次仍可切换使用。
       </p>
-      <CookingWorkbench v-if="cookingStyle === 'workbench'" v-model:pantry="workbenchPantry" @detail="openDetail" />
-      <ChooseFood v-else :flight-target="flightTarget" />
+      <CookingWorkbench v-if="cookingStyle === 'workbench'" v-model:pantry="workbenchPantry" :desktop="desktop" @detail="openDetail" />
+      <ChooseFood v-else :desktop="desktop" :flight-target="flightTarget" />
     </ion-content>
 
-    <ResultsPanel v-if="cookingStyle === 'classic'" ref="panelRef" v-model:inset="panelInset" :active="active" @scroll-top="scrollTop" @detail="openDetail" />
+    <ResultsPanel v-if="cookingStyle === 'classic'" ref="panelRef" v-model:inset="panelInset" :desktop="desktop" :active="active" @scroll-top="scrollTop" @detail="openDetail" />
     <RecipeDetailSheet v-model:open="detailOpen" :recipe="detail?.recipe" :match="detail?.match" />
   </ion-page>
 </template>
 
 <style scoped>
+.cooking-page {
+  --cook-results-width: clamp(340px, 44%, 640px);
+}
+.desktop-classic-content {
+  --padding-start: 8px;
+  --padding-end: calc(var(--cook-results-width) + 32px);
+  --padding-top: 8px;
+}
 .workbench-header ion-toolbar {
   --opacity-scale: 1;
 }
@@ -123,5 +132,11 @@ ion-header.workbench-header ion-toolbar.in-toolbar ion-title {
   margin: 12px 20px;
   font-size: 14px;
   text-align: center;
+}
+@media (min-width: 1024px) {
+  .cooking-clear {
+    margin-inline-start: 14px;
+    font-size: 13px;
+  }
 }
 </style>

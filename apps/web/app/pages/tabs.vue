@@ -32,7 +32,7 @@ function onTabClick(tab: string) {
     <ion-tabs ref="tabsRef">
       <ion-router-outlet />
 
-      <ion-tab-bar slot="bottom" :translucent="true">
+      <ion-tab-bar slot="bottom" class="cook-mobile-tabs" :translucent="true">
         <ion-tab-button tab="home" href="/home" @click="onTabClick('home')">
           <ion-icon :icon="ioniconsBookOutline" />
           <ion-label>做菜</ion-label>
@@ -56,3 +56,11 @@ function onTabClick(tab: string) {
     </ion-tabs>
   </ion-page>
 </template>
+
+<style scoped>
+@media (min-width: 1024px) {
+  .cook-mobile-tabs {
+    display: none;
+  }
+}
+</style>
