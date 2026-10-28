@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import YunleSupportUI
 
 /// 按入口固定表单用途，复用私密提交、联系方式和失败兜底。
 struct AppFeedbackView: View {
@@ -61,8 +62,14 @@ struct AppFeedbackView: View {
                 Section("反馈已收到") {
                     Text("反馈编号：\(receipt.id)")
                     if let url = receipt.ticketURL {
-                        Link("查看私密工单与回复", destination: url)
-                        ShareLink("保存私密工单链接", item: url)
+                        Link(destination: url) {
+                            SupportMenuLabel("查看私密工单与回复", icon: .system("lock.doc"), external: true)
+                        }
+                        .supportMenuRow()
+                        ShareLink(item: url) {
+                            SupportMenuLabel("保存私密工单链接", icon: .system("square.and.arrow.up"))
+                        }
+                        .supportMenuRow()
                         Text("请保存链接，不要转发。可在工单页补充信息和确认已读。")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
@@ -91,7 +98,10 @@ struct AppFeedbackView: View {
                      : "反馈私密发送至云乐坊支持中心，仅团队可见，不会自动公开到需求墙。联系方式选填；填写后这条反馈可能与你关联，便于我们回复。")
             }
             Section {
-                NavigationLink("隐私政策") { PrivacyPolicyView() }
+                NavigationLink { PrivacyPolicyView() } label: {
+                    SupportMenuLabel("隐私政策", icon: .system("hand.raised"))
+                }
+                .supportMenuRow()
             } footer: {
                 if feedback.isTest {
                     Text("测试内容只进入独立测试集合，不会转发支持中心。")
@@ -103,7 +113,10 @@ struct AppFeedbackView: View {
             }
             if !feedback.isConfigured {
                 Section {
-                    Link("去支持中心", destination: URL(string: "https://support.yunle.fun/contact?product=cook&source=cook-ios&intent=feedback")!)
+                    Link(destination: URL(string: "https://support.yunle.fun/contact?product=cook&source=cook-ios&intent=feedback")!) {
+                        SupportMenuLabel("去支持中心", icon: .system("questionmark.circle"), external: true)
+                    }
+                    .supportMenuRow()
                 }
             }
         }

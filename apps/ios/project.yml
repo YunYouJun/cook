@@ -8,6 +8,9 @@ options:
   developmentLanguage: zh-Hans
   createIntermediateGroups: true
 packages:
+  YunleSupport:
+    url: https://github.com/YunLeFun/ylf.git
+    revision: 5c7592fb101ec3f6f1ad0514a6d62499349f9f16
   CookCore:
     path: CookCore
 settings:
@@ -38,6 +41,8 @@ targets:
         type: file
         buildPhase: resources
     dependencies:
+      - package: YunleSupport
+        product: YunleSupportUI
       - package: CookCore
     preBuildScripts:
       - name: 拷贝共享数据
