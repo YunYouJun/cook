@@ -33,16 +33,6 @@ function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
-function verifiedTargets(targets) {
-  requireCondition(Array.isArray(targets) && targets.length === EDGEONE_PRODUCTION_TARGETS.length, 'production_targets_required')
-  for (const target of targets) {
-    requireCondition(isRecord(target) && Object.keys(target).sort().join(',') === 'origin,projectId', 'invalid_production_target')
-    requireCondition(EDGEONE_PRODUCTION_TARGETS.some(allowed => target.projectId === allowed.projectId && target.origin === allowed.origin), 'untrusted_production_target')
-  }
-  requireCondition(new Set(targets.map(target => target.projectId)).size === targets.length, 'duplicate_production_target')
-  return EDGEONE_PRODUCTION_TARGETS
-}
-
 async function readBody(response, limit, reason) {
   try {
     const chunks = []
@@ -230,24 +220,23 @@ async function verifyPage(fetcher, target, path, application, expectedSha, nonce
  * @param {object} options Verification inputs and injectable network/clock dependencies.
  * @param {string} options.token EdgeOne API token, used only with the fixed API origin.
  * @param {string} options.expectedSha Full lowercase SHA expected on both production sites.
- * @param {Array<{projectId: string, origin: string}>} [options.targets] The complete fixed production target set.
  * @param {typeof globalThis.fetch} [options.fetch] HTTP implementation; defaults to the runtime fetch.
- * @param {(() => Date | string) | Date | string} [options.now] Verification time, injectable for deterministic tests.
+ * @param {() => Date} [options.now] Verification clock, injectable for deterministic tests.
  * @returns {Promise<object>} Public, bounded production evidence without secrets or private payloads.
  * @throws {EdgeOneReleaseError} If any deployment, version, HTTP or asset check fails.
  */
-export async function verifyEdgeOneRelease({ token, expectedSha, targets = EDGEONE_PRODUCTION_TARGETS, fetch: fetcher = globalThis.fetch, now = () => new Date() }) {
+export async function verifyEdgeOneRelease({ token, expectedSha, fetch: fetcher = globalThis.fetch, now = () => new Date() }) {
   requireCondition(typeof token === 'string' && token.trim().length > 0 && token.length <= 4096 && !/[\r\n]/.test(token), 'token_required')
   requireCondition(typeof expectedSha === 'string' && SHA.test(expectedSha), 'expected_sha_invalid')
   requireCondition(typeof fetcher === 'function', 'fetch_required')
   let verifiedAt
   try {
-    verifiedAt = new Date(typeof now === 'function' ? now() : now).toISOString()
+    verifiedAt = now().toISOString()
   }
   catch {
     throw new EdgeOneReleaseError('verification_timestamp_invalid')
   }
-  const allowed = verifiedTargets(targets)
+  const allowed = EDGEONE_PRODUCTION_TARGETS
   const query = body => queryEdgeOne(fetcher, token, body)
   const snapshot = await projectsSnapshot(query, allowed, expectedSha)
   const nonce = `${expectedSha}-${randomUUID()}`

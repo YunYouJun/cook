@@ -99,7 +99,7 @@ function mockNetwork(intercept = () => undefined) {
 }
 
 function verify(fetch, options = {}) {
-  return verifyEdgeOneRelease({ token, expectedSha: sha, fetch, now, ...options })
+  return verifyEdgeOneRelease({ token, expectedSha: sha, fetch, now: () => new Date(now), ...options })
 }
 
 test('verifies both current EdgeOne production projects and their own public app entries', async () => {
@@ -129,14 +129,6 @@ test('queries later deployment pages to locate the project current deployment', 
   assert(state.calls.some(call => call.body?.Action === 'DescribePagesDeployments' && call.body.Offset === 50))
 })
 
-test('rejects missing, duplicated, substituted or partial production targets before any request', async () => {
-  for (const targets of [[], [EDGEONE_PRODUCTION_TARGETS[0]], [EDGEONE_PRODUCTION_TARGETS[0], EDGEONE_PRODUCTION_TARGETS[0]], [{ ...EDGEONE_PRODUCTION_TARGETS[0], origin: 'https://preview.example.com' }, EDGEONE_PRODUCTION_TARGETS[1]]]) {
-    const { fetch, state } = mockNetwork()
-    await assert.rejects(verify(fetch, { targets }), { code: 'EDGEONE_RELEASE_UNVERIFIED' })
-    assert.equal(state.calls.length, 0)
-  }
-})
-
 test('rejects Vercel, preview, wrong branch, another repository or stale production SHA', async () => {
   for (const change of [
     data => data.projects[0].Provider = 'Vercel',
@@ -158,6 +150,7 @@ test('rejects Vercel, preview, wrong branch, another repository or stale product
 test('requires both bound production domains and project records', async () => {
   for (const change of [
     data => data.projects.pop(),
+    data => data.projects[0].ProjectId = 'pages-preview',
     data => data.projects[0].CustomDomains = [{ Domain: 'preview.example.com' }],
     data => data.projects[1] = structuredClone(data.projects[0]),
   ]) {
@@ -252,7 +245,7 @@ test('rechecks authoritative project pointers before returning evidence', async 
 })
 
 test('rejects invalid SHA, missing token or clock before sending requests', async () => {
-  for (const options of [{ expectedSha: 'main' }, { expectedSha: 'A'.repeat(40) }, { token: '' }, { token: 'injected\r\nheader' }, { now: 'invalid-time' }]) {
+  for (const options of [{ expectedSha: 'main' }, { expectedSha: 'A'.repeat(40) }, { token: '' }, { token: 'injected\r\nheader' }, { now }, { now: () => new Date(Number.NaN) }, { now: () => now }]) {
     const { fetch, state } = mockNetwork()
     await assert.rejects(verify(fetch, options), { code: 'EDGEONE_RELEASE_UNVERIFIED' })
     assert.equal(state.calls.length, 0)
