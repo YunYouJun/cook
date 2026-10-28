@@ -6,7 +6,10 @@ const ticketPattern = /^[\w-]{1,128}$/
 const origins = new Set(['https://cook.yunyoujun.cn', 'https://cook.yunle.fun'])
 const statuses = new Set(['new', 'triaged', 'in_progress', 'waiting_user', 'resolved', 'closed'])
 const reservedKeys = new Set(['__proto__', 'constructor', 'prototype'])
-const defaultReply = '相关修复已上线，并完成网页回归验证。请刷新页面后重试；如仍有问题，可以在这里继续补充。'
+const acceptanceDescriptions = {
+  'app-smoke-v1': '已验证网页选材和菜谱结果。',
+  'desktop-layout-v1': '已验证电脑端侧栏、食材展开、菜谱结果和旧版入口，并检查手机端布局。',
+}
 const hash = value => createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex')
 const equal = (left, right) => JSON.stringify(left) === JSON.stringify(right)
 const unique = values => [...new Set(values)]
@@ -20,6 +23,25 @@ function invalid() {
 
 function ref(value) {
   return typeof value === 'string' && /^https:\/\/github\.com\/YunYouJun\/cook\/(?:commit\/[a-f\d]{40}|(?:pull|issues)\/[1-9]\d*)$/.test(value)
+}
+
+function replyPolicyHash(binding) {
+  return hash([binding.fixSummary ?? null, binding.resolutionReply ?? null, binding.acceptanceProfile ?? null])
+}
+
+function bindingRefsHash(binding) {
+  return hash([unique(binding.commitShas).sort(), unique(binding.pullRequests).sort((left, right) => left - right)])
+}
+
+function resolutionReply(binding, deployment) {
+  if (!Object.hasOwn(acceptanceDescriptions, binding.acceptanceProfile) || !deployment.acceptanceProfiles?.includes(binding.acceptanceProfile))
+    return null
+  if (binding.resolutionReply)
+    return binding.resolutionReply.trim()
+  if (!binding.fixSummary)
+    return null
+  const changes = binding.fixSummary.changes.map(change => `- ${change}`).join('\n')
+  return `相关修复已上线。\n\n${changes}\n\n${acceptanceDescriptions[binding.acceptanceProfile]}\n${binding.fixSummary.userAction ?? '请刷新网页后体验；如果仍有问题，欢迎在这里补充。'}`
 }
 
 /** Parse the private runner envelope; deployment evidence is accepted only from the trusted EdgeOne runner. */
@@ -43,6 +65,8 @@ export function parseCookDeliveryEvent(value, now = new Date().toISOString()) {
       invalid()
     if (!strings(value.verifiedChangeShas, 1000, 40) || !value.verifiedChangeShas.length || !value.verifiedChangeShas.every(item => shaPattern.test(item)) || !shaPattern.test(value.commitSha) || value.commitSha !== deployment.sha)
       invalid()
+    if (deployment.acceptanceProfiles !== undefined && (!strings(deployment.acceptanceProfiles, 2, 40) || deployment.acceptanceProfiles.some(profile => !Object.hasOwn(acceptanceDescriptions, profile))))
+      invalid()
   }
   return structuredClone({ ...value, eventKey: key, refs: value.refs ?? [] })
 }
@@ -65,6 +89,8 @@ export function parseCookDeliveryBindings(value) {
     if (entry.sendReply !== undefined && typeof entry.sendReply !== 'boolean')
       invalid()
     if (entry.resolutionReply !== undefined && (typeof entry.resolutionReply !== 'string' || !entry.resolutionReply.trim() || entry.resolutionReply.length > 20_000))
+      invalid()
+    if (entry.fixSummary !== undefined && (!object(entry.fixSummary) || Object.keys(entry.fixSummary).some(key => !['changes', 'userAction'].includes(key)) || !strings(entry.fixSummary.changes, 8, 500) || !entry.fixSummary.changes.length || entry.fixSummary.changes.some(change => !change.trim()) || (entry.fixSummary.userAction !== undefined && (typeof entry.fixSummary.userAction !== 'string' || !entry.fixSummary.userAction.trim() || entry.fixSummary.userAction.length > 1000))))
       invalid()
     const revision = entry.revision ?? 1
     if (!Number.isSafeInteger(revision) || revision < 1)
@@ -97,7 +123,7 @@ function productionCommand(command) {
 }
 
 function matched(binding, event, state) {
-  if (event.kind === 'reconcile' && !state?.release)
+  if (event.kind === 'reconcile' && (!state?.release || state.release.bindingRefsHash !== bindingRefsHash(binding)))
     return false
   if (event.kind === 'deployment' || event.kind === 'reconcile')
     return event.verifiedChangeShas.some(sha => [...binding.commitShas, ...(state?.associatedShas ?? [])].includes(sha))
@@ -163,7 +189,8 @@ export async function syncCookDelivery(input, ports) {
     if (!matched(binding, event, state))
       continue
     counts.matched++
-    if (record.tickets[binding.ticketId] === 'complete') {
+    const refsHash = bindingRefsHash(binding)
+    if (record.tickets[binding.ticketId] === binding.revision && state?.bindingRefsHash === refsHash) {
       counts.skipped++
       continue
     }
@@ -173,7 +200,7 @@ export async function syncCookDelivery(input, ports) {
         counts.blocked++
         continue
       }
-      if (state && binding.requesterMessageAt !== current.ticket.lastRequesterMessageAt) {
+      if (state && (binding.requesterMessageAt !== current.ticket.lastRequesterMessageAt || state.requesterMessageAt !== current.ticket.lastRequesterMessageAt || requesterMessages(current) !== state.requesterMessagesHash || current.ticket.status !== state.expectedStatus)) {
         counts.blocked++
         continue
       }
@@ -181,8 +208,12 @@ export async function syncCookDelivery(input, ports) {
         counts.blocked++
         continue
       }
-      state = ledger.tickets[binding.ticketId] = { revision: binding.revision, requesterMessageAt: binding.requesterMessageAt ?? current.ticket.lastRequesterMessageAt, requesterMessagesHash: requesterMessages(current), expectedStatus: current.ticket.status, associatedShas: [], phases: {} }
+      state = ledger.tickets[binding.ticketId] = { ...state, revision: binding.revision, bindingRefsHash: refsHash, requesterMessageAt: binding.requesterMessageAt ?? current.ticket.lastRequesterMessageAt, requesterMessagesHash: requesterMessages(current), expectedStatus: current.ticket.status, associatedShas: state?.bindingRefsHash === refsHash ? state.associatedShas : [], phases: state?.phases ?? {} }
       await save()
+    }
+    else if (state.bindingRefsHash !== refsHash) {
+      counts.blocked++
+      continue
     }
     const blocked = () => current.ticket.lastRequesterMessageAt !== state.requesterMessageAt || requesterMessages(current) !== state.requesterMessagesHash || current.ticket.status !== state.expectedStatus
     let changes = 0
@@ -205,7 +236,7 @@ export async function syncCookDelivery(input, ports) {
           deferred = true
           return false
         }
-        if (pending.input.command.action === 'reply.send' && hash(binding.resolutionReply ?? defaultReply) !== state.release?.replyHash)
+        if (pending.input.command.action === 'reply.send' && (input.sendReplies !== true || binding.sendReply !== true || replyPolicyHash(binding) !== state.release?.replyPolicyHash))
           return false
         if (!apply) {
           current = simulate(current, pending.input.command, now)
@@ -253,7 +284,7 @@ export async function syncCookDelivery(input, ports) {
     }
 
     async function command(phase, value, after = {}) {
-      const key = `${event.eventKey}:${phase}`
+      const key = `${event.eventKey}:${phase}:${hash(value).slice(0, 16)}`
       if (state.phases[key])
         return true
       if (blocked())
@@ -317,26 +348,15 @@ export async function syncCookDelivery(input, ports) {
         continue
       }
       const verification = { summary: deployed.summary, evidenceRefs: deployed.evidenceRefs, releaseRef: `edgeone:${deployed.id}@${deployed.sha}`, verifiedAt: deployed.verifiedAt }
-      const reply = binding.resolutionReply ?? defaultReply
+      const reply = resolutionReply(binding, deployed)
       const previousDraft = current.ticket.work.replyDraft
       const ownedDraft = !previousDraft || (state.generatedDraftHash && hash(previousDraft) === state.generatedDraftHash)
-      const replyDraft = ownedDraft ? { content: reply, resolution: true } : previousDraft
-      const work = { ...current.ticket.work, changeRefs: mergeRefs(current.ticket.work.changeRefs, [`https://github.com/${repository}/commit/${deployed.sha}`, ...event.refs]), verification, replyDraft }
-      const after = { release: { id: deployed.id, sha: deployed.sha, verificationHash: hash(verification), replyHash: hash(reply), verifiedAt: deployed.verifiedAt, draftCreatedAt: now, ...(current.ticket.latestReplyId ? { previousReplyId: current.ticket.latestReplyId } : {}) }, generatedDraftHash: ownedDraft ? hash(replyDraft) : null }
+      const replyDraft = ownedDraft && reply ? { content: reply, resolution: true } : previousDraft
+      const work = { ...current.ticket.work, changeRefs: mergeRefs(current.ticket.work.changeRefs, [`https://github.com/${repository}/commit/${deployed.sha}`, ...event.refs]), verification, ...(replyDraft ? { replyDraft } : {}) }
+      const after = { release: { id: deployed.id, sha: deployed.sha, bindingRefsHash: refsHash, verificationHash: hash(verification), replyHash: reply ? hash(reply) : null, replyPolicyHash: replyPolicyHash(binding), verifiedAt: deployed.verifiedAt, draftCreatedAt: now, ...(current.ticket.latestReplyId ? { previousReplyId: current.ticket.latestReplyId } : {}) }, generatedDraftHash: ownedDraft && reply ? hash(replyDraft) : null }
       if (!await command('verified-release', { action: 'work', work }, after)) {
         stopped()
         continue
-      }
-      if (input.sendReplies === true && binding.sendReply === true && ownedDraft) {
-        if (!await command('publish-resolution', { action: 'reply.send' })) {
-          stopped()
-          continue
-        }
-        if (current.ticket.latestReplyId)
-          state.replyId = current.ticket.latestReplyId
-        else
-          delete state.replyId
-        await save()
       }
     }
 
@@ -349,9 +369,9 @@ export async function syncCookDelivery(input, ports) {
         state.replyId = latest.id
         await save()
       }
-      if (event.kind === 'reconcile' && input.sendReplies === true && binding.sendReply === true && !state.replyId) {
+      if (input.sendReplies === true && binding.sendReply === true && !state.replyId) {
         const draft = current.ticket.work.replyDraft
-        if (hash(binding.resolutionReply ?? defaultReply) !== release.replyHash || latest?.resolution || !state.generatedDraftHash || !draft?.resolution || hash(draft) !== state.generatedDraftHash || hash(draft.content) !== release.replyHash || !current.ticket.work.verification || hash(current.ticket.work.verification) !== release.verificationHash) {
+        if (replyPolicyHash(binding) !== release.replyPolicyHash || latest?.resolution || !state.generatedDraftHash || !draft?.resolution || hash(draft) !== state.generatedDraftHash || hash(draft.content) !== release.replyHash || !current.ticket.work.verification || hash(current.ticket.work.verification) !== release.verificationHash) {
           stopped()
           continue
         }
@@ -375,7 +395,7 @@ export async function syncCookDelivery(input, ports) {
         }
       }
     }
-    record.tickets[binding.ticketId] = 'complete'
+    record.tickets[binding.ticketId] = binding.revision
     await save()
     if (changes)
       counts.changed++

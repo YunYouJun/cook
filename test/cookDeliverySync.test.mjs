@@ -9,9 +9,10 @@ const head = 'b'.repeat(40)
 const now = '2026-10-28T12:00:00.000Z'
 const baseline = '2026-10-28T10:00:00.000Z'
 const repository = 'YunYouJun/cook'
-const bindings = (extra = {}) => ({ schemaVersion: 1, tickets: [{ ticketId: 'ticket-1', repository, commitShas: [sha], pullRequests: [123], ...extra }] })
+const repairFacts = { changes: ['展开电脑网页的食材选项'] }
+const bindings = (extra = {}) => ({ schemaVersion: 1, tickets: [{ ticketId: 'ticket-1', repository, commitShas: [sha], pullRequests: [123], acceptanceProfile: 'desktop-layout-v1', fixSummary: repairFacts, ...extra }] })
 const change = (extra = {}) => ({ schemaVersion: 1, eventKey: 'change:1', repository, kind: 'change', occurredAt: now, commitSha: sha, refs: [`https://github.com/${repository}/pull/123`], ...extra })
-const deployment = (extra = {}) => ({ schemaVersion: 1, eventKey: 'deployment:1', repository, kind: 'deployment', occurredAt: now, commitSha: head, refs: [], verifiedChangeShas: [sha], deployment: { id: 'eo-deployment-1', provider: 'edgeone', environment: 'production', verified: true, sha: head, origin: 'https://cook.yunyoujun.cn', verifiedAt: now, summary: 'Production desktop and mobile regression passed', evidenceRefs: ['https://github.com/YunYouJun/cook/actions/runs/42'] }, ...extra })
+const deployment = (extra = {}) => ({ schemaVersion: 1, eventKey: 'deployment:1', repository, kind: 'deployment', occurredAt: now, commitSha: head, refs: [], verifiedChangeShas: [sha], deployment: { id: 'eo-deployment-1', provider: 'edgeone', environment: 'production', verified: true, sha: head, origin: 'https://cook.yunyoujun.cn', verifiedAt: now, acceptanceProfiles: ['desktop-layout-v1'], summary: 'Production desktop and mobile regression passed', evidenceRefs: ['https://github.com/YunYouJun/cook/actions/runs/42'] }, ...extra })
 const reconcile = (key = 'reconcile:1', extra = {}) => deployment({ kind: 'reconcile', eventKey: key, ...extra })
 const freshLedger = () => ({ schemaVersion: 1, events: {}, tickets: {} })
 
@@ -100,6 +101,8 @@ it('validates EdgeOne production evidence, exact repository/origin, verified anc
   assert.throws(() => parseCookDeliveryEvent(change({ refs: ['https://github.com/other/repo/pull/1'] }), now))
   assert.throws(() => parseCookDeliveryEvent(change({ repository: 'other/repo' }), now))
   assert.throws(() => parseCookDeliveryBindings({ ...bindings(), tickets: [...bindings().tickets, ...bindings().tickets] }))
+  for (const fixSummary of [{ changes: [] }, { changes: [' '] }, { changes: 'unreviewed' }, { changes: ['fixed'], userAction: '' }, { changes: ['fixed'], extra: 'unreviewed' }])
+    assert.throws(() => parseCookDeliveryBindings(bindings({ fixSummary })))
 })
 
 it('dry run queries but never mutates tickets, saves a ledger, or exposes private data', async () => {
@@ -574,7 +577,7 @@ for (const pendingAction of ['reply.send', 'closed']) {
     const secret = 'synthetic-ledger-key-for-per-ticket-production-proof'
     let encrypted = encryptLedger(freshLedger(), secret)
     const mapping = bindings({ sendReply: true })
-    mapping.tickets.push({ ticketId: 'ticket-2', repository, commitShas: [shaB], pullRequests: [456], sendReply: true })
+    mapping.tickets.push({ ...mapping.tickets[0], ticketId: 'ticket-2', commitShas: [shaB], pullRequests: [456] })
     const ports = {
       now: () => now,
       save: async (value) => {
@@ -670,4 +673,159 @@ it('does not replay an unknown reply.send under a changed private reply authoriz
   assert.equal(h.calls.length, calls)
   assert.deepEqual(decryptLedger(encrypted, secret).tickets['ticket-1'].pending, pending)
   assert.equal(h.state.ticket.status, 'in_progress')
+})
+
+for (const [sendReplies, sendReply] of [[false, true], [true, false], [false, false]]) {
+  it(`preserves an unknown publish intent without sending when authorization becomes ${sendReplies}/${sendReply}`, async () => {
+    const h = harness()
+    const ledger = freshLedger()
+    await applied(h, change(), ledger)
+    await applied(h, deployment(), ledger)
+    h.before(async ({ command }) => {
+      if (command.action === 'reply.send')
+        throw new Error('Unknown publish result')
+    })
+    await assert.rejects(applied(h, reconcile('reconcile:authorized-publish'), ledger, { bindings: bindings({ sendReply: true }), sendReplies: true }))
+    const pending = structuredClone(h.durable().tickets['ticket-1'].pending)
+    const count = h.calls.length
+    h.before(undefined)
+    const recovered = h.durable()
+    const result = await applied(h, reconcile('reconcile:revoked-publish'), recovered, { bindings: bindings({ sendReply }), sendReplies })
+    assert.equal(result.blocked, 1)
+    assert.equal(result.commands, 0)
+    assert.equal(h.calls.length, count)
+    assert.deepEqual(recovered.tickets['ticket-1'].pending, pending)
+    assert.equal(h.state.ticket.latestReplyId, undefined)
+    assert.equal(h.state.ticket.status, 'in_progress')
+    await applied(h, reconcile('reconcile:reauthorized-publish'), recovered, { bindings: bindings({ sendReply: true }), sendReplies: true })
+    assert.deepEqual(h.calls[count], { input: pending.input, key: pending.key })
+    assert.equal(h.state.messages.filter(item => item.resolution).length, 1)
+  })
+}
+
+it('builds and publishes a response from reviewed repair facts and the actual accepted profile', async () => {
+  const h = harness()
+  const ledger = freshLedger()
+  const mapping = bindings({ acceptanceProfile: 'desktop-layout-v1', fixSummary: { changes: ['新增电脑侧栏，展开食材选项', '增加旧版网页入口'], userAction: '请刷新网页后体验。' }, sendReply: true })
+  await applied(h, change(), ledger, { bindings: mapping })
+  await applied(h, deployment({ deployment: { ...deployment().deployment, acceptanceProfiles: ['desktop-layout-v1'] } }), ledger, { bindings: mapping, sendReplies: true })
+  const reply = h.state.messages.find(item => item.resolution)
+  assert.match(reply.content, /新增电脑侧栏，展开食材选项/)
+  assert.match(reply.content, /增加旧版网页入口/)
+  assert.match(reply.content, /已验证.*电脑.*手机/)
+  assert.match(reply.content, /请刷新网页后体验。/)
+  assert.doesNotMatch(reply.content, /ticket-1|eo-deployment|github\.com|[a-f0-9]{40}/)
+  assert.equal(h.state.ticket.status, 'resolved')
+  assert.equal(h.state.deliveries[0].status, 'available')
+})
+
+it('keeps accepted production evidence without inventing a reply when repair facts are absent', async () => {
+  const h = harness()
+  const ledger = freshLedger()
+  const mapping = bindings({ fixSummary: undefined, sendReply: true })
+  await applied(h, change(), ledger, { bindings: mapping })
+  const result = await applied(h, deployment(), ledger, { bindings: mapping, sendReplies: true })
+  assert.equal(result.blocked, 1)
+  assert(h.state.ticket.work.verification)
+  assert.equal(h.state.ticket.work.replyDraft, undefined)
+  assert.equal(h.state.messages.some(item => item.resolution), false)
+  assert.equal(h.state.ticket.status, 'in_progress')
+})
+
+it('requires the fix acceptance profile before generating or sending even an explicit reviewed reply', async () => {
+  for (const acceptanceProfiles of [undefined, ['app-smoke-v1']]) {
+    const h = harness()
+    const ledger = freshLedger()
+    const mapping = bindings({ sendReply: true, resolutionReply: 'Reviewed desktop repair response' })
+    await applied(h, change(), ledger, { bindings: mapping })
+    const accepted = deployment({ deployment: { ...deployment().deployment, acceptanceProfiles } })
+    const result = await applied(h, accepted, ledger, { bindings: mapping, sendReplies: true })
+    assert.equal(result.blocked, 1)
+    assert.equal(h.state.ticket.work.replyDraft, undefined)
+    assert.equal(h.state.messages.some(item => item.resolution), false)
+  }
+})
+
+it('preserves an explicit reviewed response override after its real acceptance succeeds', async () => {
+  const h = harness()
+  const ledger = freshLedger()
+  const mapping = bindings({ fixSummary: undefined, resolutionReply: '经过核对的回复内容。', sendReply: true })
+  await applied(h, change(), ledger, { bindings: mapping })
+  await applied(h, deployment(), ledger, { bindings: mapping, sendReplies: true })
+  assert.equal(h.state.messages.find(item => item.resolution).content, '经过核对的回复内容。')
+})
+
+it('blocks a saved draft after its reviewed repair facts change, including unknown publish retries', async () => {
+  const h = harness()
+  const ledger = freshLedger()
+  await applied(h, change(), ledger)
+  await applied(h, deployment(), ledger)
+  h.before(async ({ command }) => {
+    if (command.action === 'reply.send')
+      throw new Error('Unknown publish result')
+  })
+  await assert.rejects(applied(h, reconcile('reconcile:original-facts'), ledger, { bindings: bindings({ sendReply: true }), sendReplies: true }))
+  const pending = structuredClone(h.durable().tickets['ticket-1'].pending)
+  const draft = structuredClone(h.state.ticket.work.replyDraft)
+  const count = h.calls.length
+  h.before(undefined)
+  const recovered = h.durable()
+  const result = await applied(h, reconcile('reconcile:changed-facts'), recovered, { bindings: bindings({ fixSummary: { changes: ['Another reviewed repair'] }, sendReply: true }), sendReplies: true })
+  assert.equal(result.blocked, 1)
+  assert.equal(h.calls.length, count)
+  assert.deepEqual(recovered.tickets['ticket-1'].pending, pending)
+  assert.deepEqual(h.state.ticket.work.replyDraft, draft)
+})
+
+it('rebuilds revised public bindings without carrying an abandoned PR association into receipt reconciliation', async () => {
+  const h = harness()
+  const ledger = freshLedger()
+  const first = bindings({ commitShas: [], revision: 1, requesterMessageAt: baseline })
+  await applied(h, change(), ledger, { bindings: first })
+  await applied(h, deployment(), ledger, { bindings: first })
+  const nextSha = 'c'.repeat(40)
+  const next = bindings({ commitShas: [], pullRequests: [456], revision: 2, requesterMessageAt: baseline, sendReply: true, fixSummary: { changes: ['另一项已审核修复'] } })
+  await applied(h, change({ eventKey: 'change:revised-pr', commitSha: nextSha, refs: ['https://github.com/YunYouJun/cook/pull/456'] }), ledger, { bindings: next })
+  assert.deepEqual(ledger.tickets['ticket-1'].associatedShas, [nextSha])
+  assert.equal((await applied(h, reconcile('reconcile:abandoned-pr'), ledger, { bindings: next, sendReplies: true })).matched, 0)
+  const proof = { verifiedChangeShas: [nextSha] }
+  assert.equal((await applied(h, reconcile('reconcile:old-release-new-pr', proof), ledger, { bindings: next, sendReplies: true })).matched, 0)
+  assert.equal(h.state.messages.some(item => item.resolution), false)
+  const accepted = await applied(h, deployment({ eventKey: 'deployment:revised-pr', ...proof }), ledger, { bindings: next, sendReplies: true })
+  assert.equal(accepted.blocked, 0)
+  assert.match(h.state.messages.find(item => item.resolution).content, /另一项已审核修复/)
+  h.state.deliveries[0].status = 'read'
+  await applied(h, reconcile('reconcile:revised-pr-received', proof), ledger, { bindings: next, sendReplies: true })
+  assert.equal(h.state.ticket.status, 'closed')
+})
+
+for (const manualChange of ['status', 'requester-message']) {
+  it(`does not use a binding revision to bypass a manual ${manualChange} guard`, async () => {
+    const h = harness()
+    const ledger = freshLedger()
+    await applied(h, change(), ledger)
+    if (manualChange === 'status')
+      h.state.ticket.status = 'waiting_user'
+    else
+      h.state.messages.push({ id: 'new-requester-message', author: { kind: 'guest' }, createdAt: baseline, content: 'More details' })
+    h.state.ticket.version++
+    const count = h.calls.length
+    const revised = bindings({ revision: 2, requesterMessageAt: baseline })
+    const result = await applied(h, change(), ledger, { bindings: revised })
+    assert.equal(result.blocked, 1)
+    assert.equal(h.calls.length, count)
+    assert.equal(ledger.tickets['ticket-1'].revision, 1)
+  })
+}
+
+it('adds a newly linked issue on a safe revision without replaying unchanged association notes', async () => {
+  const h = harness()
+  const ledger = freshLedger()
+  await applied(h, change(), ledger)
+  const mapping = bindings({ issue: 7, revision: 2, requesterMessageAt: baseline })
+  await applied(h, change(), ledger, { bindings: mapping })
+  assert(h.state.ticket.work.changeRefs.includes('https://github.com/YunYouJun/cook/issues/7'))
+  const count = h.calls.length
+  await applied(h, change(), ledger, { bindings: mapping })
+  assert.equal(h.calls.length, count)
 })

@@ -77,7 +77,7 @@ export async function runCookSupportSync(input, ports) {
       result.phase = 'awaiting_production_acceptance'
       return result
     }
-    event = { schemaVersion: 1, eventKey, repository: 'YunYouJun/cook', kind: 'deployment', occurredAt: now, commitSha: source.sha, refs: [], verifiedChangeShas: source.verifiedChangeShas, deployment: { ...release, summary: `${release.summary}\n${browser.summary}`, evidenceRefs: [...new Set([...release.evidenceRefs, checksRef, ...browser.evidenceRefs])], verifiedAt: now } }
+    event = { schemaVersion: 1, eventKey, repository: 'YunYouJun/cook', kind: 'deployment', occurredAt: now, commitSha: source.sha, refs: [], verifiedChangeShas: source.verifiedChangeShas, deployment: { ...release, acceptanceProfiles: profiles, summary: `${release.summary}\n${browser.summary}`, evidenceRefs: [...new Set([...release.evidenceRefs, checksRef, ...browser.evidenceRefs])], verifiedAt: now } }
     if (input.apply === true) {
       ledger.inputs[eventKey] = event
       await ports.save(ledger)

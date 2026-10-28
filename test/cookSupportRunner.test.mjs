@@ -8,7 +8,7 @@ const sha = 'a'.repeat(40)
 const then = '2026-10-28T10:00:00Z'
 const now = '2026-10-28T12:00:00Z'
 const secret = 'a dedicated synthetic encryption key for tests'
-const binding = { ticketId: 'ticket-test', repository: 'YunYouJun/cook', commitShas: [sha], requesterMessageAt: then, acceptanceProfile: 'desktop-layout-v1' }
+const binding = { ticketId: 'ticket-test', repository: 'YunYouJun/cook', commitShas: [sha], requesterMessageAt: then, acceptanceProfile: 'desktop-layout-v1', fixSummary: { changes: ['展开电脑网页的食材选项'] } }
 const change = { schemaVersion: 1, eventKey: `commit-${sha}`, repository: binding.repository, kind: 'change', commitSha: sha, occurredAt: then, refs: [] }
 const release = { id: 'edgeone:deployment-a-deployment-b', provider: 'edgeone', environment: 'production', sha, origin: 'https://cook.yunyoujun.cn', verified: true, verifiedAt: now, summary: 'Live production source and HTML verified', evidenceRefs: ['https://cook.yunyoujun.cn/.well-known/cook-build.json'] }
 
@@ -36,6 +36,13 @@ function setup(overrides = {}) {
         current.ticket.status = input.command.status
       if (input.command.action === 'note')
         current.messages.push({ id: `note-${current.ticket.version}`, kind: 'internal_note', content: input.command.content })
+      if (input.command.action === 'reply.send') {
+        const id = `reply-${current.ticket.version}`
+        current.messages.push({ id, kind: 'reply', visibility: 'requester_visible', resolution: true, content: current.ticket.work.replyDraft.content, createdAt: now })
+        current.ticket.latestReplyId = id
+        delete current.ticket.work.replyDraft
+        current.deliveries.push({ ticketId: binding.ticketId, messageId: id, channel: 'portal', status: 'available' })
+      }
       return { detail: structuredClone(current) }
     },
     save: async (value) => {
@@ -76,6 +83,8 @@ test('passed production writes real evidence and a draft without sending or clos
   assert.equal(result.phase, 'production_verified')
   assert(context.current().ticket.work.verification.summary.includes('Desktop and mobile production interactions passed'))
   assert(context.current().ticket.work.replyDraft.resolution)
+  assert.match(context.current().ticket.work.replyDraft.content, /展开电脑网页的食材选项/)
+  assert.match(context.current().ticket.work.replyDraft.content, /已验证电脑.*手机/)
   assert(!context.commands.some(command => command.action === 'reply.send' || command.status === 'resolved' || command.status === 'closed'))
   assert(context.saved.length > 0)
 })
@@ -128,4 +137,40 @@ test('cached acceptance cannot bypass a changed or newly invalid binding profile
   context.input.bindings = { schemaVersion: 1, tickets: [{ ...binding, acceptanceProfile: 'unknown' }] }
   assert.equal((await runCookSupportSync(context.input, context.ports)).phase, 'acceptance_profile_required')
   assert.equal(context.commands.length, count)
+})
+
+test('a PR-only binding revision retains its merged association and closes after its real reply receipt', async () => {
+  const context = setup()
+  let merged = false
+  context.ports.collect = async () => ({ sha, events: [{ ...change, refs: ['https://github.com/YunYouJun/cook/pull/123'] }], verifiedChangeShas: merged ? [sha] : [] })
+  const first = { ...binding, commitShas: [], pullRequests: [123], revision: 1, sendReply: true }
+  context.input.bindings = { schemaVersion: 1, tickets: [first] }
+  context.input.sendReplies = true
+  assert.equal((await runCookSupportSync(context.input, context.ports)).phase, 'awaiting_merge')
+  const notes = context.commands.filter(command => command.action === 'note').length
+  context.input.bindings = { schemaVersion: 1, tickets: [{ ...first, revision: 2 }] }
+  merged = true
+  const accepted = await runCookSupportSync(context.input, context.ports)
+  assert.equal(accepted.blocked, 0)
+  assert.deepEqual(context.ledger.tickets[binding.ticketId].associatedShas, [sha])
+  assert.equal(context.current().ticket.status, 'resolved')
+  assert.equal(context.commands.filter(command => command.action === 'note').length, notes)
+  context.current().deliveries[0].status = 'delivered'
+  await runCookSupportSync(context.input, context.ports)
+  assert.equal(context.current().ticket.status, 'closed')
+})
+
+test('a reviewed facts revision can update an owned draft without adopting manual verification', async () => {
+  const context = setup()
+  context.input.bindings = { schemaVersion: 1, tickets: [{ ...binding, commitShas: [], pullRequests: [123], revision: 1 }] }
+  context.ports.collect = async () => ({ sha, events: [{ ...change, refs: ['https://github.com/YunYouJun/cook/pull/123'] }], verifiedChangeShas: [sha] })
+  await runCookSupportSync(context.input, context.ports)
+  context.input.bindings.tickets[0] = { ...context.input.bindings.tickets[0], revision: 2, fixSummary: { changes: ['补充旧版入口和电脑导航'] } }
+  assert.equal((await runCookSupportSync(context.input, context.ports)).blocked, 0)
+  assert.match(context.current().ticket.work.replyDraft.content, /补充旧版入口和电脑导航/)
+  context.current().ticket.work.verification.summary = 'Manual replacement evidence'
+  context.input.bindings.tickets[0].revision = 3
+  const manual = await runCookSupportSync(context.input, context.ports)
+  assert(manual.blocked > 0)
+  assert.equal(context.current().ticket.work.verification.summary, 'Manual replacement evidence')
 })
