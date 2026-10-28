@@ -1,3 +1,4 @@
+import UIKit
 import XCTest
 
 final class CloudKitchenUITests: XCTestCase {
@@ -6,7 +7,7 @@ final class CloudKitchenUITests: XCTestCase {
     @MainActor
     func testKitchenAndListShareSelectionAndPotOpensRealRecipes() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing"]
+        app.launchArguments = ["-ui-testing", "-UIPreferredContentSizeCategoryName", UIContentSizeCategory.large.rawValue]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launch()
@@ -56,6 +57,71 @@ final class CloudKitchenUITests: XCTestCase {
         pot.tap()
         XCTAssertTrue(app.staticTexts["先选几样食材，再点锅开火。"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["kitchen.cook"].isEnabled)
+    }
+
+    @MainActor
+    func testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-UIPreferredContentSizeCategoryName", UIContentSizeCategory.large.rawValue]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        app.launch()
+        let presentation = app.buttons["cook.presentation"]
+        XCTAssertTrue(presentation.waitForExistence(timeout: 20))
+        if presentation.label == "切换到列表" { presentation.tap() }
+        presentation.tap()
+
+        let tomato = app.buttons["kitchen.scene.tomato"]
+        let cameraMarker = app.buttons["kitchen.scene.pot"]
+        let rotation = app.buttons["kitchen.rotation"]
+        XCTAssertTrue(tomato.waitForExistence(timeout: 30))
+        XCTAssertTrue(rotation.waitForExistence(timeout: 10))
+        if rotation.value as? String == "已开启" { rotation.tap() }
+        rotation.tap()
+        XCTAssertEqual(rotation.value as? String, "已开启")
+        // The tomato is close to the orbit center and can stay almost fixed on
+        // a wide screen. The off-center pot is a reliable camera-motion marker.
+        let original = cameraMarker.frame
+        let start = tomato.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 90, dy: -20)))
+        let moved = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            hypot(cameraMarker.frame.midX - original.midX, cameraMarker.frame.midY - original.midY) > 3
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [moved], timeout: 5), .completed)
+        XCTAssertFalse(tomato.isSelected, "Dragging must not select an ingredient")
+        tomato.tap()
+        waitUntil(tomato, "isSelected == true")
+        tomato.tap()
+        waitUntil(tomato, "isSelected == false")
+
+        rotation.tap()
+        XCTAssertEqual(rotation.value as? String, "已关闭")
+        let restored = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            hypot(cameraMarker.frame.midX - original.midX, cameraMarker.frame.midY - original.midY) < 2
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 5), .completed)
+        rotation.tap()
+
+        // Recreating the scene uses a fresh clone and keeps the interaction preference.
+        presentation.tap()
+        presentation.tap()
+        XCTAssertTrue(tomato.waitForExistence(timeout: 10))
+        XCTAssertEqual(rotation.value as? String, "已开启")
+        rotation.tap()
+        XCTAssertEqual(rotation.value as? String, "已关闭")
+        let reset = cameraMarker.frame
+        let resetStart = tomato.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        resetStart.press(forDuration: 0.1, thenDragTo: resetStart.withOffset(CGVector(dx: 90, dy: 0)))
+        XCTAssertEqual(cameraMarker.frame.midX, reset.midX, accuracy: 2)
+        XCTAssertEqual(cameraMarker.frame.midY, reset.midY, accuracy: 2)
+        tomato.tap()
+        waitUntil(tomato, "isSelected == true")
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        XCTAssertTrue(tomato.waitForExistence(timeout: 10))
+        XCTAssertTrue(tomato.isSelected)
+        XCTAssertEqual(rotation.value as? String, "已关闭")
+        capture(app, name: "关闭旋转后恢复固定视角")
     }
 
     private func waitUntil(_ element: XCUIElement, _ predicate: String) {
