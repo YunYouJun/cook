@@ -1,0 +1,49 @@
+{
+  "auditTimeout": {
+    "totalTestCount": 1,
+    "passedTests": 0,
+    "failedTests": 1,
+    "skippedTests": 0,
+    "testFailures": [
+      {
+        "failureText": "failed: caught error: \"Error Domain=com.apple.xcode.xctest.accessibilityAudit Code=-56 \"Audit failed to complete in time\" UserInfo={NSLocalizedDescription=Audit failed to complete in time}\"",
+        "targetName": "CookUITests",
+        "testIdentifier": 1,
+        "testIdentifierString": "DietaryGoalsUITests/testNativeGoalPickerAccessibilityAndReviewedSummary()",
+        "testIdentifierURL": "test://com.apple.xcode/Cook/CookUITests/DietaryGoalsUITests/testNativeGoalPickerAccessibilityAndReviewedSummary",
+        "testName": "testNativeGoalPickerAccessibilityAndReviewedSummary()"
+      }
+    ]
+  },
+  "bootstrap": {
+    "totalTestCount": 1,
+    "passedTests": 0,
+    "failedTests": 1,
+    "skippedTests": 0,
+    "testFailures": [
+      {
+        "failureText": "Early unexpected exit, operation never finished bootstrapping - no restart will be attempted. (Underlying Error: The test runner crashed while preparing to run tests: CookUITests-Runner at -[XCTWaiter(StallHandling) handleStalledWait:])",
+        "targetName": "CookUITests",
+        "testIdentifier": 1,
+        "testIdentifierString": "CookUITests-Runner (15582) encountered an error",
+        "testName": "CookUITests-Runner (15582) encountered an error"
+      }
+    ]
+  },
+  "keyboardAssertion": {
+    "totalTestCount": 155,
+    "passedTests": 154,
+    "failedTests": 1,
+    "skippedTests": 0,
+    "testFailures": [
+      {
+        "failureText": "XCTAssertEqual failed: (\"XCTWaiterResult(rawValue: 2)\") is not equal to (\"XCTWaiterResult(rawValue: 1)\") - 等了 30 秒，Keyboard (First Match) 仍不满足 exists == true",
+        "targetName": "CookUITests",
+        "testIdentifier": 130,
+        "testIdentifierString": "CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval()",
+        "testIdentifierURL": "test://com.apple.xcode/Cook/CookUITests/CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval",
+        "testName": "testAvoidPickerSearchKeepsSelectionsAvailableForRemoval()"
+      }
+    ]
+  }
+}
