@@ -2,6 +2,13 @@ interface SimulatorDevice {
   udid: string
   name: string
   isAvailable: boolean
+  deviceTypeIdentifier?: string
+}
+
+function isDeviceFamily(device: SimulatorDevice, family: 'iPhone' | 'iPad') {
+  return device.deviceTypeIdentifier
+    ? device.deviceTypeIdentifier.startsWith(`com.apple.CoreSimulator.SimDeviceType.${family}-`)
+    : device.name.startsWith(family)
 }
 
 /** simctl availability alone does not mean the selected Xcode can test on a runtime. */
@@ -26,9 +33,11 @@ export function selectIOSTestDevices(devices: Record<string, SimulatorDevice[]>,
   })
   for (const runtime of runtimes) {
     const supported = devices[runtime]!.filter(device => device.isAvailable && supportedIds.has(device.udid.toUpperCase()))
-    const iphone = supported.find(device => device.name.startsWith('iPhone'))
-    const ipad = supported.find(device => device.name === 'iPad Pro 13-inch (M5)')
-      ?? supported.find(device => device.name.startsWith('iPad'))
+    const iphone = supported.find(device => isDeviceFamily(device, 'iPhone'))
+    const ipad = supported.find(device => device.deviceTypeIdentifier
+      ? device.deviceTypeIdentifier.startsWith('com.apple.CoreSimulator.SimDeviceType.iPad-Pro-13-inch-M5-')
+      : device.name === 'iPad Pro 13-inch (M5)')
+    ?? supported.find(device => isDeviceFamily(device, 'iPad'))
     if (iphone && ipad)
       return { iphone: iphone.udid, ipad: ipad.udid }
   }

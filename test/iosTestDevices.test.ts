@@ -12,6 +12,23 @@ const inventory = {
 }
 
 describe('iOS CI destinations', () => {
+  it('reuses renamed devices by hardware type and preserves large iPad coverage', () => {
+    const customPhone = { ...newerPhone, name: 'Cook Phone', deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro' }
+    const smallTablet = { ...tablet, name: 'ADV Studio Pad', deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.iPad-Pro-11-inch-M5-12GB' }
+    const customTablet = { ...newerTablet, name: 'Cook Dietary Pad', deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.iPad-Pro-13-inch-M5-12GB' }
+    const devices = { 'com.apple.CoreSimulator.SimRuntime.iOS-27-0': [customPhone, smallTablet, customTablet] }
+    const destinations = [customPhone, smallTablet, customTablet].map(device => destination(device.udid)).join('\n')
+    expect(selectIOSTestDevices(devices, destinations)).toEqual({ iphone: customPhone.udid, ipad: customTablet.udid })
+  })
+
+  it('uses hardware type ahead of a misleading device name', () => {
+    const customPhone = { ...phone, name: 'iPad QA', deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro' }
+    const customTablet = { ...tablet, name: 'iPhone QA', deviceTypeIdentifier: 'com.apple.CoreSimulator.SimDeviceType.iPad-Pro-13-inch-M5-12GB' }
+    const devices = { 'com.apple.CoreSimulator.SimRuntime.iOS-27-0': [customPhone, customTablet] }
+    const destinations = [customPhone, customTablet].map(device => destination(device.udid)).join('\n')
+    expect(selectIOSTestDevices(devices, destinations)).toEqual({ iphone: phone.udid, ipad: tablet.udid })
+  })
+
   it('ignores simctl runtimes unavailable to the selected Xcode', () => {
     const destinations = [destination(phone.udid), destination(tablet.udid), 'Destinations incompatible with the scheme:', destination(newerPhone.udid), destination(newerTablet.udid)].join('\n')
     expect(selectIOSTestDevices(inventory, destinations)).toEqual({ iphone: phone.udid, ipad: tablet.udid })

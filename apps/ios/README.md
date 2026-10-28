@@ -30,6 +30,10 @@ swift test --package-path apps/ios/CookCore   # 只跑核心逻辑
 
 CI 的 `ios` job 在 iPhone 和 iPad 模拟器上先后跑单元测试和 UI 测试。失败时 `Show test failures` 一步会写出失败原因，完整结果包（截图、每一步的操作记录）在这次运行的 Artifacts 里，名为 `ios-xcresult`，下载后用 Xcode 打开。
 
+本地可运行 `pnpm exec tsx scripts/select-ios-test-devices.ts` 选择当前 Xcode 能使用的现有 iPhone／iPad；脚本按实际设备类型识别机型，也能复用自定义名称的设备，并优先保留已验证的 13 英寸 M5 iPad 覆盖。后续按输出的 UDID 运行，常规测试显式设置 `-parallel-testing-enabled NO`。脚本不会创建或清空设备；仅在共享池缺少必要覆盖时新建。需要全新应用状态或隔离时，使用测试数据隔离、其他兼容现有设备或串行排队，不另建同系统同机型副本。
+
+按维护者 2026-10-28 的决定，本机各项目共用模拟器，相同系统版本和机型仅保留一台；共享清单及旧 UDID 替代映射位于 `~/Library/Developer/SimulatorMaintenance/shared-devices.json`。当前本地覆盖 iOS 26.5／27.0／27.1，不再将 iOS 17／18 的运行验收作为本地门禁，也不为历史待办恢复低版本运行时。已有测试结果按原始通过／失败状态保留；此调整不修改 App 的编译部署目标。
+
 本地遇到 `launchd_sim could not bind to session` 或 Xcode 等待模拟器启动 60 秒后超时，先用 `xcrun simctl list devices available` 确定目标 UDID，再运行 `python3 apps/ios/scripts/prepare-simulator.py <UDID>`。脚本仅准备指定设备：检查对应运行时的共享缓存、等待完整启动、确认 SpringBoard 可响应，总超时默认 360 秒；成功后再向同一个 UDID 执行测试。它不清空设备、不重启全局服务。缓存检查依据 [Apple 开发者工程师的排查说明](https://developer.apple.com/forums/thread/807025)。
 
 本地使用 Xcode 27.1 / iPadOS 27.0 时，如果中文输入后的每次操作都报告 `App animations complete notification not received` 并等待约 60 秒，可在模拟器键盘的地球菜单中切换到 English (US) 后重跑。2026-10-24 的验收中，仅切换输入法即消除了该等待，测试仍输入和验证中文菜名、食材及厨具。不要通过跳过断言、禁用应用动画或无限增加超时来判定通过。iPad 的内联搜索框没有 iPhone 的取消按钮，测试需提交并清除搜索后再定位系统返回按钮。
