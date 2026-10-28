@@ -180,6 +180,13 @@ async function handleSignOut(): Promise<void> {
           <CookListIcon slot="start" :icon="ioniconsInformationCircleOutline" color="#5ac8fa" />
           <ion-label>关于</ion-label>
         </ion-item>
+        <ion-item :href="links.legacyCook" :detail="true" :detail-icon="ioniconsOpenOutline">
+          <CookListIcon slot="start" :icon="ioniconsArrowUndoOutline" color="#8e8e93" />
+          <ion-label>切换到旧版</ion-label>
+          <ion-note slot="end">
+            v1
+          </ion-note>
+        </ion-item>
       </ion-list>
 
       <ion-list v-if="isAuthenticated" :inset="true">

@@ -106,7 +106,8 @@ export default defineNuxtConfig({
     '@yunlefun/ui/css',
     '~/styles/css-vars.scss',
     '~/styles/index.scss',
-    '~/styles/index.ts',
+    '@ionic/vue/css/palettes/dark.class.css',
+    '~/styles/ionic.css',
   ],
 
   router: {
@@ -169,7 +170,7 @@ export default defineNuxtConfig({
     },
     prerender: {
       crawlLinks: false,
-      routes: ['/', '/random', '/help', '/feedback', '/user', '/404', '/settings', '/auth/callback'],
+      routes: ['/', '/home', '/library', '/apps', '/my', '/catalog', '/recipes/favorites', '/recipes/history', '/random', '/help', '/feedback', '/user', '/404', '/settings', '/auth/callback'],
       ignore: ['/hi'],
     },
   },
