@@ -34,7 +34,7 @@ jobs:
     if: github.repository == 'YunYouJun/cook' && github.ref == 'refs/heads/main' && (vars.COOK_SUPPORT_ENABLED == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Configure this environment to allow main only before installing its three private secrets.
+    # Configure this environment to allow main only before installing its four private secrets.
     environment: support-cook
     steps:
       - uses: actions/checkout@v7
@@ -44,11 +44,11 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - name: Install pinned browser verifier outside the checkout
+      - name: Install pinned release tooling outside the checkout
         run: |
-          npm install --prefix "$RUNNER_TEMP/cook-release-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
-          "$RUNNER_TEMP/cook-release-browser/node_modules/.bin/playwright" install --with-deps chromium
+          npm install --prefix "$RUNNER_TEMP/cook-release-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1 @actions/artifact@6.3.1
       - name: Associate changes and reconcile verified production delivery
+        uses: actions/github-script@v9
         env:
           GH_TOKEN: ${{ github.token }}
           EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
@@ -56,21 +56,20 @@ jobs:
           COOK_SUPPORT_BINDINGS_JSON: ${{ secrets.COOK_SUPPORT_BINDINGS_JSON }}
           COOK_SUPPORT_LEDGER_KEY: ${{ secrets.COOK_SUPPORT_LEDGER_KEY }}
           APPLY: ${{ github.event_name != 'workflow_dispatch' || inputs.apply }}
-          SEND_REPLIES: ${{ github.event_name == 'workflow_dispatch' && inputs.send_replies }}
+          SEND_REPLIES: ${{ github.event_name == 'workflow_dispatch' && inputs.send_replies || github.event_name != 'workflow_dispatch' && vars.COOK_SUPPORT_AUTO_REPLY == 'true' }}
           ALLOW_INITIALIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_initialize }}
-        run: |
-          export COOK_SUPPORT_STATE_DIR="$RUNNER_TEMP/cook-support-state"
-          export COOK_PLAYWRIGHT_MODULE="$RUNNER_TEMP/cook-release-browser/node_modules/playwright/index.mjs"
-          flags=()
-          if [ "$APPLY" = true ]; then flags+=(--apply); fi
-          if [ "$SEND_REPLIES" = true ]; then flags+=(--send-replies); fi
-          if [ "$ALLOW_INITIALIZE" = true ]; then flags+=(--allow-initialize); fi
-          node scripts/cook-support-sync.mjs "${flags[@]}"
-      - name: Preserve only authenticated encrypted retry state
-        if: always()
-        uses: actions/upload-artifact@v7
         with:
-          name: cook-support-ledger
-          path: ${{ runner.temp }}/cook-support-state/ledger.enc
-          if-no-files-found: ignore
-          retention-days: 90
+          script: |
+            const { spawnSync } = require('node:child_process')
+            const flags = [['APPLY', '--apply'], ['SEND_REPLIES', '--send-replies'], ['ALLOW_INITIALIZE', '--allow-initialize']]
+              .filter(([name]) => process.env[name] === 'true').map(([, flag]) => flag)
+            const result = spawnSync(process.execPath, ['scripts/cook-support-sync.mjs', ...flags], {
+              stdio: 'inherit',
+              env: {
+                ...process.env,
+                COOK_SUPPORT_STATE_DIR: `${process.env.RUNNER_TEMP}/cook-support-state`,
+                COOK_ARTIFACT_MODULE: `${process.env.RUNNER_TEMP}/cook-release-browser/node_modules/@actions/artifact/lib/artifact.js`,
+                COOK_PLAYWRIGHT_MODULE: `${process.env.RUNNER_TEMP}/cook-release-browser/node_modules/playwright/index.mjs`,
+              },
+            })
+            if (result.error || result.status !== 0) core.setFailed('Support synchronization stopped; review its safe phase and retained checkpoint.')

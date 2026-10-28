@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict'
 import { Buffer } from 'node:buffer'
-import { readdirSync, realpathSync } from 'node:fs'
+import { mkdtemp, readFile, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-// eslint-disable-next-line test/no-import-node-test -- Ledger encryption and artifact transport are standalone Node automation tools.
+import { join } from 'node:path'
+// eslint-disable-next-line test/no-import-node-test -- Private release automation uses the standalone Node runtime.
 import { test } from 'node:test'
-import { decryptLedger, encryptLedger, loadLatestLedger, MAX_LEDGER_BYTES } from '../scripts/lib/support-ledger.mjs'
+import { createLedgerWriter, decryptLedger, encryptLedger, loadLatestLedger, MAX_LEDGER_BYTES } from '../scripts/lib/support-ledger.mjs'
 
 const secret = 'dedicated-random-ledger-secret-for-tests-only'
 const privateLedger = {
@@ -14,97 +15,35 @@ const privateLedger = {
   inputs: { 'private-event': { verifiedAt: '2026-10-28T12:00:00.000Z' } },
 }
 const repository = 'YunYouJun/cook'
-const assetUrl = 'https://productionresultssa32.blob.core.windows.net/actions-results/private?sig=private-signature'
-
-function artifact(id, { expired = false, runId = id, createdAt = new Date(Date.UTC(2026, 9, 28, 12, 0, id)).toISOString() } = {}) {
-  return { id, name: 'cook-support-ledger', expired, workflow_run: { id: runId }, created_at: createdAt }
+function artifact(id, extra = {}) {
+  return { id, name: `cook-support-ledger-${id}-1-000001.enc`, expired: false, workflow_run: { id }, created_at: new Date(Date.UTC(2026, 9, 28, 12, 0, id)).toISOString(), size_in_bytes: 512, digest: `sha256:${'a'.repeat(64)}`, ...extra }
 }
-
 function workflowRun(id, fields = {}) {
-  return {
-    id,
-    path: '.github/workflows/support-sync.yml',
-    repository: { full_name: repository },
-    head_repository: { full_name: repository },
-    head_branch: 'main',
-    event: 'push',
-    status: 'completed',
-    conclusion: 'failure',
-    ...fields,
-  }
+  return { id, path: '.github/workflows/support-sync.yml', repository: { full_name: repository }, head_repository: { full_name: repository }, head_branch: 'main', event: 'push', status: 'completed', conclusion: 'failure', ...fields }
 }
-
-function crc32(bytes) {
-  let value = 0xFFFFFFFF
-  for (const byte of bytes) {
-    value ^= byte
-    for (let bit = 0; bit < 8; bit++)
-      value = (value >>> 1) ^ (value & 1 ? 0xEDB88320 : 0)
-  }
-  return (value ^ 0xFFFFFFFF) >>> 0
-}
-
-function zip(entries) {
-  const local = []
-  const central = []
-  let offset = 0
-  for (const [name, bytes] of entries) {
-    const file = Buffer.from(name)
-    const data = Buffer.from(bytes)
-    const header = Buffer.alloc(30)
-    header.writeUInt32LE(0x04034B50, 0)
-    header.writeUInt16LE(20, 4)
-    header.writeUInt32LE(crc32(data), 14)
-    header.writeUInt32LE(data.length, 18)
-    header.writeUInt32LE(data.length, 22)
-    header.writeUInt16LE(file.length, 26)
-    const record = Buffer.alloc(46)
-    record.writeUInt32LE(0x02014B50, 0)
-    record.writeUInt16LE(20, 4)
-    record.writeUInt16LE(20, 6)
-    record.writeUInt32LE(crc32(data), 16)
-    record.writeUInt32LE(data.length, 20)
-    record.writeUInt32LE(data.length, 24)
-    record.writeUInt16LE(file.length, 28)
-    record.writeUInt32LE(offset, 42)
-    local.push(header, file, data)
-    central.push(record, file)
-    offset += header.length + file.length + data.length
-  }
-  const records = Buffer.concat(central)
-  const end = Buffer.alloc(22)
-  end.writeUInt32LE(0x06054B50, 0)
-  end.writeUInt16LE(entries.length, 8)
-  end.writeUInt16LE(entries.length, 10)
-  end.writeUInt32LE(records.length, 12)
-  end.writeUInt32LE(offset, 16)
-  return Buffer.concat([...local, records, end])
-}
-
-function transport(pages, archive, { location = assetUrl, failedDownload = false, runFields = {}, runStatus = 200 } = {}) {
+function transport(pages, { runFields = {}, status = 200, downloadFailure = false } = {}) {
   const calls = []
-  const fetcher = async (input, options) => {
-    const url = new URL(input)
-    const headers = new Headers(options.headers)
-    assert.equal(options.redirect, 'manual')
-    calls.push({ url, headers })
-    if (url.origin === 'https://api.github.com') {
-      assert.equal(headers.get('authorization'), 'Bearer test-token')
-      if (url.pathname.endsWith('/actions/artifacts')) {
-        assert.equal(url.searchParams.get('name'), 'cook-support-ledger')
-        const page = Number(url.searchParams.get('page'))
-        return new Response(JSON.stringify(pages[page - 1]), { status: 200 })
-      }
-      if (url.pathname.endsWith('/zip'))
-        return new Response(null, { status: failedDownload ? 404 : 302, headers: { Location: location } })
-      if (/\/actions\/runs\/\d+$/.test(url.pathname))
-        return new Response(JSON.stringify(workflowRun(Number(url.pathname.split('/').at(-1)), runFields)), { status: runStatus })
-    }
-    assert.equal(headers.has('authorization'), false)
-    return new Response(archive, { status: 200 })
+  const downloaded = []
+  return {
+    calls,
+    downloaded,
+    fetch: async (input, options) => {
+      const url = new URL(input)
+      assert.equal(new Headers(options.headers).get('authorization'), 'Bearer test-token')
+      assert.equal(url.origin, 'https://api.github.com')
+      calls.push(url)
+      const data = url.pathname.endsWith('/actions/artifacts') ? pages[Number(url.searchParams.get('page')) - 1] : workflowRun(Number(url.pathname.split('/').at(-1)), runFields)
+      return new Response(JSON.stringify(data), { status })
+    },
+    download: async (selected) => {
+      downloaded.push(selected)
+      if (downloadFailure)
+        throw new Error('private signed URL token must not escape')
+      return encryptLedger(privateLedger, secret)
+    },
   }
-  return { calls, fetch: fetcher }
 }
+const load = (mock, extra = {}) => loadLatestLedger({ token: 'test-token', repository, fetch: mock.fetch, download: mock.download, ...extra })
 
 test('authenticated encryption round-trips private state and randomizes every envelope', () => {
   const first = encryptLedger(privateLedger, secret)
@@ -144,138 +83,166 @@ test('schema, secret length, size, and non-JSON state are validated before persi
   assert.throws(() => encryptLedger(JSON.parse('{"schemaVersion":1,"__proto__":{}}'), secret), /payload is invalid/)
 })
 
-test('only explicit initialization with a completely empty artifact history returns null', async () => {
-  const mock = transport([{ total_count: 0, artifacts: [] }])
-  const options = { token: 'test-token', repository, fetch: mock.fetch }
-  await assert.rejects(loadLatestLedger(options), /initialization must be explicit/)
-  assert.equal(await loadLatestLedger({ ...options, allowInitialize: true }), null)
-  for (const artifacts of [[artifact(1, { expired: true })], [artifact(1, { runId: 77 })]]) {
-    const existing = transport([{ total_count: artifacts.length, artifacts }])
-    await assert.rejects(loadLatestLedger({ ...options, fetch: existing.fetch, runId: 77, allowInitialize: true }), /refusing to reset/)
-  }
+test('initialization requires a completely empty ledger history and explicit authorization', async () => {
+  const empty = transport([{ total_count: 0, artifacts: [] }])
+  await assert.rejects(load(empty), /initialization must be explicit/)
+  assert.equal(await load(empty, { allowInitialize: true }), null)
+  const expired = transport([{ total_count: 1, artifacts: [artifact(1, { expired: true })] }])
+  await assert.rejects(load(expired, { allowInitialize: true }), /refusing to reset/)
 })
 
-test('complete pagination selects latest historical state and never sends the GitHub token to Azure', async () => {
-  const encrypted = encryptLedger(privateLedger, secret)
-  const all = Array.from({ length: 102 }, (_, index) => artifact(index + 1))
-  const mock = transport([
-    { total_count: 102, artifacts: all.slice(0, 100) },
-    { total_count: 102, artifacts: all.slice(100) },
-  ], zip([['ledger.enc', encrypted]]))
-  const received = await loadLatestLedger({ token: 'test-token', repository, runId: 102, fetch: mock.fetch })
-  assert.deepEqual(received, encrypted)
-  assert.deepEqual(decryptLedger(received, secret), privateLedger)
-  assert.equal(mock.calls.filter(call => call.url.pathname.endsWith('/actions/artifacts')).length, 2)
-  assert.equal(mock.calls.find(call => call.url.pathname.endsWith('/zip')).url.pathname, '/repos/YunYouJun/cook/actions/artifacts/101/zip')
-  assert.equal(mock.calls.find(call => /\/actions\/runs\/\d+$/.test(call.url.pathname)).url.pathname, '/repos/YunYouJun/cook/actions/runs/101')
-  assert.equal(mock.calls.at(-1).headers.has('authorization'), false)
+test('complete history selects newest checkpoint even for an older run rerun', async () => {
+  const all = Array.from({ length: 102 }, (_, i) => artifact(i + 1))
+  all[0] = artifact(1, { name: 'cook-support-ledger-1-2-000003.enc', created_at: '2026-10-29T00:00:00Z' })
+  all[4] = { id: 5, name: 'unrelated-build-output' }
+  const mock = transport([{ total_count: 102, artifacts: all.slice(0, 100) }, { total_count: 102, artifacts: all.slice(100) }])
+  assert.deepEqual(decryptLedger(await load(mock), secret), privateLedger)
+  assert.equal(mock.downloaded[0].id, 1)
+  assert.equal(mock.calls.filter(url => url.pathname.endsWith('/actions/artifacts')).length, 2)
 })
 
-test('expired latest state, changed pagination, and inaccessible history fail closed', async () => {
-  const histories = [
-    [{ total_count: 2, artifacts: [artifact(1), artifact(2, { expired: true })] }],
-    [{ total_count: 2, artifacts: [artifact(1)] }],
-    [{ total_count: 2, artifacts: [artifact(1), artifact(1)] }],
-    [{ total_count: 1, artifacts: [{ ...artifact(1), name: 'other-artifact' }] }],
-    [{ total_count: 101, artifacts: Array.from({ length: 100 }, (_, index) => artifact(index + 1)) }, { total_count: 102, artifacts: [artifact(101)] }],
-  ]
-  for (const history of histories) {
-    const mock = transport(history)
-    await assert.rejects(loadLatestLedger({ token: 'test-token', repository, allowInitialize: true, fetch: mock.fetch }), /Support ledger/)
-  }
-  await assert.rejects(loadLatestLedger({ token: 'test-token', repository, allowInitialize: true, fetch: async () => new Response('private-body', { status: 403 }) }), /Unable to read/)
+test('earlier attempts of the current workflow run retain their pending intent', async () => {
+  const mock = transport([{ total_count: 1, artifacts: [artifact(77, { name: 'cook-support-ledger-77-1-000009.enc' })] }])
+  await load(mock, { runId: 77 })
+  assert.equal(mock.downloaded[0].workflow_run.id, 77)
 })
 
-test('the newest artifact must come from the exact trusted main-branch workflow before download', async () => {
-  const encrypted = encryptLedger(privateLedger, secret)
-  const archive = zip([['ledger.enc', encrypted]])
-  const history = [{ total_count: 2, artifacts: [artifact(1), artifact(2)] }]
+test('untrusted latest workflow never falls back to an older checkpoint', async () => {
   for (const runFields of [
     { path: '.github/workflows/ci.yml' },
     { path: '.github/workflows/support-sync.yml@refs/heads/other' },
     { repository: { full_name: 'another/repository' } },
     { head_repository: { full_name: 'attacker/cook' } },
     { head_repository: null },
-    { head_branch: 'feature-branch' },
+    { head_branch: 'other' },
     { event: 'pull_request' },
     { event: 'pull_request_target' },
-    { event: 'deployment_status' },
     { id: 1 },
   ]) {
-    const mock = transport(history, archive, { runFields })
-    await assert.rejects(loadLatestLedger({ token: 'test-token', repository, fetch: mock.fetch, allowInitialize: true }), /source requires maintainer review/)
-    assert.equal(mock.calls.some(call => call.url.pathname.endsWith('/zip')), false)
-    assert.equal(mock.calls.filter(call => /\/actions\/runs\/\d+$/.test(call.url.pathname)).length, 1, 'an untrusted latest artifact never falls back to older state')
-    assert.ok(mock.calls.at(-1).url.pathname.endsWith('/actions/runs/2'))
+    const mock = transport([{ total_count: 2, artifacts: [artifact(1), artifact(2)] }], { runFields })
+    await assert.rejects(load(mock, { allowInitialize: true }), /source requires maintainer review/)
+    assert.equal(mock.downloaded.length, 0)
+    assert.equal(mock.calls.at(-1).pathname, '/repos/YunYouJun/cook/actions/runs/2')
   }
 })
 
-test('trusted push, schedule and manual runs retain failed-run intents without requiring success', async () => {
-  const encrypted = encryptLedger(privateLedger, secret)
+test('failed trusted push, schedule and manual runs can restore their last finalized intent', async () => {
   for (const event of ['push', 'schedule', 'workflow_dispatch']) {
-    const mock = transport([{ total_count: 1, artifacts: [artifact(1)] }], zip([['ledger.enc', encrypted]]), { runFields: { event, conclusion: 'failure' } })
-    assert.deepEqual(await loadLatestLedger({ token: 'test-token', repository, fetch: mock.fetch }), encrypted)
+    const mock = transport([{ total_count: 1, artifacts: [artifact(1)] }], { runFields: { event, conclusion: 'failure' } })
+    assert.deepEqual(decryptLedger(await load(mock), secret), privateLedger)
   }
 })
 
-test('unavailable or malformed run provenance fails closed and never exposes provider messages', async () => {
-  for (const runStatus of [403, 404, 503]) {
-    const mock = transport([{ total_count: 1, artifacts: [artifact(1)] }], undefined, { runStatus })
-    await assert.rejects(loadLatestLedger({ token: 'test-token', repository, fetch: mock.fetch, allowInitialize: true }), /source requires maintainer review/)
-    assert.equal(mock.calls.some(call => call.url.pathname.endsWith('/zip')), false)
-  }
-  for (const failure of ['network', 'json']) {
-    const mock = transport([{ total_count: 1, artifacts: [artifact(1)] }])
-    const fetcher = (url, options) => {
-      if (/\/actions\/runs\/\d+$/.test(new URL(url).pathname)) {
-        if (failure === 'network')
-          throw new Error(`private provider ${assetUrl}`)
-        return new Response('private provider body is not JSON', { status: 200 })
-      }
-      return mock.fetch(url, options)
-    }
-    await assert.rejects(loadLatestLedger({ token: 'test-token', repository, fetch: fetcher, allowInitialize: true }), error => /source requires maintainer review/.test(error.message) && !error.message.includes('private provider') && !error.message.includes('private-signature'))
-  }
-})
-
-test('download redirects are allowlisted and signed URL errors cannot leak into logs', async () => {
-  for (const location of ['https://evil.example/ledger?sig=private-signature', 'http://productionresultssa32.blob.core.windows.net/ledger', 'https://user:password@productionresultssa32.blob.core.windows.net/ledger', 'https://productionresultssa32.blob.core.windows.net:444/ledger']) {
-    const mock = transport([{ total_count: 1, artifacts: [artifact(1)] }], undefined, { location })
-    await assert.rejects(loadLatestLedger({ token: 'test-token', repository, fetch: mock.fetch }), error => /redirect is invalid/.test(error.message) && !error.message.includes('private-signature'))
-    assert.equal(mock.calls.length, 3)
-  }
-  await assert.rejects(loadLatestLedger({
-    token: 'test-token',
-    repository,
-    fetch: async () => {
-      throw new Error(`private failure ${assetUrl}`)
-    },
-  }), error => !error.message.includes('private-signature') && /Unable to read/.test(error.message))
-})
-
-test('only one exact ledger.enc member is read; traversal, duplicate, malformed, and oversized archives fail', async () => {
-  const encrypted = encryptLedger(privateLedger, secret)
-  const before = readdirSync(realpathSync(tmpdir())).filter(name => name.startsWith('cook-support-ledger-')).sort()
-  const archives = [
-    zip([['../ledger.enc', encrypted]]),
-    zip([['ledger.enc', encrypted], ['private.json', Buffer.from('private-data')]]),
-    zip([['ledger.enc', encrypted], ['ledger.enc', encrypted]]),
-    zip([['ledger.enc', Buffer.from('plain private-data')]]),
-    zip([['ledger.enc', Buffer.alloc(MAX_LEDGER_BYTES + 1024)]]),
-    Buffer.from('not a zip archive'),
+test('malformed, incomplete, changed or expired newest history fails closed', async () => {
+  const histories = [
+    [{ total_count: 2, artifacts: [artifact(1)] }],
+    [{ total_count: 2, artifacts: [artifact(1), artifact(1)] }],
+    [{ total_count: 1, artifacts: [artifact(1, { name: 'cook-support-ledger-invalid' })] }],
+    [{ total_count: 1, artifacts: [artifact(1, { name: 'cook-support-ledger-2-1-000001.enc' })] }],
+    [{ total_count: 1, artifacts: [artifact(1, { digest: 'invalid' })] }],
+    [{ total_count: 1, artifacts: [artifact(1, { size_in_bytes: 3 * MAX_LEDGER_BYTES })] }],
+    [{ total_count: 2, artifacts: [artifact(1), artifact(2, { expired: true })] }],
+    [{ total_count: 101, artifacts: Array.from({ length: 100 }, (_, i) => artifact(i + 1)) }, { total_count: 102, artifacts: [artifact(101)] }],
   ]
-  for (const archive of archives) {
-    const mock = transport([{ total_count: 1, artifacts: [artifact(1)] }], archive)
-    await assert.rejects(loadLatestLedger({ token: 'test-token', repository, fetch: mock.fetch }), /artifact archive is invalid/)
-  }
-  const after = readdirSync(realpathSync(tmpdir())).filter(name => name.startsWith('cook-support-ledger-')).sort()
-  assert.deepEqual(after, before, 'all extraction directories are removed in finally')
+  for (const pages of histories)
+    await assert.rejects(load(transport(pages), { allowInitialize: true }), /Support ledger/)
 })
 
-test('transport rejects another repository, malformed run identity, and overlarge responses', async () => {
-  await assert.rejects(loadLatestLedger({ token: 'test-token', repository: 'other/repo' }), /configuration is invalid/)
-  await assert.rejects(loadLatestLedger({ token: 'test-token', repository, runId: '../1' }), /run identity is invalid/)
-  await assert.rejects(loadLatestLedger({ token: 'test-token', repository, fetch: async () => new Response('x', { headers: { 'Content-Length': 2 * 1024 * 1024 } }) }), /history is invalid/)
-  const normal = transport([{ total_count: 1, artifacts: [artifact(1)] }], Buffer.alloc(2 * 1024 * 1024 + 1))
-  await assert.rejects(loadLatestLedger({ token: 'test-token', repository, fetch: normal.fetch }), /maximum size/)
+test('unavailable metadata or checkpoint downloads never expose upstream private errors', async () => {
+  const mock = transport([{ total_count: 1, artifacts: [artifact(1)] }], { downloadFailure: true })
+  await assert.rejects(load(mock), error => /refusing to reset/.test(error.message) && !error.message.includes('signed URL'))
+  for (const fetch of [async () => {
+    throw new Error('private signed URL')
+  }, async () => new Response('private', { status: 403 }), async () => new Response('invalid JSON'), async () => new Response('x', { headers: { 'content-length': 2 * MAX_LEDGER_BYTES } })])
+    await assert.rejects(loadLatestLedger({ token: 'test-token', repository, fetch }), error => /metadata/.test(error.message) && !error.message.includes('private'))
+  await assert.rejects(loadLatestLedger({ token: 'test-token', repository: 'another/repository' }), /configuration/)
+})
+
+async function withWriter(run) {
+  const directory = await mkdtemp(join(tmpdir(), 'cook-ledger-writer-test-'))
+  const path = join(directory, 'ledger.enc')
+  const remote = []
+  const writer = createLedgerWriter({ path, secret, publish: async (bytes, sequence) => remote.push({ bytes: Buffer.from(bytes), sequence }) })
+  try {
+    await run({ writer, path, remote })
+  }
+  finally { await rm(directory, { recursive: true, force: true }) }
+}
+const intent = key => ({ phase: 'publish-resolution', key, input: { id: 'synthetic-ticket', version: 3, command: { action: 'reply.send' } } })
+
+test('command intent is finalized remotely before save returns, surviving total local runner loss', async () => {
+  await withWriter(async ({ writer, path, remote }) => {
+    const ledger = { schemaVersion: 1, tickets: { test: { pending: intent('stable-command-key') } }, events: {}, inputs: {} }
+    await writer.save(ledger)
+    assert.equal(remote.length, 1)
+    assert.deepEqual(decryptLedger(remote[0].bytes, secret), ledger)
+    assert.equal((await stat(path)).mode & 0o077, 0)
+    await rm(path)
+    const restored = decryptLedger(remote[0].bytes, secret)
+    assert.deepEqual(restored.tickets.test.pending, ledger.tickets.test.pending)
+    // A killed runner does not need flush() for recovery of the command it was about to send.
+  })
+})
+
+test('unchanged pending intent is checkpointed once; final state is retained separately', async () => {
+  await withWriter(async ({ writer, path, remote }) => {
+    const ledger = { schemaVersion: 1, tickets: { test: { pending: intent('stable-command-key') } } }
+    await writer.save(ledger)
+    await writer.save(ledger)
+    assert.equal(remote.length, 1)
+    delete ledger.tickets.test.pending
+    await writer.save(ledger)
+    assert.equal(remote.length, 1)
+    await writer.flush()
+    assert.equal(remote.length, 2)
+    assert.deepEqual(decryptLedger(remote[1].bytes, secret), ledger)
+    assert.deepEqual(decryptLedger(await readFile(path), secret), ledger)
+  })
+})
+
+test('failed remote persistence prevents the caller from sending any command', async () => {
+  await withWriter(async ({ path }) => {
+    let commands = 0
+    const writer = createLedgerWriter({ path, secret, publish: async () => {
+      throw new Error('upload failed')
+    } })
+    const send = async () => {
+      await writer.save({ schemaVersion: 1, tickets: { test: { pending: intent('stable-command-key') } } })
+      commands++
+    }
+    await assert.rejects(send(), /upload failed/)
+    assert.equal(commands, 0)
+  })
+})
+
+test('checkpoint batch stops before the tenth command and reserves a final recoverable intent', async () => {
+  await withWriter(async ({ writer, remote }) => {
+    const ledger = { schemaVersion: 1, tickets: { test: {} } }
+    for (let i = 1; i <= 9; i++) {
+      ledger.tickets.test.pending = intent(`command-${i}`)
+      await writer.save(ledger)
+      delete ledger.tickets.test.pending
+      await writer.save(ledger)
+    }
+    ledger.tickets.test.pending = intent('command-10')
+    await assert.rejects(writer.save(ledger), error => error.code === 'CHECKPOINT_BUDGET_EXHAUSTED')
+    assert.equal(remote.length, 9)
+    await writer.flush()
+    assert.equal(remote.length, 10)
+    assert.deepEqual(decryptLedger(remote.at(-1).bytes, secret).tickets.test.pending, intent('command-10'))
+  })
+})
+
+test('unchanged polling reuses remote state until its daily retention refresh', async () => {
+  await withWriter(async ({ path, remote }) => {
+    const ledger = { schemaVersion: 1, tickets: {}, checkpointedAt: '2026-10-28T12:00:00Z' }
+    const writer = createLedgerWriter({ path, secret, initial: ledger, publish: async bytes => remote.push(bytes) })
+    await writer.save(ledger)
+    await writer.flush()
+    assert.equal(remote.length, 0)
+    ledger.checkpointedAt = '2026-10-29T12:00:00Z'
+    await writer.save(ledger)
+    await writer.flush()
+    assert.equal(remote.length, 1)
+  })
 })
