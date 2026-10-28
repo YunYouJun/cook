@@ -9,8 +9,8 @@
     "pnpm": "11.21.0"
   },
   "scripts": {
-    "build": "pnpm run convert && pnpm -C apps/web run generate && tsx scripts/copy-web-output.ts",
-    "build:full": "pnpm run fetch && pnpm -C apps/web run generate && tsx scripts/copy-web-output.ts",
+    "build": "node scripts/build-web-output.mjs build",
+    "build:full": "node scripts/build-web-output.mjs full",
     "build:site": "pnpm run build && pnpm run docs:build && node scripts/compose-product-site.mjs",
     "build:nuxt": "pnpm -C apps/web run build",
     "convert": "pnpm -C packages/cook run convert",
@@ -29,7 +29,7 @@
     "dev:pwa": "pnpm -C apps/web run dev:pwa",
     "docs:dev": "pnpm -C docs run docs:dev",
     "docs:build": "pnpm -C docs run docs:build",
-    "generate": "pnpm -C apps/web run generate && tsx scripts/copy-web-output.ts",
+    "generate": "node scripts/build-web-output.mjs generate",
     "start:generate": "npx serve dist",
     "start": "node .output/server/index.mjs",
     "lint": "eslint .",
