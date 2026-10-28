@@ -617,3 +617,57 @@ for (const pendingAction of ['reply.send', 'closed']) {
     assert.deepEqual(decryptLedger(encrypted, secret).tickets['ticket-1'].pending, pending)
   })
 }
+
+it('blocks later send authorization for a changed private reply template while preserving the encrypted owned draft and verification', async () => {
+  const h = harness()
+  const secret = 'synthetic-ledger-key-for-reply-authorization-change'
+  let encrypted = encryptLedger(freshLedger(), secret)
+  h.ports.save = async (value) => {
+    encrypted = encryptLedger(value, secret)
+  }
+  await applied(h, change(), decryptLedger(encrypted, secret))
+  await applied(h, deployment(), decryptLedger(encrypted, secret))
+  const originalDraft = structuredClone(h.state.ticket.work.replyDraft)
+  const originalVerification = structuredClone(h.state.ticket.work.verification)
+  const calls = h.calls.length
+  const result = await applied(h, reconcile('reconcile:updated-private-reply'), decryptLedger(encrypted, secret), {
+    bindings: bindings({ sendReply: true, resolutionReply: 'A newly approved reply with different wording' }),
+    sendReplies: true,
+  })
+  assert.equal(result.blocked, 1)
+  assert.equal(result.commands, 0)
+  assert.equal(h.calls.length, calls)
+  assert.deepEqual(h.state.ticket.work.replyDraft, originalDraft)
+  assert.deepEqual(h.state.ticket.work.verification, originalVerification)
+  assert.equal(h.state.ticket.status, 'in_progress')
+  assert.equal(h.state.messages.some(item => item.resolution), false)
+  assert.equal(decryptLedger(encrypted, secret).tickets['ticket-1'].generatedDraftHash.length, 64)
+})
+
+it('does not replay an unknown reply.send under a changed private reply authorization', async () => {
+  const h = harness()
+  const secret = 'synthetic-key-for-pending-reply-authorization-change'
+  let encrypted = encryptLedger(freshLedger(), secret)
+  h.ports.save = async (value) => {
+    encrypted = encryptLedger(value, secret)
+  }
+  await applied(h, change(), decryptLedger(encrypted, secret))
+  await applied(h, deployment(), decryptLedger(encrypted, secret))
+  h.before(async ({ command }) => {
+    if (command.action === 'reply.send')
+      throw new Error('Unknown publish result')
+  })
+  await assert.rejects(applied(h, reconcile('reconcile:original-reply-send'), decryptLedger(encrypted, secret), { bindings: bindings({ sendReply: true }), sendReplies: true }))
+  h.before(undefined)
+  const pending = structuredClone(decryptLedger(encrypted, secret).tickets['ticket-1'].pending)
+  const calls = h.calls.length
+  const result = await applied(h, reconcile('reconcile:changed-reply-send'), decryptLedger(encrypted, secret), {
+    bindings: bindings({ sendReply: true, resolutionReply: 'A newly approved reply with different wording' }),
+    sendReplies: true,
+  })
+  assert.equal(result.blocked, 1)
+  assert.equal(result.commands, 0)
+  assert.equal(h.calls.length, calls)
+  assert.deepEqual(decryptLedger(encrypted, secret).tickets['ticket-1'].pending, pending)
+  assert.equal(h.state.ticket.status, 'in_progress')
+})

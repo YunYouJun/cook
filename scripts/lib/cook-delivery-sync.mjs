@@ -205,6 +205,8 @@ export async function syncCookDelivery(input, ports) {
           deferred = true
           return false
         }
+        if (pending.input.command.action === 'reply.send' && hash(binding.resolutionReply ?? defaultReply) !== state.release?.replyHash)
+          return false
         if (!apply) {
           current = simulate(current, pending.input.command, now)
         }
@@ -349,7 +351,7 @@ export async function syncCookDelivery(input, ports) {
       }
       if (event.kind === 'reconcile' && input.sendReplies === true && binding.sendReply === true && !state.replyId) {
         const draft = current.ticket.work.replyDraft
-        if (latest?.resolution || !state.generatedDraftHash || !draft?.resolution || hash(draft) !== state.generatedDraftHash || hash(draft.content) !== release.replyHash || !current.ticket.work.verification || hash(current.ticket.work.verification) !== release.verificationHash) {
+        if (hash(binding.resolutionReply ?? defaultReply) !== release.replyHash || latest?.resolution || !state.generatedDraftHash || !draft?.resolution || hash(draft) !== state.generatedDraftHash || hash(draft.content) !== release.replyHash || !current.ticket.work.verification || hash(current.ticket.work.verification) !== release.verificationHash) {
           stopped()
           continue
         }
