@@ -3,6 +3,7 @@ import type { RecipeMatch } from '@yunyoujun/cook'
 import type { RecipeItem, StuffItem } from '~/types'
 import { DIFFICULTY_LEVELS, METHOD_GROUPS } from '@yunyoujun/cook/recommend'
 import { useWorkbenchCatalog } from '~/composables/useWorkbenchCatalog'
+import { methodIcons, toolIcons } from '~/data/cookingIcons'
 import { pantryOptions } from '~/data/pantry'
 
 const props = defineProps<{ desktop?: boolean }>()
@@ -171,6 +172,7 @@ function addUnlisted() {
           </p>
           <div class="wb-pills" role="group" aria-label="做法筛选">
             <button v-for="group in METHOD_GROUPS" :key="group.label" type="button" :aria-pressed="rStore.methodGroups.includes(group.label)" @click="rStore.toggleMethodGroup(group.label)">
+              <span v-if="methodIcons[group.label]" class="wb-cooking-icon" :class="methodIcons[group.label]" aria-hidden="true" />
               {{ group.label }}
             </button>
           </div>
@@ -217,7 +219,7 @@ function addUnlisted() {
           <h2>厨具 <span>（可选）</span></h2>
           <div class="wb-pills" role="group" aria-label="工作台厨具">
             <button v-for="tool in tools" :key="tool.name" type="button" :aria-pressed="rStore.curTool === tool.name" @click="rStore.clickTool(tool)">
-              <span v-if="tool.icon" :class="tool.icon" aria-hidden="true" /><span v-else aria-hidden="true">{{ tool.emoji }}</span>{{ tool.name === '一口大锅' ? '炒锅' : tool.name }}<span v-if="rStore.curTool === tool.name" aria-hidden="true">✓</span>
+              <span v-if="toolIcons[tool.name] || tool.icon" class="wb-cooking-icon" :class="toolIcons[tool.name] || tool.icon" aria-hidden="true" /><span v-else aria-hidden="true">{{ tool.emoji }}</span>{{ tool.name === '一口大锅' ? '炒锅' : tool.name }}<span v-if="rStore.curTool === tool.name" aria-hidden="true">✓</span>
             </button>
           </div>
         </div>
@@ -462,6 +464,11 @@ function addUnlisted() {
 }
 .wb-pills button > span[class] {
   font-size: 18px;
+}
+.wb-cooking-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
 }
 .wb-checkbox {
   display: inline-flex;

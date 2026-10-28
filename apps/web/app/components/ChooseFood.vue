@@ -6,6 +6,7 @@ import { DIFFICULTY_LEVELS, METHOD_GROUPS } from '@yunyoujun/cook/recommend'
 import { useEmojiAnimation } from '~/composables/animation'
 import { useIncompatibleFoods } from '~/composables/incompatible-foods'
 import { namespace } from '~/constants'
+import { methodIcons, toolIcons } from '~/data/cookingIcons'
 import { pantryOptions } from '~/data/pantry'
 import { trackCookEvent } from '~/utils/analytics'
 import { yunleHaptic } from '~/utils/yunleHost'
@@ -123,7 +124,7 @@ function clickTool(item: StuffItem) {
         v-for="item in tools"
         :key="item.name"
         :label="item.name === '一口大锅' ? '炒锅' : (item.label || item.name)"
-        :icon="item.icon"
+        :icon="toolIcons[item.name] || item.icon"
         :selected="rStore.curTool === item.name"
         @click="clickTool(item)"
       />
@@ -134,6 +135,7 @@ function clickTool(item: StuffItem) {
         v-for="group in METHOD_GROUPS"
         :key="group.label"
         :label="group.label"
+        :icon="methodIcons[group.label]"
         :selected="rStore.methodGroups.includes(group.label)"
         @click="rStore.toggleMethodGroup(group.label)"
       />

@@ -14,7 +14,7 @@ defineProps<{
   <button type="button" class="ingredient-chip" :aria-pressed="selected">
     <ion-icon v-if="selected" class="ingredient-chip-mark" :icon="ioniconsCheckmark" aria-hidden="true" />
     <span v-else-if="emoji" class="ingredient-chip-mark" aria-hidden="true">{{ emoji }}</span>
-    <span v-else-if="icon" class="ingredient-chip-mark" :class="icon" aria-hidden="true" />
+    <span v-else-if="icon" class="ingredient-chip-mark ingredient-chip-icon" :class="icon" aria-hidden="true" />
     <span>{{ label }}</span>
   </button>
 </template>
@@ -50,6 +50,11 @@ defineProps<{
 .ingredient-chip-mark {
   display: inline-flex;
   font-size: 15px;
+}
+.ingredient-chip-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
 }
 .ingredient-chip:focus-visible {
   outline: 2px solid var(--ion-color-primary);
