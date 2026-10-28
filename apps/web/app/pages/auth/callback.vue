@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { isAuthCallbackUrl } from '~/utils/authInitialization'
+
 const {
   configurationMessage,
   errorMessage,
@@ -10,7 +12,7 @@ const router = useRouter()
 
 // Ionic restores its captured initial URL on Nuxt ready, after this page mounts.
 watch(() => router.currentRoute.value, async (route) => {
-  if (route.path === '/auth/callback' && route.query.platform === 'native' && route.hash)
+  if (isAuthCallbackUrl(route.path) && route.query.platform === 'native' && route.hash)
     await router.replace({ path: route.path, query: route.query, hash: '' })
 }, { immediate: true })
 

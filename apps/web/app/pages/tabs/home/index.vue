@@ -15,11 +15,13 @@ useHead({
 })
 
 const rStore = useRecipeStore()
+const nuxtApp = useNuxtApp()
 const { style: cookingStyle, pantry: workbenchPantry, canPersist } = useCookingStyle()
 const desktop = useMediaQuery('(min-width: 1024px)')
 const active = shallowRef(false)
 onIonViewDidEnter(() => {
   active.value = true
+  void nuxtApp.callHook('cook:home-ready')
 })
 onIonViewWillLeave(() => {
   active.value = false
@@ -103,12 +105,12 @@ watchDebounced(
       <p v-if="!canPersist" class="style-storage-note" role="status">
         浏览器暂时无法保存样式偏好，本次仍可切换使用。
       </p>
-      <CookingWorkbench v-if="cookingStyle === 'workbench'" v-model:pantry="workbenchPantry" :desktop="desktop" @detail="openDetail" />
+      <LazyCookingWorkbench v-if="cookingStyle === 'workbench'" v-model:pantry="workbenchPantry" :desktop="desktop" @detail="openDetail" />
       <ChooseFood v-else :desktop="desktop" :flight-target="flightTarget" />
     </ion-content>
 
     <ResultsPanel v-if="cookingStyle === 'classic'" ref="panelRef" v-model:inset="panelInset" :desktop="desktop" :active="active" @scroll-top="scrollTop" @detail="openDetail" />
-    <RecipeDetailSheet v-model:open="detailOpen" :recipe="detail?.recipe" :match="detail?.match" />
+    <LazyRecipeDetailSheet v-if="detail" v-model:open="detailOpen" :recipe="detail.recipe" :match="detail.match" />
   </ion-page>
 </template>
 
