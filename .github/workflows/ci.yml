@@ -115,6 +115,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm run convert
+      - name: Verify managed AI service and shared intent contract
+        run: |
+          node scripts/generate-ai-intent-contract.mjs --check
+          node --test test/cookAiIntent.test.mjs test/aiIntentContract.test.mjs
       - run: pnpm run validate
       - run: pnpm run amounts:check
       - name: Check recipe ids against base branch

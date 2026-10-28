@@ -51,6 +51,7 @@ final class SearchIntentDraft {
             } catch {
                 guard !Task.isCancelled, generation == id else { return }
                 message = (error as? DeepSeekIntentError)?.localizedDescription
+                    ?? (error as? ManagedCookAIError)?.localizedDescription
                     ?? (error as? CookAISettingsError)?.localizedDescription
                     ?? "智能识别暂不可用，已保留本地条件，可以修改后继续。"
             }

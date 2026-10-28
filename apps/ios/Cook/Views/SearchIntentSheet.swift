@@ -6,6 +6,7 @@ struct SearchIntentSheet: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
     @Environment(CookAISettings.self) private var ai
+    @Environment(YunlefunAccountStore.self) private var accounts
     @Environment(\.dismiss) private var dismiss
     @State private var draft: SearchIntentDraft
     @State private var confirmsSending = false
@@ -23,10 +24,16 @@ struct SearchIntentSheet: View {
                         .accessibilityIdentifier("intent.text")
                     Button("重新识别本地条件") { parseLocally() }
                         .disabled(draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    if ai.canUseOwnDeepSeek {
-                        Button("智能找菜 · DeepSeek") { confirmsSending = true }
+                    if ai.canUseRemote {
+                        Button(ai.canUseManagedDeepSeek ? "智能找菜 · 会员 DeepSeek" : "智能找菜 · DeepSeek") { confirmsSending = true }
                             .disabled(draft.isLoading || draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             .accessibilityIdentifier("intent.smart")
+                    } else if ai.wantsManagedDeepSeek, ai.isManagedConfigured, accounts.account != nil {
+                        Button("重新检查会员 AI") { Task { await ai.refreshManagedCapability(accounts: accounts) } }
+                            .disabled(ai.managedStatus == .checking)
+                    }
+                    if ai.managedStatus == .checking, ai.wantsManagedDeepSeek {
+                        ProgressView("正在核验会员 AI…")
                     }
                     if draft.isLoading {
                         HStack {
@@ -65,18 +72,24 @@ struct SearchIntentSheet: View {
                         .accessibilityIdentifier("intent.apply")
                 }
             }
-            .confirmationDialog("发送本次文本到 DeepSeek？", isPresented: $confirmsSending, titleVisibility: .visible) {
+            .confirmationDialog(ai.canUseManagedDeepSeek ? "通过云乐坊会员服务识别本次文本？" : "发送本次文本到 DeepSeek？", isPresented: $confirmsSending, titleVisibility: .visible) {
                 Button("发送并智能识别") { recognize() }
             } message: {
-                Text("仅发送上方本次文本及公共词典、筛选规则，不发送账号、收藏、历史或已保存偏好。使用你自己的 Key，费用由你的 DeepSeek 账号承担。")
+                Text(ai.canUseManagedDeepSeek
+                     ? "本次文本会经云乐坊服务发送给 DeepSeek。云乐坊使用登录凭据核验会员和额度，不发送收藏、历史或已保存偏好；本次调用使用会员内置服务。"
+                     : "仅发送上方本次文本及公共词典、筛选规则，不发送账号、收藏、历史或已保存偏好。使用你自己的 Key，费用由你的 DeepSeek 账号承担。")
             }
             .alert("暂时无法应用", isPresented: Binding(get: { applyError != nil }, set: { if !$0 { applyError = nil } })) {
                 Button("好", role: .cancel) { applyError = nil }
             } message: { Text(applyError ?? "") }
         }
-        .task { parseLocally() }
+        .task {
+            parseLocally()
+            if ai.wantsManagedDeepSeek, !ai.isManagedAvailable { await ai.refreshManagedCapability(accounts: accounts) }
+        }
         .onChange(of: draft.text) { draft.inputChanged(); applyError = nil }
-        .onChange(of: ai.provider) { draft.cancel() }
+        .onChange(of: ai.provider) { draft.cancel(); confirmsSending = false }
+        .onChange(of: accounts.sessionRevision) { draft.cancel(); confirmsSending = false }
         .onDisappear { draft.cancel() }
     }
 
@@ -167,9 +180,18 @@ struct SearchIntentSheet: View {
 
     private func recognize() {
         let data = store.data, goals = store.dietaryGoals
+        let provider = ai.provider
+        let revision = accounts.sessionRevision
         draft.parseRemotely { text in
+            guard ai.provider == provider else { throw CancellationError() }
+            if provider == .managedDeepSeek {
+                return try await ai.parseManaged(text: text, data: data, availableGoals: goals, accounts: accounts)
+            }
+            guard provider == .ownDeepSeek else { throw CookAISettingsError.notEnabled }
             let key = try ai.apiKeyForRequest()
-            return try await DeepSeekIntentService().parse(text: text, key: key, data: data, availableGoals: goals)
+            let result = try await DeepSeekIntentService().parse(text: text, key: key, data: data, availableGoals: goals)
+            guard ai.provider == provider, accounts.sessionRevision == revision else { throw CancellationError() }
+            return result
         }
     }
 

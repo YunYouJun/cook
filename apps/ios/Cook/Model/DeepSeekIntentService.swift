@@ -39,7 +39,6 @@ struct DeepSeekIntentService: Sendable {
             throw DeepSeekIntentError.authentication
         }
         let validator = SearchIntentValidator(data: data, availableGoals: availableGoals)
-        let local = LocalSearchIntentParser(data: data, availableGoals: availableGoals).parse(text)
         var request = URLRequest(url: Self.endpoint)
         request.httpMethod = "POST"
         request.timeoutInterval = 20
@@ -72,30 +71,8 @@ struct DeepSeekIntentService: Sendable {
                   !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw DeepSeekIntentError.invalidResponse
             }
-            var result = try validator.decode(Data(content.utf8), expectedSource: .deepseek)
-            // Model omissions must never relax locally recognized conditions.
-            if let goal = local.goal {
-                guard result.goal == nil || result.goal == goal else { throw DeepSeekIntentError.invalidResponse }
-                result.goal = goal
-            }
-            if let tool = local.query.tool {
-                guard result.query.tool == nil || result.query.tool == tool else { throw DeepSeekIntentError.invalidResponse }
-                result.query.tool = tool
-            }
-            result.query.stuff = uniqueStrings(local.query.stuff + result.query.stuff)
-            result.query.avoid = uniqueStrings(local.query.avoid + result.query.avoid)
-            result.query.noSpicy = local.query.noSpicy || result.query.noSpicy
-            // These arrays are OR filters: merging extra model values would broaden an explicit choice.
-            if !local.query.methodGroups.isEmpty { result.query.methodGroups = local.query.methodGroups }
-            if !local.query.difficulty.isEmpty { result.query.difficulty = local.query.difficulty }
-            result.unresolved = uniqueStrings(local.unresolved + result.unresolved)
-            // Unsupported health requests must not become a different, supported goal.
-            if result.goal != nil, local.goal == nil,
-               (Self.unsupportedHealthRequests.contains(where: text.contains)
-                || DietaryGoal.allCases.contains(where: { text.contains($0.title) })) {
-                throw DeepSeekIntentError.invalidResponse
-            }
-            return try validator.validate(result, expectedSource: .deepseek)
+            let result = try validator.decode(Data(content.utf8), expectedSource: .deepseek)
+            return try CookAIIntentValidation.preserveLocalConditions(result, text: text, data: data, availableGoals: availableGoals)
         } catch is CancellationError {
             throw CancellationError()
         } catch let error as URLError {
@@ -106,6 +83,8 @@ struct DeepSeekIntentService: Sendable {
                 throw DeepSeekIntentError.offline
             default: throw DeepSeekIntentError.unavailable
             }
+        } catch is CookAIIntentValidationFailure {
+            throw DeepSeekIntentError.invalidResponse
         } catch let error as SearchIntentError {
             throw error
         } catch let error as DeepSeekIntentError {
@@ -194,7 +173,6 @@ struct DeepSeekIntentService: Sendable {
         let choices: [Choice]
     }
 
-    private static let unsupportedHealthRequests = ["控制体重", "减肥", "减脂", "生酮", "痘痘", "祛痘", "孕期", "孕妇", "糖尿病", "控糖", "血糖", "高血压", "降糖"]
 }
 
 private final class DeepSeekRedirectPolicy: NSObject, URLSessionTaskDelegate {

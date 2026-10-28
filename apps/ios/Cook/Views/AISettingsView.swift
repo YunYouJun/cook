@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Local configuration does not contact DeepSeek or inspect account membership.
+/// Membership checks send account authorization, never cooking text or a personal API key.
 struct AISettingsView: View {
     @Environment(CookAISettings.self) private var settings
+    @Environment(YunlefunAccountStore.self) private var accounts
     @State private var keyInput = ""
 
     var body: some View {
@@ -11,13 +12,28 @@ struct AISettingsView: View {
                 providerButton(.local)
                 providerButton(.ownDeepSeek)
                     .disabled(!settings.hasAPIKey)
-                LabeledContent(CookAIProvider.managedDeepSeek.title, value: "尚未接通")
-                    .foregroundStyle(.secondary)
+                providerButton(.managedDeepSeek)
+                    .disabled(!settings.isManagedAvailable)
                     .accessibilityIdentifier("aiSettings.managed")
             } header: {
                 Text("智能找菜")
             } footer: {
-                Text("内置 DeepSeek 仅向云乐坊会员提供，须由服务端核验会员资格。目前尚未接通。普通用户和会员均可使用自己的 Key；普通搜索始终在本机完成。")
+                Text("内置 DeepSeek 仅向有效云乐坊会员提供，由服务端核验会员与额度。普通用户和会员均可使用自己的 Key；普通搜索始终在本机完成。")
+            }
+
+            Section {
+                if settings.managedStatus == .checking { ProgressView("正在核验会员与服务状态…") }
+                else { Text(settings.managedStatus.message).foregroundStyle(.secondary) }
+                if settings.managedStatus == .loginRequired {
+                    NavigationLink("登录或管理云乐坊账号") { YunlefunAccountView() }
+                }
+                if settings.isManagedConfigured, accounts.account != nil {
+                    Button("重新检查会员与服务状态") { Task { await settings.refreshManagedCapability(accounts: accounts) } }
+                        .disabled(settings.managedStatus == .checking || accounts.isBusy)
+                        .accessibilityIdentifier("aiSettings.refreshMembership")
+                }
+            } header: { Text("会员内置服务") } footer: {
+                Text("检查时只发送登录凭据。会员到期、切换账号或核验过期后需重新检查；每次智能识别还会由服务器检查会员资格和使用额度。")
             }
 
             Section {
@@ -54,6 +70,7 @@ struct AISettingsView: View {
         }
         .navigationTitle("AI 设置")
         .navigationBarTitleDisplayMode(.inline)
+        .task(id: accounts.sessionRevision) { await settings.refreshManagedCapability(accounts: accounts) }
         .onDisappear { keyInput = "" }
     }
 
@@ -76,5 +93,6 @@ struct AISettingsView: View {
 
 #Preview {
     NavigationStack { AISettingsView() }
-        .environment(CookAISettings(defaults: nil, vault: MemoryCookAIKeyVault()))
+        .environment(CookAISettings(defaults: nil, vault: MemoryCookAIKeyVault(), managedService: ManagedCookAIService(endpoint: nil)))
+        .environment(YunlefunAccountStore(vault: MemoryYunlefunAccountVault()))
 }

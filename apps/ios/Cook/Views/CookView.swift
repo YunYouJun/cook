@@ -67,7 +67,10 @@ struct CookView: View {
             }
         }
         .sheet(isPresented: $showingDietaryGoals) { DietaryGoalSelectionSheet() }
-        .sheet(item: $searchIntent) { SearchIntentSheet(text: $0.text) }
+        .sheet(item: $searchIntent, onDismiss: {
+            input = ""
+            isInputPresented = false
+        }) { SearchIntentSheet(text: $0.text) }
         .overlay {
             BasketFlightLayer(animator: basket)
         }
@@ -347,9 +350,7 @@ struct CookView: View {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         searchIntent = SearchIntentInput(text: text)
-        // Search suggestions can also emit submit when focus is dismissed.
-        input = ""
-        isInputPresented = false
+        // Keep the suggestion alive until the sheet finishes its presentation.
     }
 
     private func show(_ notice: InputNotice) {

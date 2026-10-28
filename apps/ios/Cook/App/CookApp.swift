@@ -42,7 +42,9 @@ struct CookApp: App {
         _favoriteActions = State(initialValue: FavoriteActions(context: container.mainContext))
         _accounts = State(initialValue: YunlefunAccountStore(vault: inMemory ? MemoryYunlefunAccountVault() : KeychainYunlefunAccountVault()))
         _workbench = State(initialValue: KitchenWorkbench(defaults: inMemory ? nil : .standard, notifications: inMemory ? .disabled : .live))
-        _ai = State(initialValue: CookAISettings(defaults: inMemory ? nil : .standard, vault: inMemory ? MemoryCookAIKeyVault() : KeychainCookAIKeyVault()))
+        _ai = State(initialValue: CookAISettings(defaults: inMemory ? nil : .standard,
+                                                vault: inMemory ? MemoryCookAIKeyVault() : KeychainCookAIKeyVault(),
+                                                managedService: ManagedCookAIService(endpoint: inMemory ? nil : ManagedCookAIService.configuredEndpoint)))
         #if DEBUG
             if uiTesting {
                 // Reset the fixture without a launch-domain override that would lock later UI changes.
@@ -105,9 +107,16 @@ struct CookApp: App {
                     .environment(accounts)
                     .environment(ai)
                     .preferredColorScheme(testColorScheme)
-                    .task { await accounts.restore() }
+                    .task {
+                        await accounts.restore()
+                        if ai.wantsManagedDeepSeek { await ai.refreshManagedCapability(accounts: accounts) }
+                    }
+                    .onChange(of: accounts.sessionRevision) { ai.invalidateManagedCapability(accounts: accounts) }
                     .onChange(of: scenePhase) { _, phase in
-                        if phase == .active { Task { await accounts.refreshIfNeeded() } }
+                        if phase == .active {
+                            ai.expireManagedCapabilityIfNeeded()
+                            Task { await accounts.refreshIfNeeded() }
+                        }
                     }
 
             case let .failure(error):

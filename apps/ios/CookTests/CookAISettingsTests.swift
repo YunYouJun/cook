@@ -41,7 +41,7 @@ final class CookAISettingsTests: XCTestCase {
     func testOrdinaryUsersCanConfigureOwnKeyWithoutAccountAndDefaultIsLocal() throws {
         try withDefaults { defaults in
             let vault = AIKeyVaultStub()
-            let settings = CookAISettings(defaults: defaults, vault: vault)
+            let settings = CookAISettings(defaults: defaults, vault: vault, managedService: ManagedCookAIService(endpoint: nil))
             XCTAssertEqual(settings.provider, .local)
             XCTAssertFalse(settings.canUseOwnDeepSeek)
             XCTAssertFalse(settings.selectProvider(.ownDeepSeek))
@@ -53,7 +53,7 @@ final class CookAISettingsTests: XCTestCase {
             XCTAssertEqual(try settings.apiKeyForRequest(), testKey)
             XCTAssertEqual(defaults.string(forKey: CookAISettings.providerKey), CookAIProvider.ownDeepSeek.rawValue)
             XCTAssertFalse(defaults.dictionaryRepresentation().values.contains { String(describing: $0).contains(testKey) })
-            let restarted = CookAISettings(defaults: defaults, vault: vault)
+            let restarted = CookAISettings(defaults: defaults, vault: vault, managedService: ManagedCookAIService(endpoint: nil))
             XCTAssertTrue(restarted.canUseOwnDeepSeek)
         }
     }
@@ -63,7 +63,7 @@ final class CookAISettingsTests: XCTestCase {
             defaults.set(CookAIProvider.managedDeepSeek.rawValue, forKey: CookAISettings.providerKey)
             let vault = AIKeyVaultStub()
             vault.key = testKey
-            let settings = CookAISettings(defaults: defaults, vault: vault)
+            let settings = CookAISettings(defaults: defaults, vault: vault, managedService: ManagedCookAIService(endpoint: nil))
             XCTAssertEqual(settings.provider, .local)
             XCTAssertFalse(settings.selectProvider(.managedDeepSeek))
             XCTAssertEqual(settings.provider, .local)
@@ -78,16 +78,16 @@ final class CookAISettingsTests: XCTestCase {
     func testDeleteFallsBackToLocalAndMissingKeyCannotBeUsedAfterRestart() {
         withDefaults { defaults in
             let vault = AIKeyVaultStub()
-            let settings = CookAISettings(defaults: defaults, vault: vault)
+            let settings = CookAISettings(defaults: defaults, vault: vault, managedService: ManagedCookAIService(endpoint: nil))
             XCTAssertTrue(settings.saveAPIKey(testKey))
             XCTAssertTrue(settings.selectProvider(.ownDeepSeek))
             XCTAssertTrue(settings.deleteAPIKey())
             XCTAssertNil(vault.key)
             XCTAssertFalse(settings.hasAPIKey)
             XCTAssertEqual(settings.provider, .local)
-            XCTAssertFalse(CookAISettings(defaults: defaults, vault: vault).canUseOwnDeepSeek)
+            XCTAssertFalse(CookAISettings(defaults: defaults, vault: vault, managedService: ManagedCookAIService(endpoint: nil)).canUseOwnDeepSeek)
             defaults.set(CookAIProvider.ownDeepSeek.rawValue, forKey: CookAISettings.providerKey)
-            XCTAssertEqual(CookAISettings(defaults: defaults, vault: vault).provider, .local)
+            XCTAssertEqual(CookAISettings(defaults: defaults, vault: vault, managedService: ManagedCookAIService(endpoint: nil)).provider, .local)
         }
     }
 
@@ -95,7 +95,7 @@ final class CookAISettingsTests: XCTestCase {
         try withDefaults { defaults in
             let vault = AIKeyVaultStub()
             vault.failSave = true
-            let settings = CookAISettings(defaults: defaults, vault: vault)
+            let settings = CookAISettings(defaults: defaults, vault: vault, managedService: ManagedCookAIService(endpoint: nil))
             XCTAssertFalse(settings.saveAPIKey(testKey))
             XCTAssertFalse(settings.hasAPIKey)
             XCTAssertNil(vault.key)
@@ -114,7 +114,7 @@ final class CookAISettingsTests: XCTestCase {
     func testRequestReadsCurrentVaultAndFailsClosedOnMissingOrUnreadableSecret() throws {
         try withDefaults { defaults in
             let vault = AIKeyVaultStub()
-            let settings = CookAISettings(defaults: defaults, vault: vault)
+            let settings = CookAISettings(defaults: defaults, vault: vault, managedService: ManagedCookAIService(endpoint: nil))
             XCTAssertTrue(settings.saveAPIKey(testKey))
             XCTAssertTrue(settings.selectProvider(.ownDeepSeek))
             let priorReads = vault.reads
@@ -136,14 +136,14 @@ final class CookAISettingsTests: XCTestCase {
     func testInvalidKeysAreRejectedAndReadFailureDoesNotExposeSecrets() {
         withDefaults { defaults in
             let vault = AIKeyVaultStub()
-            let settings = CookAISettings(defaults: defaults, vault: vault)
+            let settings = CookAISettings(defaults: defaults, vault: vault, managedService: ManagedCookAIService(endpoint: nil))
             for key in ["", "   ", "has space", "has\nnewline", "含中文", String(repeating: "a", count: 513)] {
                 XCTAssertFalse(settings.saveAPIKey(key))
                 XCTAssertNil(vault.key)
             }
             vault.failLoad = true
             defaults.set(CookAIProvider.ownDeepSeek.rawValue, forKey: CookAISettings.providerKey)
-            let unreadable = CookAISettings(defaults: defaults, vault: vault)
+            let unreadable = CookAISettings(defaults: defaults, vault: vault, managedService: ManagedCookAIService(endpoint: nil))
             XCTAssertEqual(unreadable.provider, .local)
             XCTAssertFalse(unreadable.hasAPIKey)
             XCTAssertNotNil(unreadable.message)
