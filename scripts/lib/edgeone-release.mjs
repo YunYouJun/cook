@@ -110,7 +110,7 @@ function productionDeployment(deployment, projectId, expectedSha, requireCurrent
   return deployment
 }
 
-async function projectsSnapshot(query, targets, expectedSha) {
+async function projectsSnapshot(query, targets) {
   const result = await query({
     Action: 'DescribePagesProjects',
     Filters: [{ Name: 'ProjectId', Values: targets.map(target => target.projectId) }],
@@ -124,25 +124,32 @@ async function projectsSnapshot(query, targets, expectedSha) {
     const project = matches[0]
     requireCondition(project.Provider === 'Github' && project.RepoUrl === REPOSITORY_URL && project.RepoBranch === 'main', 'project_source_mismatch')
     requireCondition(Array.isArray(project.CustomDomains) && project.CustomDomains.some(domain => domain?.Domain === new URL(target.origin).hostname), 'production_domain_mismatch')
-    const deployment = productionDeployment(project.Deployment, target.projectId, expectedSha)
-    return { ...target, deploymentId: deployment.DeploymentId }
+    return target
   })
 }
 
-async function assertCurrentDeployment(query, target, expectedSha) {
-  for (let offset = 0; offset < 1000; offset += 50) {
-    const result = await query({ Action: 'DescribePagesDeployments', ProjectId: target.projectId, Offset: offset, Limit: 50, OrderBy: 'CreatedOn', Order: 'Desc' })
-    requireCondition(Array.isArray(result.Deployments) && Number.isSafeInteger(result.TotalCount) && result.TotalCount >= 0, 'deployments_response_invalid')
-    const current = result.Deployments.filter(deployment => deployment?.DeploymentId === target.deploymentId)
-    requireCondition(current.length <= 1, 'deployment_ambiguous')
-    if (current.length) {
-      productionDeployment(current[0], target.projectId, expectedSha, true)
-      return
+async function currentDeployment(query, target, expectedSha) {
+  const deployments = []
+  const ids = new Set()
+  let total
+  for (let offset = 0; offset < 20; offset++) {
+    const result = await query({ Action: 'DescribePagesDeployments', ProjectId: target.projectId, Offset: offset, Limit: 50, OrderBy: 'CreatedOn', OrderType: 'Desc' })
+    requireCondition(Array.isArray(result.Deployments) && Number.isSafeInteger(result.TotalCount) && result.TotalCount >= 0 && (total === undefined || total === result.TotalCount), 'deployments_response_invalid')
+    total = result.TotalCount
+    requireCondition(result.Deployments.length === Math.min(50, Math.max(0, total - offset * 50)), 'deployments_response_invalid')
+    for (const deployment of result.Deployments) {
+      requireCondition(typeof deployment?.DeploymentId === 'string' && !ids.has(deployment.DeploymentId) && deployment.ProjectId === target.projectId, 'deployments_response_invalid')
+      ids.add(deployment.DeploymentId)
+      if (deployment.UsedInProd === true)
+        deployments.push(deployment)
     }
-    if (!result.Deployments.length || offset + result.Deployments.length >= result.TotalCount)
+    if (ids.size === total)
       break
   }
-  throw new EdgeOneReleaseError('current_deployment_missing')
+  requireCondition(ids.size === total, 'deployments_response_invalid')
+  requireCondition(deployments.length > 0, 'current_deployment_missing')
+  requireCondition(deployments.length === 1, 'deployment_ambiguous')
+  return productionDeployment(deployments[0], target.projectId, expectedSha, true).DeploymentId
 }
 
 function uncachedHeaders(accept) {
@@ -238,11 +245,13 @@ export async function verifyEdgeOneRelease({ token, expectedSha, fetch: fetcher 
   }
   const allowed = EDGEONE_PRODUCTION_TARGETS
   const query = body => queryEdgeOne(fetcher, token, body)
-  const snapshot = await projectsSnapshot(query, allowed, expectedSha)
+  await projectsSnapshot(query, allowed)
+  const snapshot = []
+  for (const target of allowed)
+    snapshot.push({ ...target, deploymentId: await currentDeployment(query, target, expectedSha) })
   const nonce = `${expectedSha}-${randomUUID()}`
   const results = []
   for (const target of snapshot) {
-    await assertCurrentDeployment(query, target, expectedSha)
     const manifest = await verifyManifest(fetcher, target, expectedSha, verifiedAt, nonce)
     await verifyPage(fetcher, target, '/', target.origin === 'https://cook.yunyoujun.cn', expectedSha, nonce)
     if (target.origin === 'https://cook.yunle.fun')
@@ -250,8 +259,9 @@ export async function verifyEdgeOneRelease({ token, expectedSha, fetch: fetcher 
     results.push({ ...target, sha: expectedSha, ...manifest })
   }
   requireCondition(new Set(results.map(target => target.version)).size === 1, 'production_version_mismatch')
-  const finalSnapshot = await projectsSnapshot(query, allowed, expectedSha)
-  requireCondition(finalSnapshot.every((target, index) => target.deploymentId === snapshot[index].deploymentId), 'production_changed_during_verification')
+  await projectsSnapshot(query, allowed)
+  for (const target of snapshot)
+    requireCondition(await currentDeployment(query, target, expectedSha) === target.deploymentId, 'production_changed_during_verification')
   return {
     provider: 'edgeone',
     environment: 'production',

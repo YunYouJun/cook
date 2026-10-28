@@ -78,8 +78,9 @@ function mockNetwork(intercept = () => undefined) {
     if (body?.Action === 'DescribePagesDeployments') {
       const deployments = state.deployments.filter(deployment => deployment.ProjectId === body.ProjectId)
       assert.equal(body.Limit, 50)
-      assert.equal(body.Order, 'Desc')
-      return apiResponse({ TotalCount: deployments.length, Deployments: deployments.slice(body.Offset, body.Offset + body.Limit) })
+      assert.equal(body.OrderType, 'Desc')
+      assert.equal(body.Order, undefined)
+      return apiResponse({ TotalCount: deployments.length, Deployments: deployments.slice(body.Offset * body.Limit, (body.Offset + 1) * body.Limit) })
     }
     if (url.pathname === '/.well-known/cook-build.json') {
       assert(url.searchParams.get('nonce').startsWith(sha))
@@ -126,7 +127,7 @@ test('queries later deployment pages to locate the project current deployment', 
   const current = state.deployments[0]
   state.deployments.unshift(...Array.from({ length: 50 }, (_, index) => ({ ...current, DeploymentId: `dp-preview-${index}`, Env: 'Preview', UsedInProd: false })))
   await verify(fetch)
-  assert(state.calls.some(call => call.body?.Action === 'DescribePagesDeployments' && call.body.Offset === 50))
+  assert.deepEqual(state.calls.filter(call => call.body?.Action === 'DescribePagesDeployments' && call.body.ProjectId === current.ProjectId).map(call => call.body.Offset), [0, 1, 0, 1])
 })
 
 test('rejects Vercel, preview, wrong branch, another repository or stale production SHA', async () => {
@@ -134,11 +135,11 @@ test('rejects Vercel, preview, wrong branch, another repository or stale product
     data => data.projects[0].Provider = 'Vercel',
     data => data.projects[0].RepoBranch = 'feature',
     data => data.projects[0].RepoUrl = 'https://github.com/other/cook',
-    data => data.projects[0].Deployment.Env = 'Preview',
-    data => data.projects[0].Deployment.ViaMeta = 'Upload',
-    data => data.projects[0].Deployment.Status = 'Failure',
-    data => data.projects[0].Deployment.RepoCommitHash = otherSha,
-    data => data.projects[0].Deployment.DplRepoUrl = 'https://github.com/other/cook',
+    data => data.deployments[0].Env = 'Preview',
+    data => data.deployments[0].ViaMeta = 'Upload',
+    data => data.deployments[0].Status = 'Failure',
+    data => data.deployments[0].RepoCommitHash = otherSha,
+    data => data.deployments[0].DplRepoUrl = 'https://github.com/other/cook',
   ]) {
     const { fetch, state } = mockNetwork()
     change(state)
@@ -163,10 +164,10 @@ test('requires both bound production domains and project records', async () => {
 test('does not accept an old successful deployment absent from current production', async () => {
   const { fetch, state } = mockNetwork()
   state.deployments[0].UsedInProd = false
-  await assert.rejects(verify(fetch), { reason: 'deployment_not_current' })
-  state.deployments[0].UsedInProd = true
-  state.deployments[0].DeploymentId = 'dp-another-success'
   await assert.rejects(verify(fetch), { reason: 'current_deployment_missing' })
+  state.deployments[0].UsedInProd = true
+  state.deployments[0].Env = 'Preview'
+  await assert.rejects(verify(fetch), { reason: 'deployment_not_production_success' })
 })
 
 test('rejects mismatched, dirty, unversioned, future, extended or malformed manifests', async () => {
@@ -234,14 +235,35 @@ test('requires both production manifests to describe the same package version', 
   await assert.rejects(verify(fetch), { reason: 'production_version_mismatch' })
 })
 
-test('rechecks authoritative project pointers before returning evidence', async () => {
-  const { fetch } = mockNetwork(({ body, state }) => {
-    if (body?.Action === 'DescribePagesProjects' && state.projectQueries > 1) {
-      state.projects[0].Deployment.DeploymentId = 'dp-production-replaced'
-      return apiResponse({ TotalCount: state.projects.length, Projects: state.projects })
-    }
+test('ignores a newer preview in the project overview and deployment list', async () => {
+  const { fetch, state } = mockNetwork()
+  const preview = { ...state.deployments[0], DeploymentId: 'dp-preview', Env: 'Preview', UsedInProd: false, RepoCommitHash: otherSha }
+  state.projects[0].Deployment = preview
+  state.deployments.unshift(preview)
+  assert.equal((await verify(fetch)).targets[0].deploymentId, 'dp-production-0')
+})
+
+test('rejects ambiguous production pointers', async () => {
+  const { fetch, state } = mockNetwork()
+  state.deployments.push({ ...state.deployments[0], DeploymentId: 'dp-other' })
+  await assert.rejects(verify(fetch), { reason: 'deployment_ambiguous' })
+})
+
+test('rechecks authoritative production pointers after assets', async () => {
+  const { fetch } = mockNetwork(({ url, state }) => {
+    if (url.origin === 'https://cook.yunle.fun' && url.pathname === '/home')
+      state.deployments[0].DeploymentId = 'dp-production-replaced'
   })
   await assert.rejects(verify(fetch), { reason: 'production_changed_during_verification' })
+})
+
+test('rejects incomplete or changing deployment pagination', async () => {
+  const { fetch, state } = mockNetwork(({ body }) => {
+    if (body?.Action === 'DescribePagesDeployments' && body.Offset === 1)
+      return apiResponse({ TotalCount: 52, Deployments: [] })
+  })
+  state.deployments.unshift(...Array.from({ length: 50 }, (_, index) => ({ ...state.deployments[0], DeploymentId: `dp-preview-${index}`, Env: 'Preview', UsedInProd: false })))
+  await assert.rejects(verify(fetch), { code: 'EDGEONE_RELEASE_UNVERIFIED' })
 })
 
 test('rejects invalid SHA, missing token or clock before sending requests', async () => {
