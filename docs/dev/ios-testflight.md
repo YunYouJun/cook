@@ -17,6 +17,14 @@
 
 后续包含私人菜谱、个人词典和偏好同步修复的 `2.0.0 (4)` 已完成 TestFlight 内部发布，固定源码 `6e4343faa523f400a6d2eeb0380223e80d632f95`（含 #137 布局修复）。该候选的 [CI](https://github.com/YunYouJun/cook/actions/runs/40079188284) 全部通过后，[#136](https://github.com/YunYouJun/cook/pull/136) 已合并为 main `e090866474fe5f589c0ac01d36892b802dc33b62`；合并时两者源码树相同。后续主线提交不自动扩大冻结发布范围。服务端发布状态已按精确构建回读，详情见下方验收记录；构建 `4` 的单机升级、数据保留与偏好持久化结果同样见下方记录，不能推导为生产同步通过。每次上传前重新查询已处理和上传中构建，不能复用已占用的构建号。
 
+## 2026-10-29 会员 AI 内测
+
+`2.0.0 (10)` 已按精确构建回读为 `VALID / INTERNAL_ONLY / IN_BETA_TESTING`，Build ID 为 `c31e2a32-7955-44cd-8a95-f5c013637d2c`。沿用既有内部组与 1 名成员，没有关联外部组。冻结源码为 `7c183f00f1c18e72cd314a1c8fee863d638f6056`，整合 main `620b495` 与 AI 分支 `8c94644`；IPA SHA-256 为 `1200ac9f18949083cacea4ab89e11b99e461d2a1f49edaf153ac025390cd5075`。会员服务地址、正式反馈地址、数据契约、隐私清单与正文、分发签名、dSYM UUID、CloudKit／推送 Production 权限及内部标记均核验通过，同一散列 IPA 的 Apple 包校验通过后上传。中文测试说明已回读一致，真机会员操作由维护者执行。
+
+本轮自动导出选中了缺少 Associated Domains 的旧描述文件，并尝试使用当前 Key 无权访问的云端分发证书。已在任务独立的导出配置副本中改为手动签名，复用本机已有的 Apple Distribution 身份和支持 Associated Domains 的 App Store 描述文件，保持 `testFlightInternalTestingOnly=true`、`manageAppVersionAndBuildNumber=false` 和 Production 环境。以后遇到相同错误，先核对现有证书私钥可用、描述文件有效期和能力，不要回退旧权限或直接复用外测配置。
+
+该主机还出现系统 rsync 子进程从 PATH 选中 Homebrew rsync，后者拒绝 `--extended-attributes` 而使导出报 `Copy failed`；仅在本轮发布子进程中优先系统工具路径后导出成功，没有修改全局 PATH。归档、dSYM、IPA、源码副本、导出配置与脱敏回执保存在 `~/Library/Developer/ReleaseArtifacts/Cook/20261029-2.0.0-10-member-ai`；临时构建和解包目录在发布结束时回收。
+
 ## 资源与反馈配置
 
 在本次冻结候选或经确认源码等价提交的独立工作树准备资源，生成工程前设置两个变量：

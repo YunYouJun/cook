@@ -16,6 +16,7 @@
     "convert": "pnpm -C packages/cook run convert",
     "validate": "tsx scripts/validate-recipes.ts",
     "amounts:check": "tsx scripts/check-recipe-amounts.ts",
+    "dietary:validate": "tsx scripts/validate-dietary.ts",
     "amounts:annotate": "tsx scripts/annotate-recipe-amounts.ts",
     "audit:amounts": "tsx scripts/audit-recipe-amounts.ts",
     "check:videos": "tsx scripts/check-video-links.ts",

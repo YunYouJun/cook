@@ -5,6 +5,16 @@
   "functionRoot": "./cloudfunctions",
   "functions": [
     {
+      "name": "cook-ai-intent",
+      "timeout": 45,
+      "runtime": "Nodejs18.15",
+      "memorySize": 256,
+      "installDependency": true,
+      "handler": "index.main",
+      "envVariables": { "COOK_AI_ENABLED": "false" },
+      "ignore": ["*.local", "node_modules"]
+    },
+    {
       "name": "cook-user-data",
       "timeout": 10,
       "runtime": "Nodejs18.15",

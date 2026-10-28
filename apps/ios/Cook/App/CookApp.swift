@@ -16,6 +16,7 @@ struct CookApp: App {
     @State private var favoriteActions: FavoriteActions
     @State private var accounts: YunlefunAccountStore
     @State private var workbench: KitchenWorkbench
+    @State private var ai: CookAISettings
     private let container: ModelContainer
     /// 通知中心只弱引用代理，这里留着
     private let notificationDelegate: NotificationDelegate
@@ -37,12 +38,27 @@ struct CookApp: App {
         }
         let defaultPantry = (try? result.get())?.data.pantry.defaults ?? []
         _loadResult = State(initialValue: result)
-        _session = State(initialValue: CookSession(defaultPantry: defaultPantry, context: container.mainContext))
+        _session = State(initialValue: CookSession(defaultPantry: defaultPantry, context: container.mainContext, dietaryDefaults: inMemory ? nil : .standard))
         _favoriteActions = State(initialValue: FavoriteActions(context: container.mainContext))
         _accounts = State(initialValue: YunlefunAccountStore(vault: inMemory ? MemoryYunlefunAccountVault() : KeychainYunlefunAccountVault()))
         _workbench = State(initialValue: KitchenWorkbench(defaults: inMemory ? nil : .standard, notifications: inMemory ? .disabled : .live))
+        _ai = State(initialValue: CookAISettings(defaults: inMemory ? nil : .standard,
+                                                vault: inMemory ? MemoryCookAIKeyVault() : KeychainCookAIKeyVault(),
+                                                managedService: ManagedCookAIService(endpoint: inMemory ? nil : ManagedCookAIService.configuredEndpoint)))
         #if DEBUG
             if uiTesting {
+                // Reset the fixture without a launch-domain override that would lock later UI changes.
+                if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-presentation") {
+                    UserDefaults.standard.set(CookPresentation.list.rawValue, forKey: "cook.presentation")
+                }
+                let dietaryDefaults = UserDefaults(suiteName: "cook.dietary.ui-tests")!
+                if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-dietary") {
+                    dietaryDefaults.removePersistentDomain(forName: "cook.dietary.ui-tests")
+                }
+                if !ProcessInfo.processInfo.arguments.contains("-ui-testing-show-dietary-introduction") {
+                    dietaryDefaults.set(true, forKey: CookSession.dietaryIntroductionKey)
+                }
+                _session = State(initialValue: CookSession(defaultPantry: defaultPantry, context: container.mainContext, dietaryDefaults: dietaryDefaults))
                 let kitchenDefaults = UserDefaults(suiteName: "cook.kitchen.ui-tests")!
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-kitchen") {
                     kitchenDefaults.removePersistentDomain(forName: "cook.kitchen.ui-tests")
@@ -92,9 +108,18 @@ struct CookApp: App {
                     .environment(favoriteActions)
                     .environment(workbench)
                     .environment(accounts)
-                    .task { await accounts.restore() }
+                    .environment(ai)
+                    .preferredColorScheme(testColorScheme)
+                    .task {
+                        await accounts.restore()
+                        if ai.wantsManagedDeepSeek { await ai.refreshManagedCapability(accounts: accounts) }
+                    }
+                    .onChange(of: accounts.sessionRevision) { ai.invalidateManagedCapability(accounts: accounts) }
                     .onChange(of: scenePhase) { _, phase in
-                        if phase == .active { Task { await accounts.refreshIfNeeded() } }
+                        if phase == .active {
+                            ai.expireManagedCapabilityIfNeeded()
+                            Task { await accounts.refreshIfNeeded() }
+                        }
                     }
 
             case let .failure(error):
@@ -106,5 +131,15 @@ struct CookApp: App {
             }
         }
         .modelContainer(container)
+    }
+
+    private var testColorScheme: ColorScheme? {
+        #if DEBUG
+            let arguments = ProcessInfo.processInfo.arguments
+            guard arguments.contains("-ui-testing") else { return nil }
+            return arguments.contains("-ui-testing-dark") ? .dark : .light
+        #else
+            return nil
+        #endif
     }
 }

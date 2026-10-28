@@ -118,6 +118,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm run convert
+      - name: Verify managed AI service and shared intent contract
+        run: |
+          node scripts/generate-ai-intent-contract.mjs --check
+          node --test test/cookAiIntent.test.mjs test/aiIntentContract.test.mjs
       - run: pnpm run validate
       - run: pnpm run amounts:check
       - name: Check recipe ids against base branch
@@ -181,11 +185,10 @@ jobs:
   ios:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
-    runs-on: macos-26
+    runs-on: xcode-27
     env:
-      # The image includes Xcode 26.5 and iOS 26.5. Pin the matching toolchain:
-      # the default 26.6 intermittently reports only simulator placeholders.
-      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
+      # Match native UI validation with a pinned compiler and XCTest toolchain.
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -210,18 +213,29 @@ jobs:
         run: |
           xcrun simctl list runtimes
           xcrun simctl list devices available
-          # 连启动也串行；关掉第一台再启动第二台，不让两台同时争用 runner。
-          # 即使第一台失败也跑第二台，保留两份结果；任一失败都会让检查失败。
+          # 连启动也串行；每个字体审计使用独立测试宿主和新启动的模拟器。
+          # 两项审计从常规回归中移出后分别执行，保留所有用例、审计类别和失败。
           result=0
-          for device in "$IPHONE" "$IPAD"; do
+          standard_audit=CookUITests/DietaryGoalsUITests/testNativeGoalPickerAccessibilityAndReviewedSummary
+          maximum_audit=CookUITests/DietaryGoalsUITests/testLargestTextCanChooseRememberReadAndRoll
+          run_tests() {
+            local device="$1" stage="$2"
+            shift 2
+            echo "Running $stage on $device"
             if xcrun simctl bootstatus "$device" -b; then
               xcodebuild test -project apps/ios/Cook.xcodeproj -scheme Cook -destination "id=$device" \
                 -destination-timeout 180 -parallel-testing-enabled NO \
-                -resultBundlePath "$RUNNER_TEMP/xcresult/$device.xcresult" CODE_SIGNING_ALLOWED=NO || result=1
+                "$@" -resultBundlePath "$RUNNER_TEMP/xcresult/$device-$stage.xcresult" \
+                CODE_SIGNING_ALLOWED=NO || result=1
             else
               result=1
             fi
             xcrun simctl shutdown "$device" || result=1
+          }
+          for device in "$IPHONE" "$IPAD"; do
+            run_tests "$device" regression "-skip-testing:$standard_audit" "-skip-testing:$maximum_audit"
+            run_tests "$device" dietary-standard "-only-testing:$standard_audit"
+            run_tests "$device" dietary-maximum "-only-testing:$maximum_audit"
           done
           exit "$result"
       # 跑多个设备时 xcodebuild 的日志里只有失败的用例名，没有原因，从结果包里读出来

@@ -5,6 +5,7 @@ import SwiftUI
 /// are the same ones used by the ingredient list.
 struct CloudKitchenView: View {
     @Binding var presentation: CookPresentation
+    @Binding var showingDietaryGoals: Bool
     let showResults: () -> Void
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
@@ -28,21 +29,38 @@ struct CloudKitchenView: View {
         return showingAllIngredients ? store.stuffItems : featured
     }
 
+    private var instruction: String {
+        if let goal = session.dietaryGoal, session.selectedStuff.isEmpty {
+            return "按“\(goal.title)”找菜，也可以加几样手头食材。"
+        }
+        return needsIngredients ? "先选几样食材，再点锅开火。" : "点台面上的食材，选好后点锅开火。"
+    }
+
     var body: some View {
-        let count = session.matchCount(using: store.recommender) ?? 0
+        let count = session.matchCount(in: store) ?? 0
         GeometryReader { geometry in
             ScrollView {
                 VStack(spacing: 0) {
                     VStack(spacing: 7) {
                         Text("今晚，做点好吃的。")
                             .font(.system(.title2, design: .rounded, weight: .bold))
-                        Text(needsIngredients ? "先选几样食材，再点锅开火。" : "点台面上的食材，选好后点锅开火。")
+                        Text(instruction)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
+
+                    if !session.hasCompletedDietaryIntroduction, !store.dietaryGoals.isEmpty {
+                        GroupBox { DietaryGoalIntroduction(isPresented: $showingDietaryGoals).buttonStyle(.borderless) }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 16)
+                    } else if session.dietaryGoal != nil {
+                        DietaryGoalSummaryButton(isPresented: $showingDietaryGoals)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 8)
+                    }
 
                     kitchenScene
                         .frame(height: min(430, max(250, geometry.size.width * 0.82)))
@@ -78,6 +96,8 @@ struct CloudKitchenView: View {
                 Button { showingFilters = true } label: {
                     Label("筛选", systemImage: session.activeFilterCount > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                 }
+                .accessibilityValue(session.dietaryGoal.map { "饮食目标：\($0.title)" } ?? "")
+                .accessibilityIdentifier("cook.filters")
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("清空") { session.clearStuff() }

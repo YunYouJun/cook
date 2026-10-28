@@ -18,6 +18,10 @@ struct SettingsView: View {
                     }
                 }
                 Section("设置") {
+                    NavigationLink { AISettingsView() } label: {
+                        SettingsRowLabel("AI 设置", symbol: "sparkles", color: .purple)
+                    }
+                    .accessibilityIdentifier("settings.ai")
                     NavigationLink { ReminderSettingsView() } label: {
                         SettingsRowLabel("提醒", symbol: "bell.badge.fill", color: .red)
                     }
@@ -47,4 +51,5 @@ struct SettingsView: View {
 
 #Preview {
     SettingsView().environment(YunlefunAccountStore(vault: MemoryYunlefunAccountVault()))
+        .environment(CookAISettings(defaults: nil, vault: MemoryCookAIKeyVault()))
 }

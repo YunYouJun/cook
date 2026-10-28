@@ -5,9 +5,10 @@ import SwiftUI
 struct RecipeTextView: View {
     let recipe: Recipe
     let text: RecipeText
+    var dietaryGoal: DietaryGoal? = nil
 
     var body: some View {
-        RecipeTextContent(recipe: recipe, text: text)
+        RecipeTextContent(recipe: recipe, text: text, dietaryGoal: dietaryGoal)
             .navigationTitle(recipe.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -30,12 +31,14 @@ struct RecipeTextContent: View {
     let recipe: Recipe
     let text: RecipeText
     let preparationInSidebar: Bool
+    let dietaryGoal: DietaryGoal?
     private let presentation: RecipePresentation
 
-    init(recipe: Recipe, text: RecipeText, preparationInSidebar: Bool = false) {
+    init(recipe: Recipe, text: RecipeText, preparationInSidebar: Bool = false, dietaryGoal: DietaryGoal? = nil) {
         self.recipe = recipe
         self.text = text
         self.preparationInSidebar = preparationInSidebar
+        self.dietaryGoal = dietaryGoal
         presentation = RecipePresentation(text: text)
     }
 
@@ -79,7 +82,10 @@ struct RecipeTextContent: View {
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    RecipeMetricsView(presentation: presentation, difficulty: recipe.difficulty)
+                    if let dietaryGoal, let entry = store.dietaryCatalog?.entry(for: recipe, goal: dietaryGoal) {
+                        DietaryReviewSummary(goal: dietaryGoal, entry: entry)
+                    }
+                    RecipeMetricsView(presentation: presentation, difficulty: recipe.difficulty, showsCalories: dietaryGoal == nil)
                     if let description = presentation.servingDescription {
                         Text(description).font(.footnote).foregroundStyle(.secondary)
                     }
