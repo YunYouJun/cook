@@ -1,16 +1,18 @@
 <script lang="ts" setup>
 /**
- * iOS 设置风格的列表图标：彩色圆角方块 + 白色线框图标
+ * iOS 设置风格的列表图标：彩色圆角方块 + 白色图标，默认插槽可复用其他图标库。
  */
 defineProps<{
-  icon: string
+  icon?: string
   color: string
 }>()
 </script>
 
 <template>
   <span class="cook-list-icon" :style="{ backgroundColor: color }" aria-hidden="true">
-    <ion-icon :icon="icon" />
+    <slot>
+      <ion-icon v-if="icon" :icon="icon" />
+    </slot>
   </span>
 </template>
 
