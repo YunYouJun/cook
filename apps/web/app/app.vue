@@ -57,7 +57,7 @@ onMounted(() => {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
   .cook-app-shell.sidebar-collapsed {
-    --cook-sidebar-width: 72px;
+    --cook-sidebar-width: 64px;
   }
   .cook-main-outlet {
     inset-inline-start: var(--cook-sidebar-width);

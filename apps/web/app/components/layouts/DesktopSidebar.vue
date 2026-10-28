@@ -97,6 +97,7 @@ function navigate(event: MouseEvent, href: string) {
     z-index: 10;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
     width: var(--cook-sidebar-width);
     padding: 20px 12px 12px;
     border-inline-end: 1px solid var(--ion-item-border-color, rgba(128, 128, 128, 0.2));
@@ -195,8 +196,12 @@ function navigate(event: MouseEvent, href: string) {
   outline: 2px solid var(--ion-color-primary);
   outline-offset: -2px;
 }
+.desktop-sidebar.is-collapsed {
+  padding-inline: 8px;
+}
 .is-collapsed .desktop-sidebar-brand {
-  padding: 0 4px;
+  justify-content: center;
+  padding: 0;
 }
 .is-collapsed :is(.desktop-sidebar-brand-copy, .desktop-sidebar-label, .desktop-sidebar-group),
 .is-collapsed :deep(.legacy-version-link > span) {
@@ -205,9 +210,21 @@ function navigate(event: MouseEvent, href: string) {
 .is-collapsed .desktop-sidebar-navigation > a:nth-of-type(5) {
   margin-top: 28px;
 }
+.is-collapsed .desktop-sidebar-navigation {
+  /* Keep the narrow rail scrollable without taking space from its icon buttons. */
+  scrollbar-width: none;
+}
+.is-collapsed .desktop-sidebar-navigation::-webkit-scrollbar {
+  display: none;
+}
 .is-collapsed :is(.desktop-sidebar-item, .desktop-sidebar-toggle),
 .is-collapsed :deep(.legacy-version-link) {
   justify-content: center;
-  padding-inline: 0;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: 2px auto;
+  padding: 0;
+  border-radius: 8px;
 }
 </style>
