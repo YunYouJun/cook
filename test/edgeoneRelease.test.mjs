@@ -78,8 +78,9 @@ function mockNetwork(intercept = () => undefined) {
     if (body?.Action === 'DescribePagesDeployments') {
       const deployments = state.deployments.filter(deployment => deployment.ProjectId === body.ProjectId)
       assert.equal(body.Limit, 50)
-      assert.equal(body.Order, 'Desc')
-      return apiResponse({ TotalCount: deployments.length, Deployments: deployments.slice(body.Offset, body.Offset + body.Limit) })
+      assert.equal(body.OrderType, 'Desc')
+      assert.equal(body.Order, undefined)
+      return apiResponse({ TotalCount: deployments.length, Deployments: deployments.slice(body.Offset * body.Limit, (body.Offset + 1) * body.Limit) })
     }
     if (url.pathname === '/.well-known/cook-build.json') {
       assert(url.searchParams.get('nonce').startsWith(sha))
@@ -126,7 +127,7 @@ test('queries later deployment pages to locate the project current deployment', 
   const current = state.deployments[0]
   state.deployments.unshift(...Array.from({ length: 50 }, (_, index) => ({ ...current, DeploymentId: `dp-preview-${index}`, Env: 'Preview', UsedInProd: false })))
   await verify(fetch)
-  assert(state.calls.some(call => call.body?.Action === 'DescribePagesDeployments' && call.body.Offset === 50))
+  assert.deepEqual(state.calls.filter(call => call.body?.Action === 'DescribePagesDeployments' && call.body.ProjectId === current.ProjectId).map(call => call.body.Offset), [0, 1, 0, 1])
 })
 
 test('rejects Vercel, preview, wrong branch, another repository or stale production SHA', async () => {
@@ -258,7 +259,7 @@ test('rechecks authoritative production pointers after assets', async () => {
 
 test('rejects incomplete or changing deployment pagination', async () => {
   const { fetch, state } = mockNetwork(({ body }) => {
-    if (body?.Action === 'DescribePagesDeployments' && body.Offset === 50)
+    if (body?.Action === 'DescribePagesDeployments' && body.Offset === 1)
       return apiResponse({ TotalCount: 52, Deployments: [] })
   })
   state.deployments.unshift(...Array.from({ length: 50 }, (_, index) => ({ ...state.deployments[0], DeploymentId: `dp-preview-${index}`, Env: 'Preview', UsedInProd: false })))

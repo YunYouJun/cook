@@ -132,18 +132,18 @@ async function currentDeployment(query, target, expectedSha) {
   const deployments = []
   const ids = new Set()
   let total
-  for (let offset = 0; offset < 1000; offset += 50) {
-    const result = await query({ Action: 'DescribePagesDeployments', ProjectId: target.projectId, Offset: offset, Limit: 50, OrderBy: 'CreatedOn', Order: 'Desc' })
+  for (let offset = 0; offset < 20; offset++) {
+    const result = await query({ Action: 'DescribePagesDeployments', ProjectId: target.projectId, Offset: offset, Limit: 50, OrderBy: 'CreatedOn', OrderType: 'Desc' })
     requireCondition(Array.isArray(result.Deployments) && Number.isSafeInteger(result.TotalCount) && result.TotalCount >= 0 && (total === undefined || total === result.TotalCount), 'deployments_response_invalid')
     total = result.TotalCount
-    requireCondition(result.Deployments.length === Math.min(50, Math.max(0, total - offset)), 'deployments_response_invalid')
+    requireCondition(result.Deployments.length === Math.min(50, Math.max(0, total - offset * 50)), 'deployments_response_invalid')
     for (const deployment of result.Deployments) {
       requireCondition(typeof deployment?.DeploymentId === 'string' && !ids.has(deployment.DeploymentId) && deployment.ProjectId === target.projectId, 'deployments_response_invalid')
       ids.add(deployment.DeploymentId)
       if (deployment.UsedInProd === true)
         deployments.push(deployment)
     }
-    if (offset + result.Deployments.length === total)
+    if (ids.size === total)
       break
   }
   requireCondition(ids.size === total, 'deployments_response_invalid')
