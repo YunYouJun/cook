@@ -122,6 +122,8 @@ jobs:
         run: |
           git fetch --depth=1 origin ${{ github.base_ref }}
           pnpm run validate --base FETCH_HEAD
+      - name: Test release provenance and Support delivery gates
+        run: node --test --test-reporter=dot test/webBuildInfo.test.mjs test/productSiteBuild.test.mjs test/supportAgentHttp.test.mjs test/cookGithubChanges.test.mjs test/cookDeliverySync.test.mjs test/supportLedger.test.mjs test/edgeoneRelease.test.mjs test/cookSupportRunner.test.mjs
       - run: pnpm run test
 
   # iOS 的 CookCore 跑和 Web 共用的用例（ubuntu 镜像自带 Swift）
