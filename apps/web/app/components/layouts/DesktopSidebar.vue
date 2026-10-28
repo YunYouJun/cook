@@ -7,15 +7,15 @@ const ionRouter = useIonRouter()
 const path = computed(() => router.currentRoute.value.path)
 
 const navigation = computed(() => [
-  { label: '做菜', href: '/home', icon: ioniconsRestaurantOutline, active: ['/', '/home', '/tabs', '/tabs/home'].includes(path.value) },
-  { label: '菜谱', href: '/library', icon: ioniconsLibraryOutline, active: ['/library', '/tabs/library', '/recipes'].includes(path.value) },
-  { label: '发现', href: '/apps', icon: ioniconsCompassOutline, active: path.value.startsWith('/apps') || path.value.startsWith('/tabs/apps') },
-  { label: '我的', href: '/my', icon: ioniconsPersonCircleOutline, active: ['/my', '/tabs/my'].includes(path.value) },
+  { label: '做菜', href: '/home', icon: 'i-f7-flame', active: ['/', '/home', '/tabs', '/tabs/home'].includes(path.value) },
+  { label: '菜谱', href: '/library', icon: 'i-f7-book', active: ['/library', '/tabs/library', '/recipes'].includes(path.value) },
+  { label: '发现', href: '/apps', icon: 'i-f7-compass', active: path.value.startsWith('/apps') || path.value.startsWith('/tabs/apps') },
+  { label: '我的', href: '/my', icon: 'i-f7-person-crop-circle', active: ['/my', '/tabs/my'].includes(path.value) },
 ])
 const kitchen = [
-  { label: '我的收藏', href: '/recipes/favorites', icon: ioniconsStarOutline },
-  { label: '历史记录', href: '/recipes/history', icon: ioniconsTimeOutline },
-  { label: '食材和厨具', href: '/catalog', icon: ioniconsGridOutline },
+  { label: '我的收藏', href: '/recipes/favorites', icon: 'i-f7-star' },
+  { label: '历史记录', href: '/recipes/history', icon: 'i-f7-clock' },
+  { label: '食材和厨具', href: '/catalog', icon: 'i-f7-square-grid-2x2' },
 ]
 
 function navigate(event: MouseEvent, href: string) {
@@ -50,7 +50,7 @@ function navigate(event: MouseEvent, href: string) {
         :aria-label="collapsed ? item.label : undefined"
         @click="navigate($event, item.href)"
       >
-        <ion-icon :icon="item.icon" aria-hidden="true" />
+        <span class="desktop-sidebar-icon" :class="item.icon" aria-hidden="true" />
         <span class="desktop-sidebar-label">{{ item.label }}</span>
       </a>
 
@@ -67,19 +67,19 @@ function navigate(event: MouseEvent, href: string) {
         :aria-label="collapsed ? item.label : undefined"
         @click="navigate($event, item.href)"
       >
-        <ion-icon :icon="item.icon" aria-hidden="true" />
+        <span class="desktop-sidebar-icon" :class="item.icon" aria-hidden="true" />
         <span class="desktop-sidebar-label">{{ item.label }}</span>
       </a>
     </nav>
 
     <div class="desktop-sidebar-footer">
       <a class="desktop-sidebar-item" href="/settings" :title="collapsed ? '设置' : undefined" :aria-label="collapsed ? '设置' : undefined" :aria-current="path === '/settings' ? 'page' : undefined" @click="navigate($event, '/settings')">
-        <span class="i-f7-gear-alt desktop-sidebar-footer-icon" aria-hidden="true" />
+        <span class="i-f7-gear-alt desktop-sidebar-icon" aria-hidden="true" />
         <span class="desktop-sidebar-label">设置</span>
       </a>
       <LegacyVersionLink :title="collapsed ? '切换到旧版' : undefined" aria-label="切换到旧版" />
       <button class="desktop-sidebar-toggle" type="button" :aria-label="collapsed ? '展开侧栏' : '收起侧栏'" :title="collapsed ? '展开侧栏' : '收起侧栏'" :aria-expanded="!collapsed" @click="collapsed = !collapsed">
-        <span class="i-f7-sidebar-left desktop-sidebar-footer-icon" aria-hidden="true" />
+        <span class="i-f7-sidebar-left desktop-sidebar-icon" aria-hidden="true" />
         <span class="desktop-sidebar-label">收起侧栏</span>
       </button>
     </div>
@@ -157,10 +157,10 @@ function navigate(event: MouseEvent, href: string) {
   white-space: nowrap;
   cursor: pointer;
 }
-.desktop-sidebar-item ion-icon {
+.desktop-sidebar-icon {
   flex: none;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   color: var(--ion-color-primary);
 }
 .desktop-sidebar-item[aria-current='page'] {
@@ -186,13 +186,7 @@ function navigate(event: MouseEvent, href: string) {
   color: var(--ion-text-color-step-400, #6d6d72);
   font-size: 12px;
 }
-.desktop-sidebar-footer-icon {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  color: var(--ion-color-primary);
-}
-.desktop-sidebar-toggle .desktop-sidebar-footer-icon {
+.desktop-sidebar-toggle .desktop-sidebar-icon {
   color: inherit;
 }
 .desktop-sidebar :is(a, button):focus-visible {
