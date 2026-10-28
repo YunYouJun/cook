@@ -2,6 +2,7 @@ import SwiftUI
 import YunleSupportUI
 
 struct HelpSettingsView: View {
+    @State private var showingSupport = false
     var body: some View {
         List {
             Section {
@@ -23,8 +24,11 @@ struct HelpSettingsView: View {
                              url: AppLinks.shared.wecomKf.absoluteString,
                              accessibilityHint: "打开微信客服页面")
                     .accessibilityIdentifier("help.wechatSupport")
-                externalLink("支持中心", subtitle: "访问云乐坊支持服务", icon: .system("questionmark.circle"),
-                             url: "https://support.yunle.fun/?product=cook")
+                Button { showingSupport = true } label: {
+                    SupportMenuLabel("支持中心", icon: .system("questionmark.circle"),
+                                     detail: .subtitle("查看帮助、在线反馈与工单"))
+                }
+                .supportMenuRow()
                     .accessibilityIdentifier("help.support")
                 externalLink("需求墙", subtitle: "查看公开建议，为想要的功能投票", icon: .system("lightbulb"),
                              url: "https://support.yunle.fun/feedback?product=cook")
@@ -36,6 +40,9 @@ struct HelpSettingsView: View {
                              accessibilityHint: "打开 App Store 撰写评价")
                     .accessibilityIdentifier("help.appStoreReview")
             }
+        }
+        .sheet(isPresented: $showingSupport) {
+            SupportBrowser(configuration: SupportConfiguration(productID: "cook", appName: "云食册"), destination: .help)
         }
         .navigationTitle("帮助与反馈")
         .navigationBarTitleDisplayMode(.inline)

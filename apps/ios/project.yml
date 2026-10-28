@@ -10,7 +10,7 @@ options:
 packages:
   YunleSupport:
     url: https://github.com/YunLeFun/ylf.git
-    revision: a03be8d1e1f096cb9aefe7cb4c4d277b1dd46119
+    revision: 5ce0ad76461256f055669aceb2c3b093724459ac
   CookCore:
     path: CookCore
 settings:
