@@ -5,7 +5,7 @@ import { links } from '~/constants/links'
 <template>
   <a class="legacy-version-link" :href="links.legacyCook">
     <span class="legacy-version-label">切换到旧版</span>
-    <span class="i-f7-arrow-up-right-square legacy-version-icon" aria-hidden="true" />
+    <ion-icon class="legacy-version-icon" :icon="ioniconsOpenOutline" aria-hidden="true" />
   </a>
 </template>
 

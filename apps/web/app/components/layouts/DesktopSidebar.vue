@@ -1,21 +1,17 @@
 <script setup lang="ts">
 import { useIonRouter } from '@ionic/vue'
+import { getPrimaryNavigation, normalizeNavigationPath } from '~/config'
 
 const collapsed = defineModel<boolean>('collapsed', { default: false })
 const router = useRouter()
 const ionRouter = useIonRouter()
-const path = computed(() => router.currentRoute.value.path)
+const path = computed(() => normalizeNavigationPath(router.currentRoute.value.path))
 
-const navigation = computed(() => [
-  { label: '做菜', href: '/home', icon: 'i-f7-flame', active: ['/', '/home', '/tabs', '/tabs/home'].includes(path.value) },
-  { label: '菜谱', href: '/library', icon: 'i-f7-book', active: ['/library', '/tabs/library', '/recipes'].includes(path.value) },
-  { label: '发现', href: '/apps', icon: 'i-f7-compass', active: path.value.startsWith('/apps') || path.value.startsWith('/tabs/apps') },
-  { label: '我的', href: '/my', icon: 'i-f7-person-crop-circle', active: ['/my', '/tabs/my'].includes(path.value) },
-])
+const navigation = computed(() => getPrimaryNavigation(path.value))
 const kitchen = [
-  { label: '我的收藏', href: '/recipes/favorites', icon: 'i-f7-star' },
-  { label: '历史记录', href: '/recipes/history', icon: 'i-f7-clock' },
-  { label: '食材和厨具', href: '/catalog', icon: 'i-f7-square-grid-2x2' },
+  { label: '我的收藏', href: '/recipes/favorites', icon: ioniconsStarOutline, activeIcon: ioniconsStar },
+  { label: '历史记录', href: '/recipes/history', icon: ioniconsTimeOutline, activeIcon: ioniconsTime },
+  { label: '食材和厨具', href: '/catalog', icon: ioniconsGridOutline, activeIcon: ioniconsGrid },
 ]
 
 function navigate(event: MouseEvent, href: string) {
@@ -50,7 +46,7 @@ function navigate(event: MouseEvent, href: string) {
         :aria-label="collapsed ? item.label : undefined"
         @click="navigate($event, item.href)"
       >
-        <span class="desktop-sidebar-icon" :class="item.icon" aria-hidden="true" />
+        <ion-icon class="desktop-sidebar-icon" :icon="item.active ? item.activeIcon : item.icon" aria-hidden="true" />
         <span class="desktop-sidebar-label">{{ item.label }}</span>
       </a>
 
@@ -67,19 +63,19 @@ function navigate(event: MouseEvent, href: string) {
         :aria-label="collapsed ? item.label : undefined"
         @click="navigate($event, item.href)"
       >
-        <span class="desktop-sidebar-icon" :class="item.icon" aria-hidden="true" />
+        <ion-icon class="desktop-sidebar-icon" :icon="path === item.href ? item.activeIcon : item.icon" aria-hidden="true" />
         <span class="desktop-sidebar-label">{{ item.label }}</span>
       </a>
     </nav>
 
     <div class="desktop-sidebar-footer">
       <a class="desktop-sidebar-item" href="/settings" :title="collapsed ? '设置' : undefined" :aria-label="collapsed ? '设置' : undefined" :aria-current="path === '/settings' ? 'page' : undefined" @click="navigate($event, '/settings')">
-        <span class="i-f7-gear-alt desktop-sidebar-icon" aria-hidden="true" />
+        <ion-icon class="desktop-sidebar-icon" :icon="path === '/settings' ? ioniconsSettings : ioniconsSettingsOutline" aria-hidden="true" />
         <span class="desktop-sidebar-label">设置</span>
       </a>
       <LegacyVersionLink :title="collapsed ? '切换到旧版' : undefined" aria-label="切换到旧版" />
       <button class="desktop-sidebar-toggle" type="button" :aria-label="collapsed ? '展开侧栏' : '收起侧栏'" :title="collapsed ? '展开侧栏' : '收起侧栏'" :aria-expanded="!collapsed" @click="collapsed = !collapsed">
-        <span class="i-f7-sidebar-left desktop-sidebar-icon" aria-hidden="true" />
+        <ion-icon class="desktop-sidebar-icon" :icon="ioniconsMenuOutline" aria-hidden="true" />
         <span class="desktop-sidebar-label">收起侧栏</span>
       </button>
     </div>
@@ -161,15 +157,19 @@ function navigate(event: MouseEvent, href: string) {
   flex: none;
   width: 20px;
   height: 20px;
-  color: var(--ion-color-primary);
-}
-.desktop-sidebar-item[aria-current='page'] {
-  background: var(--cook-fill);
-  font-weight: 600;
+  color: var(--ion-text-color-step-400, #6d6d72);
 }
 .desktop-sidebar-item:hover,
 .desktop-sidebar-toggle:hover {
   background: var(--cook-fill);
+}
+.desktop-sidebar-item[aria-current='page'] {
+  background: rgba(var(--ion-color-primary-rgb, 0, 102, 204), 0.12);
+  color: var(--ion-color-primary);
+  font-weight: 600;
+}
+.desktop-sidebar-item[aria-current='page'] .desktop-sidebar-icon {
+  color: inherit;
 }
 .desktop-sidebar-group {
   margin: 26px 10px 8px;
