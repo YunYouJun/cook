@@ -97,6 +97,9 @@ jobs:
           node scripts/compose-product-site.mjs
 
   test:
+    permissions:
+      contents: read
+      actions: read
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -124,7 +127,34 @@ jobs:
         run: |
           git fetch --depth=1 origin ${{ github.base_ref }}
           pnpm run validate --base FETCH_HEAD
+      - name: Test release provenance and Support delivery gates
+        run: node --test --test-reporter=dot test/webBuildInfo.test.mjs test/productSiteBuild.test.mjs test/supportAgentHttp.test.mjs test/cookGithubChanges.test.mjs test/cookDeliverySync.test.mjs test/supportLedger.test.mjs test/supportArtifacts.test.mjs test/edgeoneRelease.test.mjs test/cookSupportRunner.test.mjs
       - run: pnpm run test
+      - name: Install pinned artifact SDK for runtime contract verification
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        run: npm install --prefix "$RUNNER_TEMP/cook-artifact-contract" --ignore-scripts --no-audit --no-fund @actions/artifact@6.3.1
+      - name: Verify finalized checkpoints with the real Actions artifact runtime
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v9
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COOK_ARTIFACT_MODULE: ${{ runner.temp }}/cook-artifact-contract/node_modules/@actions/artifact/lib/artifact.js
+        with:
+          script: |
+            const { spawnSync } = require('node:child_process')
+            const result = spawnSync(process.execPath, ['scripts/test-support-artifact-runtime.mjs'], { stdio: 'inherit' })
+            if (result.error || result.status !== 0) core.setFailed('The artifact runtime contract failed.')
+
+  web-acceptance:
+    needs: [lint, typecheck, build, test]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Require all Web jobs and every matrix entry to succeed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: node -e 'if (Object.values(JSON.parse(process.env.RESULTS)).some(job => job.result !== "success")) process.exit(1)'
 
   # iOS 的 CookCore 跑和 Web 共用的用例（ubuntu 镜像自带 Swift）
   swift:

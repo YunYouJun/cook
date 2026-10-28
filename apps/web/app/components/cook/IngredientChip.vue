@@ -14,7 +14,7 @@ defineProps<{
   <button type="button" class="ingredient-chip" :aria-pressed="selected">
     <ion-icon v-if="selected" class="ingredient-chip-mark" :icon="ioniconsCheckmark" aria-hidden="true" />
     <span v-else-if="emoji" class="ingredient-chip-mark" aria-hidden="true">{{ emoji }}</span>
-    <span v-else-if="icon" class="ingredient-chip-mark" :class="icon" aria-hidden="true" />
+    <span v-else-if="icon" class="ingredient-chip-mark ingredient-chip-icon" :class="icon" aria-hidden="true" />
     <span>{{ label }}</span>
   </button>
 </template>
@@ -24,12 +24,12 @@ defineProps<{
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-height: 44px;
-  padding: 8px 12px;
-  border-radius: 17px;
+  min-height: var(--ingredient-chip-height, 44px);
+  padding: var(--ingredient-chip-padding, 8px 12px);
+  border-radius: var(--ingredient-chip-radius, 17px);
   background: var(--cook-fill);
   color: var(--ion-text-color, #000);
-  font-size: 15px;
+  font-size: var(--ingredient-chip-font-size, 15px);
   line-height: 1.4;
   transition:
     transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -50,6 +50,11 @@ defineProps<{
 .ingredient-chip-mark {
   display: inline-flex;
   font-size: 15px;
+}
+.ingredient-chip-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
 }
 .ingredient-chip:focus-visible {
   outline: 2px solid var(--ion-color-primary);
