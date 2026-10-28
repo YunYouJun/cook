@@ -52,6 +52,71 @@ struct DietaryGoalPickerButton: View {
     }
 }
 
+/// Introduce the optional filter once without interrupting ingredient selection.
+struct DietaryGoalIntroduction: View {
+    @Environment(CookSession.self) private var session
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("这餐想怎样吃？").font(.headline)
+            Text("可以先选一个饮食目标，也可以直接按食材找菜。")
+                .font(.subheadline).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 0) { actions }
+            } else {
+                HStack(spacing: 20) { actions }
+            }
+            Text("之后可在「筛选 → 饮食目标」中修改。")
+                .font(.footnote).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("dietary.introduction")
+    }
+
+    @ViewBuilder private var actions: some View {
+        Button("选择饮食目标") { isPresented = true }
+            .fontWeight(.semibold)
+            .frame(minHeight: 44)
+            .accessibilityIdentifier("dietary.introduction.choose")
+        Button("暂不设置") { session.completeDietaryIntroduction() }
+            .frame(minHeight: 44)
+            .accessibilityIdentifier("dietary.introduction.skip")
+    }
+}
+
+/// A selected filter stays visible without repeating the full preference row.
+struct DietaryGoalSummaryButton: View {
+    @Environment(CookSession.self) private var session
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        if let goal = session.dietaryGoal {
+            Button { isPresented = true } label: {
+                HStack(spacing: 8) {
+                    DietaryGoalIcon(goal: goal)
+                    Text(goal.title).foregroundStyle(Color.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                }
+                .font(.subheadline)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .accessibilityLabel("饮食目标")
+            .accessibilityValue(goal.title)
+            .accessibilityHint("修改本次饮食目标")
+            .accessibilityIdentifier("dietary.openPicker")
+        }
+    }
+}
+
 // Keep the accessible identity on the UIKit control itself. A SwiftUI Toggle in
 // a List also exposes a separate row-wide switch proxy on newer system versions.
 private struct DietaryRememberSwitch: UIViewRepresentable {
@@ -158,11 +223,11 @@ struct DietaryGoalSelectionSheet: View {
     @ViewBuilder
     private var confirmationButton: some View {
         if #available(iOS 26.0, *) {
-            Button(role: .confirm) { dismiss() }
+            Button(role: .confirm) { session.completeDietaryIntroduction(); dismiss() }
                 .accessibilityLabel("完成")
                 .accessibilityIdentifier("dietary.done")
         } else {
-            Button("完成") { dismiss() }
+            Button("完成") { session.completeDietaryIntroduction(); dismiss() }
                 .foregroundStyle(Color.primary)
                 .accessibilityIdentifier("dietary.done")
         }

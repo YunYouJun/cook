@@ -52,9 +52,15 @@ struct CloudKitchenView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
 
-                    GroupBox { DietaryGoalPickerButton(isPresented: $showingDietaryGoals) }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 16)
+                    if !session.hasCompletedDietaryIntroduction, !store.dietaryGoals.isEmpty {
+                        GroupBox { DietaryGoalIntroduction(isPresented: $showingDietaryGoals).buttonStyle(.borderless) }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 16)
+                    } else if session.dietaryGoal != nil {
+                        DietaryGoalSummaryButton(isPresented: $showingDietaryGoals)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 8)
+                    }
 
                     kitchenScene
                         .frame(height: min(430, max(250, geometry.size.width * 0.82)))
@@ -90,6 +96,8 @@ struct CloudKitchenView: View {
                 Button { showingFilters = true } label: {
                     Label("筛选", systemImage: session.activeFilterCount > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                 }
+                .accessibilityValue(session.dietaryGoal.map { "饮食目标：\($0.title)" } ?? "")
+                .accessibilityIdentifier("cook.filters")
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("清空") { session.clearStuff() }

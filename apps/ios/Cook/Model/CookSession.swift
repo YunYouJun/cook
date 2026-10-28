@@ -14,8 +14,10 @@ final class CookSession {
     var keyword = ""
     private(set) var dietaryGoal: DietaryGoal?
     private(set) var rememberedDietaryGoal: DietaryGoal?
+    private(set) var hasCompletedDietaryIntroduction: Bool
     @ObservationIgnored private let dietaryDefaults: UserDefaults?
     static let dietaryGoalKey = "cook.dietary.rememberedGoal"
+    static let dietaryIntroductionKey = "cook.dietary.introductionCompleted"
 
     private let context: ModelContext
     private let defaults: PreferenceValues
@@ -28,13 +30,21 @@ final class CookSession {
         let remembered = dietaryDefaults?.string(forKey: Self.dietaryGoalKey).flatMap(DietaryGoal.init(rawValue:))
         dietaryGoal = remembered
         rememberedDietaryGoal = remembered
+        hasCompletedDietaryIntroduction = dietaryDefaults?.bool(forKey: Self.dietaryIntroductionKey) == true || remembered != nil
         defaults = PreferenceValues(pantry: defaultPantry)
         refreshPreferences()
     }
 
     var remembersDietaryGoal: Bool { rememberedDietaryGoal != nil }
 
+    /// Dismissing the introduction changes only local presentation state.
+    func completeDietaryIntroduction() {
+        hasCompletedDietaryIntroduction = true
+        dietaryDefaults?.set(true, forKey: Self.dietaryIntroductionKey)
+    }
+
     func selectDietaryGoal(_ goal: DietaryGoal?) {
+        completeDietaryIntroduction()
         dietaryGoal = goal
         if goal == nil {
             rememberDietaryGoal(false)
@@ -45,6 +55,7 @@ final class CookSession {
     }
 
     func rememberDietaryGoal(_ remember: Bool) {
+        completeDietaryIntroduction()
         rememberedDietaryGoal = remember ? dietaryGoal : nil
         if let rememberedDietaryGoal {
             dietaryDefaults?.set(rememberedDietaryGoal.rawValue, forKey: Self.dietaryGoalKey)

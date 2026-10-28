@@ -22,6 +22,71 @@ final class DietarySessionTests: XCTestCase {
         XCTAssertNotNil(UIImage(systemName: DietaryGoalAppearance(goal: nil).symbol), "Missing unrestricted goal appearance")
     }
 
+    func testSkippingIntroductionPersistsCompletionWithoutChoosingOrRememberingAGoal() throws {
+        let (defaults, name) = defaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let context = container.mainContext
+        let session = CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults)
+        XCTAssertFalse(session.hasCompletedDietaryIntroduction)
+
+        session.completeDietaryIntroduction()
+
+        XCTAssertTrue(session.hasCompletedDietaryIntroduction)
+        XCTAssertNil(session.dietaryGoal)
+        XCTAssertNil(session.rememberedDietaryGoal)
+        XCTAssertNil(defaults.string(forKey: CookSession.dietaryGoalKey))
+        let reloaded = CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults)
+        XCTAssertTrue(reloaded.hasCompletedDietaryIntroduction)
+        XCTAssertNil(reloaded.dietaryGoal)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Preferences>()), 0)
+        XCTAssertFalse(context.hasChanges)
+    }
+
+    func testChoosingOrExplicitlyDecliningAGoalCompletesIntroductionWithoutOptingIntoMemory() {
+        let goals: [DietaryGoal?] = [.lessAddedSugar, nil]
+        for goal in goals {
+            let (defaults, name) = defaults()
+            defer { defaults.removePersistentDomain(forName: name) }
+            let session = CookSession(defaultPantry: [], context: container.mainContext, dietaryDefaults: defaults)
+            session.selectDietaryGoal(goal)
+
+            XCTAssertTrue(session.hasCompletedDietaryIntroduction)
+            XCTAssertEqual(session.dietaryGoal, goal)
+            XCTAssertFalse(session.remembersDietaryGoal)
+            XCTAssertNil(defaults.string(forKey: CookSession.dietaryGoalKey))
+            XCTAssertTrue(CookSession(defaultPantry: [], context: container.mainContext, dietaryDefaults: defaults).hasCompletedDietaryIntroduction)
+
+            session.clearStuff()
+            session.clearFilters()
+            XCTAssertTrue(session.hasCompletedDietaryIntroduction)
+            XCTAssertNil(session.dietaryGoal)
+        }
+    }
+
+    func testExistingRememberedGoalSkipsIntroductionAndRemovingMemoryDoesNotBringItBack() {
+        let (defaults, name) = defaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(DietaryGoal.balancedPairing.rawValue, forKey: CookSession.dietaryGoalKey)
+        let session = CookSession(defaultPantry: [], context: container.mainContext, dietaryDefaults: defaults)
+        XCTAssertTrue(session.hasCompletedDietaryIntroduction)
+        XCTAssertEqual(session.dietaryGoal, .balancedPairing)
+        XCTAssertEqual(session.rememberedDietaryGoal, .balancedPairing)
+
+        session.rememberDietaryGoal(false)
+        XCTAssertEqual(session.dietaryGoal, .balancedPairing)
+        let reloaded = CookSession(defaultPantry: [], context: container.mainContext, dietaryDefaults: defaults)
+        XCTAssertTrue(reloaded.hasCompletedDietaryIntroduction)
+        XCTAssertNil(reloaded.dietaryGoal)
+        XCTAssertNil(reloaded.rememberedDietaryGoal)
+    }
+
+    func testIntroductionWithoutDefaultsStaysIsolatedToItsSession() {
+        let session = CookSession(defaultPantry: [], context: container.mainContext)
+        session.completeDietaryIntroduction()
+        XCTAssertTrue(session.hasCompletedDietaryIntroduction)
+        XCTAssertFalse(CookSession(defaultPantry: [], context: container.mainContext).hasCompletedDietaryIntroduction)
+    }
+
     func testSelectingAGoalDoesNotCreateSyncedPreferencesOrPersistWithoutOptIn() throws {
         let (defaults, name) = defaults()
         defer { defaults.removePersistentDomain(forName: name) }
