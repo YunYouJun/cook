@@ -50,7 +50,7 @@ function harness(initial = {}) {
           const reply = state.messages.find(item => item.id === state.ticket.latestReplyId)
           assert(state.ticket.work.verification && reply?.resolution)
           if (command.status === 'closed')
-            assert(state.deliveries.some(item => item.messageId === reply.id && ['delivered', 'read'].includes(item.status)))
+            assert(state.closeWithoutDelivery === true || state.deliveries.some(item => item.messageId === reply.id && ['delivered', 'read'].includes(item.status)))
         }
         state.ticket.status = command.status
       }
@@ -188,6 +188,88 @@ it('available or unrelated/non-portal receipts cannot close; matching actual por
   h.state.deliveries[0].status = 'delivered'
   await applied(h, reconcile('reconcile:2'), ledger)
   assert.equal(h.state.ticket.status, 'closed')
+})
+
+it('a trusted guest closure exemption closes the owned published repair without changing its unconfirmed delivery', async () => {
+  const h = harness()
+  const ledger = freshLedger()
+  await applied(h, change(), ledger)
+  await applied(h, deployment(), ledger, { bindings: bindings({ sendReply: true }), sendReplies: true })
+  h.state.closeWithoutDelivery = true
+  const deliveries = structuredClone(h.state.deliveries)
+  const replies = h.state.messages.filter(item => item.resolution).length
+  const result = await applied(h, reconcile(), ledger)
+  assert.equal(result.commands, 1)
+  assert.equal(h.state.ticket.status, 'closed')
+  assert.deepEqual(h.state.deliveries, deliveries)
+  assert.equal(h.state.messages.filter(item => item.resolution).length, replies)
+  await applied(h, reconcile('reconcile:guest-already-closed'), ledger)
+  assert.equal(h.calls.filter(call => call.input.command.status === 'closed').length, 1)
+})
+
+it('an absent, false or malformed exemption still requires an actual matching receipt', async () => {
+  for (const flag of [undefined, false, 'true', 1, {}, null]) {
+    const h = harness()
+    const ledger = freshLedger()
+    await applied(h, change(), ledger)
+    await applied(h, deployment(), ledger, { bindings: bindings({ sendReply: true }), sendReplies: true })
+    if (flag !== undefined)
+      h.state.closeWithoutDelivery = flag
+    await applied(h, reconcile(), ledger)
+    assert.equal(h.state.ticket.status, 'resolved')
+    assert.equal(h.state.deliveries[0].status, 'available')
+    h.state.deliveries[0].status = 'read'
+    await applied(h, reconcile('reconcile:actual-receipt'), ledger)
+    assert.equal(h.state.ticket.status, 'closed')
+  }
+})
+
+it('a guest exemption cannot override requester changes, manual status, work or a human resolution', async () => {
+  for (const mutate of [
+    h => h.state.messages.push({ id: 'new-guest-message', author: { kind: 'guest' }, createdAt: baseline }),
+    h => h.state.ticket.status = 'waiting_user',
+    h => h.state.ticket.work.verification.summary = 'Changed by a maintainer',
+    (h) => {
+      h.state.messages.push({ id: 'human-resolution', resolution: true, visibility: 'requester_visible', createdAt: now, content: 'Different human resolution' })
+      h.state.ticket.latestReplyId = 'human-resolution'
+    },
+  ]) {
+    const h = harness()
+    const ledger = freshLedger()
+    await applied(h, change(), ledger)
+    await applied(h, deployment(), ledger, { bindings: bindings({ sendReply: true }), sendReplies: true })
+    h.state.closeWithoutDelivery = true
+    mutate(h)
+    const count = h.calls.length
+    await applied(h, reconcile(), ledger)
+    assert.equal(h.calls.length, count)
+    assert.notEqual(h.state.ticket.status, 'closed')
+    assert.equal(h.state.deliveries[0].status, 'available')
+  }
+})
+
+it('an unknown guest close retries the frozen command and keeps its original unconfirmed receipt', async () => {
+  const h = harness()
+  const ledger = freshLedger()
+  await applied(h, change(), ledger)
+  await applied(h, deployment(), ledger, { bindings: bindings({ sendReply: true }), sendReplies: true })
+  h.state.closeWithoutDelivery = true
+  let first = true
+  h.after(async ({ command }) => {
+    if (command.status === 'closed' && first) {
+      first = false
+      throw new Error('Unknown guest closure result')
+    }
+  })
+  await assert.rejects(applied(h, reconcile(), ledger))
+  const pending = structuredClone(h.durable().tickets['ticket-1'].pending)
+  // A closed ticket is no longer eligible for a new transition, but replay must
+  // recover an already applied command through its original idempotency key.
+  h.state.closeWithoutDelivery = false
+  await applied(h, reconcile(), h.durable())
+  assert.deepEqual(h.calls.at(-1), { input: pending.input, key: pending.key })
+  assert.equal(h.state.ticket.status, 'closed')
+  assert.equal(h.state.deliveries[0].status, 'available')
 })
 
 it('new requester input after a fix invalidates automatic release and closure', async () => {

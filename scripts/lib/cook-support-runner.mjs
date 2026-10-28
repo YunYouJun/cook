@@ -85,12 +85,12 @@ export async function runCookSupportSync(input, ports) {
   }
   await deliver(event)
 
-  // Receipt/state changes create a new idempotent reconcile event; unchanged polling does not.
+  // Receipt/state or Support policy changes create a new reconcile event; unchanged polling does not.
   const snapshots = []
   for (const binding of bindings) {
     const value = await ports.detail(binding.ticketId)
     const detail = value.detail ?? value
-    snapshots.push({ ticketId: binding.ticketId, version: detail.ticket.version, latestReplyId: detail.ticket.latestReplyId, requester: detail.ticket.lastRequesterMessageAt, deliveries: detail.deliveries.map(item => [item.messageId, item.channel, item.status]) })
+    snapshots.push({ ticketId: binding.ticketId, version: detail.ticket.version, latestReplyId: detail.ticket.latestReplyId, requester: detail.ticket.lastRequesterMessageAt, closeWithoutDelivery: detail.closeWithoutDelivery === true, deliveries: detail.deliveries.map(item => [item.messageId, item.channel, item.status]) })
   }
   const authorization = bindings.map(binding => [binding.ticketId, binding.revision, input.sendReplies === true && binding.sendReply === true])
   const reconcileKey = `receipts-${source.sha}-${hash([snapshots, authorization, eventKey, source.verifiedChangeShas])}`

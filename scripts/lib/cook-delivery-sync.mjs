@@ -389,7 +389,8 @@ export async function syncCookDelivery(input, ports) {
           continue
         }
         const received = current.deliveries.some(item => item.ticketId === binding.ticketId && item.messageId === state.replyId && item.channel === 'portal' && ['delivered', 'read'].includes(item.status))
-        if (current.ticket.status === 'resolved' && received && !await command('closed', { action: 'status', status: 'closed' })) {
+        // Support computes the no-contact guest exemption; keep receipt evidence unchanged.
+        if (current.ticket.status === 'resolved' && (received || current.closeWithoutDelivery === true) && !await command('closed', { action: 'status', status: 'closed' })) {
           stopped()
           continue
         }

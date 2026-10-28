@@ -11,7 +11,7 @@ Support 是工单状态、用户沟通和送达回执的权威来源。GitHub �
 3. 查询真实 EdgeOne API；项目概览仅用于仓库和域名信息，当前生产指针从完整部署列表中唯一的 `UsedInProd` 记录取得，忽略较新的预览部署。核实下面两个固定项目的当前生产部署为 `Success`、`UsedInProd`、`Production`、`Github`、`main`，且 SHA 与待验收版本一致。
 4. 读取两个正式域名的 `/.well-known/cook-build.json`，核对完整 SHA、产品、仓库、版本及 `dirty: false`，再检查实际应用 HTML 的 `feedbackBuild` 和启动资源。浏览器执行绑定指定的验收流程，结束后重新核对部署指针。
 5. 将真实部署及浏览器证据写入 `work.verification`，根据经过核对的修复事实和实际通过的验收项目生成解决回复；默认保存草稿，获得发送授权后自动发布。
-6. 对本次自动化草稿发布产生的解决回复推进 `resolved`；仅匹配这条回复的真实用户端 portal `delivered` / `read` 回执才能推进 `closed`。公开到工单页的 `available` 和微信通知回执均不能代替此条件。
+6. 对本次自动化草稿发布产生的解决回复推进 `resolved`；匹配这条回复的真实用户端 portal `delivered` / `read` 回执可推进 `closed`。无联系方式访客也可使用 Support 管理详情计算的严格 `closeWithoutDelivery === true` 资格关闭；该资格要求当前验证、已发布解决回复和合法状态。缺失或非 `true` 时继续等待回执。Support 保存“关闭时未确认送达”的依据，实际 `available` 和微信通知回执保持原义，运行器不伪造回执。
 
 | 项目                 | 正式域名                    | 应用验收路径              |
 | -------------------- | --------------------------- | ------------------------- |

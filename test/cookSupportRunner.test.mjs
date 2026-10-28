@@ -100,6 +100,28 @@ test('a repeated unchanged deployment reuses frozen evidence and does not duplic
   assert.equal(context.commands.length, count)
 })
 
+test('a changed Support guest policy reconciles an already published repair without a receipt or duplicate reply', async () => {
+  const context = setup()
+  context.input.bindings.tickets[0] = { ...binding, sendReply: true }
+  context.input.sendReplies = true
+  await runCookSupportSync(context.input, context.ports)
+  assert.equal(context.current().ticket.status, 'resolved')
+  const version = context.current().ticket.version
+  const replies = context.commands.filter(command => command.action === 'reply.send').length
+  const deliveries = structuredClone(context.current().deliveries)
+  context.current().closeWithoutDelivery = true
+  const before = context.commands.length
+  const result = await runCookSupportSync(context.input, context.ports)
+  assert.equal(result.phase, 'production_verified')
+  assert.deepEqual(context.commands.slice(before), [{ action: 'status', status: 'closed' }])
+  assert.equal(context.current().ticket.version, version + 1)
+  assert.deepEqual(context.current().deliveries, deliveries)
+  assert.equal(context.commands.filter(command => command.action === 'reply.send').length, replies)
+  const closed = context.commands.length
+  await runCookSupportSync(context.input, context.ports)
+  assert.equal(context.commands.length, closed)
+})
+
 test('a rollback blocks receipt reconciliation, including an otherwise closable ledger', async () => {
   const context = setup()
   await runCookSupportSync(context.input, context.ports)
