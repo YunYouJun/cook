@@ -37,14 +37,19 @@ final class SearchIntentUITests: XCTestCase {
     }
 
     @MainActor
-    private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
-        let form = app.descendants(matching: .any).matching(identifier: "intent.form").firstMatch
-        for _ in 0..<14 where !element.isHittable {
+    private func reveal(_ element: XCUIElement, in app: XCUIApplication, fullyVisible: Bool = false) {
+        let form = app.collectionViews.matching(identifier: "intent.form").firstMatch
+        for _ in 0..<14 {
+            let viewport = form.frame.intersection(app.windows.firstMatch.frame).insetBy(dx: 0, dy: 8)
+            if element.isHittable, !fullyVisible || viewport.contains(element.frame) { return }
             form.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.65))
                 .press(forDuration: 0.1, thenDragTo: form.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)),
                        withVelocity: .slow, thenHoldForDuration: 0.1)
         }
         XCTAssertTrue(element.isHittable)
+        if fullyVisible {
+            XCTAssertTrue(form.frame.intersection(app.windows.firstMatch.frame).contains(element.frame))
+        }
     }
 
     @MainActor
@@ -54,7 +59,14 @@ final class SearchIntentUITests: XCTestCase {
         XCTAssertTrue(app.buttons["移除食材鸡蛋"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["移除目标减少添加糖"].exists)
         XCTAssertFalse(app.buttons["intent.smart"].exists)
-        app.buttons["移除食材西葫芦"].tap()
+        for label in ["移除食材鸡蛋", "移除食材西葫芦", "移除不吃辣", "移除目标减少添加糖"] {
+            let tag = app.buttons[label]
+            // A 44 pt frame can arrive as 43.99999999999994 after coordinate conversion.
+            XCTAssertGreaterThanOrEqual(tag.frame.width, 44 - 0.001)
+            XCTAssertGreaterThanOrEqual(tag.frame.height, 44 - 0.001)
+        }
+        // Tap the transparent top inset outside the 36 pt capsule.
+        app.buttons["移除食材西葫芦"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.04)).tap()
         XCTAssertFalse(app.buttons["移除食材西葫芦"].exists)
         let image = XCTAttachment(screenshot: app.screenshot())
         image.name = "本地可编辑找菜条件"
@@ -76,10 +88,14 @@ final class SearchIntentUITests: XCTestCase {
     @MainActor
     func testLargeDarkPreviewAndUnavailableManagedService() {
         let app = launch(largeDark: true)
-        preview(app, text: "鸡蛋，孕期饮食")
+        preview(app, text: "鸡蛋，减少添加糖，孕期饮食")
         XCTAssertFalse(app.buttons["intent.apply"].isEnabled)
         reveal(app.buttons["移除食材鸡蛋"], in: app)
         XCTAssertTrue(app.buttons["移除食材鸡蛋"].exists)
+        let goal = app.buttons["移除目标减少添加糖"]
+        reveal(goal, in: app, fullyVisible: true)
+        XCTAssertTrue(goal.isHittable)
+        XCTAssertGreaterThanOrEqual(goal.frame.height, 44)
         let image = XCTAttachment(screenshot: app.screenshot())
         image.name = "大字号深色待确认条件"
         image.lifetime = .keepAlways
