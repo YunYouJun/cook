@@ -84,4 +84,30 @@ final class SearchIntentUITests: XCTestCase {
         settings.tap()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "aiSettings.managed").firstMatch.waitForExistence(timeout: 10))
     }
+
+    @MainActor
+    func testPreviewSettingsAndChangedTextKeepConditionsUnapplied() {
+        let app = launch()
+        preview(app, text: "鸡蛋，不要辣")
+        app.buttons["移除食材鸡蛋"].tap()
+        let settings = app.buttons["intent.settings"]
+        reveal(settings, in: app)
+        settings.tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "aiSettings.managed").firstMatch.waitForExistence(timeout: 10))
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.buttons["intent.apply"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["移除食材鸡蛋"].exists)
+
+        let field = app.descendants(matching: .any).matching(identifier: "intent.text").firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("，番茄")
+        XCTAssertFalse(app.buttons["intent.apply"].isEnabled)
+        app.buttons["intent.local"].tap()
+        XCTAssertTrue(app.buttons["移除食材番茄"].waitForExistence(timeout: 10))
+        app.buttons["intent.cancel"].tap()
+        XCTAssertTrue(app.buttons["鸡蛋"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["鸡蛋"].isSelected)
+        XCTAssertFalse(app.buttons["番茄"].isSelected)
+    }
 }
