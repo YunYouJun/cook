@@ -11,6 +11,7 @@ struct SearchIntentSheet: View {
     @State private var draft: SearchIntentDraft
     @State private var confirmsSending = false
     @State private var applyError: String?
+    @FocusState private var editingText: Bool
 
     init(text: String) { _draft = State(initialValue: SearchIntentDraft(text: text)) }
 
@@ -20,6 +21,7 @@ struct SearchIntentSheet: View {
                 Section {
                     TextField("如：鸡蛋和西葫芦，不要辣", text: $draft.text, axis: .vertical)
                         .lineLimit(2...5)
+                        .focused($editingText)
                         .privacySensitive()
                         .accessibilityIdentifier("intent.text")
                     Button("重新识别本地条件") { parseLocally() }
@@ -59,6 +61,13 @@ struct SearchIntentSheet: View {
             .navigationTitle("确认找菜条件")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                if editingText {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("完成") { editingText = false }
+                            .accessibilityIdentifier("intent.finishEditing")
+                    }
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { draft.cancel(); dismiss() }
                         .accessibilityIdentifier("intent.cancel")

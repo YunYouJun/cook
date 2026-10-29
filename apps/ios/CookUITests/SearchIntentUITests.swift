@@ -130,14 +130,20 @@ final class SearchIntentUITests: XCTestCase {
         field.typeText("，番茄")
         XCTAssertEqual(field.value as? String, "鸡蛋，不要辣，番茄")
         XCTAssertFalse(app.buttons["intent.apply"].isEnabled)
-        let hideKeyboard = app.keyboards.buttons["隐藏键盘"]
-        if hideKeyboard.exists {
-            hideKeyboard.tap()
-            XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
-        }
+        // Hiding the iPad system keyboard leaves the field focused. Finish editing
+        // through the native toolbar so the sheet settles before the next action.
+        let finishEditing = app.buttons["intent.finishEditing"]
+        XCTAssertTrue(finishEditing.waitForExistence(timeout: 5))
+        finishEditing.tap()
+        XCTAssertTrue(finishEditing.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
         let local = app.buttons["intent.local"]
         reveal(local, in: app, fullyVisible: true)
-        // Resolve the button's normalized center for this one physical tap.
+        let ready = XCTAttachment(screenshot: app.screenshot())
+        ready.name = "intent-reparse-after-finishing-editing"
+        ready.lifetime = .keepAlways
+        add(ready)
+        // Use the visible row center after explicitly ending input focus.
         local.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue(app.buttons["移除食材番茄"].waitForExistence(timeout: 10))
         app.buttons["intent.cancel"].tap()
