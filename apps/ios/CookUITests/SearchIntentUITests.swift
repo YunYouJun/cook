@@ -135,8 +135,10 @@ final class SearchIntentUITests: XCTestCase {
             hideKeyboard.tap()
             XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
         }
-        reveal(app.buttons["intent.local"], in: app, fullyVisible: true)
-        app.buttons["intent.local"].tap()
+        let local = app.buttons["intent.local"]
+        reveal(local, in: app, fullyVisible: true)
+        // Resolve the button's normalized center for this one physical tap.
+        local.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue(app.buttons["移除食材番茄"].waitForExistence(timeout: 10))
         app.buttons["intent.cancel"].tap()
         XCTAssertTrue(app.buttons["鸡蛋"].waitForExistence(timeout: 10))
