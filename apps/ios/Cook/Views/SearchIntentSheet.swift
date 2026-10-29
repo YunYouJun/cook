@@ -97,47 +97,40 @@ struct SearchIntentSheet: View {
     private var conditions: some View {
         Group {
             if let intent = draft.intent, !intent.isEmpty {
-                ChipSection(title: "已识别", note: "轻点标签移除；在下方修改或补充") {
+                ChipSection(title: "已识别", note: "轻点标签移除；在下方修改或补充", minChipWidth: 150) {
                     ForEach(intent.query.stuff, id: \.self) { name in
-                        Chip(title: name, isSelected: true) { query.wrappedValue.stuff.removeAll { $0 == name } }
-                            .accessibilityLabel("移除食材\(name)")
+                        SearchIntentTag(title: name, removalLabel: "移除食材\(name)", action: { query.wrappedValue.stuff.removeAll { $0 == name } }) {
+                            if let emoji = store.emoji(forStuff: name) { Text(emoji) }
+                            else { Image(systemName: "leaf") }
+                        }
                     }
                     ForEach(intent.query.avoid, id: \.self) { name in
-                        Chip(title: "忌口\(name)", isSelected: true) { query.wrappedValue.avoid.removeAll { $0 == name } }
-                            .accessibilityLabel("移除忌口\(name)")
+                        SearchIntentTag(title: "忌口\(name)", removalLabel: "移除忌口\(name)", action: { query.wrappedValue.avoid.removeAll { $0 == name } }) {
+                            Image(systemName: "hand.raised")
+                        }
                     }
                     if intent.query.noSpicy {
-                        Chip(title: "不吃辣", isSelected: true) { query.wrappedValue.noSpicy = false }
-                            .accessibilityLabel("移除不吃辣")
+                        SearchIntentTag(title: "不吃辣", removalLabel: "移除不吃辣", action: { query.wrappedValue.noSpicy = false }) { Text("🌶️") }
                     }
                     if let tool = intent.query.tool {
-                        Chip(title: store.toolLabel(tool), isSelected: true) { query.wrappedValue.tool = nil }
-                            .accessibilityLabel("移除厨具\(store.toolLabel(tool))")
+                        SearchIntentTag(title: store.toolLabel(tool), removalLabel: "移除厨具\(store.toolLabel(tool))", action: { query.wrappedValue.tool = nil }) {
+                            if let image = store.food.tools.first(where: { $0.name == tool })?.toolImageName { Image(image).renderingMode(.template).resizable().scaledToFit() }
+                            else { Image(systemName: "frying.pan") }
+                        }
                     }
                     ForEach(intent.query.methodGroups, id: \.self) { method in
-                        Chip(title: method, isSelected: true) { query.wrappedValue.methodGroups.removeAll { $0 == method } }
-                            .accessibilityLabel("移除做法\(method)")
+                        SearchIntentTag(title: method, removalLabel: "移除做法\(method)", action: { query.wrappedValue.methodGroups.removeAll { $0 == method } }) {
+                            if let image = Recommender.methodGroups.first(where: { $0.label == method })?.imageName { Image(image).renderingMode(.template).resizable().scaledToFit() }
+                            else { Image(systemName: "frying.pan") }
+                        }
                     }
                     ForEach(intent.query.difficulty, id: \.self) { level in
-                        Chip(title: level, isSelected: true) { query.wrappedValue.difficulty.removeAll { $0 == level } }
-                            .accessibilityLabel("移除难度\(level)")
+                        SearchIntentTag(title: level, removalLabel: "移除难度\(level)", action: { query.wrappedValue.difficulty.removeAll { $0 == level } }) { Image(systemName: "gauge") }
                     }
                     if let goal = intent.goal {
-                        Button { draft.intent?.goal = nil } label: {
-                            VStack(spacing: 4) {
-                                DietaryGoalIcon(goal: goal)
-                                Text(goal.title)
-                                    .multilineTextAlignment(.center)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .font(.subheadline)
-                            .frame(maxWidth: .infinity, minHeight: 44)
+                        SearchIntentTag(title: goal.title, removalLabel: "移除目标\(goal.title)", tint: DietaryGoalAppearance(goal: goal).color, action: { draft.intent?.goal = nil }) {
+                            DietaryGoalIcon(goal: goal)
                         }
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.capsule)
-                        .tint(DietaryGoalAppearance(goal: goal).color)
-                        .accessibilityLabel("移除目标\(goal.title)")
-                        .accessibilityAddTraits(.isSelected)
                     }
                 }
             }
