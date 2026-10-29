@@ -18,6 +18,7 @@ struct CloudKitchenView: View {
     @State private var visible = true
     @State private var sceneStatus = CloudKitchenSceneStatus.loading
     @State private var needsIngredients = false
+    @AppStorage("cook.kitchen.rotationEnabled") private var allowsRotation = false
 
     private var background: Color {
         colorScheme == .dark ? Color(red: 0.10, green: 0.16, blue: 0.24) : Color(red: 0.93, green: 0.97, blue: 1)
@@ -58,6 +59,28 @@ struct CloudKitchenView: View {
 
                     kitchenScene
                         .frame(height: min(430, max(250, geometry.size.width * 0.82)))
+
+                    HStack {
+                        Text(allowsRotation ? "拖动厨房可旋转，点食材可选择。" : "开启旋转，可拖动查看厨房。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 8)
+                        Button {
+                            allowsRotation.toggle()
+                        } label: {
+                            Label("旋转视角", systemImage: "rotate.3d")
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(allowsRotation ? Color.accentColor : .secondary)
+                        .controlSize(.small)
+                        .accessibilityIdentifier("kitchen.rotation")
+                        .accessibilityValue(allowsRotation ? "已开启" : "已关闭")
+                        .accessibilityAddTraits(allowsRotation ? .isSelected : [])
+                        .accessibilityHint("开启后可拖动厨房，关闭后恢复初始视角")
+                        .disabled(sceneStatus != .ready || cooking)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
 
                     ingredientTray
                         .padding(.horizontal, 20)
@@ -117,18 +140,26 @@ struct CloudKitchenView: View {
         .onDisappear {
             visible = false
             cooking = false
+            sceneStatus = .loading
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background {
+                sceneStatus = .loading
+                cooking = false
+            }
         }
         .sensoryFeedback(.impact(weight: .light), trigger: cooking)
     }
 
     private var kitchenScene: some View {
         ZStack {
-            if visible, scenePhase == .active {
+            if visible, scenePhase != .background {
                 CloudKitchenSceneView(
                     selected: session.selectedStuff,
                     cooking: cooking,
                     dark: colorScheme == .dark,
                     reduceMotion: reduceMotion,
+                    allowsRotation: allowsRotation,
                     onSelect: session.toggleStuff,
                     onCook: cook,
                     onStatus: { sceneStatus = $0 }

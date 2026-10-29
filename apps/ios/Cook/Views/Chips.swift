@@ -58,7 +58,7 @@ struct Chip: View {
     }
 }
 
-/// 做法图标只用于 iOS 展示，不混入多端共用的推荐规则。
+/// 做法图标读取共享资产；各端只维护展示映射，不混入推荐规则。
 extension MethodGroup {
     var imageName: String? {
         switch label {
@@ -176,7 +176,7 @@ struct CheckRow: View {
     }
 }
 
-/// 厨具图标只用于 iOS 展示，复用做法中已有的器具图形。
+/// 厨具图标读取共享资产，复用做法中已有的器具图形。
 extension StuffItem {
     var toolImageName: String? {
         switch name {

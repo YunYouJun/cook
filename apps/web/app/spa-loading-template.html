@@ -1,106 +1,460 @@
-<div class="cook-boot" role="status" aria-live="polite" aria-label="正在准备做菜页面">
-  <div class="cook-boot-header">做菜</div>
-  <div class="cook-boot-content" aria-hidden="true">
-    <div class="cook-boot-search cook-boot-pulse"></div>
-    <div class="cook-boot-label cook-boot-pulse"></div>
-    <div class="cook-boot-group">
-      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+<div class="cook-boot" role="status" aria-live="polite">
+  <span class="cook-boot-status">正在加载食用手册…</span>
+  <div class="cook-boot-shell" aria-hidden="true">
+    <aside class="cook-boot-sidebar">
+      <div class="cook-boot-brand"><i></i><span></span></div>
+      <div class="cook-boot-nav"><i></i><i></i><i></i><i></i></div>
+      <div class="cook-boot-nav cook-boot-kitchen"><i></i><i></i><i></i></div>
+      <div class="cook-boot-nav cook-boot-footer"><i></i><i></i><i></i></div>
+    </aside>
+    <div class="cook-boot-page">
+      <div class="cook-boot-header"><i></i><span></span></div>
+      <div class="cook-boot-content">
+        <div class="cook-boot-filters">
+          <div class="cook-boot-title"><i></i></div>
+          <div class="cook-boot-search"><i></i></div>
+          <div class="cook-boot-categories">
+            <div class="cook-boot-section cook-boot-vegetables">
+              <div class="cook-boot-label"><i></i></div>
+              <div class="cook-boot-group">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i> <i></i><i></i
+                ><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                <span class="cook-boot-more"></span>
+              </div>
+            </div>
+            <div class="cook-boot-section cook-boot-meat">
+              <div class="cook-boot-label"><i></i></div>
+              <div class="cook-boot-group">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                <span class="cook-boot-more"></span>
+              </div>
+            </div>
+            <div class="cook-boot-section">
+              <div class="cook-boot-label"><i></i></div>
+              <div class="cook-boot-group"><i></i><i></i><i></i><i></i></div>
+            </div>
+          </div>
+          <div class="cook-boot-manage"><i></i></div>
+          <div class="cook-boot-section">
+            <div class="cook-boot-label"><i></i></div>
+            <div class="cook-boot-group"><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="cook-boot-section cook-boot-methods">
+            <div class="cook-boot-label"><i></i></div>
+            <div class="cook-boot-group"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="cook-boot-section">
+            <div class="cook-boot-label"><i></i></div>
+            <div class="cook-boot-group"><i></i><i></i><i></i></div>
+          </div>
+        </div>
+        <div class="cook-boot-results">
+          <div class="cook-boot-results-head"><i></i><span></span></div>
+          <div class="cook-boot-results-empty"><i></i><span></span></div>
+        </div>
+      </div>
+      <div class="cook-boot-tabs"><i></i><i></i><i></i><i></i></div>
     </div>
-    <div class="cook-boot-label cook-boot-pulse"></div>
-    <div class="cook-boot-group"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    <p>正在准备菜谱…</p>
   </div>
   <noscript>请启用 JavaScript 来选择食材和查看菜谱。</noscript>
 </div>
 <style>
+  /* Mirror app.vue, ChooseFood and ResultsPanel without waiting for app CSS/JS. */
   .cook-boot {
+    --boot-background: #f2f2f6;
+    --boot-surface: #fff;
+    --boot-fill: rgba(118, 118, 128, 0.12);
+    --boot-border: rgba(0, 0, 0, 0.12);
     position: fixed;
     inset: 0;
+    overflow: hidden;
+    background: var(--boot-background);
+    color: #6d6d72;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  .cook-boot *,
+  .cook-boot *::before,
+  .cook-boot *::after {
     box-sizing: border-box;
-    background: #f2f2f6;
-    color: #1c1c1e;
-    font-family:
-      system-ui,
-      -apple-system,
-      sans-serif;
-    padding-top: env(safe-area-inset-top);
+  }
+  .cook-boot-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .cook-boot-shell {
+    height: 100%;
+  }
+  .cook-boot i,
+  .cook-boot span:not(.cook-boot-status) {
+    display: block;
+    flex: none;
+    background: var(--boot-fill);
+    border-radius: 6px;
+    animation: cook-boot-pulse 2s ease-in-out infinite alternate;
+  }
+  .cook-boot-sidebar {
+    display: none;
+  }
+  .cook-boot-page {
+    position: absolute;
+    inset: 0;
   }
   .cook-boot-header {
-    height: 52px;
+    height: calc(50px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 16px 0;
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 17px;
-    font-weight: 600;
-    border-bottom: 1px solid #ddd;
+    justify-content: flex-end;
+  }
+  .cook-boot-header > i {
+    display: none;
+    width: 34px;
+    height: 18px;
+  }
+  .cook-boot-header > span {
+    width: 100px;
+    height: 28px;
   }
   .cook-boot-content {
-    padding: 28px 16px;
-    max-width: 720px;
-    margin: auto;
+    position: absolute;
+    inset: calc(50px + env(safe-area-inset-top, 0px)) 0 calc(50px + env(safe-area-inset-bottom, 0px));
+    overflow: hidden;
+  }
+  .cook-boot-title {
+    height: 63px;
+    padding: 17px 16px 12px;
+  }
+  .cook-boot-title i {
+    width: 68px;
+    height: 34px;
   }
   .cook-boot-search {
+    height: 60px;
+    padding: 18px 12px 6px;
+  }
+  .cook-boot-search i {
     height: 36px;
     border-radius: 10px;
-    background: #e3e3e8;
-    margin: 16px 0 32px;
   }
   .cook-boot-label {
+    height: 18px;
+    margin: 24px 36px 6px;
+    display: flex;
+    align-items: center;
+  }
+  .cook-boot-label i {
+    width: 44px;
+    height: 10px;
+  }
+  .cook-boot-manage {
+    height: 63px;
+    padding: 26px 16px 0;
+  }
+  .cook-boot-manage i {
+    width: 110px;
     height: 12px;
-    width: 56px;
-    margin: 24px 12px 12px;
-    border-radius: 6px;
-    background: #dedee3;
   }
   .cook-boot-group {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-    background: #fff;
-    padding: 18px;
-    border-radius: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 16px;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--boot-surface);
   }
   .cook-boot-group i {
+    width: 77.8px;
+    height: 44px;
+    border-radius: 17px;
+  }
+  .cook-boot-vegetables .cook-boot-group i:nth-child(2),
+  .cook-boot-vegetables .cook-boot-group i:nth-child(3) {
+    width: var(--boot-wide-chip, 92.7px);
+  }
+  .cook-boot-vegetables i:nth-child(n + 13),
+  .cook-boot-meat i:nth-child(n + 8) {
+    display: none;
+  }
+  .cook-boot-group .cook-boot-more {
+    width: 100px;
+    height: 44px;
+    background: transparent;
+  }
+  .cook-boot-more::before {
+    content: '';
     display: block;
-    height: 32px;
-    border-radius: 18px;
-    background: #ededf1;
-    animation: cook-boot-pulse 1.6s ease-in-out infinite alternate;
+    width: 72px;
+    height: 10px;
+    margin: 17px 8px;
+    background: var(--boot-fill);
+    border-radius: 6px;
   }
-  .cook-boot-pulse {
-    animation: cook-boot-pulse 1.6s ease-in-out infinite alternate;
+  .cook-boot-results {
+    position: absolute;
+    inset: auto 0 0;
+    height: 92px;
+    padding: 28px 16px 10px;
+    border-top: 1px solid var(--boot-border);
+    border-radius: 12px 12px 0 0;
+    background: var(--boot-background);
   }
-  .cook-boot-content p {
-    font-size: 14px;
+  .cook-boot-results::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: calc(50% - 18px);
+    width: 36px;
+    height: 5px;
+    background: var(--boot-fill);
+    border-radius: 3px;
+  }
+  .cook-boot-results-head i {
+    width: 160px;
+    height: 16px;
+    margin-bottom: 8px;
+  }
+  .cook-boot-results-head span {
+    width: 128px;
+    height: 10px;
+  }
+  .cook-boot-results-empty {
+    display: none;
+  }
+  .cook-boot-tabs {
+    position: absolute;
+    inset: auto 0 0;
+    height: calc(50px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    border-top: 1px solid var(--boot-border);
+    background: var(--boot-surface);
+  }
+  .cook-boot-tabs i {
+    width: 24px;
+    height: 24px;
+  }
+  .cook-boot noscript {
+    position: absolute;
+    inset: auto 16px calc(150px + env(safe-area-inset-bottom, 0px));
+    padding: 12px;
+    background: var(--boot-surface);
     text-align: center;
-    color: #74747a;
-    margin-top: 28px;
+    font-size: 14px;
+  }
+  @media (min-width: 1024px) {
+    .cook-boot-sidebar {
+      position: absolute;
+      inset: 0 auto 0 0;
+      display: flex;
+      flex-direction: column;
+      width: 208px;
+      padding: 20px 12px 12px;
+      border-right: 1px solid var(--boot-border);
+    }
+    .cook-boot-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 40px;
+      padding: 0 8px;
+      margin-bottom: 28px;
+    }
+    .cook-boot-brand i {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+    }
+    .cook-boot-brand span {
+      width: 72px;
+      height: 14px;
+    }
+    .cook-boot-nav > i {
+      width: 100%;
+      height: 36px;
+      margin: 2px 0;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: transparent;
+    }
+    .cook-boot-nav > i::before,
+    .cook-boot-nav > i::after {
+      content: '';
+      width: 20px;
+      height: 20px;
+      border-radius: 5px;
+      background: var(--boot-fill);
+    }
+    .cook-boot-nav > i::after {
+      width: 56px;
+      height: 12px;
+    }
+    .cook-boot-kitchen {
+      margin-top: 42px;
+    }
+    .cook-boot-footer {
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid var(--boot-border);
+    }
+    .cook-boot-page {
+      left: 208px;
+      --boot-results-width: clamp(340px, 44%, 640px);
+      --boot-wide-chip: 84px;
+    }
+    .cook-boot-header {
+      height: 56px;
+      padding: 0 20px;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--boot-border);
+    }
+    .cook-boot-header > i {
+      display: block;
+    }
+    .cook-boot-header > span {
+      width: 160px;
+    }
+    .cook-boot-content {
+      inset: 56px 0 0;
+      padding: 8px calc(var(--boot-results-width) + 48px) 24px 24px;
+    }
+    .cook-boot-title,
+    .cook-boot-tabs {
+      display: none;
+    }
+    .cook-boot-search {
+      padding-inline: 0;
+    }
+    .cook-boot-search i {
+      border-radius: 7px;
+    }
+    .cook-boot-label {
+      margin: 18px 2px 7px;
+    }
+    .cook-boot-manage {
+      height: 45px;
+      padding: 18px 0 0;
+    }
+    .cook-boot-group {
+      gap: 6px;
+      margin: 0;
+      padding: 10px;
+      border: 1px solid var(--boot-border);
+      border-radius: 8px;
+    }
+    .cook-boot-group i,
+    .cook-boot-vegetables i:nth-child(n + 13),
+    .cook-boot-meat i:nth-child(n + 8) {
+      display: block;
+      width: 70px;
+      height: 32px;
+      border-radius: 7px;
+    }
+    .cook-boot-group i:nth-child(3n + 2) {
+      width: 84px;
+    }
+    .cook-boot-group i:nth-child(3n + 3) {
+      width: 70px;
+    }
+    .cook-boot-methods .cook-boot-group i {
+      width: 71px;
+    }
+    .cook-boot-methods .cook-boot-group i:nth-child(4),
+    .cook-boot-methods .cook-boot-group i:nth-child(6) {
+      width: 57px;
+    }
+    .cook-boot-group > span.cook-boot-more {
+      display: none;
+    }
+    .cook-boot-results {
+      inset: 16px 16px 16px auto;
+      width: var(--boot-results-width);
+      height: auto;
+      padding: 0;
+      border: 1px solid var(--boot-border);
+      border-radius: 10px;
+      background: var(--boot-surface);
+    }
+    .cook-boot-results::before {
+      display: none;
+    }
+    .cook-boot-results-head {
+      height: 67px;
+      padding: 18px 14px 12px;
+      border-bottom: 1px solid var(--boot-border);
+    }
+    .cook-boot-results-head i {
+      width: 80px;
+    }
+    .cook-boot-results-empty {
+      position: absolute;
+      inset: 67px 0 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+    .cook-boot-results-empty i {
+      width: 128px;
+      height: 16px;
+    }
+    .cook-boot-results-empty span {
+      width: min(60%, 240px);
+      height: 10px;
+    }
+  }
+  @media (min-width: 1280px) {
+    .cook-boot-categories {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0 14px;
+      align-items: start;
+    }
+    .cook-boot-vegetables {
+      grid-column: 1 / -1;
+    }
   }
   @keyframes cook-boot-pulse {
     to {
-      opacity: 0.45;
+      opacity: 0.65;
     }
   }
   @media (prefers-color-scheme: dark) {
     .cook-boot {
-      background: #000;
-      color: #fff;
-    }
-    .cook-boot-header {
-      border-color: #333;
-    }
-    .cook-boot-group {
-      background: #1c1c1e;
-    }
-    .cook-boot-group i,
-    .cook-boot-search,
-    .cook-boot-label {
-      background: #323236;
+      --boot-background: #000;
+      --boot-surface: #1c1c1d;
+      --boot-fill: rgba(118, 118, 128, 0.24);
+      --boot-border: rgba(255, 255, 255, 0.12);
+      color: #a0a0a7;
     }
   }
+  :root.dark .cook-boot {
+    --boot-background: #000;
+    --boot-surface: #1c1c1d;
+    --boot-fill: rgba(118, 118, 128, 0.24);
+    --boot-border: rgba(255, 255, 255, 0.12);
+    color: #a0a0a7;
+  }
+  :root.light .cook-boot {
+    --boot-background: #f2f2f6;
+    --boot-surface: #fff;
+    --boot-fill: rgba(118, 118, 128, 0.12);
+    --boot-border: rgba(0, 0, 0, 0.12);
+    color: #6d6d72;
+  }
   @media (prefers-reduced-motion: reduce) {
-    .cook-boot-pulse,
-    .cook-boot-group i {
+    .cook-boot i,
+    .cook-boot span {
       animation: none;
     }
   }

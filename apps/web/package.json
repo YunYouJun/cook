@@ -17,6 +17,7 @@
     "@yunlefun/sso": "0.7.0",
     "@yunyoujun/cook": "workspace:*",
     "dayjs": "^1.11.21",
+    "ionicons": "^8.1.0",
     "vue-about-me": "^1.4.0"
   },
   "devDependencies": {

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 import consola from 'consola'
 import {
   CHUNK_SIZE,
@@ -170,5 +171,8 @@ export function runConvert() {
     fs.writeFileSync(recipeMetaJsonFile, JSON.stringify(meta, null, 2))
     consola.success(`Generated: ${recipeMetaJsonFile} (dataVersion ${meta.dataVersion})`)
   }
-  updateLastDbUpdated()
+  // Production generation must not rewrite a tracked source timestamp after checkout.
+  // Manual conversion keeps the existing maintenance timestamp behavior.
+  if (process.env.COOK_PRESERVE_SOURCE_TIMESTAMP !== 'true')
+    updateLastDbUpdated()
 }

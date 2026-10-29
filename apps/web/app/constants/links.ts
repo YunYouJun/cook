@@ -2,6 +2,7 @@ import sharedLinks from '../../../../packages/shared/links.json'
 
 export const links = {
   cook: 'https://cook.yunyoujun.cn',
+  legacyCook: 'https://v1.cook.yunyoujun.cn',
 
   /**
    * 应用内反馈提交失败时的可选邮件兜底

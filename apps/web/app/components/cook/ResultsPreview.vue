@@ -7,12 +7,13 @@ defineProps<{
   summary: string
   emojis: string[]
   expanded: boolean
+  docked?: boolean
 }>()
 defineEmits<{ toggle: [], adjust: [], example: [], retry: [] }>()
 </script>
 
 <template>
-  <div class="results-preview">
+  <div class="results-preview" :class="{ 'is-docked': docked }">
     <template v-if="error">
       <div class="results-preview-copy">
         <strong>菜谱没有加载成功</strong><span>{{ error }}</span>
@@ -23,7 +24,7 @@ defineEmits<{ toggle: [], adjust: [], example: [], retry: [] }>()
     </template>
     <template v-else-if="!hasSelection">
       <div class="results-preview-copy">
-        <strong>选好食材，看看能做什么</strong><span>厨具可选，不选也能找菜谱</span>
+        <strong>{{ docked ? '推荐菜谱' : '选好食材，看看能做什么' }}</strong><span>{{ docked ? '根据已选食材实时更新' : '厨具可选，不选也能找菜谱' }}</span>
       </div>
       <button class="results-preview-example" type="button" @click.stop="$emit('example')">
         试试番茄＋鸡蛋
@@ -33,7 +34,12 @@ defineEmits<{ toggle: [], adjust: [], example: [], retry: [] }>()
       <button class="results-preview-avatars" type="button" aria-label="回到顶部调整食材" data-flight-target @click.stop="$emit('adjust')">
         <span v-for="(emoji, index) in emojis" :key="index" aria-hidden="true">{{ emoji }}</span>
       </button>
+      <div v-if="docked" class="results-preview-copy" aria-live="polite">
+        <strong>{{ loading ? '正在准备菜谱…' : count ? `可以做 ${count} 道菜` : '暂时没有匹配的菜' }}</strong>
+        <span>{{ summary }}</span>
+      </div>
       <button
+        v-else
         class="results-preview-open"
         type="button"
         :aria-expanded="expanded"
@@ -156,6 +162,23 @@ defineEmits<{ toggle: [], adjust: [], example: [], retry: [] }>()
   outline: 2px solid var(--ion-color-primary);
   outline-offset: 3px;
   border-radius: 12px;
+}
+.results-preview.is-docked {
+  min-height: 46px;
+  flex-wrap: wrap;
+}
+.is-docked .results-preview-copy strong {
+  font-size: 15px;
+}
+.is-docked .results-preview-example,
+.is-docked .results-preview-action {
+  min-height: 30px;
+  border-radius: 6px;
+  padding-inline: 9px;
+  font-size: 12px;
+}
+.is-docked .results-preview-avatars {
+  min-height: 34px;
 }
 @media (max-width: 359px) {
   .results-preview-avatars {
