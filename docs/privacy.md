@@ -1,8 +1,8 @@
 # 云食册隐私政策
 
-更新日期：2026 年 10 月 25 日
+更新日期：2026 年 10 月 29 日
 
-本政策适用于云游君（YunYouJun）提供的「云食册」原生 iOS App。网页版及从 App 打开的第三方网站，适用各自的隐私政策。隐私问题和数据删除请求可发送至 [me@yunyoujun.cn](mailto:me@yunyoujun.cn)。
+本政策适用于海州区云乐坊信息技术工作室（以下简称“我们”）运营的「云食册」原生 iOS App，我们是本政策所述个人信息处理活动的责任主体。云食册产品官网为 [cook.yunle.fun](https://cook.yunle.fun/)，由同一工作室运营；开源项目由云游君（YunYouJun）开发维护。网页版及从 App 打开的第三方网站，适用各自的隐私政策。隐私问题和数据删除请求可发送至 [me@yunyoujun.cn](mailto:me@yunyoujun.cn)。
 
 ## 本地数据与 iCloud
 
