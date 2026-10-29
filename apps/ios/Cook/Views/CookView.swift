@@ -128,6 +128,7 @@ struct CookView: View {
                 }
             }
         }
+        .accessibilityIdentifier("cook.chooser")
         .navigationTitle("做菜")
         .searchable(text: $input, isPresented: $isInputPresented, placement: .navigationBarDrawer(displayMode: .always), prompt: "说说有什么，如：土豆和鸡蛋，不要辣")
         .searchSuggestions {

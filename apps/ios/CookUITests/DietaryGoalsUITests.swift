@@ -31,12 +31,14 @@ final class DietaryGoalsUITests: XCTestCase {
     @MainActor
     @discardableResult
     private func openGoalPicker(in app: XCUIApplication) -> Bool {
-        let introduction = app.buttons["dietary.introduction.choose"]
+        let chooser = app.collectionViews["cook.chooser"]
+        XCTAssertTrue(chooser.waitForExistence(timeout: 10))
+        let introduction = chooser.buttons["dietary.introduction.choose"]
         if introduction.exists && introduction.isHittable {
             introduction.tap()
             return false
         }
-        let summary = app.buttons["dietary.openPicker"].firstMatch
+        let summary = chooser.buttons["dietary.openPicker"]
         if summary.exists && summary.isHittable {
             summary.tap()
             return false
@@ -382,19 +384,24 @@ final class DietaryGoalsUITests: XCTestCase {
                               file: StaticString = #filePath, line: UInt = #line) -> XCUIElement? {
         let recipe = app.buttons[identifier]
         // Query the native list role instead of a whole-app Any lookup after scrolling.
-        let results = app.collectionViews.matching(identifier: "dietary.results").firstMatch
+        let results = app.collectionViews["dietary.results"]
         guard results.waitForExistence(timeout: 5) else {
             XCTFail("查找 \(identifier) 前未显示菜谱结果列表", file: file, line: line)
             return nil
         }
         for _ in 0..<maximumSwipes {
+            guard app.state == .runningForeground else {
+                XCTFail("查找 \(identifier) 时应用意外离开前台", file: file, line: line)
+                return nil
+            }
             guard results.exists else {
                 XCTFail("查找 \(identifier) 时意外离开菜谱结果列表", file: file, line: line)
                 return nil
             }
             if recipe.exists && recipe.isHittable { return recipe }
             let frame = results.frame
-            let visibleFrame = frame.intersection(app.windows.firstMatch.frame)
+            // Use the app viewport without another lazy Window query after scrolling.
+            let visibleFrame = frame.intersection(app.frame)
             guard !visibleFrame.isNull && !visibleFrame.isEmpty else {
                 XCTFail("查找 \(identifier) 时菜谱结果列表没有可见滚动区域", file: file, line: line)
                 return nil
