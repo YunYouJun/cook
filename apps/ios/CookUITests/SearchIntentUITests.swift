@@ -26,6 +26,14 @@ final class SearchIntentUITests: XCTestCase {
         XCTAssertTrue(app.buttons["intent.preview"].waitForExistence(timeout: 10))
         app.buttons["intent.preview"].tap()
         XCTAssertTrue(app.buttons["intent.apply"].waitForExistence(timeout: 10))
+        let screen = XCTAttachment(screenshot: app.screenshot())
+        screen.name = "intent-preview-layout"
+        screen.lifetime = .keepAlways
+        add(screen)
+        let hierarchy = XCTAttachment(string: app.debugDescription)
+        hierarchy.name = "intent-preview-hierarchy"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
     }
 
     @MainActor

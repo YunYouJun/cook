@@ -277,7 +277,10 @@ final class DietaryGoalsUITests: XCTestCase {
         for _ in 0..<8 {
             let control = toggle
             if control.exists && control.isHittable {
-                control.tap()
+                // One deliberate native gesture; do not repeat a failed toggle.
+                control.press(forDuration: 0.1)
+                let changed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "1"), object: control)
+                XCTAssertEqual(XCTWaiter.wait(for: [changed], timeout: 5), .completed)
                 return
             }
             app.swipeUp()
