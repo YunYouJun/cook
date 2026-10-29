@@ -289,13 +289,9 @@ final class DietaryGoalsUITests: XCTestCase {
                 XCTFail("查找 \(identifier) 时菜谱结果列表没有可见滚动区域", file: file, line: line)
                 return nil
             }
-            let origin = results.coordinate(withNormalizedOffset: .zero)
-            origin.withOffset(CGVector(dx: visibleFrame.midX - frame.minX,
-                                       dy: visibleFrame.minY + visibleFrame.height * 0.65 - frame.minY))
-                .press(forDuration: 0.1,
-                       thenDragTo: origin.withOffset(CGVector(dx: visibleFrame.midX - frame.minX,
-                                                             dy: visibleFrame.minY + visibleFrame.height * 0.45 - frame.minY)),
-                       withVelocity: .slow, thenHoldForDuration: 0.2)
+            // A short custom drag made too little progress through tall recipe rows.
+            // Keep the gesture scoped to the native list and let XCTest choose its swipe span.
+            results.swipeUp(velocity: .slow)
             guard results.exists else {
                 XCTFail("滚动查找 \(identifier) 后意外离开菜谱结果列表", file: file, line: line)
                 return nil
