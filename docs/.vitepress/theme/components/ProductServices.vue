@@ -75,7 +75,7 @@ const docs = [
   </section>
 
   <div class="product-footer">
-    <p>开发者 / 版权所有者：云游君（YunYouJun）<br>© 2022 云游君（YunYouJun）</p>
+    <p>运营主体：海州区云乐坊信息技术工作室<br>开发者 / 开源项目版权所有者：云游君（YunYouJun）<br>© 2022 云游君（YunYouJun）</p>
     <nav aria-label="法律与项目链接">
       <a href="/terms">用户协议</a>
       <a href="/privacy">iOS 隐私政策</a>
