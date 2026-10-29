@@ -272,7 +272,8 @@ final class DietaryGoalsUITests: XCTestCase {
     private func revealRecipe(_ identifier: String, in app: XCUIApplication, maximumSwipes: Int,
                               file: StaticString = #filePath, line: UInt = #line) -> XCUIElement? {
         let recipe = app.buttons[identifier]
-        let results = app.descendants(matching: .any).matching(identifier: "dietary.results").firstMatch
+        // Query the native list role instead of a whole-app Any lookup after scrolling.
+        let results = app.collectionViews.matching(identifier: "dietary.results").firstMatch
         guard results.waitForExistence(timeout: 5) else {
             XCTFail("查找 \(identifier) 前未显示菜谱结果列表", file: file, line: line)
             return nil
