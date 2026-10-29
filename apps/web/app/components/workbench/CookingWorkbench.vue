@@ -3,8 +3,10 @@ import type { RecipeMatch } from '@yunyoujun/cook'
 import type { RecipeItem, StuffItem } from '~/types'
 import { DIFFICULTY_LEVELS, METHOD_GROUPS } from '@yunyoujun/cook/recommend'
 import { useWorkbenchCatalog } from '~/composables/useWorkbenchCatalog'
+import { methodIcons, toolIcons } from '~/data/cookingIcons'
 import { pantryOptions } from '~/data/pantry'
 
+const props = defineProps<{ desktop?: boolean }>()
 defineEmits<{ detail: [recipe: RecipeItem, match?: RecipeMatch] }>()
 const pantry = defineModel<string[]>('pantry', { required: true })
 const rStore = useRecipeStore()
@@ -14,6 +16,9 @@ const { sections: categories, ingredients: allFood, tools, acceptsIngredient } =
 const category = ref(0)
 const query = ref('')
 const expanded = ref(false)
+// Desktop always shows settings without changing the narrow-screen disclosure choices.
+const pantryExpanded = shallowRef(false)
+const filtersExpanded = shallowRef(false)
 const avoidOpen = ref(false)
 const matches = computed(() => rStore.recommendWithPantry(pantry.value))
 const toolOnly = computed(() => !rStore.selectedStuff.length && Boolean(rStore.curTool))
@@ -27,7 +32,7 @@ const visibleItems = computed(() => {
   const text = query.value.trim()
   if (text)
     return allFood.value.filter(item => item.name.includes(text) || item.alias?.includes(text))
-  return categories.value[category.value]!.items.filter(item => expanded.value || !item.more || rStore.selectedStuff.includes(item.name))
+  return categories.value[category.value]!.items.filter(item => props.desktop || expanded.value || !item.more || rStore.selectedStuff.includes(item.name))
 })
 const hasMore = computed(() => categories.value[category.value]!.items.some(item => item.more))
 const preferenceSummary = computed(() => [
@@ -94,7 +99,7 @@ function addUnlisted() {
 </script>
 
 <template>
-  <div class="cooking-workbench">
+  <div class="cooking-workbench" :class="{ 'is-desktop': desktop }">
     <div class="wb-layout">
       <section class="wb-tray wb-panel" aria-labelledby="wb-tray-title">
         <h2 id="wb-tray-title">
@@ -126,7 +131,7 @@ function addUnlisted() {
             <span v-if="rStore.selectedStuff.includes(item.name)" class="wb-selected-mark" aria-hidden="true">✓</span>
           </button>
         </div>
-        <button v-if="!query && hasMore" class="wb-text-button" type="button" :aria-expanded="expanded" @click="expanded = !expanded">
+        <button v-if="!desktop && !query && hasMore" class="wb-text-button" type="button" :aria-expanded="expanded" @click="expanded = !expanded">
           {{ expanded ? '收起更多食材 ↑' : '展开更多食材 ↓' }}
         </button>
         <div v-if="query && !visibleItems.length" class="wb-empty-search">
@@ -142,8 +147,10 @@ function addUnlisted() {
           管理食材和厨具
         </NuxtLink>
 
-        <details class="wb-settings">
-          <summary>家里现有的调料 <span>{{ pantry.length }} 种</span></summary>
+        <details class="wb-settings" :open="desktop || pantryExpanded">
+          <summary :role="desktop ? 'heading' : undefined" :aria-level="desktop ? 3 : undefined" :tabindex="desktop ? -1 : undefined" @click.prevent="!desktop && (pantryExpanded = !pantryExpanded)">
+            家里现有的调料 <span>{{ pantry.length }} 种</span>
+          </summary>
           <p class="wb-hint">
             选择这次可用的调料，单独保存于此视图。
           </p>
@@ -156,13 +163,16 @@ function addUnlisted() {
         <p class="wb-hint wb-pantry-summary">
           {{ pantry.length ? `已确认调料：${pantry.join('、')}` : '调料尚未确认；不默认有油、盐。' }}
         </p>
-        <details class="wb-settings">
-          <summary>做法、难度与忌口</summary>
+        <details class="wb-settings" :open="desktop || filtersExpanded">
+          <summary :role="desktop ? 'heading' : undefined" :aria-level="desktop ? 3 : undefined" :tabindex="desktop ? -1 : undefined" @click.prevent="!desktop && (filtersExpanded = !filtersExpanded)">
+            做法、难度与忌口
+          </summary>
           <p class="wb-hint">
             筛选条件在两种视图间同步。
           </p>
           <div class="wb-pills" role="group" aria-label="做法筛选">
             <button v-for="group in METHOD_GROUPS" :key="group.label" type="button" :aria-pressed="rStore.methodGroups.includes(group.label)" @click="rStore.toggleMethodGroup(group.label)">
+              <span v-if="methodIcons[group.label]" class="wb-cooking-icon" :class="methodIcons[group.label]" aria-hidden="true" />
               {{ group.label }}
             </button>
           </div>
@@ -209,7 +219,7 @@ function addUnlisted() {
           <h2>厨具 <span>（可选）</span></h2>
           <div class="wb-pills" role="group" aria-label="工作台厨具">
             <button v-for="tool in tools" :key="tool.name" type="button" :aria-pressed="rStore.curTool === tool.name" @click="rStore.clickTool(tool)">
-              <span v-if="tool.icon" :class="tool.icon" aria-hidden="true" /><span v-else aria-hidden="true">{{ tool.emoji }}</span>{{ tool.name === '一口大锅' ? '炒锅' : tool.name }}<span v-if="rStore.curTool === tool.name" aria-hidden="true">✓</span>
+              <span v-if="toolIcons[tool.name] || tool.icon" class="wb-cooking-icon" :class="toolIcons[tool.name] || tool.icon" aria-hidden="true" /><span v-else aria-hidden="true">{{ tool.emoji }}</span>{{ tool.name === '一口大锅' ? '炒锅' : tool.name }}<span v-if="rStore.curTool === tool.name" aria-hidden="true">✓</span>
             </button>
           </div>
         </div>
@@ -420,6 +430,14 @@ function addUnlisted() {
   float: right;
   color: var(--wb-muted);
 }
+.is-desktop .wb-settings summary {
+  cursor: default;
+  list-style: none;
+  font-weight: 600;
+}
+.is-desktop .wb-settings summary::-webkit-details-marker {
+  display: none;
+}
 .wb-pills {
   display: flex;
   flex-wrap: wrap;
@@ -446,6 +464,11 @@ function addUnlisted() {
 }
 .wb-pills button > span[class] {
   font-size: 18px;
+}
+.wb-cooking-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
 }
 .wb-checkbox {
   display: inline-flex;

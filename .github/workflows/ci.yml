@@ -27,6 +27,8 @@ jobs:
           node-version: 24
       - name: Test change detection
         run: node --test test/ciChanges.test.mjs
+      - name: Test isolated iOS infrastructure recovery
+        run: node --test test/iosTestInfrastructure.test.mjs
       - name: Detect documentation-only changes
         id: changes
         run: node scripts/ci-changes.mjs
@@ -95,6 +97,9 @@ jobs:
           node scripts/compose-product-site.mjs
 
   test:
+    permissions:
+      contents: read
+      actions: read
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -126,7 +131,34 @@ jobs:
         run: |
           git fetch --depth=1 origin ${{ github.base_ref }}
           pnpm run validate --base FETCH_HEAD
+      - name: Test release provenance and Support delivery gates
+        run: node --test --test-reporter=dot test/webBuildInfo.test.mjs test/productSiteBuild.test.mjs test/supportAgentHttp.test.mjs test/cookGithubChanges.test.mjs test/cookDeliverySync.test.mjs test/supportLedger.test.mjs test/supportArtifacts.test.mjs test/edgeoneRelease.test.mjs test/cookSupportRunner.test.mjs
       - run: pnpm run test
+      - name: Install pinned artifact SDK for runtime contract verification
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        run: npm install --prefix "$RUNNER_TEMP/cook-artifact-contract" --ignore-scripts --no-audit --no-fund @actions/artifact@6.3.1
+      - name: Verify finalized checkpoints with the real Actions artifact runtime
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v9
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COOK_ARTIFACT_MODULE: ${{ runner.temp }}/cook-artifact-contract/node_modules/@actions/artifact/lib/artifact.js
+        with:
+          script: |
+            const { spawnSync } = require('node:child_process')
+            const result = spawnSync(process.execPath, ['scripts/test-support-artifact-runtime.mjs'], { stdio: 'inherit' })
+            if (result.error || result.status !== 0) core.setFailed('The artifact runtime contract failed.')
+
+  web-acceptance:
+    needs: [lint, typecheck, build, test]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Require all Web jobs and every matrix entry to succeed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: node -e 'if (Object.values(JSON.parse(process.env.RESULTS)).some(job => job.result !== "success")) process.exit(1)'
 
   # iOS 的 CookCore 跑和 Web 共用的用例（ubuntu 镜像自带 Swift）
   swift:
@@ -177,6 +209,7 @@ jobs:
         id: simulators
         run: pnpm exec tsx scripts/select-ios-test-devices.ts >> "$GITHUB_OUTPUT"
       - name: Build and test
+        id: ios_tests
         env:
           IPHONE: ${{ steps.simulators.outputs.iphone }}
           IPAD: ${{ steps.simulators.outputs.ipad }}
@@ -188,19 +221,37 @@ jobs:
           result=0
           standard_audit=CookUITests/DietaryGoalsUITests/testNativeGoalPickerAccessibilityAndReviewedSummary
           maximum_audit=CookUITests/DietaryGoalsUITests/testLargestTextCanChooseRememberReadAndRoll
-          run_tests() {
-            local device="$1" stage="$2"
+          run_once() {
+            local device="$1" stage="$2" code=0
             shift 2
             echo "Running $stage on $device"
             if xcrun simctl bootstatus "$device" -b; then
               xcodebuild test -project apps/ios/Cook.xcodeproj -scheme Cook -destination "id=$device" \
                 -destination-timeout 180 -parallel-testing-enabled NO \
                 "$@" -resultBundlePath "$RUNNER_TEMP/xcresult/$device-$stage.xcresult" \
-                CODE_SIGNING_ALLOWED=NO || result=1
+                CODE_SIGNING_ALLOWED=NO || code=$?
+            else
+              code=1
+            fi
+            xcrun simctl shutdown "$device" || result=1
+            return "$code"
+          }
+          run_tests() {
+            local device="$1" stage="$2"
+            shift 2
+            if run_once "$device" "$stage" "$@"; then
+              return
+            fi
+            # Keep the failed bundle. Only these two known audit-infrastructure
+            # errors may repeat once in a new host on the same existing device.
+            if [[ "$stage" == dietary-standard || "$stage" == dietary-maximum ]] &&
+              node scripts/classify-ios-test-retry.mjs "$RUNNER_TEMP/xcresult/$device-$stage.xcresult" "${1-}"; then
+              echo "::warning title=Isolated iOS infrastructure retry::$device $stage failed before audit completion; original result bundle retained"
+              echo "infrastructure_retries=true" >> "$GITHUB_OUTPUT"
+              run_once "$device" "$stage-infrastructure-retry" "$@" || result=1
             else
               result=1
             fi
-            xcrun simctl shutdown "$device" || result=1
           }
           for device in "$IPHONE" "$IPAD"; do
             run_tests "$device" regression "-skip-testing:$standard_audit" "-skip-testing:$maximum_audit"
@@ -225,7 +276,7 @@ jobs:
           done
       # 截图和每一步的操作记录都在结果包里，下载后用 Xcode 打开
       - name: Upload test results
-        if: failure()
+        if: ${{ failure() || steps.ios_tests.outputs.infrastructure_retries == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: ios-xcresult

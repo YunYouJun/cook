@@ -1,9 +1,12 @@
 import Combine
+import os
 import RealityKit
 import SwiftUI
 import UIKit
 
 enum CloudKitchenSceneStatus { case loading, ready, failed }
+
+private let kitchenSignposter = OSSignposter(subsystem: "fun.yunle.cook", category: .pointsOfInterest)
 
 /// RealityKit renders the shared USDZ locally. Only semantic actions cross the
 /// boundary; the scene never owns ingredients or recommendation state.
@@ -12,6 +15,7 @@ struct CloudKitchenSceneView: UIViewRepresentable {
     let cooking: Bool
     let dark: Bool
     let reduceMotion: Bool
+    let allowsRotation: Bool
     let onSelect: (String) -> Void
     let onCook: () -> Void
     let onStatus: (CloudKitchenSceneStatus) -> Void
@@ -19,6 +23,8 @@ struct CloudKitchenSceneView: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     func makeUIView(context: Context) -> KitchenARView {
+        let interval = kitchenSignposter.beginInterval("创建厨房渲染器")
+        defer { kitchenSignposter.endInterval("创建厨房渲染器", interval) }
         let view = KitchenARView(frame: .zero, cameraMode: .nonAR, automaticallyConfigureSession: false)
         view.renderOptions = [.disableMotionBlur, .disableDepthOfField, .disableCameraGrain]
         view.isAccessibilityElement = false
@@ -58,7 +64,14 @@ struct CloudKitchenSceneView: UIViewRepresentable {
         private var potHome = Transform()
         private var ingredients: [String: Entity] = [:]
         private var homes: [String: Transform] = [:]
-        private var load: AnyCancellable?
+        private var load: Task<Void, Never>?
+        private var orbit: CloudKitchenCameraOrbit?
+        private weak var pan: UIPanGestureRecognizer?
+        private weak var scrollingPan: UIPanGestureRecognizer?
+        private var selectionRings: [String: Entity] = [:]
+        private var potFood: Entity?
+        private var flame: Entity?
+        private var steam: [Entity] = []
         private var animation: (any Cancellable)?
         private var elapsed: Float = 0
         private var cookingStarted: Float = 0
@@ -83,28 +96,46 @@ struct CloudKitchenSceneView: UIViewRepresentable {
 
         func start(in view: KitchenARView) {
             self.view = view
-            camera.camera.fieldOfViewInDegrees = 32
+            camera.camera.fieldOfViewInDegrees = CloudKitchenCameraOrbit.fieldOfView
             anchor.addChild(camera)
             addLight(from: [-3, 8, 5], color: UIColor(red: 1, green: 0.95, blue: 0.85, alpha: 1), intensity: 2200, shadow: true)
             addLight(from: [5, 4, 3], color: UIColor(red: 0.79, green: 0.88, blue: 1, alpha: 1), intensity: 1000)
             addLight(from: [0, 5, -5], color: .white, intensity: 900)
             view.scene.addAnchor(anchor)
-            view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tap(_:))))
-            view.didLayout = { [weak self] in self?.fitCamera() }
-            updateBackground()
-            guard let asset = CloudKitchenAsset.bundled,
-                  let url = Bundle.main.url(forResource: asset.model, withExtension: "usdz") else {
-                DispatchQueue.main.async { [weak self] in self?.owner.onStatus(.failed) }
-                return
+            let pan = UIPanGestureRecognizer(target: self, action: #selector(rotate(_:)))
+            pan.maximumNumberOfTouches = 1
+            pan.isEnabled = false
+            view.addGestureRecognizer(pan)
+            self.pan = pan
+            let tap = UITapGestureRecognizer(target: self, action: #selector(tap(_:)))
+            tap.require(toFail: pan)
+            view.addGestureRecognizer(tap)
+            view.didLayout = { [weak self] in
+                self?.connectScrollingGesture()
+                self?.fitCamera()
             }
-            load = Entity.loadAsync(contentsOf: url)
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] completion in
-                    if case .failure = completion { self?.owner.onStatus(.failed) }
-                } receiveValue: { [weak self] model in
-                    guard let self, !self.disposed else { return }
-                    self.install(model, asset: asset)
+            updateBackground()
+            load = Task { @MainActor [weak self] in
+                guard !Task.isCancelled, self?.disposed == false else { return }
+                self?.owner.onStatus(.loading)
+                guard let asset = CloudKitchenAsset.bundled else {
+                    self?.owner.onStatus(.failed)
+                    return
                 }
+                do {
+                    let model: Entity
+                    do {
+                        let interval = kitchenSignposter.beginInterval("读取厨房模型")
+                        defer { kitchenSignposter.endInterval("读取厨房模型", interval) }
+                        model = try await CloudKitchenModelLoader.shared.modelClone()
+                    }
+                    guard let self, !Task.isCancelled, !self.disposed else { return }
+                    self.install(model, asset: asset)
+                } catch {
+                    guard let self, !Task.isCancelled, !self.disposed else { return }
+                    self.owner.onStatus(.failed)
+                }
+            }
         }
 
         private func addLight(from position: SIMD3<Float>, color: UIColor, intensity: Float, shadow: Bool = false) {
@@ -117,6 +148,8 @@ struct CloudKitchenSceneView: UIViewRepresentable {
         }
 
         private func install(_ model: Entity, asset: CloudKitchenAsset) {
+            let interval = kitchenSignposter.beginInterval("安装厨房场景")
+            defer { kitchenSignposter.endInterval("安装厨房场景", interval) }
             root = model
             anchor.addChild(model)
             pot = model.findEntity(named: "CookPot")
@@ -125,11 +158,16 @@ struct CloudKitchenSceneView: UIViewRepresentable {
                 return
             }
             potHome = pot.transform
+            orbit = CloudKitchenCameraOrbit(framing: asset.camera)
+            potFood = model.findEntity(named: "PotFood")
+            flame = model.findEntity(named: "StoveFlame")
+            steam = (0..<6).compactMap { model.findEntity(named: "Steam_\($0)") }
             addHitArea(to: pot, radius: 0.55, height: 0.3)
             for ingredient in asset.ingredients {
                 guard let entity = model.findEntity(named: ingredient.node) else { continue }
                 ingredients[ingredient.name] = entity
                 homes[ingredient.name] = entity.transform
+                selectionRings[ingredient.name] = model.findEntity(named: "Selection_\(ingredient.id)")
                 addHitArea(to: entity, radius: 0.27, height: 0.15)
             }
             guard ingredients.count == asset.ingredients.count else {
@@ -140,6 +178,7 @@ struct CloudKitchenSceneView: UIViewRepresentable {
             applySelection(animated: false)
             applyCooking()
             fitCamera()
+            pan?.isEnabled = owner.allowsRotation && !owner.cooking
             owner.onStatus(.ready)
         }
 
@@ -155,7 +194,13 @@ struct CloudKitchenSceneView: UIViewRepresentable {
             let selectionChanged = owner.selected != next.selected
             let cookingChanged = owner.cooking != next.cooking || owner.reduceMotion != next.reduceMotion
             let appearanceChanged = owner.dark != next.dark
+            let rotationChanged = owner.allowsRotation != next.allowsRotation
             owner = next
+            pan?.isEnabled = root != nil && next.allowsRotation && !next.cooking
+            if rotationChanged, !next.allowsRotation {
+                orbit?.reset()
+                fitCamera()
+            }
             if next.reduceMotion {
                 animation?.cancel()
                 animation = nil
@@ -170,7 +215,7 @@ struct CloudKitchenSceneView: UIViewRepresentable {
             let selected = Set(owner.selected)
             for ingredient in CloudKitchenAsset.bundled?.ingredients ?? [] {
                 let chosen = selected.contains(ingredient.name)
-                root?.findEntity(named: "Selection_\(ingredient.id)")?.isEnabled = chosen
+                selectionRings[ingredient.name]?.isEnabled = chosen
                 guard let entity = ingredients[ingredient.name], var destination = homes[ingredient.name] else { continue }
                 destination.translation.y += chosen ? 0.07 : 0
                 entity.stopAllAnimations(recursive: false)
@@ -182,7 +227,7 @@ struct CloudKitchenSceneView: UIViewRepresentable {
                     entity.transform = destination
                 }
             }
-            root?.findEntity(named: "PotFood")?.isEnabled = !selected.isEmpty
+            potFood?.isEnabled = !selected.isEmpty
             updateAccessibilityFrames()
         }
 
@@ -191,10 +236,8 @@ struct CloudKitchenSceneView: UIViewRepresentable {
             flights.removeAll()
             cookingStarted = elapsed
             pot?.transform = potHome
-            root?.findEntity(named: "StoveFlame")?.isEnabled = owner.cooking
-            for index in 0..<6 {
-                root?.findEntity(named: "Steam_\(index)")?.isEnabled = owner.cooking
-            }
+            flame?.isEnabled = owner.cooking
+            steam.forEach { $0.isEnabled = owner.cooking }
             guard owner.cooking, !owner.reduceMotion, let root else { return }
             for (index, name) in owner.selected.enumerated() {
                 guard let source = ingredients[name] else { continue }
@@ -248,9 +291,8 @@ struct CloudKitchenSceneView: UIViewRepresentable {
             if owner.cooking {
                 pot?.transform.rotation = potHome.rotation * simd_quatf(angle: sin(cookingTime * 18) * 0.035, axis: [0, 0, 1])
             }
-            for index in 0..<6 where owner.cooking {
+            for (index, puff) in steam.enumerated() where owner.cooking {
                 let phase = (cookingTime * 0.6 + Float(index) / 6).truncatingRemainder(dividingBy: 1)
-                guard let puff = root?.findEntity(named: "Steam_\(index)") else { continue }
                 puff.position = [1.28 + sin(phase * 5 + Float(index)) * 0.12, 2.12 + phase * 1.1, -1.62]
                 puff.scale = .init(repeating: sin(phase * .pi))
             }
@@ -268,21 +310,40 @@ struct CloudKitchenSceneView: UIViewRepresentable {
         }
 
         private func fitCamera() {
-            guard let view, root != nil, let framing = CloudKitchenAsset.bundled?.camera,
-                  view.bounds.width > 0, view.bounds.height > 0 else { return }
-            let direction = SIMD3<Float>(framing.direction)
-            let center = SIMD3<Float>(framing.center)
-            let verticalTangent = tan(Float.pi * 32 / 360)
-            let horizontalTangent = verticalTangent * Float(view.bounds.width / view.bounds.height)
-            var distance: Float = 1
-            for point in framing.horizontalHull {
-                distance = max(distance, abs(point[0]) / horizontalTangent + point[1])
-            }
-            for point in framing.verticalHull {
-                distance = max(distance, abs(point[0]) / verticalTangent + point[1])
-            }
-            camera.look(at: center, from: center + direction * distance * 1.06, relativeTo: nil)
+            guard let view, root != nil, let pose = orbit?.pose(viewport: view.bounds.size) else { return }
+            camera.look(at: pose.center, from: pose.position, relativeTo: nil)
             updateAccessibilityFrames()
+        }
+
+        private func connectScrollingGesture() {
+            guard let view, let pan else { return }
+            var ancestor = view.superview
+            while let current = ancestor {
+                if let scroll = current as? UIScrollView {
+                    if scrollingPan !== scroll.panGestureRecognizer {
+                        // Only drags starting inside the model reach this pan.
+                        // When rotation is off it fails immediately, so the page scrolls.
+                        scroll.panGestureRecognizer.require(toFail: pan)
+                        scrollingPan = scroll.panGestureRecognizer
+                    }
+                    return
+                }
+                ancestor = current.superview
+            }
+        }
+
+        @objc private func rotate(_ gesture: UIPanGestureRecognizer) {
+            guard owner.allowsRotation, !owner.cooking, root != nil, let view else { return }
+            switch gesture.state {
+            case .began:
+                orbit?.beginDrag()
+                fallthrough
+            case .changed, .ended:
+                let translation = gesture.translation(in: view)
+                orbit?.updateDrag(translation: CGSize(width: translation.x, height: translation.y), viewport: view.bounds.size)
+                fitCamera()
+            default: break
+            }
         }
 
         @objc private func tap(_ gesture: UITapGestureRecognizer) {
@@ -355,6 +416,12 @@ struct CloudKitchenSceneView: UIViewRepresentable {
             root = nil
             pot = nil
             ingredients.removeAll()
+            selectionRings.removeAll()
+            potFood = nil
+            flame = nil
+            steam.removeAll()
+            orbit = nil
+            pan?.isEnabled = false
             accessibilityItems.removeAll()
         }
     }

@@ -35,7 +35,7 @@ const legacyRoutes = [
   '/auth/callback',
 ]
 const protectedPaths = ['_nuxt', 'auth', '.well-known', 'sw.js', 'about']
-const requiredWebFiles = ['index.html', 'sw.js', '.well-known/apple-app-site-association', 'auth/wechat/index.html', 'about/index.html', 'about/terms.html']
+const requiredWebFiles = ['index.html', 'sw.js', '.well-known/apple-app-site-association', '.well-known/cook-build.json', 'auth/wechat/index.html', 'about/index.html', 'about/terms.html']
 const defaultRoot = fileURLToPath(new URL('../', import.meta.url))
 
 function requirePath(path, directory = false) {

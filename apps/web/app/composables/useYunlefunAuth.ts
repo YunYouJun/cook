@@ -7,6 +7,7 @@ import {
   createCloudbaseIdentityAdapter,
   createWebYunlefunAuthorizationAdapter,
 } from '~/adapters/yunlefunAuth'
+import { isAuthCallbackUrl } from '~/utils/authInitialization'
 import { createYunlefunAuthController } from '~/utils/yunlefunAuth'
 import { resolveYunlefunSsoConfig } from '~/utils/yunlefunSsoConfig'
 
@@ -40,14 +41,18 @@ export function useYunlefunAuth() {
   async function initialize(): Promise<void> {
     if (!initialization)
       initialization = initializeOnce(runtimeConfig, snapshot, configurationMessage)
+    publishSnapshot(snapshot)
     await initialization
     publishSnapshot(snapshot)
   }
 
   async function signIn(): Promise<void> {
+    await initialize()
     if (!controller || !isConfigured.value)
       return
-    await controller.signIn()
+    const signingIn = controller.signIn()
+    publishSnapshot(snapshot)
+    await signingIn
     publishSnapshot(snapshot)
   }
 
@@ -84,11 +89,11 @@ async function initializeOnce(
   snapshot: Ref<YunlefunAuthSnapshot>,
   configurationMessage: Ref<string>,
 ): Promise<void> {
-  if (!import.meta.client)
+  if (import.meta.server)
     return
 
   // Native HTTPS callbacks (including SwiftUI) must not become Web transactions.
-  if (window.location.pathname === '/auth/callback'
+  if (isAuthCallbackUrl(window.location.href)
     && new URLSearchParams(window.location.search).get('platform') === 'native') {
     window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`)
     configurationMessage.value = '未能返回云食册，请在应用中重新授权，或返回网页版登录'
@@ -130,7 +135,7 @@ async function initializeOnce(
 
   await controller.initialize()
   publishSnapshot(snapshot)
-  if (window.location.pathname === '/auth/callback'
+  if (isAuthCallbackUrl(window.location.href)
     && controller.snapshot().status === 'signed-in') {
     await navigateTo('/my', { replace: true })
   }

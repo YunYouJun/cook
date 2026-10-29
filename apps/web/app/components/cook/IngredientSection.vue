@@ -25,17 +25,23 @@ defineProps<{
 .ingredient-section-header {
   display: flex;
   justify-content: space-between;
+  margin: var(--ingredient-section-heading-margin, 24px 0 0);
+  padding: var(--ingredient-section-heading-padding, 0 36px 6px);
+  color: var(--ingredient-section-heading-color, var(--ion-text-color-step-400, #6d6d72));
+  font-weight: var(--ingredient-section-heading-weight, 400);
 }
 .ingredient-section-note {
   color: var(--ion-color-primary);
+  font-weight: 400;
 }
 .ingredient-section-card {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 16px;
-  padding: 12px;
-  border-radius: 10px;
+  gap: var(--ingredient-section-gap, 8px);
+  margin: var(--ingredient-section-margin, 0 16px);
+  padding: var(--ingredient-section-padding, 12px);
+  border: var(--ingredient-section-border, 0);
+  border-radius: var(--ingredient-section-radius, 10px);
   background: var(--ion-item-background, #fff);
 }
 </style>
