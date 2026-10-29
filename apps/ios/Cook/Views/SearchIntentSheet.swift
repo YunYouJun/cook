@@ -24,6 +24,7 @@ struct SearchIntentSheet: View {
                         .accessibilityIdentifier("intent.text")
                     Button("重新识别本地条件") { parseLocally() }
                         .disabled(draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .accessibilityIdentifier("intent.local")
                     if ai.canUseRemote {
                         Button(ai.canUseManagedDeepSeek ? "智能找菜 · 会员 DeepSeek" : "智能找菜 · DeepSeek") { confirmsSending = true }
                             .disabled(draft.isLoading || draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -41,24 +42,20 @@ struct SearchIntentSheet: View {
                             Text("正在识别条件…")
                             Spacer()
                             Button("取消请求") { draft.cancel() }
+                                .accessibilityIdentifier("intent.cancelRequest")
                         }
                     }
+                    NavigationLink("AI 设置") { AISettingsView() }
+                        .accessibilityIdentifier("intent.settings")
                 } header: { Text("这次想怎么做") } footer: {
                     Text("普通识别在本机完成。确认前不会修改当前选择；确认后合并条件，保留已有忌口和筛选。")
                 }
-                if draft.intent != nil { conditions }
+                if draft.intent != nil { conditions.disabled(draft.isLoading) }
                 if let message = draft.message {
                     Section { Text(message).foregroundStyle(.secondary) }
                 }
             }
             .accessibilityIdentifier("intent.form")
-            .disabled(draft.isLoading)
-            .overlay(alignment: .bottom) {
-                if draft.isLoading {
-                    Button("取消请求，保留本地条件") { draft.cancel() }
-                        .buttonStyle(.borderedProminent).padding()
-                }
-            }
             .navigationTitle("确认找菜条件")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -126,8 +123,21 @@ struct SearchIntentSheet: View {
                             .accessibilityLabel("移除难度\(level)")
                     }
                     if let goal = intent.goal {
-                        Chip(title: goal.title, isSelected: true) { draft.intent?.goal = nil }
-                            .accessibilityLabel("移除目标\(goal.title)")
+                        Button { draft.intent?.goal = nil } label: {
+                            VStack(spacing: 4) {
+                                DietaryGoalIcon(goal: goal)
+                                Text(goal.title)
+                                    .multilineTextAlignment(.center)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.capsule)
+                        .tint(DietaryGoalAppearance(goal: goal).color)
+                        .accessibilityLabel("移除目标\(goal.title)")
+                        .accessibilityAddTraits(.isSelected)
                     }
                 }
             }

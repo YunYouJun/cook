@@ -48,6 +48,8 @@ final class SearchIntentDraft {
                 guard !Task.isCancelled, generation == id, text == submitted else { return }
                 intent = result
                 acceptsUnresolved = false
+            } catch is CancellationError {
+                return
             } catch {
                 guard !Task.isCancelled, generation == id else { return }
                 message = (error as? DeepSeekIntentError)?.localizedDescription
@@ -88,7 +90,6 @@ extension CookSession {
         methodGroups = methods
         difficulty = levels
         if let goal = validated.goal { selectDietaryGoal(goal) }
-        keyword = ""
     }
 }
 
