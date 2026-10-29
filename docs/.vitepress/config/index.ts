@@ -37,7 +37,7 @@ export default defineConfig(withYunlefun({
     },
 
     footer: {
-      message: '<a href="/terms">用户协议</a> · <a href="/privacy">iOS 隐私政策</a> · <a href="mailto:me@yunyoujun.cn">联系开发者</a>',
+      message: '运营主体：海州区云乐坊信息技术工作室<br><a href="/terms">用户协议</a> · <a href="/privacy">iOS 隐私政策</a> · <a href="mailto:me@yunyoujun.cn">联系开发者</a>',
       copyright: '© 2022–2026 云游君（YunYouJun） · <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">苏ICP备2023020936号</a>',
     },
     nav: [
