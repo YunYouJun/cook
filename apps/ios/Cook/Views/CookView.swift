@@ -20,6 +20,7 @@ struct CookView: View {
     @State private var input = ""
     @State private var isInputPresented = false
     @State private var notice: InputNotice?
+    @State private var searchIntent: SearchIntentInput?
     /// 宽屏时一打开就并排显示两栏，不等用户点开侧栏
     @State private var columns: NavigationSplitViewVisibility = .all
     /// 展开了「更多」的分组标题，用逗号连起来存，下次打开保持原样
@@ -66,6 +67,10 @@ struct CookView: View {
             }
         }
         .sheet(isPresented: $showingDietaryGoals) { DietaryGoalSelectionSheet() }
+        .sheet(item: $searchIntent, onDismiss: {
+            input = ""
+            isInputPresented = false
+        }) { SearchIntentSheet(text: $0.text) }
         .overlay {
             BasketFlightLayer(animator: basket)
         }
@@ -126,6 +131,12 @@ struct CookView: View {
         .navigationTitle("做菜")
         .searchable(text: $input, isPresented: $isInputPresented, placement: .navigationBarDrawer(displayMode: .always), prompt: "说说有什么，如：土豆和鸡蛋，不要辣")
         .searchSuggestions {
+            if !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button { previewSentence() } label: {
+                    Label("预览找菜条件", systemImage: "slider.horizontal.3")
+                }
+                .accessibilityIdentifier("intent.preview")
+            }
             ForEach(store.stuffSuggestions(for: input, excluding: session.selectedStuff), id: \.name) { item in
                 Button {
                     addSuggestion(item.name)
@@ -302,6 +313,7 @@ struct CookView: View {
 
     /// 回车时把一整句识别成筛选条件；只列了几样食材时和点选一样，不额外提示（和 Web 的 IngredientInput 一致）
     private func applySentence() {
+        guard searchIntent == nil else { return }
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
             return
@@ -331,6 +343,14 @@ struct CookView: View {
         } else {
             withAnimation(.snappy) { notice = nil }
         }
+    }
+
+    /// Previewing is explicit, so ordinary search retains the personal catalog parser.
+    private func previewSentence() {
+        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        searchIntent = SearchIntentInput(text: text)
+        // Keep the suggestion alive until the sheet finishes its presentation.
     }
 
     private func show(_ notice: InputNotice) {
@@ -377,6 +397,11 @@ struct CookView: View {
             moreExpanded = groups.joined(separator: ",")
         }
     }
+}
+
+private struct SearchIntentInput: Identifiable {
+    let id = UUID()
+    let text: String
 }
 
 /// 输入框下方的一行提示：识别出了什么、没认出来，或者已经选过

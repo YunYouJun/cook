@@ -8,6 +8,7 @@ final class YunlefunAccountStore {
     private(set) var isBusy = false
     private(set) var message: String?
     private(set) var canRetry = false
+    private(set) var sessionRevision = UUID()
     @ObservationIgnored private let service: YunlefunAccountServing
     @ObservationIgnored private let vault: YunlefunAccountVault
     @ObservationIgnored private let authorization: YunlefunAuthorizing
@@ -33,6 +34,20 @@ final class YunlefunAccountStore {
         await refreshSession()
     }
 
+    /// Never exposes the refresh token to a request body or assumes that signing in grants membership.
+    func credentialForAIRequest() async throws -> YunlefunCredential {
+        guard !isBusy else { throw YunlefunAccountError.unavailable }
+        guard let user = account, let current = credential, user.id == current.subject else {
+            throw YunlefunAccountError.expiredSession
+        }
+        if current.expiresAt.timeIntervalSinceNow < 60 { await refreshSession() }
+        try Task.checkCancellation()
+        guard let next = credential, account?.id == user.id, next.subject == user.id, next.expiresAt > Date() else {
+            throw YunlefunAccountError.expiredSession
+        }
+        return next
+    }
+
     func signIn() async {
         guard !isBusy else { return }
         isBusy = true
@@ -51,6 +66,7 @@ final class YunlefunAccountStore {
             try vault.save(next)
             credential = next
             account = user
+            sessionRevision = UUID()
         } catch is CancellationError {
             // 用户取消授权后回到原状态。
             canRetry = previousCanRetry
@@ -71,6 +87,7 @@ final class YunlefunAccountStore {
             try vault.clear()
             credential = nil
             account = nil
+            sessionRevision = UUID()
             message = nil
             canRetry = false
             if let previous {
@@ -89,7 +106,12 @@ final class YunlefunAccountStore {
         canRetry = false
         defer { isBusy = false }
         do {
-            guard var current = try vault.load() else { return }
+            guard var current = try vault.load() else {
+                if account != nil || credential != nil { sessionRevision = UUID() }
+                credential = nil
+                account = nil
+                return
+            }
             if current.expiresAt.timeIntervalSinceNow < 60 {
                 current = try await service.refresh(current)
                 // 刷新凭据会轮换：取资料前先原子保存，断网后仍可重试。
@@ -98,10 +120,12 @@ final class YunlefunAccountStore {
             credential = current
             let user = try await service.account(current)
             try Task.checkCancellation()
+            if account?.id != user.id { sessionRevision = UUID() }
             account = user
         } catch is CancellationError {
             canRetry = true
         } catch YunlefunAccountError.expiredSession {
+            if account != nil || credential != nil { sessionRevision = UUID() }
             account = nil
             credential = nil
             do {
@@ -110,6 +134,7 @@ final class YunlefunAccountStore {
             } catch { message = errorMessage(error) }
         } catch {
             // 网络失败保留钥匙串中的会话，以便恢复网络后重试。
+            if account != nil { sessionRevision = UUID() }
             account = nil
             canRetry = true
             message = errorMessage(error)

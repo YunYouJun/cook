@@ -16,6 +16,7 @@ struct CookApp: App {
     @State private var favoriteActions: FavoriteActions
     @State private var accounts: YunlefunAccountStore
     @State private var workbench: KitchenWorkbench
+    @State private var ai: CookAISettings
     private let container: ModelContainer
     /// 通知中心只弱引用代理，这里留着
     private let notificationDelegate: NotificationDelegate
@@ -41,6 +42,9 @@ struct CookApp: App {
         _favoriteActions = State(initialValue: FavoriteActions(context: container.mainContext))
         _accounts = State(initialValue: YunlefunAccountStore(vault: inMemory ? MemoryYunlefunAccountVault() : KeychainYunlefunAccountVault()))
         _workbench = State(initialValue: KitchenWorkbench(defaults: inMemory ? nil : .standard, notifications: inMemory ? .disabled : .live))
+        _ai = State(initialValue: CookAISettings(defaults: inMemory ? nil : .standard,
+                                                vault: inMemory ? MemoryCookAIKeyVault() : KeychainCookAIKeyVault(),
+                                                managedService: ManagedCookAIService(endpoint: inMemory ? nil : ManagedCookAIService.configuredEndpoint)))
         #if DEBUG
             if uiTesting {
                 // Reset the fixture without a launch-domain override that would lock later UI changes.
@@ -101,9 +105,18 @@ struct CookApp: App {
                     .environment(favoriteActions)
                     .environment(workbench)
                     .environment(accounts)
-                    .task { await accounts.restore() }
+                    .environment(ai)
+                    .preferredColorScheme(testColorScheme)
+                    .task {
+                        await accounts.restore()
+                        if ai.wantsManagedDeepSeek { await ai.refreshManagedCapability(accounts: accounts) }
+                    }
+                    .onChange(of: accounts.sessionRevision) { ai.invalidateManagedCapability(accounts: accounts) }
                     .onChange(of: scenePhase) { _, phase in
-                        if phase == .active { Task { await accounts.refreshIfNeeded() } }
+                        if phase == .active {
+                            ai.expireManagedCapabilityIfNeeded()
+                            Task { await accounts.refreshIfNeeded() }
+                        }
                     }
 
             case let .failure(error):
@@ -115,5 +128,15 @@ struct CookApp: App {
             }
         }
         .modelContainer(container)
+    }
+
+    private var testColorScheme: ColorScheme? {
+        #if DEBUG
+            let arguments = ProcessInfo.processInfo.arguments
+            guard arguments.contains("-ui-testing") else { return nil }
+            return arguments.contains("-ui-testing-dark") ? .dark : .light
+        #else
+            return nil
+        #endif
     }
 }

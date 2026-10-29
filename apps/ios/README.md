@@ -70,6 +70,8 @@ CI 的 `ios` job 在 iPhone 和 iPad 模拟器上先后跑单元测试和 UI 测
 
 ## 云乐坊账号
 
+「我的 → AI 设置」可选择会员内置 DeepSeek，或保存自己的 DeepSeek Key。有效会员由服务器核验；普通用户仍可使用自己的 Key 或本地识别。在做菜搜索框输入想法后，点击「预览找菜条件」修改条件；模型请求仅在主动选择智能找菜并确认发送时发生。来源、额度、隐私与验证边界见[会员 AI 接入](../../docs/dev/ios-managed-ai.md)。
+
 原生云乐坊登录的客户端登记、HTTPS 回调发布条件和会话验证见 [账号接入](../../docs/dev/ios-account.md)。微信登录暂缓，申请资料见 [微信移动应用申请](../../docs/dev/wechat-mobile-application.md)。登录与 iCloud 数据同步相互独立。
 
 原生微信入口预留构建开关 `COOK_WECHAT_LOGIN_ENABLED`，Debug / Release 均默认 `NO`，通过 `Info.plist` 的 `CookWeChatLoginEnabled` 供 `CookFeatures.weChatLoginEnabled` 读取。只有显式 `YES` 才开启；缺失或未展开的值保持关闭。后续接入微信按钮和发起授权动作时，统一使用该属性控制入口。审核通过且 SDK、同一云乐坊账号绑定联调完成后，可在 `project.yml` 修改默认值并重新生成工程，或通过 `xcodebuild ... COOK_WECHAT_LOGIN_ENABLED=YES` 覆盖本次构建，再重新打包分发。
