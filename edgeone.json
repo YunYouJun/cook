@@ -69,6 +69,19 @@
           "value": "public, max-age=3600"
         }
       ]
+    },
+    {
+      "source": "/.well-known/cook-build.json",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
     }
   ]
 }

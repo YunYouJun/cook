@@ -97,6 +97,9 @@ importers:
       dayjs:
         specifier: ^1.11.21
         version: 1.11.21
+      ionicons:
+        specifier: ^8.1.0
+        version: 8.1.0
       vue-about-me:
         specifier: ^1.4.0
         version: 1.4.0(typescript@5.9.3)
