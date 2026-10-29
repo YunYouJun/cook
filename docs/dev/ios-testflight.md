@@ -21,7 +21,7 @@
 
 `2.0.0 (11)` 已按精确构建回读为 `VALID / INTERNAL_ONLY / IN_BETA_TESTING`，Build ID 为 `2108cd6c-fec2-45f0-bfbf-7e6019783674`，沿用既有内部组与成员。冻结源码 `7e1e6e175d618c35824d789aced330d01ecbcf1d` 整合 main `75d50ad`、布局 `fe6086a` 与既有会员 AI；7 个关键布局／状态源文件与实际回归的版本逐字一致。IPA SHA-256 为 `bb1e6ab961fb0c9c760c556675ca6faf16abf4a283e709bee8350e6e2200cb9e`，同一文件通过签名、配置、隐私资源、dSYM／Production 权限与 Apple 包校验后上传。
 
-首次引导在选择、完成或跳过后收起；后续从筛选或更多菜单修改，仍由用户主动开启目标记忆。17 项原生测试、iPhone 8 条功能／字号流程及固定产物后的 iPad 3 条回归通过；iPad 首轮宿主终止及重验范围如实记录在[验证记录](../../specs/dietary-goals/validation)。中文测试说明已写入并回读。维护者继续在真机比较布局与会员功能，发布状态不替代真机或实际 VoiceOver 朗读验收。产物与回执保存在 `~/Library/Developer/ReleaseArtifacts/Cook/20261029-2.0.0-11-goal-intro`，临时构建与完整诊断副本按任务独占范围回收。
+首次引导在选择、完成或跳过后收起；后续从筛选或更多菜单修改，仍由用户主动开启目标记忆。17 项原生测试、iPhone 8 条功能／字号流程及固定产物后的 iPad 3 条回归通过；iPad 首轮宿主终止及重验范围如实记录在[验证记录](https://github.com/YunYouJun/cook/blob/main/specs/dietary-goals/validation.md)。中文测试说明已写入并回读。维护者继续在真机比较布局与会员功能，发布状态不替代真机或实际 VoiceOver 朗读验收。产物与回执保存在 `~/Library/Developer/ReleaseArtifacts/Cook/20261029-2.0.0-11-goal-intro`，临时构建与完整诊断副本按任务独占范围回收。
 
 ## 2026-10-29 会员 AI 内测
 
