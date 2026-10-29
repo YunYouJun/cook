@@ -158,7 +158,7 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(updatedGoal.waitForExistence(timeout: 10))
         updatedGoal.tap()
         XCTAssertTrue(updatedGoal.isSelected)
-        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "dietary.remember").firstMatch.exists)
+        assertRememberControlAbsent(in: app)
         XCTAssertTrue(app.staticTexts["dietary.persistenceNote"].exists)
         capture(app, named: "dietary-automatically-saved-picker")
         finishGoalSelection(in: app, closingFilters: true)
@@ -185,7 +185,7 @@ final class DietaryGoalsUITests: XCTestCase {
         let reopenedFilters = openGoalPicker(in: app)
         XCTAssertTrue(reopenedFilters)
         XCTAssertTrue(app.buttons["dietary.goal.none"].isSelected)
-        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "dietary.remember").firstMatch.exists)
+        assertRememberControlAbsent(in: app)
         finishGoalSelection(in: app, closingFilters: reopenedFilters)
     }
 
@@ -269,7 +269,7 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(none.isSelected)
         let done = app.buttons["dietary.done"]
         XCTAssertTrue(done.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "dietary.remember").firstMatch.exists)
+        assertRememberControlAbsent(in: app)
         done.tap()
         XCTAssertTrue(app.staticTexts["先选几样食材"].waitForExistence(timeout: 10))
     }
@@ -331,7 +331,7 @@ final class DietaryGoalsUITests: XCTestCase {
             print("Passed dietary accessibility audit: \(auditType.rawValue)")
         }
         XCTAssertTrue(option.isSelected)
-        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "dietary.remember").firstMatch.exists)
+        assertRememberControlAbsent(in: app)
         let picker = XCTAttachment(screenshot: app.screenshot())
         picker.name = "dietary-accessibility-picker"
         picker.lifetime = .keepAlways
@@ -368,6 +368,14 @@ final class DietaryGoalsUITests: XCTestCase {
     }
 
     @MainActor
+    private func assertRememberControlAbsent(in app: XCUIApplication,
+                                            file: StaticString = #filePath, line: UInt = #line) {
+        // Cover both legacy native controls without querying every descendant role.
+        XCTAssertFalse(app.buttons["dietary.remember"].exists, file: file, line: line)
+        XCTAssertFalse(app.switches["dietary.remember"].exists, file: file, line: line)
+    }
+
+    @MainActor
     private func revealRecipe(_ identifier: String, in app: XCUIApplication, maximumSwipes: Int,
                               file: StaticString = #filePath, line: UInt = #line) -> XCUIElement? {
         let recipe = app.buttons[identifier]
@@ -388,13 +396,9 @@ final class DietaryGoalsUITests: XCTestCase {
                 XCTFail("查找 \(identifier) 时菜谱结果列表没有可见滚动区域", file: file, line: line)
                 return nil
             }
-            let origin = results.coordinate(withNormalizedOffset: .zero)
-            origin.withOffset(CGVector(dx: visibleFrame.midX - frame.minX,
-                                       dy: visibleFrame.minY + visibleFrame.height * 0.65 - frame.minY))
-                .press(forDuration: 0.1,
-                       thenDragTo: origin.withOffset(CGVector(dx: visibleFrame.midX - frame.minX,
-                                                             dy: visibleFrame.minY + visibleFrame.height * 0.45 - frame.minY)),
-                       withVelocity: .slow, thenHoldForDuration: 0.2)
+            // A short custom drag made too little progress through tall recipe rows.
+            // Keep the gesture scoped to the native list and let XCTest choose its swipe span.
+            results.swipeUp(velocity: .slow)
             guard results.exists else {
                 XCTFail("滚动查找 \(identifier) 后意外离开菜谱结果列表", file: file, line: line)
                 return nil
