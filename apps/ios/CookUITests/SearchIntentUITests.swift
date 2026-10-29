@@ -122,11 +122,20 @@ final class SearchIntentUITests: XCTestCase {
         XCTAssertTrue(app.buttons["intent.apply"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["移除食材鸡蛋"].exists)
 
-        let field = app.descendants(matching: .any).matching(identifier: "intent.text").firstMatch
+        let field = app.textFields.matching(identifier: "intent.text").firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 5))
-        field.tap()
+        XCTAssertEqual(field.value as? String, "鸡蛋，不要辣")
+        // Focus after the existing text instead of assuming a tap preserves the insertion point.
+        field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
         field.typeText("，番茄")
+        XCTAssertEqual(field.value as? String, "鸡蛋，不要辣，番茄")
         XCTAssertFalse(app.buttons["intent.apply"].isEnabled)
+        let hideKeyboard = app.keyboards.buttons["隐藏键盘"]
+        if hideKeyboard.exists {
+            hideKeyboard.tap()
+            XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
+        }
+        reveal(app.buttons["intent.local"], in: app, fullyVisible: true)
         app.buttons["intent.local"].tap()
         XCTAssertTrue(app.buttons["移除食材番茄"].waitForExistence(timeout: 10))
         app.buttons["intent.cancel"].tap()
