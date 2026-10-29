@@ -271,20 +271,24 @@ const sheetStyle = computed(() => {
         <h3>从左侧选几样食材</h3>
         <p>也可以只选厨具，查看适合它的菜谱。做法和难度可以继续缩小范围。</p>
       </div>
-      <ResultsSkeleton v-else-if="bodyVisible && rStore.isSearching" />
       <template v-else-if="bodyVisible && !rStore.loadError">
-        <div v-if="rStore.unlockSuggestions.length && !toolMode" class="results-panel-unlock" aria-label="再补一样">
+        <div v-if="!toolMode && (rStore.isSearching || rStore.unlockSuggestions.length)" class="results-panel-unlock" aria-label="再补一样" :aria-hidden="rStore.isSearching || undefined">
           <span class="results-panel-unlock-label">再补一样</span>
-          <TransitionGroup name="unlock" tag="div" class="results-panel-unlock-row">
+          <div v-if="rStore.isSearching" class="results-panel-unlock-row">
+            <span v-for="item in 3" :key="item" class="results-panel-unlock-chip results-panel-unlock-placeholder" />
+          </div>
+          <TransitionGroup v-else name="unlock" tag="div" class="results-panel-unlock-row">
             <button v-for="item in rStore.unlockSuggestions" :key="item.name" type="button" class="results-panel-unlock-chip" @click="addSuggestion(item.name)">
               <ion-icon :icon="ioniconsAdd" aria-hidden="true" />{{ item.name }}<span>多 {{ item.count }} 道</span>
             </button>
           </TransitionGroup>
         </div>
 
-        <ion-segment v-if="!toolMode" class="results-panel-segment" :value="String(active)" @ion-change="onGroupChange($event.detail.value)">
+        <ion-segment v-if="!toolMode" class="results-panel-segment" :disabled="rStore.isSearching" :value="String(active)" @ion-change="onGroupChange($event.detail.value)">
           <ion-segment-button v-for="(group, index) in groups" :key="group.label" :value="String(index)">
-            <ion-label>{{ group.label }} {{ group.items.length }}</ion-label>
+            <ion-label>
+              {{ group.label }} <span v-if="rStore.isSearching" class="results-panel-count-placeholder" aria-hidden="true" /><span v-else>{{ group.items.length }}</span>
+            </ion-label>
           </ion-segment-button>
         </ion-segment>
 
@@ -299,7 +303,7 @@ const sheetStyle = computed(() => {
             @ion-input="onKeyword"
           />
           <div class="results-panel-summary">
-            <span>{{ total }} 道{{ toolMode ? '' : ` · ${groupHints[active]}` }}</span>
+            <span><span v-if="rStore.isSearching" class="results-panel-count-placeholder" aria-hidden="true" /><span v-else>{{ total }}</span> 道{{ toolMode ? '' : ` · ${groupHints[active]}` }}</span>
             <ion-select
               v-if="!toolMode"
               class="results-panel-mode"
@@ -325,7 +329,8 @@ const sheetStyle = computed(() => {
             </button>
           </div>
 
-          <Transition :name="slideDirection > 0 ? 'results-slide-left' : 'results-slide-right'" mode="out-in">
+          <ResultsSkeleton v-if="rStore.isSearching" :desktop="desktop" />
+          <Transition v-else :name="slideDirection > 0 ? 'results-slide-left' : 'results-slide-right'" mode="out-in">
             <ion-list v-if="total" :key="toolMode ? 'tool' : active" :inset="true" class="results-panel-list">
               <template v-if="toolMode">
                 <RecipeResultRow
@@ -448,6 +453,10 @@ const sheetStyle = computed(() => {
   font-size: 12px;
   font-weight: 400;
   opacity: 0.8;
+}
+.results-panel-unlock-placeholder {
+  width: 100px;
+  background: var(--cook-fill);
 }
 .results-panel-unlock-chip:active {
   transform: scale(0.94);
@@ -579,6 +588,14 @@ const sheetStyle = computed(() => {
   color: var(--ion-color-step-600, #6d6d72);
   white-space: nowrap;
 }
+.results-panel-count-placeholder {
+  display: inline-block;
+  width: 20px;
+  height: 10px;
+  border-radius: 4px;
+  background: var(--cook-fill);
+  vertical-align: middle;
+}
 .results-panel-mode {
   flex: none;
   --padding-end: 0;
@@ -604,8 +621,11 @@ const sheetStyle = computed(() => {
   font-size: 13px;
   font-weight: 500;
 }
-.results-panel-list {
+.results-panel .results-panel-list {
   margin-top: 8px;
+  /* Keep these values ahead of Ionic's styles injected after the component mounts. */
+  padding-block: 0;
+  border-radius: 10px;
 }
 /* 展开或切换分组时，前几行依次浮现 */
 .results-panel-list :deep(.recipe-result-row) {
