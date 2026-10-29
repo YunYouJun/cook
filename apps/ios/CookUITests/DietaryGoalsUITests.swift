@@ -50,7 +50,9 @@ final class DietaryGoalsUITests: XCTestCase {
         let filters = app.buttons["cook.filters"].firstMatch
         XCTAssertTrue(filters.waitForExistence(timeout: 15))
         filters.tap()
-        let picker = app.buttons["dietary.openPicker"].firstMatch
+        // Resolve the unique row inside its sheet instead of lazily traversing every app button.
+        let options = app.collectionViews["filter.options"]
+        let picker = options.buttons["dietary.openPicker"]
         XCTAssertTrue(picker.waitForExistence(timeout: 10))
         picker.tap()
     }
