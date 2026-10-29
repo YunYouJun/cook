@@ -110,12 +110,8 @@ final class DietaryGoalsUITests: XCTestCase {
         select("less-added-sugar", in: app)
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "dietary.introduction").firstMatch.exists)
         showResults(app)
-        let row = app.buttons["dietary.recipe.333"]
-        for _ in 0..<5 {
-            if row.exists && row.isHittable { break }
-            app.swipeUp()
-        }
-        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        guard let row = revealRecipe("dietary.recipe.333", in: app, maximumSwipes: 5) else { return }
+        XCTAssertTrue(row.isHittable)
         row.tap()
         let reviewed = app.buttons["dietary.openReviewedRecipe"]
         XCTAssertTrue(reviewed.waitForExistence(timeout: 10))
@@ -162,7 +158,7 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(updatedGoal.waitForExistence(timeout: 10))
         updatedGoal.tap()
         XCTAssertTrue(updatedGoal.isSelected)
-        XCTAssertFalse(app.switches["dietary.remember"].exists)
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "dietary.remember").firstMatch.exists)
         XCTAssertTrue(app.staticTexts["dietary.persistenceNote"].exists)
         capture(app, named: "dietary-automatically-saved-picker")
         finishGoalSelection(in: app, closingFilters: true)
@@ -189,7 +185,7 @@ final class DietaryGoalsUITests: XCTestCase {
         let reopenedFilters = openGoalPicker(in: app)
         XCTAssertTrue(reopenedFilters)
         XCTAssertTrue(app.buttons["dietary.goal.none"].isSelected)
-        XCTAssertFalse(app.switches["dietary.remember"].exists)
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "dietary.remember").firstMatch.exists)
         finishGoalSelection(in: app, closingFilters: reopenedFilters)
     }
 
@@ -273,7 +269,7 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(none.isSelected)
         let done = app.buttons["dietary.done"]
         XCTAssertTrue(done.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.switches["dietary.remember"].exists)
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "dietary.remember").firstMatch.exists)
         done.tap()
         XCTAssertTrue(app.staticTexts["先选几样食材"].waitForExistence(timeout: 10))
     }
@@ -335,18 +331,14 @@ final class DietaryGoalsUITests: XCTestCase {
             print("Passed dietary accessibility audit: \(auditType.rawValue)")
         }
         XCTAssertTrue(option.isSelected)
-        XCTAssertFalse(app.switches["dietary.remember"].exists)
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "dietary.remember").firstMatch.exists)
         let picker = XCTAttachment(screenshot: app.screenshot())
         picker.name = "dietary-accessibility-picker"
         picker.lifetime = .keepAlways
         add(picker)
         finishGoalSelection(in: app, closingFilters: openedFilters)
         showResults(app)
-        let recipe = app.buttons["dietary.recipe.333"]
-        for _ in 0..<25 {
-            if recipe.exists && recipe.isHittable { break }
-            app.swipeUp()
-        }
+        guard let recipe = revealRecipe("dietary.recipe.333", in: app, maximumSwipes: 25) else { return }
         XCTAssertTrue(recipe.isHittable)
         recipe.tap()
         let source = app.buttons["dietary.openReviewedRecipe"]
@@ -373,6 +365,46 @@ final class DietaryGoalsUITests: XCTestCase {
         random.name = "dietary-accessibility-random"
         random.lifetime = .keepAlways
         add(random)
+    }
+
+    @MainActor
+    private func revealRecipe(_ identifier: String, in app: XCUIApplication, maximumSwipes: Int,
+                              file: StaticString = #filePath, line: UInt = #line) -> XCUIElement? {
+        let recipe = app.buttons[identifier]
+        let results = app.descendants(matching: .any).matching(identifier: "dietary.results").firstMatch
+        guard results.waitForExistence(timeout: 5) else {
+            XCTFail("查找 \(identifier) 前未显示菜谱结果列表", file: file, line: line)
+            return nil
+        }
+        for _ in 0..<maximumSwipes {
+            guard results.exists else {
+                XCTFail("查找 \(identifier) 时意外离开菜谱结果列表", file: file, line: line)
+                return nil
+            }
+            if recipe.exists && recipe.isHittable { return recipe }
+            let frame = results.frame
+            let visibleFrame = frame.intersection(app.windows.firstMatch.frame)
+            guard !visibleFrame.isNull && !visibleFrame.isEmpty else {
+                XCTFail("查找 \(identifier) 时菜谱结果列表没有可见滚动区域", file: file, line: line)
+                return nil
+            }
+            let origin = results.coordinate(withNormalizedOffset: .zero)
+            origin.withOffset(CGVector(dx: visibleFrame.midX - frame.minX,
+                                       dy: visibleFrame.minY + visibleFrame.height * 0.65 - frame.minY))
+                .press(forDuration: 0.1,
+                       thenDragTo: origin.withOffset(CGVector(dx: visibleFrame.midX - frame.minX,
+                                                             dy: visibleFrame.minY + visibleFrame.height * 0.45 - frame.minY)),
+                       withVelocity: .slow, thenHoldForDuration: 0.2)
+            guard results.exists else {
+                XCTFail("滚动查找 \(identifier) 后意外离开菜谱结果列表", file: file, line: line)
+                return nil
+            }
+        }
+        guard recipe.exists && recipe.isHittable else {
+            XCTFail("在 \(maximumSwipes) 次结果列表滚动后仍无法点击 \(identifier)", file: file, line: line)
+            return nil
+        }
+        return recipe
     }
 
     @MainActor
