@@ -17,22 +17,13 @@ final class DietaryGoalsUITests: XCTestCase {
     }
 
     @MainActor
-    private func select(_ goal: String, in app: XCUIApplication, remember: Bool = false) {
+    private func select(_ goal: String, in app: XCUIApplication) {
         let openedFilters = openGoalPicker(in: app)
         let option = app.buttons["dietary.goal.\(goal)"]
         XCTAssertTrue(option.waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["dietary.goal.weight-aware"].exists)
         option.tap()
-        if remember {
-            let toggle = app.switches["dietary.remember"]
-            XCTAssertTrue(toggle.isEnabled)
-            tapNativeSwitch(toggle, in: app)
-            XCTAssertEqual(toggle.value as? String, "1")
-            let attachment = XCTAttachment(screenshot: app.screenshot())
-            attachment.name = "native-dietary-picker"
-            attachment.lifetime = .keepAlways
-            add(attachment)
-        }
+        XCTAssertTrue(option.isSelected)
         finishGoalSelection(in: app, closingFilters: openedFilters)
     }
 
@@ -50,13 +41,18 @@ final class DietaryGoalsUITests: XCTestCase {
             summary.tap()
             return false
         }
+        openFiltersGoalPicker(in: app)
+        return true
+    }
+
+    @MainActor
+    private func openFiltersGoalPicker(in app: XCUIApplication) {
         let filters = app.buttons["cook.filters"].firstMatch
         XCTAssertTrue(filters.waitForExistence(timeout: 15))
         filters.tap()
         let picker = app.buttons["dietary.openPicker"].firstMatch
         XCTAssertTrue(picker.waitForExistence(timeout: 10))
         picker.tap()
-        return true
     }
 
     @MainActor
@@ -150,15 +146,31 @@ final class DietaryGoalsUITests: XCTestCase {
     }
 
     @MainActor
-    func testRememberedGoalAndExplicitCancellationAcrossLaunches() {
-        let app = app()
-        select("balanced-pairing", in: app, remember: true)
+    func testGoalSelectionIsSavedAndUpdatedInFiltersAcrossLaunches() {
+        let app = app(showsIntroduction: true)
+        select("balanced-pairing", in: app)
         app.terminate()
         app.launchArguments.removeAll { $0 == "-ui-testing-reset-dietary" }
         app.launch()
         let picker = app.buttons["dietary.openPicker"].firstMatch
         XCTAssertTrue(picker.waitForExistence(timeout: 15))
         XCTAssertEqual(picker.value as? String, "均衡搭配")
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "dietary.introduction").firstMatch.exists)
+
+        openFiltersGoalPicker(in: app)
+        let updatedGoal = app.buttons["dietary.goal.less-added-sugar"]
+        XCTAssertTrue(updatedGoal.waitForExistence(timeout: 10))
+        updatedGoal.tap()
+        XCTAssertTrue(updatedGoal.isSelected)
+        XCTAssertFalse(app.switches["dietary.remember"].exists)
+        XCTAssertTrue(app.staticTexts["dietary.persistenceNote"].exists)
+        capture(app, named: "dietary-automatically-saved-picker")
+        finishGoalSelection(in: app, closingFilters: true)
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(picker.waitForExistence(timeout: 15))
+        XCTAssertEqual(picker.value as? String, "减少添加糖")
+
         app.buttons["清空"].tap()
         XCTAssertFalse(picker.exists)
         let openedFilters = openGoalPicker(in: app)
@@ -168,7 +180,7 @@ final class DietaryGoalsUITests: XCTestCase {
         app.terminate()
         app.launch()
         XCTAssertTrue(picker.waitForExistence(timeout: 15))
-        XCTAssertEqual(picker.value as? String, "均衡搭配")
+        XCTAssertEqual(picker.value as? String, "减少添加糖")
         select("none", in: app)
         app.terminate()
         app.launch()
@@ -177,7 +189,7 @@ final class DietaryGoalsUITests: XCTestCase {
         let reopenedFilters = openGoalPicker(in: app)
         XCTAssertTrue(reopenedFilters)
         XCTAssertTrue(app.buttons["dietary.goal.none"].isSelected)
-        XCTAssertFalse(app.switches["dietary.remember"].isEnabled)
+        XCTAssertFalse(app.switches["dietary.remember"].exists)
         finishGoalSelection(in: app, closingFilters: reopenedFilters)
     }
 
@@ -261,7 +273,7 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(none.isSelected)
         let done = app.buttons["dietary.done"]
         XCTAssertTrue(done.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.switches["dietary.remember"].isEnabled)
+        XCTAssertFalse(app.switches["dietary.remember"].exists)
         done.tap()
         XCTAssertTrue(app.staticTexts["先选几样食材"].waitForExistence(timeout: 10))
     }
@@ -322,14 +334,8 @@ final class DietaryGoalsUITests: XCTestCase {
             }
             print("Passed dietary accessibility audit: \(auditType.rawValue)")
         }
-        let toggle = app.switches["dietary.remember"]
-        for _ in 0..<8 {
-            if toggle.exists && toggle.isHittable { break }
-            app.swipeUp()
-        }
-        XCTAssertTrue(toggle.isHittable)
-        tapNativeSwitch(toggle, in: app)
-        XCTAssertEqual(toggle.value as? String, "1")
+        XCTAssertTrue(option.isSelected)
+        XCTAssertFalse(app.switches["dietary.remember"].exists)
         let picker = XCTAttachment(screenshot: app.screenshot())
         picker.name = "dietary-accessibility-picker"
         picker.lifetime = .keepAlways
@@ -375,19 +381,5 @@ final class DietaryGoalsUITests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
-    }
-
-    @MainActor
-    private func tapNativeSwitch(_ toggle: XCUIElement, in app: XCUIApplication) {
-        // The identifier covers the native control's visible touch area.
-        for _ in 0..<8 {
-            let control = toggle
-            if control.exists && control.isHittable {
-                control.tap()
-                return
-            }
-            app.swipeUp()
-        }
-        XCTFail("记住目标的原生开关不可点击")
     }
 }

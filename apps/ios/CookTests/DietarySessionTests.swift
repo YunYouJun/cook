@@ -33,7 +33,6 @@ final class DietarySessionTests: XCTestCase {
 
         XCTAssertTrue(session.hasCompletedDietaryIntroduction)
         XCTAssertNil(session.dietaryGoal)
-        XCTAssertNil(session.rememberedDietaryGoal)
         XCTAssertNil(defaults.string(forKey: CookSession.dietaryGoalKey))
         let reloaded = CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults)
         XCTAssertTrue(reloaded.hasCompletedDietaryIntroduction)
@@ -42,7 +41,7 @@ final class DietarySessionTests: XCTestCase {
         XCTAssertFalse(context.hasChanges)
     }
 
-    func testChoosingOrExplicitlyDecliningAGoalCompletesIntroductionWithoutOptingIntoMemory() {
+    func testChoosingOrExplicitlyDecliningAGoalCompletesIntroductionAndPersistsSelection() {
         let goals: [DietaryGoal?] = [.lessAddedSugar, nil]
         for goal in goals {
             let (defaults, name) = defaults()
@@ -52,9 +51,10 @@ final class DietarySessionTests: XCTestCase {
 
             XCTAssertTrue(session.hasCompletedDietaryIntroduction)
             XCTAssertEqual(session.dietaryGoal, goal)
-            XCTAssertFalse(session.remembersDietaryGoal)
-            XCTAssertNil(defaults.string(forKey: CookSession.dietaryGoalKey))
-            XCTAssertTrue(CookSession(defaultPantry: [], context: container.mainContext, dietaryDefaults: defaults).hasCompletedDietaryIntroduction)
+            XCTAssertEqual(defaults.string(forKey: CookSession.dietaryGoalKey), goal?.rawValue)
+            let reloaded = CookSession(defaultPantry: [], context: container.mainContext, dietaryDefaults: defaults)
+            XCTAssertTrue(reloaded.hasCompletedDietaryIntroduction)
+            XCTAssertEqual(reloaded.dietaryGoal, goal)
 
             session.clearStuff()
             session.clearFilters()
@@ -63,21 +63,18 @@ final class DietarySessionTests: XCTestCase {
         }
     }
 
-    func testExistingRememberedGoalSkipsIntroductionAndRemovingMemoryDoesNotBringItBack() {
+    func testExistingRememberedGoalSkipsIntroductionAndCancellationDoesNotBringItBack() {
         let (defaults, name) = defaults()
         defer { defaults.removePersistentDomain(forName: name) }
         defaults.set(DietaryGoal.balancedPairing.rawValue, forKey: CookSession.dietaryGoalKey)
         let session = CookSession(defaultPantry: [], context: container.mainContext, dietaryDefaults: defaults)
         XCTAssertTrue(session.hasCompletedDietaryIntroduction)
         XCTAssertEqual(session.dietaryGoal, .balancedPairing)
-        XCTAssertEqual(session.rememberedDietaryGoal, .balancedPairing)
-
-        session.rememberDietaryGoal(false)
-        XCTAssertEqual(session.dietaryGoal, .balancedPairing)
+        session.selectDietaryGoal(nil)
+        XCTAssertNil(session.dietaryGoal)
         let reloaded = CookSession(defaultPantry: [], context: container.mainContext, dietaryDefaults: defaults)
         XCTAssertTrue(reloaded.hasCompletedDietaryIntroduction)
         XCTAssertNil(reloaded.dietaryGoal)
-        XCTAssertNil(reloaded.rememberedDietaryGoal)
     }
 
     func testIntroductionWithoutDefaultsStaysIsolatedToItsSession() {
@@ -87,7 +84,7 @@ final class DietarySessionTests: XCTestCase {
         XCTAssertFalse(CookSession(defaultPantry: [], context: container.mainContext).hasCompletedDietaryIntroduction)
     }
 
-    func testSelectingAGoalDoesNotCreateSyncedPreferencesOrPersistWithoutOptIn() throws {
+    func testSelectingAGoalSavesLocallyWithoutCreatingSyncedPreferences() throws {
         let (defaults, name) = defaults()
         defer { defaults.removePersistentDomain(forName: name) }
         let context = container.mainContext
@@ -95,8 +92,8 @@ final class DietarySessionTests: XCTestCase {
         session.selectDietaryGoal(.lessAddedSugar)
         XCTAssertTrue(session.hasSelection)
         XCTAssertEqual(session.activeFilterCount, 1)
-        XCTAssertNil(defaults.string(forKey: CookSession.dietaryGoalKey))
-        XCTAssertNil(CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults).dietaryGoal)
+        XCTAssertEqual(defaults.string(forKey: CookSession.dietaryGoalKey), DietaryGoal.lessAddedSugar.rawValue)
+        XCTAssertEqual(CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults).dietaryGoal, .lessAddedSugar)
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<Preferences>()), 0)
         XCTAssertFalse(context.hasChanges)
     }
@@ -107,17 +104,16 @@ final class DietarySessionTests: XCTestCase {
         let context = container.mainContext
         let session = CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults)
         session.selectDietaryGoal(.lessAddedSugar)
-        session.rememberDietaryGoal(true)
         session.selectDietaryGoal(.balancedPairing)
         XCTAssertEqual(defaults.string(forKey: CookSession.dietaryGoalKey), DietaryGoal.balancedPairing.rawValue)
         session.clearStuff()
         XCTAssertNil(session.dietaryGoal)
-        XCTAssertEqual(session.rememberedDietaryGoal, .balancedPairing)
+        XCTAssertEqual(defaults.string(forKey: CookSession.dietaryGoalKey), DietaryGoal.balancedPairing.rawValue)
         let reloaded = CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults)
         XCTAssertEqual(reloaded.dietaryGoal, .balancedPairing)
         reloaded.selectDietaryGoal(nil)
         XCTAssertNil(defaults.string(forKey: CookSession.dietaryGoalKey))
-        XCTAssertFalse(reloaded.remembersDietaryGoal)
+        XCTAssertNil(CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults).dietaryGoal)
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<Preferences>()), 0)
     }
 
@@ -148,12 +144,12 @@ final class DietarySessionTests: XCTestCase {
         let session = CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults)
         session.toggleAvoid("猪肉")
         session.selectDietaryGoal(.lessAddedSugar)
-        session.rememberDietaryGoal(true)
         session.toggleMethodGroup("蒸")
         session.clearFilters()
         XCTAssertEqual(session.avoid, ["猪肉"])
         XCTAssertNil(session.dietaryGoal)
-        XCTAssertEqual(session.rememberedDietaryGoal, .lessAddedSugar)
+        XCTAssertEqual(defaults.string(forKey: CookSession.dietaryGoalKey), DietaryGoal.lessAddedSugar.rawValue)
+        XCTAssertEqual(CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults).dietaryGoal, .lessAddedSugar)
         XCTAssertEqual(session.activeFilterCount, 0)
     }
 

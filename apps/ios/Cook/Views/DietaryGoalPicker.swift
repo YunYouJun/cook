@@ -1,7 +1,6 @@
 import CookCore
 import SwiftData
 import SwiftUI
-import UIKit
 
 /// The same native selection sheet is reachable from both cooking presentations and results.
 struct DietaryGoalPickerButton: View {
@@ -111,45 +110,9 @@ struct DietaryGoalSummaryButton: View {
             }
             .accessibilityLabel("饮食目标")
             .accessibilityValue(goal.title)
-            .accessibilityHint("修改本次饮食目标")
+            .accessibilityHint("修改饮食目标")
             .accessibilityIdentifier("dietary.openPicker")
         }
-    }
-}
-
-// Keep the accessible identity on the UIKit control itself. A SwiftUI Toggle in
-// a List also exposes a separate row-wide switch proxy on newer system versions.
-private struct DietaryRememberSwitch: UIViewRepresentable {
-    let isOn: Bool
-    let onChange: (Bool) -> Void
-    @Environment(\.isEnabled) private var isEnabled
-
-    func makeCoordinator() -> Coordinator { Coordinator(onChange: onChange) }
-
-    func makeUIView(context: Context) -> UISwitch {
-        let control = UISwitch()
-        control.accessibilityIdentifier = "dietary.remember"
-        control.accessibilityLabel = "记住这个目标"
-        control.addTarget(context.coordinator, action: #selector(Coordinator.valueChanged(_:)), for: .valueChanged)
-        return control
-    }
-
-    func updateUIView(_ control: UISwitch, context: Context) {
-        context.coordinator.onChange = onChange
-        control.isEnabled = isEnabled
-        if control.isOn != isOn { control.setOn(isOn, animated: false) }
-    }
-
-    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UISwitch, context: Context) -> CGSize? {
-        CGSize(width: uiView.intrinsicContentSize.width, height: max(44, uiView.intrinsicContentSize.height))
-    }
-
-    final class Coordinator: NSObject {
-        var onChange: (Bool) -> Void
-
-        init(onChange: @escaping (Bool) -> Void) { self.onChange = onChange }
-
-        @objc func valueChanged(_ control: UISwitch) { onChange(control.isOn) }
     }
 }
 
@@ -168,11 +131,17 @@ struct DietaryGoalSelectionSheet: View {
                 } header: {
                     Text("这一餐，想怎样安排？").foregroundStyle(Color.primary)
                 } footer: {
-                    if let message = store.dietaryUnavailableMessage(for: session.dietaryGoal) {
-                        Text(message).foregroundStyle(Color.primary)
-                    } else {
-                        Text("只展示对应目标已核对的图文做法，也可以继续选择食材和厨具。").foregroundStyle(Color.primary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let message = store.dietaryUnavailableMessage(for: session.dietaryGoal) {
+                            Text(message)
+                        } else {
+                            Text("只展示对应目标已核对的图文做法，也可以继续选择食材和厨具。")
+                        }
+                        Text("选择后自动保存在这台设备，下次继续使用；选择“不限目标”可取消。")
+                            .accessibilityIdentifier("dietary.persistenceNote")
                     }
+                    .foregroundStyle(Color.primary)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
 
                 if let goal = session.dietaryGoal {
@@ -182,26 +151,6 @@ struct DietaryGoalSelectionSheet: View {
                             .foregroundStyle(Color.primary)
                             .fixedSize(horizontal: false, vertical: true)
                     } header: { Text("\(goal.title)的含义").foregroundStyle(Color.primary) }
-                }
-
-                Section {
-                    HStack(spacing: 12) {
-                        Text("记住这个目标")
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityHidden(true)
-                        Spacer(minLength: 12)
-                        DietaryRememberSwitch(isOn: session.remembersDietaryGoal) {
-                            session.rememberDietaryGoal($0)
-                        }
-                    }
-                    .accessibilityElement(children: .contain)
-                    .disabled(session.dietaryGoal == nil && !session.remembersDietaryGoal)
-                } footer: {
-                    if let goal = session.rememberedDietaryGoal {
-                        Text("下次默认选择“\(goal.title)”。仅保存在这台设备，选择“不限目标”会取消记忆。").foregroundStyle(Color.primary)
-                    } else {
-                        Text("默认只用于本次做菜。开启后，仅在这台设备记住你的选择。").foregroundStyle(Color.primary)
-                    }
                 }
             }
             // Rebuild cached list row heights when Dynamic Type changes on older iOS versions.
