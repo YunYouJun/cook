@@ -55,6 +55,9 @@ struct CookApp: App {
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-dietary") {
                     dietaryDefaults.removePersistentDomain(forName: "cook.dietary.ui-tests")
                 }
+                if !ProcessInfo.processInfo.arguments.contains("-ui-testing-show-dietary-introduction") {
+                    dietaryDefaults.set(true, forKey: CookSession.dietaryIntroductionKey)
+                }
                 _session = State(initialValue: CookSession(defaultPantry: defaultPantry, context: container.mainContext, dietaryDefaults: dietaryDefaults))
                 let kitchenDefaults = UserDefaults(suiteName: "cook.kitchen.ui-tests")!
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-kitchen") {

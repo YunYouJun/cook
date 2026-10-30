@@ -88,10 +88,10 @@ struct CookView: View {
     /// 选食材的列表：两种布局共用，宽屏放在左栏，窄屏是导航的第一页
     private func chooser(warnings: [IncompatibleRule], extras: [String], emptySignal: String?) -> some View {
         List {
-            Section {
-                DietaryGoalPickerButton(isPresented: $showingDietaryGoals)
-            } footer: {
-                if let goal = session.dietaryGoal { Text(goal.subtitle) }
+            if !session.hasCompletedDietaryIntroduction, !store.dietaryGoals.isEmpty {
+                Section { DietaryGoalIntroduction(isPresented: $showingDietaryGoals).buttonStyle(.borderless) }
+            } else if session.dietaryGoal != nil {
+                Section { DietaryGoalSummaryButton(isPresented: $showingDietaryGoals) }
             }
             if let notice {
                 InputNoticeRow(notice: notice) {
@@ -128,6 +128,7 @@ struct CookView: View {
                 }
             }
         }
+        .accessibilityIdentifier("cook.chooser")
         .navigationTitle("做菜")
         .searchable(text: $input, isPresented: $isInputPresented, placement: .navigationBarDrawer(displayMode: .always), prompt: "说说有什么，如：土豆和鸡蛋，不要辣")
         .searchSuggestions {
@@ -163,7 +164,8 @@ struct CookView: View {
                     Label("筛选", systemImage: count > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                         .contentTransition(.symbolEffect(.replace))
                 }
-                .accessibilityValue(count > 0 ? "已选 \(count) 项" : "")
+                .accessibilityValue(session.dietaryGoal.map { "已选 \(count) 项，饮食目标：\($0.title)" } ?? (count > 0 ? "已选 \(count) 项" : ""))
+                .accessibilityIdentifier("cook.filters")
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("清空") {
@@ -541,6 +543,7 @@ struct FilterSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("完成") { dismiss() }
+                        .accessibilityIdentifier("filter.done")
                 }
             }
         }

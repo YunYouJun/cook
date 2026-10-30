@@ -2,6 +2,7 @@ import UIKit
 import XCTest
 
 final class CloudKitchenUITests: XCTestCase {
+    private let timeout: TimeInterval = 30
     override func setUp() { continueAfterFailure = false }
 
     @MainActor
@@ -23,14 +24,27 @@ final class CloudKitchenUITests: XCTestCase {
         capture(app, name: "列表的紧凑视图入口")
 
         presentation.tap()
+        // Use the ready control as a scene barrier and start from a fixed camera.
+        let rotation = app.buttons["kitchen.rotation"]
+        XCTAssertTrue(rotation.waitForExistence(timeout: timeout))
+        waitUntil(rotation, "isEnabled == true")
+        if rotation.value as? String == "已开启" { rotation.tap() }
+        XCTAssertEqual(rotation.value as? String, "已关闭")
         let modelTomato = app.buttons["kitchen.scene.tomato"]
         XCTAssertTrue(modelTomato.waitForExistence(timeout: 30))
         XCTAssertTrue(modelTomato.isSelected)
         // Tap the 3D ingredient at its projected screen location. This catches
         // overlapping targets accidentally selecting a neighboring ingredient.
         let modelEgg = app.buttons["kitchen.scene.egg"]
+        XCTAssertTrue(modelEgg.waitForExistence(timeout: timeout))
+        waitUntil(modelEgg, "isHittable == true")
+        capture(app, name: "单次3D鸡蛋点击前的固定视角")
         modelEgg.tap()
-        waitUntil(app.buttons.matching(NSPredicate(format: "label == %@", "鸡蛋")).firstMatch, "isSelected == true")
+        // Check the projected ingredient and tray independently after the same tap.
+        waitUntil(modelEgg, "isSelected == true")
+        let trayEgg = app.buttons.matching(NSPredicate(format: "label == %@", "鸡蛋")).firstMatch
+        XCTAssertTrue(trayEgg.waitForExistence(timeout: timeout))
+        waitUntil(trayEgg, "isSelected == true")
         XCTAssertEqual(app.staticTexts["kitchen.selectionCount"].label, "已选 2 样")
 
         presentation.tap()
@@ -124,9 +138,11 @@ final class CloudKitchenUITests: XCTestCase {
         capture(app, name: "关闭旋转后恢复固定视角")
     }
 
-    private func waitUntil(_ element: XCUIElement, _ predicate: String) {
+    private func waitUntil(_ element: XCUIElement, _ predicate: String,
+                           file: StaticString = #filePath, line: UInt = #line) {
         let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: predicate), object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 10), .completed)
+        // Match the standard cooking suite's UI deadline on slower CI runners.
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed, file: file, line: line)
     }
 
     @MainActor

@@ -25,6 +25,7 @@ struct ResultsView: View {
 
     private var filterSummary: [String] {
         var items: [String] = []
+        if let goal = session.dietaryGoal { items.append(goal.title) }
         if let tool = session.tool {
             items.append(store.toolLabel(tool))
         }
@@ -58,6 +59,20 @@ struct ResultsView: View {
         // The result list can disappear when a goal is cleared; keep its presenter above that branch.
         .sheet(isPresented: $showingDietaryGoals) { DietaryGoalSelectionSheet() }
         .navigationTitle(session.dietaryGoal?.title ?? "能做的菜")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button { showingDietaryGoals = true } label: {
+                        Label("饮食目标", systemImage: "slider.horizontal.3")
+                    }
+                    .accessibilityIdentifier("results.dietaryGoal")
+                } label: {
+                    Label("更多选项", systemImage: "ellipsis.circle")
+                }
+                .accessibilityValue(session.dietaryGoal?.title ?? "不限目标")
+                .accessibilityIdentifier("results.options")
+            }
+        }
         .searchable(text: $session.keyword, placement: .navigationBarDrawer(displayMode: .always), prompt: "按菜名筛选")
         .sensoryFeedback(.selection, trigger: session.selectedStuff)
     }
@@ -69,7 +84,6 @@ struct ResultsView: View {
         let suggestions = Recommender.unlockSuggestions(matches)
 
         return List {
-            Section { DietaryGoalPickerButton(isPresented: $showingDietaryGoals) }
             Section {
                 Picker("推荐方式", selection: $session.mode) {
                     ForEach(Self.modes, id: \.self) { mode in
@@ -132,11 +146,6 @@ struct ResultsView: View {
     private func goalList(favoriteIds: Set<Int>) -> some View {
         let recipes = session.candidates(in: store)
         return List {
-            Section { DietaryGoalPickerButton(isPresented: $showingDietaryGoals) } footer: {
-                if let goal = session.dietaryGoal {
-                    Text(goal.explanation)
-                }
-            }
             if recipes.isEmpty { goalEmptyState }
             Section {
                 ForEach(recipes) { recipe in
@@ -151,6 +160,7 @@ struct ResultsView: View {
             } header: {
                 if !recipes.isEmpty { Text("已核对做法 · \(recipes.count)") }
             } footer: {
+                if let goal = session.dietaryGoal { Text(goal.explanation) }
                 Text("可继续选择食材和厨具；选择食材后，推荐方式才参与筛选。")
             }
         }

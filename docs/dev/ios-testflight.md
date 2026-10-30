@@ -17,6 +17,12 @@
 
 后续包含私人菜谱、个人词典和偏好同步修复的 `2.0.0 (4)` 已完成 TestFlight 内部发布，固定源码 `6e4343faa523f400a6d2eeb0380223e80d632f95`（含 #137 布局修复）。该候选的 [CI](https://github.com/YunYouJun/cook/actions/runs/40079188284) 全部通过后，[#136](https://github.com/YunYouJun/cook/pull/136) 已合并为 main `e090866474fe5f589c0ac01d36892b802dc33b62`；合并时两者源码树相同。后续主线提交不自动扩大冻结发布范围。服务端发布状态已按精确构建回读，详情见下方验收记录；构建 `4` 的单机升级、数据保留与偏好持久化结果同样见下方记录，不能推导为生产同步通过。每次上传前重新查询已处理和上传中构建，不能复用已占用的构建号。
 
+## 2026-10-29 饮食目标引导内测
+
+`2.0.0 (11)` 已按精确构建回读为 `VALID / INTERNAL_ONLY / IN_BETA_TESTING`，Build ID 为 `2108cd6c-fec2-45f0-bfbf-7e6019783674`，沿用既有内部组与成员。冻结源码 `7e1e6e175d618c35824d789aced330d01ecbcf1d` 整合 main `75d50ad`、布局 `fe6086a` 与既有会员 AI；7 个关键布局／状态源文件与实际回归的版本逐字一致。IPA SHA-256 为 `bb1e6ab961fb0c9c760c556675ca6faf16abf4a283e709bee8350e6e2200cb9e`，同一文件通过签名、配置、隐私资源、dSYM／Production 权限与 Apple 包校验后上传。
+
+首次引导在选择、完成或跳过后收起；后续从筛选或更多菜单修改，仍由用户主动开启目标记忆。17 项原生测试、iPhone 8 条功能／字号流程及固定产物后的 iPad 3 条回归通过；iPad 首轮宿主终止及重验范围如实记录在[验证记录](https://github.com/YunYouJun/cook/blob/main/specs/dietary-goals/validation.md)。中文测试说明已写入并回读。维护者继续在真机比较布局与会员功能，发布状态不替代真机或实际 VoiceOver 朗读验收。产物与回执保存在 `~/Library/Developer/ReleaseArtifacts/Cook/20261029-2.0.0-11-goal-intro`，临时构建与完整诊断副本按任务独占范围回收。
+
 ## 2026-10-29 会员 AI 内测
 
 `2.0.0 (10)` 已按精确构建回读为 `VALID / INTERNAL_ONLY / IN_BETA_TESTING`，Build ID 为 `c31e2a32-7955-44cd-8a95-f5c013637d2c`。沿用既有内部组与 1 名成员，没有关联外部组。冻结源码为 `7c183f00f1c18e72cd314a1c8fee863d638f6056`，整合 main `620b495` 与 AI 分支 `8c94644`；IPA SHA-256 为 `1200ac9f18949083cacea4ab89e11b99e461d2a1f49edaf153ac025390cd5075`。会员服务地址、正式反馈地址、数据契约、隐私清单与正文、分发签名、dSYM UUID、CloudKit／推送 Production 权限及内部标记均核验通过，同一散列 IPA 的 Apple 包校验通过后上传。中文测试说明已回读一致，真机会员操作由维护者执行。

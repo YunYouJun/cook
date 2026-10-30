@@ -104,7 +104,7 @@
 
 ## 6. 状态、存储与隐私
 
-Web 在 recipe store 持有当前目标，通过显式本机开关保存默认目标，遵守 `settings.keepLocalData`；iOS 在 `CookSession` 持有当前目标，本机默认值独立于现有 SwiftData `Preferences` 和云同步模型。不新增后端、账号权限或健康数据集合。
+Web 在 recipe store 持有当前目标，通过显式本机开关保存默认目标，遵守 `settings.keepLocalData`；iOS 在 `CookSession` 持有当前目标，每次选择自动写入独立本机设置，取消目标时删除保存值，不保留记忆开关。iOS 沿用原保存键以兼容旧目标，独立于现有 SwiftData `Preferences` 和云同步模型。不新增后端、账号权限或健康数据集合。
 
 切换目标、经典／工作台视图、人数或筛选时，状态统一更新；点击“不限目标”同时清除本机记忆。清空本餐筛选不修改忌口，也不在当前会话恢复已记住的默认目标。
 

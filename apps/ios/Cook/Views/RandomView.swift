@@ -43,7 +43,6 @@ struct RandomView: View {
             GeometryReader { geometry in
                 ScrollView {
                     VStack(spacing: 20) {
-                        GroupBox { DietaryGoalPickerButton(isPresented: $showingDietaryGoals) }
                         Spacer(minLength: 0)
                         if let recipe {
                             NavigationLink(value: RecipeRoute(recipe: recipe, dietaryGoal: session.dietaryGoal)) {
@@ -71,6 +70,7 @@ struct RandomView: View {
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                                 .contentTransition(.numericText())
+                                .accessibilityIdentifier("random.scope")
                             Button(action: roll) {
                                 Label {
                                     Text("换一道")
@@ -96,6 +96,20 @@ struct RandomView: View {
             }
             .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle("今天吃什么")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button { showingDietaryGoals = true } label: {
+                            Label("饮食目标", systemImage: "slider.horizontal.3")
+                        }
+                        .accessibilityIdentifier("random.dietaryGoal")
+                    } label: {
+                        Label("更多选项", systemImage: "ellipsis.circle")
+                    }
+                    .accessibilityValue(session.dietaryGoal?.title ?? "不限目标")
+                    .accessibilityIdentifier("random.options")
+                }
+            }
             .recipeDestinations()
             .onAppear {
                 isVisible = true

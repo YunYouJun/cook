@@ -51,6 +51,71 @@ struct DietaryGoalPickerButton: View {
     }
 }
 
+/// Introduce the optional filter once without interrupting ingredient selection.
+struct DietaryGoalIntroduction: View {
+    @Environment(CookSession.self) private var session
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("这餐想怎样吃？").font(.headline)
+            Text("可以先选一个饮食目标，也可以直接按食材找菜。")
+                .font(.subheadline).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 0) { actions }
+            } else {
+                HStack(spacing: 20) { actions }
+            }
+            Text("之后可在「筛选 → 饮食目标」中修改。")
+                .font(.footnote).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("dietary.introduction")
+    }
+
+    @ViewBuilder private var actions: some View {
+        Button("选择饮食目标") { isPresented = true }
+            .fontWeight(.semibold)
+            .frame(minHeight: 44)
+            .accessibilityIdentifier("dietary.introduction.choose")
+        Button("暂不设置") { session.completeDietaryIntroduction() }
+            .frame(minHeight: 44)
+            .accessibilityIdentifier("dietary.introduction.skip")
+    }
+}
+
+/// A selected filter stays visible without repeating the full preference row.
+struct DietaryGoalSummaryButton: View {
+    @Environment(CookSession.self) private var session
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        if let goal = session.dietaryGoal {
+            Button { isPresented = true } label: {
+                HStack(spacing: 8) {
+                    DietaryGoalIcon(goal: goal)
+                    Text(goal.title).foregroundStyle(Color.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                }
+                .font(.subheadline)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .accessibilityLabel("饮食目标")
+            .accessibilityValue(goal.title)
+            .accessibilityHint("修改饮食目标")
+            .accessibilityIdentifier("dietary.openPicker")
+        }
+    }
+}
+
 struct DietaryGoalSelectionSheet: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
@@ -66,11 +131,17 @@ struct DietaryGoalSelectionSheet: View {
                 } header: {
                     Text("这一餐，想怎样安排？").foregroundStyle(Color.primary)
                 } footer: {
-                    if let message = store.dietaryUnavailableMessage(for: session.dietaryGoal) {
-                        Text(message).foregroundStyle(Color.primary)
-                    } else {
-                        Text("只展示对应目标已核对的图文做法，也可以继续选择食材和厨具。").foregroundStyle(Color.primary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let message = store.dietaryUnavailableMessage(for: session.dietaryGoal) {
+                            Text(message)
+                        } else {
+                            Text("只展示对应目标已核对的图文做法，也可以继续选择食材和厨具。")
+                        }
+                        Text("选择后自动保存在这台设备，下次继续使用；选择“不限目标”可取消。")
+                            .accessibilityIdentifier("dietary.persistenceNote")
                     }
+                    .foregroundStyle(Color.primary)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
 
                 if let goal = session.dietaryGoal {
@@ -80,35 +151,6 @@ struct DietaryGoalSelectionSheet: View {
                             .foregroundStyle(Color.primary)
                             .fixedSize(horizontal: false, vertical: true)
                     } header: { Text("\(goal.title)的含义").foregroundStyle(Color.primary) }
-                }
-
-                Section {
-                    Button {
-                        session.rememberDietaryGoal(!session.remembersDietaryGoal)
-                    } label: {
-                        HStack(spacing: 12) {
-                            Text("记住这个目标")
-                                .fixedSize(horizontal: false, vertical: true)
-                            Spacer(minLength: 12)
-                            Image(systemName: session.remembersDietaryGoal ? "checkmark.circle.fill" : "circle")
-                                .accessibilityHidden(true)
-                        }
-                        .foregroundStyle(Color.primary)
-                        .frame(minHeight: 44)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("记住这个目标")
-                    .accessibilityValue(session.remembersDietaryGoal ? "已记住" : "未记住")
-                    .accessibilityAddTraits(session.remembersDietaryGoal ? .isSelected : [])
-                    .accessibilityIdentifier("dietary.remember")
-                    .disabled(session.dietaryGoal == nil && !session.remembersDietaryGoal)
-                } footer: {
-                    if let goal = session.rememberedDietaryGoal {
-                        Text("下次默认选择“\(goal.title)”。仅保存在这台设备，选择“不限目标”会取消记忆。").foregroundStyle(Color.primary)
-                    } else {
-                        Text("默认只用于本次做菜。开启后，仅在这台设备记住你的选择。").foregroundStyle(Color.primary)
-                    }
                 }
             }
             // Rebuild cached list row heights when Dynamic Type changes on older iOS versions.
@@ -130,11 +172,11 @@ struct DietaryGoalSelectionSheet: View {
     @ViewBuilder
     private var confirmationButton: some View {
         if #available(iOS 26.0, *) {
-            Button(role: .confirm) { dismiss() }
+            Button(role: .confirm) { session.completeDietaryIntroduction(); dismiss() }
                 .accessibilityLabel("完成")
                 .accessibilityIdentifier("dietary.done")
         } else {
-            Button("完成") { dismiss() }
+            Button("完成") { session.completeDietaryIntroduction(); dismiss() }
                 .foregroundStyle(Color.primary)
                 .accessibilityIdentifier("dietary.done")
         }

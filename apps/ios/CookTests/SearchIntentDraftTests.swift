@@ -8,9 +8,13 @@ final class SearchIntentDraftTests: XCTestCase {
     private lazy var container = Persistence.makeContainer(inMemory: true)
 
     func testPreviewEditingAndCancellationDoNotWriteSessionOrPreferences() throws {
+        let defaultsName = "cook.search-intent.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: defaultsName))
+        defer { defaults.removePersistentDomain(forName: defaultsName) }
+        defaults.set(DietaryGoal.balancedPairing.rawValue, forKey: CookSession.dietaryGoalKey)
         let store = try RecipeStore.loadBundled(inMemory: true)
         let context = container.mainContext
-        let session = CookSession(defaultPantry: [], context: context)
+        let session = CookSession(defaultPantry: [], context: context, dietaryDefaults: defaults)
         session.selectedStuff = ["番茄"]
         let draft = SearchIntentDraft(text: "鸡蛋，不要辣，减少添加糖")
         draft.parseLocally(data: store.data, goals: store.dietaryGoals)
@@ -20,21 +24,27 @@ final class SearchIntentDraftTests: XCTestCase {
         draft.cancel()
         XCTAssertEqual(session.selectedStuff, ["番茄"])
         XCTAssertFalse(session.noSpicy)
-        XCTAssertNil(session.dietaryGoal)
+        XCTAssertEqual(session.dietaryGoal, .balancedPairing)
+        XCTAssertEqual(defaults.string(forKey: CookSession.dietaryGoalKey), DietaryGoal.balancedPairing.rawValue)
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<Preferences>()), 0)
         XCTAssertFalse(context.hasChanges)
     }
 
     func testOnlyConfirmedValidDraftIsAppliedAndCandidatesStayInsideReviewedPool() throws {
+        let defaultsName = "cook.search-intent.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: defaultsName))
+        defer { defaults.removePersistentDomain(forName: defaultsName) }
         let store = try RecipeStore.loadBundled(inMemory: true)
-        let session = CookSession(defaultPantry: store.data.pantry.defaults, context: container.mainContext)
+        let session = CookSession(defaultPantry: store.data.pantry.defaults, context: container.mainContext, dietaryDefaults: defaults)
         session.toggleAvoid("猪肉")
         let draft = SearchIntentDraft(text: "不吃辣，减少添加糖")
         draft.parseLocally(data: store.data, goals: store.dietaryGoals)
+        XCTAssertNil(defaults.string(forKey: CookSession.dietaryGoalKey))
         try session.applySearchIntent(XCTUnwrap(draft.intent), in: store)
         XCTAssertEqual(session.avoid, ["猪肉"])
         XCTAssertTrue(session.noSpicy)
         XCTAssertEqual(session.dietaryGoal, .lessAddedSugar)
+        XCTAssertEqual(CookSession(defaultPantry: [], context: container.mainContext, dietaryDefaults: defaults).dietaryGoal, .lessAddedSugar)
         let candidates = session.candidates(in: store)
         XCTAssertFalse(candidates.isEmpty)
         for recipe in candidates {
@@ -49,6 +59,7 @@ final class SearchIntentDraftTests: XCTestCase {
         XCTAssertEqual(session.selectedStuff, before.stuff)
         XCTAssertEqual(session.avoid, before.avoid)
         XCTAssertEqual(session.dietaryGoal, .lessAddedSugar)
+        XCTAssertEqual(defaults.string(forKey: CookSession.dietaryGoalKey), DietaryGoal.lessAddedSugar.rawValue)
     }
 
     func testPendingRequestsRequireExplicitPartialConfirmationAndChangedTextInvalidatesPreview() throws {

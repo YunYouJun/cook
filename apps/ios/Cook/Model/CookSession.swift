@@ -4,7 +4,8 @@ import Observation
 import os
 import SwiftData
 
-/// 做菜页的选择：已选食材和筛选条件只在本次使用；常备调料、忌口、不吃辣和推荐模式存在 SwiftData，随 iCloud 同步
+/// Meal ingredients and filters are transient; the default dietary goal stays on this device.
+/// Pantry, exclusions, spice preference, and mode use SwiftData and iCloud.
 @Observable
 final class CookSession {
     var selectedStuff: [String] = []
@@ -13,9 +14,10 @@ final class CookSession {
     var difficulty: [String] = []
     var keyword = ""
     private(set) var dietaryGoal: DietaryGoal?
-    private(set) var rememberedDietaryGoal: DietaryGoal?
+    private(set) var hasCompletedDietaryIntroduction: Bool
     @ObservationIgnored private let dietaryDefaults: UserDefaults?
     static let dietaryGoalKey = "cook.dietary.rememberedGoal"
+    static let dietaryIntroductionKey = "cook.dietary.introductionCompleted"
 
     private let context: ModelContext
     private let defaults: PreferenceValues
@@ -27,27 +29,22 @@ final class CookSession {
         self.dietaryDefaults = dietaryDefaults
         let remembered = dietaryDefaults?.string(forKey: Self.dietaryGoalKey).flatMap(DietaryGoal.init(rawValue:))
         dietaryGoal = remembered
-        rememberedDietaryGoal = remembered
+        hasCompletedDietaryIntroduction = dietaryDefaults?.bool(forKey: Self.dietaryIntroductionKey) == true || remembered != nil
         defaults = PreferenceValues(pantry: defaultPantry)
         refreshPreferences()
     }
 
-    var remembersDietaryGoal: Bool { rememberedDietaryGoal != nil }
-
-    func selectDietaryGoal(_ goal: DietaryGoal?) {
-        dietaryGoal = goal
-        if goal == nil {
-            rememberDietaryGoal(false)
-        } else if remembersDietaryGoal {
-            rememberedDietaryGoal = goal
-            dietaryDefaults?.set(goal?.rawValue, forKey: Self.dietaryGoalKey)
-        }
+    /// Dismissing the introduction changes only local presentation state.
+    func completeDietaryIntroduction() {
+        hasCompletedDietaryIntroduction = true
+        dietaryDefaults?.set(true, forKey: Self.dietaryIntroductionKey)
     }
 
-    func rememberDietaryGoal(_ remember: Bool) {
-        rememberedDietaryGoal = remember ? dietaryGoal : nil
-        if let rememberedDietaryGoal {
-            dietaryDefaults?.set(rememberedDietaryGoal.rawValue, forKey: Self.dietaryGoalKey)
+    func selectDietaryGoal(_ goal: DietaryGoal?) {
+        completeDietaryIntroduction()
+        dietaryGoal = goal
+        if let goal {
+            dietaryDefaults?.set(goal.rawValue, forKey: Self.dietaryGoalKey)
         } else {
             dietaryDefaults?.removeObject(forKey: Self.dietaryGoalKey)
         }

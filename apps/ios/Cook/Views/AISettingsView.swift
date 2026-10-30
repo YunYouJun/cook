@@ -68,6 +68,7 @@ struct AISettingsView: View {
                 }
             }
         }
+        .accessibilityIdentifier("aiSettings.form")
         .navigationTitle("AI 设置")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: accounts.sessionRevision) { await settings.refreshManagedCapability(accounts: accounts) }
