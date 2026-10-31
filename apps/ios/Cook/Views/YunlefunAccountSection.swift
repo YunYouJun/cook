@@ -17,9 +17,12 @@ struct YunlefunAccountSection: View {
                                 .foregroundStyle(.primary)
                             Text("云乐坊账号").font(.subheadline).foregroundStyle(.secondary)
                         }
+                        Spacer(minLength: 8)
+                        AccountActivityIndicator()
                     }
                     .padding(.vertical, 6)
                 }
+                .accessibilityValue(accounts.isBusy ? "正在更新账号" : "")
                 .accessibilityIdentifier("account.profile")
             } else {
                 AccountSignInButton()
@@ -47,6 +50,9 @@ struct YunlefunAccountView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
+                    .overlay(alignment: .topTrailing) { AccountActivityIndicator() }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityValue(accounts.isBusy ? "正在更新账号" : "")
                     .listRowBackground(Color.clear)
                 }
                 Section {
@@ -62,7 +68,7 @@ struct YunlefunAccountView: View {
             } else {
                 Section { AccountSignInButton() }
             }
-            if accounts.isBusy || accounts.message != nil || accounts.canRetry {
+            if accounts.message != nil || accounts.canRetry {
                 Section { AccountSessionStatus() }
             }
             Section {
@@ -99,10 +105,13 @@ private struct AccountSignInButton: View {
                         Text("登录云乐坊账号").font(.headline)
                         Text("不登录也能使用做菜功能").font(.subheadline).foregroundStyle(.secondary)
                     }
+                    Spacer(minLength: 8)
+                    AccountActivityIndicator()
                 }
                 .padding(.vertical, 6)
             }
             .disabled(accounts.isBusy)
+            .accessibilityValue(accounts.isBusy ? "正在处理账号" : "")
             .accessibilityIdentifier("account.signIn")
         } else {
             Text("升级至 iOS 17.4 后可登录云乐坊账号").foregroundStyle(.secondary)
@@ -110,11 +119,28 @@ private struct AccountSignInButton: View {
     }
 }
 
+/// 在原账号行内预留进度位置，避免授权开始或取消时插入列表行、挤压文字。
+private struct AccountActivityIndicator: View {
+    @Environment(YunlefunAccountStore.self) private var accounts
+
+    var body: some View {
+        Color.clear
+            .frame(width: 24, height: 24)
+            .overlay {
+                if accounts.isBusy {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(.secondary)
+                }
+            }
+            .accessibilityHidden(true)
+    }
+}
+
 private struct AccountSessionStatus: View {
     @Environment(YunlefunAccountStore.self) private var accounts
 
     var body: some View {
-        if accounts.isBusy { ProgressView("正在处理账号…") }
         if let message = accounts.message {
             Text(message).font(.footnote).foregroundStyle(.secondary)
                 .accessibilityIdentifier("account.message")
