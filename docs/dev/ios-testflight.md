@@ -17,6 +17,18 @@
 
 后续包含私人菜谱、个人词典和偏好同步修复的 `2.0.0 (4)` 已完成 TestFlight 内部发布，固定源码 `6e4343faa523f400a6d2eeb0380223e80d632f95`（含 #137 布局修复）。该候选的 [CI](https://github.com/YunYouJun/cook/actions/runs/40079188284) 全部通过后，[#136](https://github.com/YunYouJun/cook/pull/136) 已合并为 main `e090866474fe5f589c0ac01d36892b802dc33b62`；合并时两者源码树相同。后续主线提交不自动扩大冻结发布范围。服务端发布状态已按精确构建回读，详情见下方验收记录；构建 `4` 的单机升级、数据保留与偏好持久化结果同样见下方记录，不能推导为生产同步通过。每次上传前重新查询已处理和上传中构建，不能复用已占用的构建号。
 
+## 2026-11-01 找菜视图菜单内测
+
+`2.0.0 (12)` 已按精确构建回读为 `VALID / INTERNAL_ONLY / IN_BETA_TESTING`，Build ID 为 `315742ed-3c67-48d3-907b-ed88dad320d4`。既有「内部测试」组自动关联，沿用原成员；外部状态为 `NOT_APPLICABLE`，没有外部组。中文测试说明已写入并回读一致。
+
+找菜保留首屏食材快选，通过标题栏「视图」菜单切换云厨房；随机和三道灵感合入找菜页，场景移到筛选，输入框收紧。同步优化 iPad 双栏连续点菜、最大辅助字号的菜单标记、44pt 入口点击范围及食材篮。主线已有的会员 AI 显式确认与饮食目标默认保存继续保留。
+
+实际归档源码为 `dc20115605244c68c925063f8ce76d231ebeeb92`，基于 main `0c1757b1f2b4951d1f23e6715954c356e3b3cc08`。209 项原生测试、iPhone 六条及 iPad 三条关键 UI 流程完成；首轮一条 UI 的滚动定位失败及测试提交 `d7c3a2e1` 后的通过结果，详见[发布回归](./dinner-discovery.md)。该测试修正未改变产品源码、资源或最终 IPA。
+
+IPA SHA-256 为 `1c6d8de3ad8cce96f1265eb6e0c00c5ffe6d6ecb0b0c5bb6f2a8fdd8250af30b`。同一文件通过分发签名、内部限制、Production 权限、正式反馈／AI 地址、877 道菜、隐私资源、App 与 dSYM UUID 及 Apple 包校验后上传。Xcode 本地导出产生的同构建分析会话仅含分析资源，已核对没有 App 二进制；实际 IPA 只上传一次，没有盲目重传或修改分发范围。
+
+归档、dSYM、IPA、冻结源码、导出配置及脱敏回执保存在 `~/Library/Developer/ReleaseArtifacts/Cook/20261031-2.0.0-12-view-menu`；目录日期为开始准备的日期。构建／测试中间产物按 `du` 计回收 608.6 MiB，可用空间实测增加 583.8 MiB。共享 iPad 已恢复 Shutdown，未新建或擦除模拟器。服务端分发验收完成；本轮未操作维护者手机，真机体验由维护者从 TestFlight 更新后进行。
+
 ## 2026-10-29 饮食目标引导内测
 
 `2.0.0 (11)` 已按精确构建回读为 `VALID / INTERNAL_ONLY / IN_BETA_TESTING`，Build ID 为 `2108cd6c-fec2-45f0-bfbf-7e6019783674`，沿用既有内部组与成员。冻结源码 `7e1e6e175d618c35824d789aced330d01ecbcf1d` 整合 main `75d50ad`、布局 `fe6086a` 与既有会员 AI；7 个关键布局／状态源文件与实际回归的版本逐字一致。IPA SHA-256 为 `bb1e6ab961fb0c9c760c556675ca6faf16abf4a283e709bee8350e6e2200cb9e`，同一文件通过签名、配置、隐私资源、dSYM／Production 权限与 Apple 包校验后上传。
