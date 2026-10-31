@@ -120,10 +120,20 @@ final class SearchIntentUITests: XCTestCase {
             XCTAssertTrue(chooser.waitForExistence(timeout: 10))
             // Inspect each large-text chip before scrolling its lazy row out of view.
             let tomatoChip = chooser.buttons["番茄"]
-            for _ in 0..<8 {
+            // The compact chooser starts with potato and carrot; at AX5 tomato can
+            // be below the fixed results action rather than above the viewport.
+            for _ in 0..<14 {
                 if tomatoChip.exists && tomatoChip.isHittable { break }
-                chooser.swipeDown(velocity: .slow)
+                if tomatoChip.exists && tomatoChip.frame.maxY < chooser.frame.minY {
+                    chooser.swipeDown(velocity: .slow)
+                } else {
+                    chooser.swipeUp(velocity: .slow)
+                }
             }
+            let cancelled = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            cancelled.name = "\(attachmentName)-cancelled-ingredients"
+            cancelled.lifetime = .keepAlways
+            add(cancelled)
             XCTAssertTrue(tomatoChip.waitForExistence(timeout: 10))
             XCTAssertTrue(tomatoChip.isHittable)
             XCTAssertFalse(tomatoChip.isSelected)
