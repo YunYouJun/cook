@@ -92,13 +92,20 @@ function replay(scenarios, verify) {
   }
 }
 
-test('the original six serial test invocations remain unchanged when successful', () => {
+test('the six serial invocations target existing UI audits with parallel testing disabled', () => {
   replay({}, ({ result, calls, output }) => {
     assert.equal(result.status, 0, result.stderr)
     assert.equal(calls.length, 6)
     assert.deepEqual(calls.map(call => call.name), ['phone-regression', 'phone-dietary-standard', 'phone-dietary-maximum', 'pad-regression', 'pad-dietary-standard', 'pad-dietary-maximum'])
-    for (const { args } of calls)
+    for (const { args } of calls) {
       assert.equal(args[args.indexOf('-parallel-testing-enabled') + 1], 'NO')
+      for (const argument of args.filter(value => /^-(?:only|skip)-testing:/.test(value))) {
+        const [target, suite, method] = argument.split(':')[1].split('/')
+        assert.equal(target, 'CookUITests')
+        const source = readFileSync(join(root, 'apps/ios/CookUITests', `${suite}.swift`), 'utf8')
+        assert.match(source, new RegExp(`\\bfunc\\s+${method}\\s*\\(`), `CI selector must name an existing test: ${argument}`)
+      }
+    }
     assert.equal(output, '')
   })
 })

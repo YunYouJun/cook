@@ -220,7 +220,7 @@ jobs:
           # 两项审计从常规回归中移出后分别执行，保留所有用例、审计类别和失败。
           result=0
           standard_audit=CookUITests/DietaryGoalsUITests/testNativeGoalPickerAccessibilityAndReviewedSummary
-          maximum_audit=CookUITests/DietaryGoalsUITests/testLargestTextCanChooseRememberReadAndRoll
+          maximum_audit=CookUITests/DietaryGoalsUITests/testLargestTextCanChooseSavedGoalReadAndDecide
           run_once() {
             local device="$1" stage="$2" code=0
             shift 2

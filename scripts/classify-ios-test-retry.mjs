@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 const isolatedAudits = new Set([
   'CookUITests/DietaryGoalsUITests/testNativeGoalPickerAccessibilityAndReviewedSummary',
-  'CookUITests/DietaryGoalsUITests/testLargestTextCanChooseRememberReadAndRoll',
+  'CookUITests/DietaryGoalsUITests/testLargestTextCanChooseSavedGoalReadAndDecide',
 ])
 
 // Only a captured infrastructure failure of one isolated audit may be retried.
