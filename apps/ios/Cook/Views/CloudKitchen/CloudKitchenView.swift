@@ -5,13 +5,20 @@ import SwiftUI
 /// are the same ones used by the ingredient list.
 struct CloudKitchenView: View {
     @Binding var presentation: CookPresentation
-    @Binding var showingDietaryGoals: Bool
+    @Binding var input: String
+    let inputMessage: String?
+    let submitInput: () -> Void
+    var previewInput: (() -> Void)? = nil
+    let decide: (RecipeRoute) -> Void
     let showResults: () -> Void
+    var isDetailPresented = false
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .caption) var minIngredientWidth: CGFloat = 68
     @State private var showingFilters = false
     @State private var showingAllIngredients = false
     @State private var cooking = false
@@ -30,80 +37,53 @@ struct CloudKitchenView: View {
         return showingAllIngredients ? store.stuffItems : featured
     }
 
-    private var instruction: String {
-        if let goal = session.dietaryGoal, session.selectedStuff.isEmpty {
-            return "按“\(goal.title)”找菜，也可以加几样手头食材。"
-        }
-        return needsIngredients ? "先选几样食材，再点锅开火。" : "点台面上的食材，选好后点锅开火。"
-    }
-
     var body: some View {
-        let count = session.matchCount(in: store) ?? 0
+        let count = session.candidates(in: store).count
         GeometryReader { geometry in
-            ScrollView {
-                VStack(spacing: 0) {
-                    VStack(spacing: 7) {
-                        Text("今晚，做点好吃的。")
-                            .font(.system(.title2, design: .rounded, weight: .bold))
-                        Text(instruction)
+            List {
+                Section {
+                    CookQueryField(text: $input, message: inputMessage, submit: submitInput, preview: previewInput)
+                    CookActiveConditions()
+                    if needsIngredients {
+                        Text("这些条件暂时没找到菜，调整一下再试试。")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-
-                    if !session.hasCompletedDietaryIntroduction, !store.dietaryGoals.isEmpty {
-                        GroupBox { DietaryGoalIntroduction(isPresented: $showingDietaryGoals).buttonStyle(.borderless) }
-                            .padding(.horizontal, 20)
-                            .padding(.top, 16)
-                    } else if session.dietaryGoal != nil {
-                        DietaryGoalSummaryButton(isPresented: $showingDietaryGoals)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 8)
-                    }
-
-                    kitchenScene
-                        .frame(height: min(430, max(250, geometry.size.width * 0.82)))
-
-                    HStack {
-                        Text(allowsRotation ? "拖动厨房可旋转，点食材可选择。" : "开启旋转，可拖动查看厨房。")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer(minLength: 8)
-                        Button {
-                            allowsRotation.toggle()
-                        } label: {
-                            Label("旋转视角", systemImage: "rotate.3d")
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(allowsRotation ? Color.accentColor : .secondary)
-                        .controlSize(.small)
-                        .accessibilityIdentifier("kitchen.rotation")
-                        .accessibilityValue(allowsRotation ? "已开启" : "已关闭")
-                        .accessibilityAddTraits(allowsRotation ? .isSelected : [])
-                        .accessibilityHint("开启后可拖动厨房，关闭后恢复初始视角")
-                        .disabled(sceneStatus != .ready || cooking)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
-
-                    ingredientTray
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
                 }
-                .frame(maxWidth: 720)
-                .frame(maxWidth: .infinity)
+                Section {
+                    VStack(spacing: 0) {
+                        kitchenScene
+                            .frame(height: min(380, max(230, geometry.size.width * 0.68)))
+
+                        rotationControls
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 12)
+
+                        ingredientTray
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 12)
+                    }
+                    .frame(maxWidth: 720)
+                    .frame(maxWidth: .infinity)
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+
+                CookInspirationSection(decide: decide, isDetailPresented: isDetailPresented)
             }
+            .listSectionSpacing(.compact)
+            .contentMargins(.top, 8, for: .scrollContent)
+            .scrollDismissesKeyboard(.interactively)
+            .scrollContentBackground(.hidden)
             .background(background)
         }
-        .navigationTitle("做菜")
+        .navigationTitle("找菜")
         .navigationBarTitleDisplayMode(.inline)
-        .bottomActionBar {
+        .bottomActionBar(background: background) {
             Button(action: cook) {
                 HStack(spacing: 8) {
                     Image(systemName: "frying.pan.fill")
-                    Text(cooking ? "咕嘟咕嘟，菜单出炉…" : session.hasSelection ? "开火，看看 \(count) 道菜" : "先选几样食材")
+                    Text(cooking ? "咕嘟咕嘟，菜单出炉…" : "查看全部 \(count) 道菜")
                         .contentTransition(.numericText())
                 }
                 .font(.headline)
@@ -111,7 +91,7 @@ struct CloudKitchenView: View {
             }
             .prominentButtonStyle()
             .controlSize(.large)
-            .disabled(!session.hasSelection || cooking)
+            .disabled(count == 0 || cooking)
             .accessibilityIdentifier("kitchen.cook")
         }
         .toolbar {
@@ -125,19 +105,18 @@ struct CloudKitchenView: View {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("清空") { session.clearStuff() }
                     .disabled(!session.hasSelection)
-                CookPresentationToggle(selection: $presentation)
+                CookPresentationToggle(selection: $presentation, usesCurrentSubtitle: dynamicTypeSize.isAccessibilitySize)
             }
         }
         .sheet(isPresented: $showingFilters) {
             FilterSheet()
-                .presentationDetents([.medium, .large])
-                .presentationBackground(Color(uiColor: .systemGroupedBackground))
         }
         .task(id: cooking) {
             guard cooking else { return }
             if !reduceMotion { try? await Task.sleep(for: .milliseconds(1200)) }
-            guard !Task.isCancelled, session.hasSelection else { return }
+            guard !Task.isCancelled else { return }
             cooking = false
+            guard !session.candidates(in: store).isEmpty else { return }
             showResults()
         }
         .onChange(of: session.selectedStuff) {
@@ -189,26 +168,98 @@ struct CloudKitchenView: View {
         }
     }
 
+    @ViewBuilder
+    private var rotationControls: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 8) {
+                rotationInstruction
+                rotationButton
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            HStack(spacing: 8) {
+                rotationInstruction
+                Spacer(minLength: 8)
+                rotationButton
+            }
+        }
+    }
+
+    private var rotationInstruction: some View {
+        Text(allowsRotation ? "拖动旋转，点食材选择。" : "点台面食材即可选择。")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var rotationButton: some View {
+        Button {
+            allowsRotation.toggle()
+        } label: {
+            Label("旋转视角", systemImage: "rotate.3d")
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .buttonStyle(.bordered)
+        .tint(allowsRotation ? Color.accentColor : .secondary)
+        .controlSize(dynamicTypeSize.isAccessibilitySize ? .regular : .small)
+        .accessibilityIdentifier("kitchen.rotation")
+        .accessibilityValue(allowsRotation ? "已开启" : "已关闭")
+        .accessibilityAddTraits(allowsRotation ? .isSelected : [])
+        .accessibilityHint("开启后可拖动厨房，关闭后恢复初始视角")
+        .disabled(sceneStatus != .ready || cooking)
+    }
+
+    @ViewBuilder
+    private var ingredientTrayHeader: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 8) {
+                ingredientTrayTitle
+                ingredientSelectionCount
+                allIngredientsButton
+            }
+        } else {
+            HStack {
+                ingredientTrayTitle
+                ingredientSelectionCount
+                Spacer()
+                allIngredientsButton
+            }
+        }
+    }
+
+    private var ingredientTrayTitle: some View {
+        Text("食材篮")
+            .font(.headline)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var ingredientSelectionCount: some View {
+        Text("已选 \(session.selectedStuff.count) 样")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("kitchen.selectionCount")
+    }
+
+    private var allIngredientsButton: some View {
+        Button(showingAllIngredients ? "收起" : "全部食材") {
+            showingAllIngredients.toggle()
+        }
+        .font(.subheadline)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
     private var ingredientTray: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("食材篮").font(.headline)
-                Text("已选 \(session.selectedStuff.count) 样")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .accessibilityIdentifier("kitchen.selectionCount")
-                Spacer()
-                Button(showingAllIngredients ? "收起" : "全部食材") {
-                    showingAllIngredients.toggle()
-                }
-                .font(.subheadline)
-            }
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 68), spacing: 8)], spacing: 8) {
+            ingredientTrayHeader
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: minIngredientWidth), spacing: 8)], spacing: 8) {
                 ForEach(ingredients, id: \.name) { item in
                     KitchenIngredientButton(item: item, selected: session.selectedStuff.contains(item.name)) {
                         session.toggleStuff(item.name)
                     }
                 }
             }
+            .id(dynamicTypeSize)
             let extra = session.selectedStuff.filter { name in !ingredients.contains { $0.name == name } }
             if !extra.isEmpty {
                 Text("也选了：\(extra.joined(separator: "、"))")
@@ -225,7 +276,7 @@ struct CloudKitchenView: View {
     }
 
     private func cook() {
-        guard session.hasSelection else {
+        guard !session.candidates(in: store).isEmpty else {
             needsIngredients = true
             return
         }
@@ -247,7 +298,10 @@ private struct KitchenIngredientButton: View {
                 } else {
                     Text(item.emoji).font(.system(size: 25)).accessibilityHidden(true)
                 }
-                Text(item.name).font(.caption).lineLimit(1).minimumScaleFactor(0.75)
+                Text(item.name)
+                    .font(.caption)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, minHeight: 62)
             .foregroundStyle(selected ? Color.accentColor : .primary)
@@ -262,6 +316,7 @@ private struct KitchenIngredientButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(item.name)
+        .accessibilityIdentifier("kitchen.ingredient.\(item.name)")
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

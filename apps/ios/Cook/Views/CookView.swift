@@ -2,23 +2,22 @@ import CookCore
 import SwiftData
 import SwiftUI
 
-/// 做菜：选食材和厨具，或者在搜索框里说一句话；做法、难度和忌口放在「筛选」里。
+/// 找菜：优先输入与食材快选，场景放在筛选中，三道灵感位于选择区之后。
 /// 窄屏（iPhone、折叠屏外屏、分屏后变窄）点底部按钮进入推荐结果；
 /// 宽屏（iPad、iPhone Duo 展开、大屏 iPhone 横屏）左边选食材，右边的推荐结果跟着实时更新
 struct CookView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(CookSession.self) private var session
     @Environment(FeedbackClient.self) private var feedback
     @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }, sort: \FridgeItem.expiresAt) private var fridgeItems: [FridgeItem]
     @State private var showingFilters = false
-    @State private var showingDietaryGoals = false
     /// 冰箱快捷入口按它判断哪些过期了，跨过零点时刷新
     @State private var now = Date()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var basket = BasketAnimator()
     @State private var input = ""
-    @State private var isInputPresented = false
     @State private var notice: InputNotice?
     @State private var searchIntent: SearchIntentInput?
     /// 宽屏时一打开就并排显示两栏，不等用户点开侧栏
@@ -26,18 +25,19 @@ struct CookView: View {
     /// 展开了「更多」的分组标题，用逗号连起来存，下次打开保持原样
     @AppStorage("cook.food.moreExpanded") private var moreExpanded = ""
     @AppStorage("cook.presentation") private var presentation = CookPresentation.list
-    @State private var kitchenPath = NavigationPath()
+    @State private var cookPath = NavigationPath()
+    @State private var detailPath = NavigationPath()
 
     var body: some View {
-        let matchCount = session.matchCount(in: store) ?? 0
+        let matchCount = session.candidates(in: store).count
         let emptySignal = emptySignalID(matchCount: matchCount)
         let warnings = findIncompatibleRules(session.selectedStuff, rules: store.data.incompatibleRules)
         let extras = session.selectedStuff.filter { !store.isCatalogStuff($0) }
 
         Group {
             if presentation == .kitchen {
-                NavigationStack(path: $kitchenPath) {
-                    CloudKitchenView(presentation: $presentation, showingDietaryGoals: $showingDietaryGoals, showResults: { kitchenPath.append(ResultsRoute()) })
+                NavigationStack(path: $cookPath) {
+                    CloudKitchenView(presentation: $presentation, input: $input, inputMessage: notice?.message, submitInput: applySentence, previewInput: previewSentence, decide: openRecipe, showResults: { cookPath.append(ResultsRoute()) }, isDetailPresented: !cookPath.isEmpty)
                         .navigationDestination(for: ResultsRoute.self) { _ in ResultsView() }
                         .recipeDestinations()
                 }
@@ -46,17 +46,17 @@ struct CookView: View {
                     chooser(warnings: warnings, extras: extras, emptySignal: emptySignal)
                         .navigationSplitViewColumnWidth(min: 320, ideal: 400, max: 480)
                 } detail: {
-                    NavigationStack {
-                        ResultsView()
+                    NavigationStack(path: $detailPath) {
+                        ResultsView(isEmbedded: true)
                             .recipeDestinations()
                     }
                 }
                 // 竖着拿的 iPad 和展开的折叠屏也并排显示两栏，不把选食材的一栏收起来
                 .navigationSplitViewStyle(.balanced)
             } else {
-                NavigationStack {
+                NavigationStack(path: $cookPath) {
                     chooser(warnings: warnings, extras: extras, emptySignal: emptySignal)
-                        .bottomActionBar {
+                        .bottomActionBar(background: Color(uiColor: .systemGroupedBackground)) {
                             resultsButton(matchCount: matchCount)
                         }
                         .navigationDestination(for: ResultsRoute.self) { _ in
@@ -66,11 +66,9 @@ struct CookView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingDietaryGoals) { DietaryGoalSelectionSheet() }
-        .sheet(item: $searchIntent, onDismiss: {
-            input = ""
-            isInputPresented = false
-        }) { SearchIntentSheet(text: $0.text) }
+        .sheet(item: $searchIntent, onDismiss: { input = "" }) {
+            SearchIntentSheet(text: $0.text)
+        }
         .overlay {
             BasketFlightLayer(animator: basket)
         }
@@ -87,15 +85,15 @@ struct CookView: View {
 
     /// 选食材的列表：两种布局共用，宽屏放在左栏，窄屏是导航的第一页
     private func chooser(warnings: [IncompatibleRule], extras: [String], emptySignal: String?) -> some View {
-        List {
-            if !session.hasCompletedDietaryIntroduction, !store.dietaryGoals.isEmpty {
-                Section { DietaryGoalIntroduction(isPresented: $showingDietaryGoals).buttonStyle(.borderless) }
-            } else if session.dietaryGoal != nil {
-                Section { DietaryGoalSummaryButton(isPresented: $showingDietaryGoals) }
-            }
-            if let notice {
-                InputNoticeRow(notice: notice) {
-                    withAnimation(.snappy) { self.notice = nil }
+        @Bindable var session = session
+        return List {
+            Section {
+                CookQueryField(text: $input, message: notice?.message, submit: applySentence, preview: previewSentence)
+                CookActiveConditions()
+                if !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    ForEach(store.stuffSuggestions(for: input, excluding: session.selectedStuff).prefix(3), id: \.name) { item in
+                        Button("添加\(item.name)") { addSuggestion(item.name) }
+                    }
                 }
             }
             if !warnings.isEmpty {
@@ -116,7 +114,6 @@ struct CookView: View {
             stuffSection("肉和蛋", store.food.meat)
             stuffSection("主食（可选）", store.food.staple)
 
-            NavigationLink("管理食材和厨具") { PersonalCatalogView() }
             ChipSection(title: "厨具（可选）", note: toolNote) {
                 if let tool = session.tool, !store.food.tools.contains(where: { $0.name == tool }) {
                     Chip(title: store.toolLabel(tool), isSelected: true) { session.toggleTool(tool) }
@@ -127,34 +124,15 @@ struct CookView: View {
                     }
                 }
             }
+            CookInspirationSection(decide: openRecipe, isDetailPresented: sizeClass == .regular ? !detailPath.isEmpty : !cookPath.isEmpty)
+            NavigationLink("管理食材和厨具") { PersonalCatalogView() }
         }
         .accessibilityIdentifier("cook.chooser")
-        .navigationTitle("做菜")
-        .searchable(text: $input, isPresented: $isInputPresented, placement: .navigationBarDrawer(displayMode: .always), prompt: "说说有什么，如：土豆和鸡蛋，不要辣")
-        .searchSuggestions {
-            if !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Button { previewSentence() } label: {
-                    Label("预览找菜条件", systemImage: "slider.horizontal.3")
-                }
-                .accessibilityIdentifier("intent.preview")
-            }
-            ForEach(store.stuffSuggestions(for: input, excluding: session.selectedStuff), id: \.name) { item in
-                Button {
-                    addSuggestion(item.name)
-                } label: {
-                    Label {
-                        Text(item.name)
-                            .foregroundStyle(Color.primary)
-                    } icon: {
-                        Text(item.emoji)
-                    }
-                }
-                .accessibilityLabel("添加\(item.name)")
-            }
-        }
-        .onSubmit(of: .search) {
-            applySentence()
-        }
+        .listSectionSpacing(.compact)
+        .contentMargins(.top, 8, for: .scrollContent)
+        .navigationTitle("找菜")
+        .navigationBarTitleDisplayMode(.inline)
+        .scrollDismissesKeyboard(.interactively)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 let count = session.activeFilterCount
@@ -172,7 +150,7 @@ struct CookView: View {
                     withAnimation(.snappy) { session.clearStuff() }
                 }
                 .disabled(!session.hasSelection)
-                CookPresentationToggle(selection: $presentation)
+                CookPresentationToggle(selection: $presentation, usesCurrentSubtitle: dynamicTypeSize.isAccessibilitySize)
             }
         }
         // 选了食材却一道菜都没有，停留 3 秒后匿名记一次，用来发现缺哪些菜；条件一变就重新计时
@@ -195,13 +173,10 @@ struct CookView: View {
             guard !Task.isCancelled else {
                 return
             }
-            withAnimation(.snappy) { notice = nil }
+            notice = nil
         }
         .sheet(isPresented: $showingFilters) {
             FilterSheet()
-                .presentationDetents([.medium, .large])
-                // 半屏时系统默认是半透明玻璃，后面选中的蓝色食材会透上来，看着像选中了某个做法
-                .presentationBackground(Color(uiColor: .systemGroupedBackground))
         }
     }
 
@@ -236,32 +211,14 @@ struct CookView: View {
         }
     }
 
-    /// 底部「看看能做什么」按钮，只在窄屏显示
+    /// 底部「查看全部」按钮，只在窄屏显示
     private func resultsButton(matchCount: Int) -> some View {
         NavigationLink(value: ResultsRoute()) {
             HStack(spacing: 10) {
                 BasketStack(items: basketItems)
-                // 只让数字滚动，文字不跟着变形
-                HStack(spacing: 0) {
-                    if session.selectedStuff.isEmpty, session.dietaryGoal != nil {
-                        Text("看看符合目标的做法（")
-                    } else if session.selectedStuff.isEmpty, let tool = session.tool {
-                        Text("看看用\(store.toolLabel(tool))能做什么（")
-                    } else if session.selectedStuff.isEmpty {
-                        Text("先选几样食材")
-                    } else {
-                        Text("看看能做什么（")
-                    }
-                    if session.hasSelection {
-                        Text("\(matchCount)")
-                            .contentTransition(.numericText(value: Double(matchCount)))
-                            .animation(.snappy, value: matchCount)
-                        Text("）")
-                    }
-                }
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .accessibilityElement(children: .combine)
+                Text("查看全部 \(matchCount) 道菜")
+                    .contentTransition(.numericText(value: Double(matchCount)))
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .font(.headline)
             .frame(maxWidth: .infinity)
@@ -269,7 +226,7 @@ struct CookView: View {
         .prominentButtonStyle()
         .controlSize(.large)
         .accessibilityIdentifier("cook.showResults")
-        .disabled(!session.hasSelection)
+        .disabled(matchCount == 0)
         .modifier(BasketBounce(animator: basket))
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { basket.target = $0 }
     }
@@ -299,66 +256,50 @@ struct CookView: View {
 
     /// 和 Web 一样，按菜名搜索时没有结果不算
     private func emptySignalID(matchCount: Int) -> String? {
-        guard session.dietaryGoal == nil, matchCount == 0, !session.selectedStuff.isEmpty, session.keyword.isEmpty else {
+        guard session.dietaryGoal == nil, session.discoveryScene == nil, matchCount == 0, !session.selectedStuff.isEmpty, session.keyword.isEmpty else {
             return nil
         }
         return ([session.tool ?? "", session.mode.rawValue] + session.selectedStuff.sorted()).joined(separator: "|")
     }
 
     private func addSuggestion(_ name: String) {
+        let clearedKeyword = !session.keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         withAnimation(.snappy) {
+            session.keyword = ""
             session.addStuff(name)
-            notice = nil
         }
         input = ""
+        show(InputNotice(kind: .applied, message: "已添加\(name)。" + (clearedKeyword ? "已清除上次菜名搜索。" : "")))
     }
 
-    /// 回车时把一整句识别成筛选条件；只列了几样食材时和点选一样，不额外提示（和 Web 的 IngredientInput 一致）
+    private func openRecipe(_ route: RecipeRoute) {
+        if presentation == .list, sizeClass == .regular {
+            // 左侧选择区一直可操作，明确点选另一道菜时直接更新右侧详情。
+            detailPath = NavigationPath([route])
+        } else {
+            guard cookPath.isEmpty else { return }
+            cookPath.append(route)
+        }
+    }
+
+    /// 一个输入框承接菜名、已有食材和口语条件，识别结果交给共享会话处理。
     private func applySentence() {
         guard searchIntent == nil else { return }
-        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else {
-            return
-        }
-        let parsed = store.queryParser.parse(text)
-        if parsed.isEmpty {
-            show(InputNotice(kind: .notRecognized, message: "没认出食材，换个说法试试，如：土豆、鸡蛋，不要辣"))
-            return
-        }
-        let names = parsed.stuff + parsed.unknown
-        var rest = parsed
-        rest.stuff = []
-        rest.unknown = []
-        let plainList = store.data.normalizer.unique([text]).allSatisfy(names.contains)
-        let onlyStuff = !names.isEmpty && rest.isEmpty
-        let nothingNew = onlyStuff && names.allSatisfy(session.selectedStuff.contains)
-
-        withAnimation(.snappy) {
-            session.apply(parsed, normalizer: store.data.normalizer)
-        }
+        let result = session.applyDiscoveryInput(input, in: store)
+        guard result.kind != .empty else { return }
         input = ""
-        isInputPresented = false
-        if nothingNew {
-            show(InputNotice(kind: .info, message: "已经选过了"))
-        } else if !(plainList && onlyStuff) {
-            show(InputNotice(kind: .applied, message: "已按「\(store.describe(parsed))」筛选"))
-        } else {
-            withAnimation(.snappy) { notice = nil }
-        }
+        show(InputNotice(kind: .applied, message: result.message))
     }
 
-    /// Previewing is explicit, so ordinary search retains the personal catalog parser.
+    /// 预览由用户主动打开；普通提交继续使用本地规则，远程识别仍在预览中单独确认。
     private func previewSentence() {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         searchIntent = SearchIntentInput(text: text)
-        // Keep the suggestion alive until the sheet finishes its presentation.
     }
 
     private func show(_ notice: InputNotice) {
-        withAnimation(.snappy) {
-            self.notice = notice
-        }
+        self.notice = notice
         AccessibilityNotification.Announcement(notice.message).post()
     }
 
@@ -419,48 +360,6 @@ struct InputNotice: Hashable {
     let message: String
 }
 
-private struct InputNoticeRow: View {
-    let notice: InputNotice
-    let onClose: () -> Void
-
-    var body: some View {
-        Section {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Image(systemName: symbol)
-                    .foregroundStyle(tint)
-                    .symbolEffect(.bounce, value: notice.id)
-                Text(notice.message)
-                    .font(.subheadline)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Button(action: onClose) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("关闭提示")
-            }
-            .accessibilityElement(children: .combine)
-        }
-        .transition(.opacity.combined(with: .move(edge: .top)))
-    }
-
-    private var symbol: String {
-        switch notice.kind {
-        case .applied: return "text.badge.checkmark"
-        case .notRecognized: return "questionmark.bubble"
-        case .info: return "checkmark.circle"
-        }
-    }
-
-    private var tint: Color {
-        switch notice.kind {
-        case .applied: return .accentColor
-        case .notRecognized: return .orange
-        case .info: return .secondary
-        }
-    }
-}
-
 /// 底部按钮里叠在一起的几样食材，选中时一个个弹进来
 private struct BasketStack: View {
     struct Item: Hashable {
@@ -489,20 +388,31 @@ private struct BasketStack: View {
 
 struct ResultsRoute: Hashable {}
 
-/// 筛选：做法、难度、不吃辣，以及家里常备和忌口
+/// 筛选：场景、饮食目标、做法、难度，以及家里常备和忌口
 struct FilterSheet: View {
     @State private var showingDietaryGoals = false
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        let matchCount = session.matchCount(in: store)
+        @Bindable var session = session
+        let matchCount = session.candidates(in: store).count
 
         NavigationStack {
             List {
                 Section { DietaryGoalPickerButton(isPresented: $showingDietaryGoals) }
+                Section {
+                    CookDiscoveryScenePrompt(selection: $session.discoveryScene)
+                    if session.discoveryScene != nil {
+                        Button("取消这次场景") { session.discoveryScene = nil }
+                            .accessibilityIdentifier("filter.clearScene")
+                    }
+                } header: {
+                    Text("今天更想……（可选）")
+                }
                 ChipSection(title: "做法", note: session.methodGroups.isEmpty ? nil : "只看这些做法") {
                     ForEach(Recommender.methodGroups, id: \.label) { group in
                         Chip(title: group.label, imageName: group.imageName, isSelected: session.methodGroups.contains(group.label)) {
@@ -547,14 +457,17 @@ struct FilterSheet: View {
                 }
             }
         }
+        // 辅助字号的计数和选项都更高，直接全高展示，给实际滚动内容留出空间。
+        .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium, .large])
+        // 不让后方选中的食材透过半屏背景，造成选项也被选中的错觉。
+        .presentationBackground(Color(uiColor: .systemGroupedBackground))
         .sheet(isPresented: $showingDietaryGoals) { DietaryGoalSelectionSheet() }
         .sensoryFeedback(.selection, trigger: session.activeFilterCount)
     }
 
     /// 固定在列表底部，不增加第二个确认按钮；进入调料和忌口子页时随根列表一起移走。
-    private func resultSummary(matchCount: Int?) -> some View {
+    private func resultSummary(matchCount: Int) -> some View {
         VStack(spacing: 4) {
-            if let matchCount {
                 HStack(spacing: 0) {
                     Text("符合条件 ")
                     Text("\(matchCount)")
@@ -572,18 +485,14 @@ struct FilterSheet: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-            } else {
-                Text("选好食材或厨具后，这里会显示结果数量。")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("filter.selectionHint")
-            }
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .background(Color(uiColor: .systemGroupedBackground))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("filter.summary")
     }
 }
 

@@ -7,7 +7,6 @@ enum AppTab: Hashable {
     case cook
     case fridge
     case library
-    case random
     case settings
 }
 
@@ -31,7 +30,7 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $router.tab) {
             CookView()
-                .tabItem { Label("做菜", systemImage: "frying.pan") }
+                .tabItem { Label("找菜", systemImage: "frying.pan") }
                 .tag(AppTab.cook)
             FridgeView()
                 .tabItem { Label("冰箱", systemImage: "refrigerator") }
@@ -39,9 +38,6 @@ struct RootView: View {
             LibraryView()
                 .tabItem { Label("菜谱", systemImage: "book") }
                 .tag(AppTab.library)
-            RandomView()
-                .tabItem { Label("随机", systemImage: "dice") }
-                .tag(AppTab.random)
             SettingsView()
                 .tabItem { Label("我的", systemImage: "person.crop.circle") }
                 .tag(AppTab.settings)

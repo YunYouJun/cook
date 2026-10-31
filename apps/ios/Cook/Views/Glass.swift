@@ -41,8 +41,8 @@ extension View {
 
     /// 底部固定的操作栏。iOS 26 用 safeAreaBar，系统会给下面滚过的内容加渐隐的边缘效果；
     /// 旧系统垫一层和背景同色的渐变，免得半透明的按钮和列表叠在一起
-    func bottomActionBar<Bar: View>(@ViewBuilder _ bar: @escaping () -> Bar) -> some View {
-        modifier(BottomActionBar(bar: bar))
+    func bottomActionBar<Bar: View>(background: Color? = nil, @ViewBuilder _ bar: @escaping () -> Bar) -> some View {
+        modifier(BottomActionBar(background: background, bar: bar))
     }
 
     /// 浮在图片上的小控件（关闭按钮、页码、图片说明）。iOS 26 用玻璃，能点的加上按压反馈；旧系统用磨砂材质
@@ -95,6 +95,7 @@ private struct ScrollBottomFade: ViewModifier {
 }
 
 private struct BottomActionBar<Bar: View>: ViewModifier {
+    let background: Color?
     let bar: () -> Bar
 
     func body(content: Content) -> some View {
@@ -103,6 +104,11 @@ private struct BottomActionBar<Bar: View>: ViewModifier {
                 bar()
                     .padding(.horizontal)
                     .padding(.bottom, 8)
+                    .background {
+                        if let background {
+                            background.ignoresSafeArea(.container, edges: .bottom)
+                        }
+                    }
             }
         } else {
             content.safeAreaInset(edge: .bottom) {
@@ -111,7 +117,7 @@ private struct BottomActionBar<Bar: View>: ViewModifier {
                     .padding(.top, 16)
                     .padding(.bottom, 8)
                     .background {
-                        let background = Color(uiColor: .systemGroupedBackground)
+                        let background = background ?? Color(uiColor: .systemGroupedBackground)
                         VStack(spacing: 0) {
                             LinearGradient(colors: [background.opacity(0), background], startPoint: .top, endPoint: .bottom)
                                 .frame(height: 16)

@@ -49,7 +49,7 @@ final class PersonalCatalogUITests: XCTestCase {
         let mine = app.buttons.matching(identifier: "我的").firstMatch
         XCTAssertTrue(mine.waitForExistence(timeout: 10))
         mine.tap()
-        let cook = app.buttons.matching(identifier: "做菜").firstMatch
+        let cook = app.buttons.matching(identifier: "找菜").firstMatch
         XCTAssertTrue(cook.waitForExistence(timeout: 10))
         cook.tap()
         let ingredient = app.buttons.matching(identifier: "鹰嘴豆").firstMatch

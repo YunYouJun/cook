@@ -1,3 +1,4 @@
+import UIKit
 import XCTest
 
 final class RecipeAmountAnnotationsUITests: XCTestCase {
@@ -45,8 +46,11 @@ final class RecipeAmountAnnotationsUITests: XCTestCase {
         let ingredient = app.buttons["西兰花"]
         XCTAssertTrue(ingredient.waitForExistence(timeout: 20))
         if !ingredient.isSelected { ingredient.tap() }
-        if app.windows.firstMatch.horizontalSizeClass != .regular {
-            let results = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "看看能做什么")).firstMatch
+        if app.windows.firstMatch.horizontalSizeClass == .regular {
+            let results = app.descendants(matching: .any).matching(identifier: "dietary.results").firstMatch
+            XCTAssertTrue(results.waitForExistence(timeout: 10))
+        } else {
+            let results = app.buttons["cook.showResults"]
             XCTAssertTrue(results.waitForExistence(timeout: 10))
             results.tap()
         }

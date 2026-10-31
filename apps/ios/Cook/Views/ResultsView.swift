@@ -10,15 +10,8 @@ struct ResultsView: View {
     @Environment(FavoriteActions.self) private var favoriteActions
     @State private var showingDietaryGoals = false
     @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }) private var favorites: [Favorite]
-
-    static let modes: [RecommendationMode] = [.loose, .strict, .survival]
-    static func label(for mode: RecommendationMode) -> String {
-        switch mode {
-        case .loose: return "全部推荐"
-        case .strict: return "用上所有已选"
-        case .survival: return "只看食材齐全"
-        }
-    }
+    /// 宽屏的左栏已有搜索和筛选，右栏专注实时结果。
+    var isEmbedded = false
 
     static let groupLabels = ["齐全", "差一种", "差两种"]
     static let groupHints = ["食材都有", "补一种就能做", "补两种就能做"]
@@ -29,6 +22,7 @@ struct ResultsView: View {
         if let tool = session.tool {
             items.append(store.toolLabel(tool))
         }
+        if let scene = session.discoveryScene { items.append(scene.label) }
         items += session.methodGroups + session.difficulty
         if session.noSpicy {
             items.append("不吃辣")
@@ -38,43 +32,45 @@ struct ResultsView: View {
 
     var body: some View {
         @Bindable var session = session
-        let favoriteIds = Set(favorites.map(\.recipeId))
-
         Group {
-            // 宽屏时结果常驻在右栏，还没选东西就先给个提示
-            if !session.hasSelection {
-                ContentUnavailableView(
-                    "先选几样食材",
-                    systemImage: "frying.pan",
-                    description: Text("在左边选食材或厨具，能做的菜会出现在这里。")
-                )
-            } else if session.selectedStuff.isEmpty, session.dietaryGoal != nil {
-                goalList(favoriteIds: favoriteIds)
-            } else if session.selectedStuff.isEmpty, let tool = session.tool {
-                toolList(tool, favoriteIds: favoriteIds)
+            if isEmbedded {
+                resultLists
             } else {
-                recommendList(favoriteIds: favoriteIds)
+                resultLists
+                    .searchable(text: $session.keyword, placement: .navigationBarDrawer(displayMode: .always), prompt: "按菜名筛选")
             }
         }
         // The result list can disappear when a goal is cleared; keep its presenter above that branch.
         .sheet(isPresented: $showingDietaryGoals) { DietaryGoalSelectionSheet() }
-        .navigationTitle(session.dietaryGoal?.title ?? "能做的菜")
+        .navigationTitle(session.dietaryGoal?.title ?? "找到的菜")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button { showingDietaryGoals = true } label: {
-                        Label("饮食目标", systemImage: "slider.horizontal.3")
+            if !isEmbedded {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button { showingDietaryGoals = true } label: {
+                            Label("饮食目标", systemImage: "slider.horizontal.3")
+                        }
+                        .accessibilityIdentifier("results.dietaryGoal")
+                    } label: {
+                        Label("更多选项", systemImage: "ellipsis.circle")
                     }
-                    .accessibilityIdentifier("results.dietaryGoal")
-                } label: {
-                    Label("更多选项", systemImage: "ellipsis.circle")
+                    .accessibilityValue(session.dietaryGoal?.title ?? "不限目标")
+                    .accessibilityIdentifier("results.options")
                 }
-                .accessibilityValue(session.dietaryGoal?.title ?? "不限目标")
-                .accessibilityIdentifier("results.options")
             }
         }
-        .searchable(text: $session.keyword, placement: .navigationBarDrawer(displayMode: .always), prompt: "按菜名筛选")
         .sensoryFeedback(.selection, trigger: session.selectedStuff)
+    }
+
+    @ViewBuilder
+    private var resultLists: some View {
+        let favoriteIds = Set(favorites.map(\.recipeId))
+        if session.selectedStuff.isEmpty {
+            candidateList(favoriteIds: favoriteIds)
+        } else {
+            recommendList(favoriteIds: favoriteIds)
+        }
     }
 
     private func recommendList(favoriteIds: Set<Int>) -> some View {
@@ -86,8 +82,8 @@ struct ResultsView: View {
         return List {
             Section {
                 Picker("推荐方式", selection: $session.mode) {
-                    ForEach(Self.modes, id: \.self) { mode in
-                        Text(Self.label(for: mode)).tag(mode)
+                    ForEach(RecommendationMode.displayModes, id: \.self) { mode in
+                        Text(mode.displayTitle).tag(mode)
                     }
                 }
             } footer: {
@@ -126,6 +122,7 @@ struct ResultsView: View {
                             NavigationLink(value: RecipeRoute(recipe: match.recipe, match: match, rank: ranks[match.recipe.id], dietaryGoal: session.dietaryGoal)) {
                                 RecipeRow(recipe: match.recipe, match: match, dietaryGoal: session.dietaryGoal)
                             }
+                            .accessibilityIdentifier("dietary.recipe.\(match.recipe.id)")
                             .recipeActions(match.recipe, isFavorite: favoriteIds.contains(match.recipe.id), store: store) {
                                 favoriteActions.set(match.recipe.id, isFavorite: !favoriteIds.contains(match.recipe.id))
                             }
@@ -143,10 +140,15 @@ struct ResultsView: View {
         .animation(.snappy, value: matches.map(\.recipe.id))
     }
 
-    private func goalList(favoriteIds: Set<Int>) -> some View {
+    private func candidateList(favoriteIds: Set<Int>) -> some View {
         let recipes = session.candidates(in: store)
         return List {
-            if recipes.isEmpty { goalEmptyState }
+            if recipes.isEmpty {
+                if session.dietaryGoal != nil { goalEmptyState }
+                else {
+                    ContentUnavailableView("没有找到合适的菜", systemImage: "magnifyingglass", description: Text("试试更换菜名、场景或筛选条件。"))
+                }
+            }
             Section {
                 ForEach(recipes) { recipe in
                     NavigationLink(value: RecipeRoute(recipe: recipe, dietaryGoal: session.dietaryGoal)) {
@@ -158,7 +160,7 @@ struct ResultsView: View {
                     }
                 }
             } header: {
-                if !recipes.isEmpty { Text("已核对做法 · \(recipes.count)") }
+                if !recipes.isEmpty { Text("\(session.dietaryGoal == nil ? "当前候选" : "已核对做法") · \(recipes.count)") }
             } footer: {
                 if let goal = session.dietaryGoal { Text(goal.explanation) }
                 Text("可继续选择食材和厨具；选择食材后，推荐方式才参与筛选。")
@@ -179,37 +181,7 @@ struct ResultsView: View {
         }
     }
 
-    /// 没选食材、只选了厨具：用这个厨具能做的菜，忌口和筛选照样生效（和 Web 的 toolRecipes 一致）
-    private func toolList(_ tool: String, favoriteIds: Set<Int>) -> some View {
-        let recipes = store.recommender.recipes(using: tool, options: session.options)
 
-        return List {
-            Section {
-                if recipes.isEmpty {
-                    ContentUnavailableView(
-                        "没有用\(store.toolLabel(tool))能做的菜",
-                        systemImage: "frying.pan",
-                        description: Text("换个厨具，或者放宽筛选条件。")
-                    )
-                }
-                ForEach(recipes) { recipe in
-                    NavigationLink(value: RecipeRoute(recipe: recipe)) {
-                        RecipeRow(recipe: recipe)
-                    }
-                    .recipeActions(recipe, isFavorite: favoriteIds.contains(recipe.id), store: store) {
-                        favoriteActions.set(recipe.id, isFavorite: !favoriteIds.contains(recipe.id))
-                    }
-                }
-            } header: {
-                if !recipes.isEmpty {
-                    Text("用\(store.toolLabel(tool))能做 · \(recipes.count)")
-                }
-            } footer: {
-                Text("再选几样食材，会按缺几样排好。")
-            }
-        }
-        .animation(.snappy, value: recipes.map(\.id))
-    }
 }
 
 /// 「再补一样」：家里正好有的话点一下，差一种的菜就变成齐全
@@ -260,87 +232,5 @@ private struct UnlockSection: View {
         } footer: {
             Text("家里有的话点一下，差一种的菜就能直接做")
         }
-    }
-}
-
-/// 列表里的一道菜
-struct RecipeRow: View {
-    @Environment(RecipeStore.self) private var store
-    let recipe: Recipe
-    var match: RecipeMatch? = nil
-    var dietaryGoal: DietaryGoal? = nil
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(store.thumbnail(for: recipe))
-                .font(.largeTitle)
-                .frame(minWidth: 44)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(recipe.name)
-                    .font(.headline)
-                Text(store.meta(for: recipe))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                if let dietaryGoal, let entry = store.dietaryCatalog?.entry(for: recipe, goal: dietaryGoal) {
-                    Text(entry.reason(for: dietaryGoal))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                if let match, !match.missingStuff.isEmpty {
-                    Text("还缺 \(match.missingStuff.joined(separator: "、"))")
-                        .font(.footnote)
-                        .foregroundStyle(.orange)
-                }
-            }
-        }
-        .padding(.vertical, 2)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-extension View {
-    /// 菜谱行的快捷操作：左滑收藏，长按预览并收藏
-    func recipeActions(_ recipe: Recipe, isFavorite: Bool, store: RecipeStore, toggleFavorite: @escaping () -> Void) -> some View {
-        let label = Label(isFavorite ? "取消收藏" : "收藏", systemImage: isFavorite ? "heart.slash" : "heart")
-        return swipeActions(edge: .leading, allowsFullSwipe: true) {
-            Button(action: toggleFavorite) { label }
-                .tint(isFavorite ? .gray : .pink)
-        }
-        .contextMenu {
-            Button(action: toggleFavorite) { label }
-        } preview: {
-            RecipePreviewCard(thumbnail: store.thumbnail(for: recipe), name: recipe.name, meta: store.meta(for: recipe), stuff: recipe.stuff)
-        }
-    }
-}
-
-/// 长按菜谱时的预览卡片。预览在单独的层级里渲染，拿不到环境里的 store，内容直接传进来
-private struct RecipePreviewCard: View {
-    let thumbnail: String
-    let name: String
-    let meta: String
-    let stuff: [String]
-
-    var body: some View {
-        VStack(spacing: 10) {
-            Text(thumbnail)
-                .font(.system(size: 72))
-            Text(name)
-                .font(.title2.bold())
-                .multilineTextAlignment(.center)
-            Text(meta)
-                .foregroundStyle(.secondary)
-            if !stuff.isEmpty {
-                Text(stuff.joined(separator: "、"))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(3)
-            }
-        }
-        .padding(28)
-        .frame(width: 300)
     }
 }

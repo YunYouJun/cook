@@ -18,12 +18,13 @@ final class SearchIntentUITests: XCTestCase {
 
     @MainActor
     private func preview(_ app: XCUIApplication, text: String) {
-        let search = app.searchFields.firstMatch
-        if !search.isHittable { app.swipeDown() }
+        let search = app.textFields["cook.query"]
         XCTAssertTrue(search.waitForExistence(timeout: 10))
+        XCTAssertTrue(search.isHittable)
         search.tap()
         search.typeText(text)
         XCTAssertTrue(app.buttons["intent.preview"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["intent.preview"].isHittable)
         app.buttons["intent.preview"].tap()
         XCTAssertTrue(app.buttons["intent.apply"].waitForExistence(timeout: 10))
         let screen = XCTAttachment(screenshot: app.screenshot())
@@ -164,9 +165,13 @@ final class SearchIntentUITests: XCTestCase {
         app.buttons["intent.cancel"].tap()
         XCTAssertTrue(app.buttons["鸡蛋"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["鸡蛋"].isSelected)
-        let search = app.searchFields.firstMatch
+        let search = app.textFields["cook.query"]
+        XCTAssertTrue(search.waitForExistence(timeout: 10))
+        XCTAssertTrue(search.isHittable)
         search.tap()
         search.typeText("鸡蛋，不要辣")
+        XCTAssertTrue(app.buttons["intent.preview"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["intent.preview"].isHittable)
         app.buttons["intent.preview"].tap()
         XCTAssertTrue(app.buttons["intent.apply"].waitForExistence(timeout: 10))
         app.buttons["intent.apply"].tap()
