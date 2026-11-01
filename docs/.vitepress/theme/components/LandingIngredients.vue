@@ -26,7 +26,9 @@ const shown = computed(() => {
       <button v-for="item in shown" :key="item.name" class="ingredient-item" type="button" :aria-pressed="selected.includes(item.name)" @click="emit('select', item.name)">
         <span class="ingredient-art" aria-hidden="true"><img v-if="ingredientImage(item.name)" :src="ingredientImage(item.name)" alt="" width="52" height="52"><template v-else>{{ item.emoji }}</template></span>
         <span class="ingredient-name">{{ item.name }}</span>
-        <span v-if="selected.includes(item.name)" class="ingredient-check" aria-hidden="true">✓</span>
+        <span v-if="selected.includes(item.name)" class="ingredient-check" aria-hidden="true">
+          <svg class="ingredient-check-icon" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8 3 3 6-6" /></svg>
+        </span>
       </button>
     </div>
     <div class="ingredient-tools">
@@ -129,7 +131,10 @@ const shown = computed(() => {
   border-radius: 50%;
   background: var(--sky-2);
   color: var(--cook-action-text);
-  font-size: 11px;
+  line-height: 1;
+}
+.ingredient-check-icon {
+  display: block;
 }
 .inventory .ingredient-tools {
   margin-top: 6px;
