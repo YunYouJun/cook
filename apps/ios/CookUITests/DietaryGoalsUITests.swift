@@ -2,6 +2,51 @@ import UIKit
 import XCTest
 
 final class DietaryGoalsUITests: XCTestCase {
+
+    @MainActor
+    func testNextDayLunchAndWeightGoalIntersectAndShowSourceOilUnits() {
+        verifyNextDayLunchAndWeightGoal(contentSize: .large)
+    }
+
+    @MainActor
+    func testNextDayLunchAndWeightGoalAtAccessibilitySize() {
+        verifyNextDayLunchAndWeightGoal(contentSize: .accessibilityExtraExtraExtraLarge)
+    }
+
+    @MainActor
+    private func verifyNextDayLunchAndWeightGoal(contentSize: UIContentSizeCategory) {
+        let app = self.app(contentSize: contentSize)
+        let filters = app.buttons["cook.filters"].firstMatch
+        XCTAssertTrue(filters.waitForExistence(timeout: 15))
+        filters.tap()
+        let options = app.collectionViews["filter.options"]
+        let lunch = options.buttons["discovery.scene.next-day-lunch"]
+        XCTAssertTrue(lunch.waitForExistence(timeout: 10))
+        for _ in 0..<3 where !lunch.isHittable { options.swipeUp() }
+        XCTAssertTrue(lunch.isHittable)
+        lunch.tap()
+        let count = app.descendants(matching: .any).matching(identifier: "filter.resultCount").firstMatch
+        XCTAssertTrue(count.waitForExistence(timeout: 10))
+        XCTAssertEqual(count.label.filter { $0.isASCII && $0.isNumber }, "10")
+        XCTAssertTrue(options.staticTexts["discovery.explanation"].label.contains("冷藏"))
+        app.buttons["filter.done"].tap()
+
+        select("weight-aware", in: app)
+        filters.tap()
+        XCTAssertTrue(count.waitForExistence(timeout: 10))
+        XCTAssertEqual(count.label.filter { $0.isASCII && $0.isNumber }, "9")
+        app.buttons["filter.done"].tap()
+        showResults(app)
+        guard let recipe = revealRecipe("dietary.recipe.333", in: app, maximumSwipes: 5) else { return }
+        recipe.tap()
+        let reviewed = app.buttons["dietary.openReviewedRecipe"]
+        XCTAssertTrue(reviewed.waitForExistence(timeout: 10))
+        reviewed.tap()
+        let reason = app.staticTexts["dietary.reviewReason"]
+        XCTAssertTrue(reason.waitForExistence(timeout: 10))
+        XCTAssertTrue(reason.label.contains("5–10 ml"), reason.label)
+        capture(app, named: "weight-aware-next-day-lunch-source-units-\(contentSize.rawValue)")
+    }
     @MainActor
     private func app(contentSize: UIContentSizeCategory = .large, showsIntroduction: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
@@ -21,7 +66,7 @@ final class DietaryGoalsUITests: XCTestCase {
         let openedFilters = openGoalPicker(in: app)
         let option = app.buttons["dietary.goal.\(goal)"]
         XCTAssertTrue(option.waitForExistence(timeout: 10))
-        XCTAssertFalse(app.buttons["dietary.goal.weight-aware"].exists)
+        XCTAssertTrue(app.buttons["dietary.goal.weight-aware"].exists)
         option.tap()
         XCTAssertTrue(option.isSelected)
         finishGoalSelection(in: app, closingFilters: openedFilters)

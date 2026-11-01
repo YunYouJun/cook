@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "policyVersion": 1,
-  "dataVersion": "faf919fc0041",
+  "dataVersion": "0d18a7815a3d",
   "stuff": [
     "冬瓜",
     "包菜",
@@ -83,6 +83,7 @@
     "微波"
   ],
   "availableGoals": [
+    "weight-aware",
     "less-added-sugar",
     "balanced-pairing"
   ]

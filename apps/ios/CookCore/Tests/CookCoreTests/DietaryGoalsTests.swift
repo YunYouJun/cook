@@ -18,13 +18,13 @@ final class DietaryGoalsTests: XCTestCase {
         }
     }
 
-    func testBundledCatalogValidatesEveryEntryAndKeepsWeightGoalClosed() throws {
+    func testBundledCatalogValidatesEveryEntryAndOpensWeightGoalAtTen() throws {
         let catalog = try catalog()
-        XCTAssertEqual(catalog.entries.count, 32)
+        XCTAssertEqual(catalog.entries.count, 36)
         XCTAssertEqual(catalog.rejectedEntryCount, 0)
-        XCTAssertEqual(catalog.availableGoals, [.lessAddedSugar, .balancedPairing])
+        XCTAssertEqual(catalog.availableGoals, [.weightAware, .lessAddedSugar, .balancedPairing])
         XCTAssertEqual(catalog.count(for: .lessAddedSugar), 12)
-        XCTAssertEqual(catalog.count(for: .weightAware), 2)
+        XCTAssertEqual(catalog.count(for: .weightAware), 10)
         XCTAssertEqual(catalog.entries[800]?.portionOil?.perServingUpper, 0)
     }
 
@@ -33,12 +33,15 @@ final class DietaryGoalsTests: XCTestCase {
         XCTAssertNil(changedText.entries[333])
         XCTAssertEqual(changedText.rejectedEntryCount, 1)
         XCTAssertEqual(changedText.availableGoals.count, 2)
+        XCTAssertFalse(changedText.availableGoals.contains(.weightAware))
+        XCTAssertEqual(changedText.count(for: .weightAware), 9)
         XCTAssertNil(try catalog(changedRecipeID: 333).entries[333])
     }
 
     func testVersionAndAmountMismatchFailClosed() throws {
-        XCTAssertThrowsError(try catalog { $0["schemaVersion"] = 2 })
-        XCTAssertThrowsError(try catalog { $0["policyVersion"] = 2 })
+        XCTAssertThrowsError(try catalog { $0["schemaVersion"] = 99 })
+        XCTAssertThrowsError(try catalog { $0["policyVersion"] = 99 })
+        XCTAssertThrowsError(try catalog { $0["schemaVersion"] = 1 })
         XCTAssertThrowsError(try catalog { $0["amountsFingerprint"] = String(repeating: "0", count: 64) })
     }
 
@@ -50,7 +53,7 @@ final class DietaryGoalsTests: XCTestCase {
     func testStaleEntriesCannotBeUsedToMeetCoverageThreshold() throws {
         let catalog = try catalog { document in
             var entries = document["recipes"] as! [String: Any]
-            for key in ["333", "630", "677"] { entries.removeValue(forKey: key) }
+            for key in ["333", "630", "677", "701", "736", "756", "799"] { entries.removeValue(forKey: key) }
             document["recipes"] = entries
         }
         XCTAssertEqual(catalog.entries.count, 29)
@@ -67,7 +70,7 @@ final class DietaryGoalsTests: XCTestCase {
         XCTAssertTrue(ids.contains(333))
         XCTAssertFalse(ids.contains(849), "Optional sugar cannot silently disappear from the original preparation")
         XCTAssertFalse(ids.contains(789), "Unverified sauce is unknown, rather than zero sugar")
-        XCTAssertTrue(catalog.candidates(options, goal: .weightAware, using: recommender).isEmpty)
+        XCTAssertEqual(catalog.candidates(options, goal: .weightAware, using: recommender).count, 10)
         let keyword = RecommendationOptions(stuff: [], keyword: "菠菜")
         XCTAssertEqual(catalog.candidates(keyword, goal: .lessAddedSugar, using: recommender).map(\.id), [630])
     }
@@ -127,5 +130,47 @@ final class DietaryGoalsTests: XCTestCase {
         let oil = try JSONDecoder().decode(DietaryCatalog.PortionOil.self, from: Data(#"{"referenceServings":2,"batchOilGrams":{"lower":10,"upper":15},"servingEvidence":[],"oilEvidence":[]}"#.utf8))
         XCTAssertEqual(oil.perServingLower, 5)
         XCTAssertEqual(oil.perServingUpper, 7.5)
+        XCTAssertEqual(oil.unit, .grams)
+        XCTAssertTrue(oil.label.hasSuffix(" g"))
+        let volume = try XCTUnwrap(catalog.entries[333]?.portionOil)
+        XCTAssertEqual(volume.unit, .milliliters)
+        XCTAssertEqual(volume.perServingLower, 5)
+        XCTAssertEqual(volume.perServingUpper, 10)
+        XCTAssertTrue(volume.label.hasSuffix(" ml"))
+        XCTAssertTrue(volume.label.hasPrefix("每人添加油"))
+        XCTAssertEqual(catalog.entries[630]?.portionOil?.perServingUpper, 15)
+        XCTAssertEqual(catalog.entries[814]?.portionOil?.perServingUpper, 7.5)
+    }
+
+    func testMixedOilUnitsAreRejectedAndNeverComparedAsNutritionScores() throws {
+        let invalid = #"{"referenceServings":2,"batchOilGrams":{"lower":10,"upper":15},"batchOilMilliliters":{"lower":10,"upper":15},"servingEvidence":[],"oilEvidence":[]}"#
+        XCTAssertThrowsError(try JSONDecoder().decode(DietaryCatalog.PortionOil.self, from: Data(invalid.utf8)))
+        let data = try SharedFixtureTests.loadData()
+        let recommender = Recommender(recipes: data.recipes, normalizer: data.normalizer)
+        let candidates = try catalog().candidates(RecommendationOptions(stuff: []), goal: .weightAware, using: recommender)
+        let scores = candidates.map { $0.score ?? Recommender.defaultScore }
+        XCTAssertEqual(scores, scores.sorted(by: >))
+    }
+
+    func testLegacyGramOnlyCatalogStillLoadsWithoutTreatingVolumeAsGrams() throws {
+        let legacy = try catalog { document in
+            document["schemaVersion"] = 1
+            document["policyVersion"] = 1
+            document["enabledGoals"] = ["less-added-sugar", "balanced-pairing"]
+            var entries = document["recipes"] as! [String: [String: Any]]
+            for key in ["333", "630", "677", "701", "736", "756", "799", "814"] {
+                entries[key]?.removeValue(forKey: "portionOil")
+                var assessments = entries[key]!["assessments"] as! [String: [String: Any]]
+                assessments["weight-aware"]?["status"] = "unknown"
+                assessments["weight-aware"]?["reason"] = "unverified-portion-oil"
+                entries[key]?["assessments"] = assessments
+            }
+            document["recipes"] = entries
+        }
+        XCTAssertEqual(legacy.rejectedEntryCount, 0)
+        XCTAssertEqual(legacy.availableGoals, [.lessAddedSugar, .balancedPairing])
+        XCTAssertEqual(legacy.count(for: .weightAware), 2)
+        XCTAssertEqual(legacy.entries[800]?.portionOil?.unit, .grams)
+        XCTAssertEqual(legacy.entries[800]?.portionOil?.perServingUpper, 0)
     }
 }

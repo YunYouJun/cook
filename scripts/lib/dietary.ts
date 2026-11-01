@@ -27,15 +27,16 @@ export interface DietaryEntry {
   assessments: Record<DietaryGoalID, DietaryAssessment>
   portionOil?: {
     referenceServings: number
-    batchOilGrams: { lower: number, upper: number }
+    batchOilGrams?: { lower: number, upper: number }
+    batchOilMilliliters?: { lower: number, upper: number }
     servingEvidence: AmountAnchor[]
     oilEvidence: AmountAnchor[]
   }
 }
 
 export interface DietaryData {
-  schemaVersion: 1
-  policyVersion: 1
+  schemaVersion: 1 | 2
+  policyVersion: 1 | 2
   dataVersion: string
   amountsFingerprint: string
   enabledGoals: DietaryGoalID[]
@@ -62,6 +63,8 @@ export function dietaryDataVersion(data: DietaryData): string {
 /** Verify source evidence and release coverage after JSON Schema validation. */
 export function validateDietaryData(data: DietaryData, recipes: RecipeItem[], texts: Record<string, RecipeText>, amountsFingerprint: string): string[] {
   const errors: string[] = []
+  if (![1, 2].includes(data.schemaVersion) || data.policyVersion !== data.schemaVersion)
+    errors.push('饮食数据结构或审核政策版本不支持')
   const byID = new Map(recipes.map(recipe => [String(recipe.id), recipe]))
   if (data.dataVersion !== dietaryDataVersion(data))
     errors.push('饮食数据版本与内容不一致')
@@ -105,8 +108,16 @@ export function validateDietaryData(data: DietaryData, recipes: RecipeItem[], te
           fail('添加糖或未核对复合调料不能标为未添加糖')
         if (goal === 'weight-aware') {
           const oil = entry.portionOil
-          if (!oil || oil.batchOilGrams.lower > oil.batchOilGrams.upper || !oil.servingEvidence.every(matches) || !oil.oilEvidence.every(matches))
+          const range = oil?.batchOilGrams ?? oil?.batchOilMilliliters
+          const hasOneUnit = oil && (oil.batchOilGrams === undefined) !== (oil.batchOilMilliliters === undefined)
+          if (!oil || !hasOneUnit || !range || !Number.isFinite(range.lower) || !Number.isFinite(range.upper)
+            || range.lower < 0 || range.lower > range.upper
+            || !Number.isInteger(oil.referenceServings) || oil.referenceServings < 1 || oil.referenceServings > 20
+            || (data.schemaVersion === 1 && oil.batchOilMilliliters !== undefined)
+            || !oil.servingEvidence.length || !oil.oilEvidence.length
+            || !oil.servingEvidence.every(matches) || !oil.oilEvidence.every(matches)) {
             fail('份量、添加油数值或证据无效')
+          }
         }
       }
       else if (!['added-sugar', 'unverified-seasoning', 'unverified-portion-oil'].includes(assessment.reason)) {

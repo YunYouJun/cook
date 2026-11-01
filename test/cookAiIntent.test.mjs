@@ -344,8 +344,17 @@ test('production HTTP adapters forward user bearer only to fixed platform endpoi
   assert.deepEqual(body.messages.map(message => message.role), ['system', 'user'])
   assert.equal(body.messages[1].content, input().text)
   assert.ok(body.messages[0].content.includes(JSON.stringify(CONTRACT)))
+  assert.ok(body.messages[0].content.includes('never infer it from 减肥, 减脂, 低热量'))
   for (const secret of [USER_TOKEN, PROVIDER_KEY, 'verified-user', 'private-favorite'])
     assert.ok(!provider.body.includes(secret), secret)
+})
+
+test('weight awareness is accepted only when the trusted contract explicitly offers it', () => {
+  const value = intent({ goal: 'weight-aware' })
+  assert.throws(() => validateIntent(value, CONTRACT), IntentServiceError)
+  const enabled = { ...CONTRACT, availableGoals: ['weight-aware', ...CONTRACT.availableGoals] }
+  assert.equal(validateIntent(value, enabled).goal, 'weight-aware')
+  assert.throws(() => validateIntent({ ...value, calories: 400 }, enabled), IntentServiceError)
 })
 
 test('production identity gate rejects anonymous, missing UID, unusable status and redirects without any account or model call', async () => {

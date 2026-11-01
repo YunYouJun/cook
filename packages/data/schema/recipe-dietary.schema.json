@@ -1,12 +1,12 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Cook 饮食做法核对数据 v1",
+  "title": "Cook 饮食做法核对数据 v2",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "policyVersion", "dataVersion", "amountsFingerprint", "enabledGoals", "recipes"],
   "properties": {
-    "schemaVersion": { "const": 1 },
-    "policyVersion": { "const": 1 },
+    "schemaVersion": { "enum": [1, 2] },
+    "policyVersion": { "enum": [1, 2] },
     "dataVersion": { "type": "string", "pattern": "^[a-f0-9]{12}$" },
     "amountsFingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "enabledGoals": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/goal" } },
@@ -16,6 +16,16 @@
       "additionalProperties": { "$ref": "#/$defs/entry" }
     }
   },
+  "allOf": [{
+    "if": { "properties": { "schemaVersion": { "const": 1 } } },
+    "then": { "properties": {
+      "policyVersion": { "const": 1 },
+      "recipes": { "type": "object", "additionalProperties": { "type": "object", "properties": {
+        "portionOil": { "type": "object", "required": ["batchOilGrams"], "properties": { "batchOilMilliliters": false } }
+      } } }
+    } },
+    "else": { "properties": { "policyVersion": { "const": 2 } } }
+  }],
   "$defs": {
     "goal": { "enum": ["weight-aware", "less-added-sugar", "balanced-pairing"] },
     "names": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
@@ -70,10 +80,15 @@
         "portionOil": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["referenceServings", "batchOilGrams", "servingEvidence", "oilEvidence"],
+          "required": ["referenceServings", "servingEvidence", "oilEvidence"],
+          "oneOf": [{ "required": ["batchOilGrams"] }, { "required": ["batchOilMilliliters"] }],
           "properties": {
             "referenceServings": { "type": "integer", "minimum": 1, "maximum": 20 },
             "batchOilGrams": {
+              "type": "object", "additionalProperties": false, "required": ["lower", "upper"],
+              "properties": { "lower": { "type": "number", "minimum": 0 }, "upper": { "type": "number", "minimum": 0 } }
+            },
+            "batchOilMilliliters": {
               "type": "object", "additionalProperties": false, "required": ["lower", "upper"],
               "properties": { "lower": { "type": "number", "minimum": 0 }, "upper": { "type": "number", "minimum": 0 } }
             },
