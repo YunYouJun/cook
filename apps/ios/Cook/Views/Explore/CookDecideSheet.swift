@@ -6,59 +6,13 @@ import UIKit
 struct CookDecideRequest: Identifiable {
     let id = UUID()
     let batchIDs: [Int]?
-}
+    var ignoringKeyword = false
 
-/// 找菜标题栏里的「今天吃什么」。字号在工具栏里封顶，避免把筛选和视图挤出屏幕；决定页本身跟随动态字体。
-struct CookDecideToolbarButton: UIViewRepresentable {
-    var present: () -> Void
-
-    func makeCoordinator() -> Coordinator { Coordinator(present: present) }
-
-    func makeUIView(context: Context) -> UIButton {
-        let button = UIButton(type: .system)
-        button.setContentHuggingPriority(.required, for: .horizontal)
-        button.setContentCompressionResistancePriority(.required, for: .horizontal)
-        button.addTarget(context.coordinator, action: #selector(Coordinator.tap), for: .touchUpInside)
-        return button
-    }
-
-    func updateUIView(_ button: UIButton, context: Context) {
-        context.coordinator.present = present
-        // 和「清空 / 视图」共用标题栏，字号封顶，避免把「今天吃什么」挤出屏幕。决定页里的文字仍跟随动态字体。
-        let font = UIFontMetrics(forTextStyle: .subheadline).scaledFont(
-            for: UIFont.systemFont(ofSize: 15, weight: .semibold),
-            maximumPointSize: 17,
-            compatibleWith: button.traitCollection
-        )
-        var configuration = UIButton.Configuration.plain()
-        configuration.title = "今天吃什么"
-        configuration.image = UIImage(systemName: "dice.fill", withConfiguration: UIImage.SymbolConfiguration(pointSize: font.pointSize, weight: .semibold))
-        configuration.imagePlacement = .leading
-        configuration.imagePadding = 4
-        configuration.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 2, bottom: 0, trailing: 2)
-        configuration.titleLineBreakMode = .byClipping
-        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
-            var outgoing = incoming
-            outgoing.font = font
-            return outgoing
-        }
-        button.configuration = configuration
-        button.isEnabled = context.environment.isEnabled
-        // 工具栏有时只把无障碍标签交给 VoiceOver，不转发按钮标题。标签与可见文字相同。
-        button.accessibilityLabel = "今天吃什么"
-        button.accessibilityHint = "按当前食材、厨具、筛选和饮食目标随机选一道，也可以摇一摇"
-        button.accessibilityIdentifier = "cook.decideToday"
-    }
-
-    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UIButton, context: Context) -> CGSize? {
-        let size = uiView.intrinsicContentSize
-        return CGSize(width: max(44, size.width), height: max(44, size.height))
-    }
-
-    final class Coordinator: NSObject {
-        var present: () -> Void
-        init(present: @escaping () -> Void) { self.present = present }
-        @objc func tap() { present() }
+    /// A captured empty batch stays empty instead of broadening to the catalog.
+    func recipes(in snapshot: CookCandidateSnapshot) -> [Recipe] {
+        guard let batchIDs else { return snapshot.recipes }
+        let ids = Set(batchIDs)
+        return snapshot.recipes.filter { ids.contains($0.id) }
     }
 }
 
@@ -72,9 +26,9 @@ extension View {
     }
 }
 
-/// 灵感区和标题栏共用的条件说明，避免两处各写一套。
+/// Conditions shared by the inspiration section and the library decision sheet.
 enum CookDiscoverySummary {
-    static func lines(session: CookSession, store: RecipeStore) -> [String] {
+    static func lines(session: CookSession, store: RecipeStore, ignoringKeyword: Bool = false) -> [String] {
         var parts: [String] = []
         if let goal = session.dietaryGoal { parts.append("饮食目标：\(goal.title)") }
         if !session.selectedStuff.isEmpty {
@@ -83,7 +37,7 @@ enum CookDiscoverySummary {
         }
         if let tool = session.tool { parts.append("厨具：\(store.toolLabel(tool))") }
         let keyword = session.keyword.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !keyword.isEmpty { parts.append("菜名：\(keyword)") }
+        if !ignoringKeyword, !keyword.isEmpty { parts.append("菜名：\(keyword)") }
         if let scene = session.discoveryScene { parts.append("想法：\(scene.label)") }
         if !session.avoid.isEmpty { parts.append("忌口：\(session.avoid.joined(separator: "、"))") }
         if session.noSpicy { parts.append("不吃辣") }
@@ -91,12 +45,12 @@ enum CookDiscoverySummary {
         return parts
     }
 
-    static func emptyExplanation(session: CookSession, store: RecipeStore) -> String {
+    static func emptyExplanation(session: CookSession, store: RecipeStore, ignoringKeyword: Bool = false) -> String {
         if let goal = session.dietaryGoal, let message = store.dietaryUnavailableMessage(for: goal) { return message }
         if session.discoveryScene != nil {
             return "当前条件和这次的想法暂时没有交集，可以取消场景，或调整食材、厨具和筛选。"
         }
-        if !session.keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if !ignoringKeyword, !session.keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return "换个菜名试试，或清除菜名继续看看。已有食材、忌口和饮食目标会继续保留。"
         }
         return "还没找到符合这些条件的菜，试试调整食材、厨具或筛选。"
@@ -120,7 +74,7 @@ private struct CookDecideSheetModifier: ViewModifier {
             pending = nil
             openRecipe(route)
         }) { item in
-            CookDecideSheet(batchIDs: item.batchIDs, lastDecidedID: $lastDecidedID) { route in
+            CookDecideSheet(request: item, lastDecidedID: $lastDecidedID) { route in
                 pending = route
                 request = nil
             }
@@ -132,7 +86,6 @@ private struct CookDecideSheetModifier: ViewModifier {
 private struct CookDecideSheet: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
-    @Environment(AppRouter.self) private var router
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -140,7 +93,7 @@ private struct CookDecideSheet: View {
     @ScaledMetric(relativeTo: .largeTitle) private var dieSize: CGFloat = 48
     @ScaledMetric(relativeTo: .largeTitle) private var thumbnailSize: CGFloat = 64
 
-    let batchIDs: [Int]?
+    let request: CookDecideRequest
     @Binding var lastDecidedID: Int?
     let onOpen: (RecipeRoute) -> Void
 
@@ -149,12 +102,18 @@ private struct CookDecideSheet: View {
     @State private var spin = 0
     @State private var settledCount = 0
     @State private var rollToken = 0
+    @State private var showingFilters = false
     @State private var detent: PresentationDetent = .large
 
+    private struct RollTaskID: Hashable {
+        let pool: [Recipe]
+        let revision: Int
+    }
+
     var body: some View {
-        let snapshot = session.candidateSnapshot(in: store)
+        let snapshot = session.candidateSnapshot(in: store, ignoringKeyword: request.ignoringKeyword)
         let pool = resolvedPool(snapshot)
-        let lines = CookDiscoverySummary.lines(session: session, store: store)
+        let lines = CookDiscoverySummary.lines(session: session, store: store, ignoringKeyword: request.ignoringKeyword)
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -188,18 +147,22 @@ private struct CookDecideSheet: View {
                     Button("关闭") { dismiss() }
                         .accessibilityIdentifier("cook.decide.close")
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingFilters = true } label: {
+                        Label("筛选", systemImage: session.activeFilterCount > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                    }
+                    .accessibilityValue(session.dietaryGoal?.title ?? "不限目标")
+                    .accessibilityIdentifier("cook.decide.filters")
+                }
             }
         }
         .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium, .large], selection: $detent)
         .presentationDragIndicator(.visible)
         .presentationBackground(Color(uiColor: .systemGroupedBackground))
-        .task(id: rollToken) { await roll() }
-        .onChange(of: Set(pool.map(\.id))) { _, ids in
-            let stillValid = displayed.map { ids.contains($0.id) } ?? false
-            if !stillValid { rollToken += 1 }
-        }
+        .sheet(isPresented: $showingFilters) { FilterSheet() }
+        .task(id: RollTaskID(pool: pool, revision: rollToken)) { await roll(in: pool) }
         .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
-            guard scenePhase == .active, router.tab == .cook else { return }
+            guard scenePhase == .active, !showingFilters else { return }
             rollToken += 1
         }
         .sensoryFeedback(.success, trigger: settledCount)
@@ -210,7 +173,7 @@ private struct CookDecideSheet: View {
             Text("这次还没找到合适的菜。")
                 .font(.headline)
                 .accessibilityIdentifier("cook.decide.empty")
-            Text(CookDiscoverySummary.emptyExplanation(session: session, store: store))
+            Text(CookDiscoverySummary.emptyExplanation(session: session, store: store, ignoringKeyword: request.ignoringKeyword))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -226,16 +189,18 @@ private struct CookDecideSheet: View {
 
     private func stage(_ snapshot: CookCandidateSnapshot) -> some View {
         VStack(spacing: 14) {
-            Text(shuffling ? "正在挑一道菜" : "就做这道")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .accessibilityHidden(true)
-            die
+            if !dynamicTypeSize.isAccessibilitySize {
+                Text(shuffling ? "正在挑一道菜" : "就做这道")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityHidden(true)
+                die
+            }
             ZStack {
-                if !reduceMotion {
+                if !reduceMotion, !dynamicTypeSize.isAccessibilitySize {
                     DecideDeck(shuffling: shuffling)
                 }
-                if let recipe = displayed {
+                if let recipe = displayed, resolvedPool(snapshot).contains(where: { $0.id == recipe.id }) {
                     recipeCard(recipe, snapshot: snapshot)
                         .id(recipe.id)
                         .transition(cardTransition)
@@ -280,9 +245,11 @@ private struct CookDecideSheet: View {
     private func recipeCard(_ recipe: Recipe, snapshot: CookCandidateSnapshot) -> some View {
         let match = snapshot.matchesByID[recipe.id]
         return VStack(spacing: 10) {
-            Text(store.thumbnail(for: recipe))
-                .font(.system(size: thumbnailSize))
-                .accessibilityHidden(true)
+            if !dynamicTypeSize.isAccessibilitySize {
+                Text(store.thumbnail(for: recipe))
+                    .font(.system(size: thumbnailSize))
+                    .accessibilityHidden(true)
+            }
             Text(recipe.name)
                 .font(.title.bold())
                 .multilineTextAlignment(.center)
@@ -294,7 +261,7 @@ private struct CookDecideSheet: View {
                 .fixedSize(horizontal: false, vertical: true)
             if let match {
                 if match.missingStuff.isEmpty {
-                    Text("已选食材都能用上")
+                    Text("所需食材已齐")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 } else {
@@ -365,15 +332,13 @@ private struct CookDecideSheet: View {
     }
 
     private func resolvedPool(_ snapshot: CookCandidateSnapshot) -> [Recipe] {
-        guard let batchIDs, !batchIDs.isEmpty else { return snapshot.recipes }
-        let ids = Set(batchIDs)
-        return snapshot.recipes.filter { ids.contains($0.id) }
+        request.recipes(in: snapshot)
     }
 
     private func accessibilitySummary(_ recipe: Recipe, match: RecipeMatch?) -> String {
         var parts = [recipe.name, store.meta(for: recipe)]
         if let match {
-            parts.append(match.missingStuff.isEmpty ? "已选食材都能用上" : "还缺\(match.missingStuff.joined(separator: "、"))")
+            parts.append(match.missingStuff.isEmpty ? "所需食材已齐" : "还缺\(match.missingStuff.joined(separator: "、"))")
         }
         if let goal = session.dietaryGoal, let reason = store.dietaryCatalog?.entry(for: recipe, goal: goal)?.reason(for: goal) {
             parts.append(reason)
@@ -385,25 +350,26 @@ private struct CookDecideSheet: View {
     }
 
     private func confirm() {
-        guard let recipe = displayed, !shuffling else { return }
-        let current = session.candidateSnapshot(in: store)
-        guard resolvedPool(current).contains(where: { $0.id == recipe.id }) else {
+        guard let displayed, !shuffling else { return }
+        let current = session.candidateSnapshot(in: store, ignoringKeyword: request.ignoringKeyword)
+        guard let recipe = resolvedPool(current).first(where: { $0.id == displayed.id }) else {
             rollToken += 1
             return
         }
         onOpen(RecipeRoute(recipe: recipe, match: current.matchesByID[recipe.id], dietaryGoal: session.dietaryGoal))
     }
 
-    private func roll() async {
-        let snapshot = session.candidateSnapshot(in: store)
-        let pool = resolvedPool(snapshot)
-        guard let landing = store.randomRecipe(from: pool, excluding: lastDecidedID) else {
+    private func roll(in pool: [Recipe]) async {
+        guard !Task.isCancelled else { return }
+        let previousName = pool.first { $0.id == lastDecidedID }?.name
+        let alternatives = pool.filter { $0.name != previousName }
+        guard let landing = store.randomRecipe(from: alternatives.isEmpty ? pool : alternatives, excluding: lastDecidedID) else {
             shuffling = false
             displayed = nil
             AccessibilityNotification.Announcement("这次还没找到合适的菜").post()
             return
         }
-        if reduceMotion || pool.count < 2 {
+        if displayed == nil || reduceMotion || pool.count < 2 {
             lastDecidedID = landing.id
             withAnimation(reduceMotion ? .easeOut(duration: 0.12) : .spring(response: 0.42, dampingFraction: 0.72)) {
                 displayed = landing

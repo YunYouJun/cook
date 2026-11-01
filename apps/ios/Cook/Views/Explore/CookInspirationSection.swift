@@ -3,7 +3,7 @@ import SwiftData
 import SwiftUI
 import UIKit
 
-/// 找菜页内的三道候选。浏览和换批留在选择区之后；「帮我决定」打开和标题栏相同的决定页。
+/// Three suggestions with a decision sheet shared by the library dice entry.
 struct CookInspirationSection: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session

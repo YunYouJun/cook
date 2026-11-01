@@ -114,11 +114,12 @@ struct CloudKitchenView: View {
                 .accessibilityIdentifier("cook.filters")
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
-                CookDecideToolbarButton {
-                    decideRequest = CookDecideRequest(batchIDs: nil)
+                Button { session.clearStuff() } label: {
+                    Label("清空", systemImage: "arrow.counterclockwise")
+                        .labelStyle(.iconOnly)
                 }
-                Button("清空") { session.clearStuff() }
-                    .disabled(!session.hasSelection)
+                .disabled(!session.hasSelection)
+                .accessibilityHint("清空本次找菜条件，保留长期偏好")
                 CookPresentationToggle(selection: $presentation, usesCurrentSubtitle: dynamicTypeSize.isAccessibilitySize)
             }
         }

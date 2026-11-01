@@ -6,7 +6,7 @@ enum CookPresentation: String {
     case kitchen
 }
 
-/// 标题栏中的视图菜单，同时展示两个选项和当前选择，不占用食材快选区域。
+/// An icon-only toolbar menu with named options and an accessible current selection.
 struct CookPresentationToggle: UIViewRepresentable {
     @Binding var selection: CookPresentation
     // 工具栏会限制自己的动态字号；菜单跟随页面读到的实际辅助字号设置。
@@ -19,10 +19,6 @@ struct CookPresentationToggle: UIViewRepresentable {
     func makeUIView(context: Context) -> UIButton {
         let button = UIButton(type: .system)
         var configuration = UIButton.Configuration.plain()
-        configuration.title = "视图"
-        configuration.image = UIImage(systemName: "chevron.down", withConfiguration: UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold))
-        configuration.imagePlacement = .trailing
-        configuration.imagePadding = 4
         configuration.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4)
         configuration.baseForegroundColor = .label
         button.configuration = configuration
@@ -34,6 +30,7 @@ struct CookPresentationToggle: UIViewRepresentable {
 
     func updateUIView(_ button: UIButton, context: Context) {
         context.coordinator.selection = $selection
+        button.configuration?.image = UIImage(systemName: selection == .list ? "list.bullet" : "cube", withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .regular))
         let coordinator = context.coordinator
         let quick = UIAction(title: "食材快选", image: UIImage(systemName: "list.bullet"), state: !usesCurrentSubtitle && selection == .list ? .on : .off) { [weak coordinator] _ in
             coordinator?.selection.wrappedValue = .list

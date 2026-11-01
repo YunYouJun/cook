@@ -123,4 +123,15 @@ final class CookDiscoveryTests: XCTestCase {
         XCTAssertTrue(reel.dropLast().allSatisfy { $0.id != 3 })
         XCTAssertTrue(reel.dropLast().allSatisfy { recipe in recipes.contains { $0.id == recipe.id } })
     }
+
+    func testCapturedDecisionBatchNeverBroadensWhenEmptyOrNoLongerEligible() {
+        let snapshot = CookCandidateSnapshot(recipes: recipes, matchesByID: [:])
+        XCTAssertEqual(CookDecideRequest(batchIDs: nil).recipes(in: snapshot), recipes)
+        XCTAssertTrue(CookDecideRequest(batchIDs: []).recipes(in: snapshot).isEmpty)
+        XCTAssertTrue(CookDecideRequest(batchIDs: [9999]).recipes(in: snapshot).isEmpty)
+        let batch = CookDecideRequest(batchIDs: [recipes[0].id, recipes[1].id])
+        XCTAssertEqual(batch.recipes(in: snapshot), Array(recipes.prefix(2)))
+        let updated = CookCandidateSnapshot(recipes: [recipes[1], recipes[2]], matchesByID: [:])
+        XCTAssertEqual(batch.recipes(in: updated), [recipes[1]])
+    }
 }

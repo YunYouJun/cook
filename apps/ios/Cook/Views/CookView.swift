@@ -2,7 +2,7 @@ import CookCore
 import SwiftData
 import SwiftUI
 
-/// 找菜：优先输入与食材快选。标题栏「今天吃什么」随时可打开；三道灵感仍在选择区之后。
+/// Ingredient selection stays first; the inspiration section shares the random decision sheet.
 /// 窄屏（iPhone、折叠屏外屏、分屏后变窄）点底部按钮进入推荐结果；
 /// 宽屏（iPad、iPhone Duo 展开、大屏 iPhone 横屏）左边选食材，右边的推荐结果跟着实时更新
 struct CookView: View {
@@ -157,13 +157,14 @@ struct CookView: View {
                 .accessibilityIdentifier("cook.filters")
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
-                CookDecideToolbarButton {
-                    decideRequest = CookDecideRequest(batchIDs: nil)
-                }
-                Button("清空") {
+                Button {
                     withAnimation(.snappy) { session.clearStuff() }
+                } label: {
+                    Label("清空", systemImage: "arrow.counterclockwise")
+                        .labelStyle(.iconOnly)
                 }
                 .disabled(!session.hasSelection)
+                .accessibilityHint("清空本次找菜条件，保留长期偏好")
                 CookPresentationToggle(selection: $presentation, usesCurrentSubtitle: dynamicTypeSize.isAccessibilitySize)
             }
         }

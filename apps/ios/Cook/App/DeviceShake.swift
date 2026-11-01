@@ -1,7 +1,7 @@
 import UIKit
 
 extension Notification.Name {
-    /// 摇一摇手机。找菜页在未打开详情时处理：灵感可见则从当前一批决定，否则从全部当前候选决定。
+    /// Shared by the visible find-recipes view or decision sheet.
     static let deviceDidShake = Notification.Name("fun.yunle.cook.deviceDidShake")
 }
 

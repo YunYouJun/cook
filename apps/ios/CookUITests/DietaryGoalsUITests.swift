@@ -123,7 +123,6 @@ final class DietaryGoalsUITests: XCTestCase {
             bar.buttons.element(boundBy: 0).tap()
         }
         revealCookingControl(app.buttons["discovery.decide"], in: app)
-        XCTAssertFalse(app.buttons["随机"].exists)
     }
 
     @MainActor
