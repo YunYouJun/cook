@@ -8,7 +8,7 @@
   ],
   "recipes": {
     "333": {
-      "recipeFingerprint": "e5a3180531a0c7d8",
+      "recipeFingerprint": "6b9287ee273db992",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/西葫芦炒鸡蛋/西葫芦炒鸡蛋.md",
       "sourceFingerprint": "175f351179e37fc4",
       "reviewedAt": "2026-10-26",
@@ -622,7 +622,7 @@
       }
     },
     "630": {
-      "recipeFingerprint": "43b2991347412559",
+      "recipeFingerprint": "90693296eebfb343",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/菠菜炒鸡蛋/菠菜炒鸡蛋.md",
       "sourceFingerprint": "c498a7cc00444be1",
       "reviewedAt": "2026-10-26",
@@ -1169,7 +1169,7 @@
       }
     },
     "677": {
-      "recipeFingerprint": "316601060b418ff8",
+      "recipeFingerprint": "9090debaed56018a",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/清炒花菜.md",
       "sourceFingerprint": "3f8831cc66d70e3b",
       "reviewedAt": "2026-10-26",
@@ -1825,7 +1825,7 @@
       }
     },
     "701": {
-      "recipeFingerprint": "c7f492750e797d22",
+      "recipeFingerprint": "6775672ca6ea1048",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/冬瓜桑拿鸡.md",
       "sourceFingerprint": "23a597b3522a9ba3",
       "reviewedAt": "2026-10-26",
@@ -3729,7 +3729,7 @@
       }
     },
     "800": {
-      "recipeFingerprint": "a53181f27fc72371",
+      "recipeFingerprint": "ba503ceee0c9534b",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/排骨苦瓜汤/排骨苦瓜汤.md",
       "sourceFingerprint": "35d355e07cd5614c",
       "reviewedAt": "2026-10-26",
@@ -6334,5 +6334,5 @@
       }
     }
   },
-  "dataVersion": "d933a7d65a25"
+  "dataVersion": "63604070ca5b"
 }

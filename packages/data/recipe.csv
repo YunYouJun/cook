@@ -236,7 +236,7 @@ BBQ烟熏手撕猪肉,猪肉,BV1DV411x7SH,困难,,烤,烤箱,49
 茄子焖饭,茄子,BV1k7411m7nv,简单,单一食材,烧,一口大锅,234
 清炖肉骨头,骨头,BV1n4j36GEzn,普通,单一食材,炖,一口大锅,235
 薯球,土豆,BV1bY4y1H7L9,普通,单一食材,炸,一口大锅,236
-蒜蓉西兰花,西兰花,BV1fy4y1W7z5,简单,单一食材,炒,一口大锅,237,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/蒜蓉西兰花.md
+蒜蓉西兰花,西兰花,BV1fy4y1W7z5,简单,单一食材、次日便当,炒,一口大锅,237,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/蒜蓉西兰花.md
 土豆派,土豆,BV1bY4y1H7L9,简单,单一食材,烘,一口大锅,238
 炸厚土豆片,土豆,BV1mt4y1i7Zr,简单,单一食材,煎,一口大锅,239
 蒸腊肠,腊肠、米,BV1YK4y1e7bM,简单,单一食材,蒸,一口大锅,240
@@ -331,7 +331,7 @@ M记同款麦乐鸡,鸡肉、鸡蛋,BV1KA411e7Gr,,同款,炸,一口大锅,305
 芹菜油豆腐,芹菜、豆腐,BV1AZ4y1j7rE,,下饭,炒,一口大锅,330
 肉末土豆,土豆、猪肉、米,BV1ZS4y127wm,,下饭,炒,一口大锅,331
 莴笋炒肉,莴笋、猪肉,BV1d3411H7G5,普通,下饭,炒,一口大锅,332
-西葫芦炒蛋,西葫芦、鸡蛋、番茄,BV1wT4y1Q7Db,简单,下饭,炒,一口大锅,333,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/西葫芦炒鸡蛋/西葫芦炒鸡蛋.md
+西葫芦炒蛋,西葫芦、鸡蛋、番茄,BV1wT4y1Q7Db,简单,下饭、次日便当,炒,一口大锅,333,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/西葫芦炒鸡蛋/西葫芦炒鸡蛋.md
 西葫芦炒五花肉,西葫芦、猪肉,BV1TL411T7eX,普通,下饭,炒,一口大锅,334
 香辣土豆片,土豆、米,BV1Sq4y137uw,,下饭、辣,煮,一口大锅,335
 小炒拆骨肉,骨头、米,BV14p411o7zm,困难,下饭,炒,一口大锅,336
@@ -628,7 +628,7 @@ biangbiang面,面食,BV1844y157GL,简单,,油泼,一口大锅,393
 红烧瓦块鱼,鱼,BV1oX4y127ZA,普通,,烧,一口大锅,627
 红焖鱼头,鱼,BV1Zp421D76M,普通,,炖,一口大锅,628
 清炒菠菜,菠菜,BV1eU4y1j72P,简单,家常菜,炒,一口大锅,629
-菠菜炒鸡蛋,菠菜、鸡蛋,BV16v4y1s77M,简单,家常菜,炒,一口大锅,630,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/菠菜炒鸡蛋/菠菜炒鸡蛋.md
+菠菜炒鸡蛋,菠菜、鸡蛋,BV16v4y1s77M,简单,家常菜、次日便当,炒,一口大锅,630,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/菠菜炒鸡蛋/菠菜炒鸡蛋.md
 菠菜鸡蛋汤,菠菜、鸡蛋,BV1k44y1W71Z,简单,汤,煮,一口大锅,631
 凉拌菠菜,菠菜,BV1bu4m137KL,简单,凉菜,凉拌,一口大锅,632
 菠菜炖豆腐,菠菜、豆腐,BV1QE41177Sv,简单,家常菜,炖,一口大锅,633
@@ -675,7 +675,7 @@ biangbiang面,面食,BV1844y157GL,简单,,油泼,一口大锅,393
 椒盐玉米,玉米,,普通,,炸,一口大锅,674,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/椒盐玉米/椒盐玉米.md
 榄菜肉末四季豆,豆角、猪肉,,普通,,炒,一口大锅,675,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/榄菜肉末四季豆/榄菜肉末四季豆.md
 油醋爆蛋,鸡蛋,,简单,,煎,一口大锅,676,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/油醋爆蛋.md
-清炒花菜,花菜,,简单,,炒,一口大锅,677,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/清炒花菜.md
+清炒花菜,花菜,,简单,次日便当,炒,一口大锅,677,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/清炒花菜.md
 炒滑蛋,鸡蛋,,简单,,炒,一口大锅,678,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/炒滑蛋/炒滑蛋.md
 炒茄子,茄子、猪肉,,普通,,炒,一口大锅,679,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/炒茄子.md
 炸洋葱花,洋葱、鸡蛋,,困难,,炸,一口大锅,680,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/炸洋葱花/炸洋葱花.md
@@ -699,7 +699,7 @@ biangbiang面,面食,BV1844y157GL,简单,,油泼,一口大锅,393
 微波炉鸡蛋羹,鸡蛋,,简单,,微波加热,微波炉,698,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/鸡蛋羹/微波炉鸡蛋羹.md
 鸡蛋羹,鸡蛋,,简单,,蒸,一口大锅,699,https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/鸡蛋羹/鸡蛋羹.md
 乡村啤酒鸭,鸭肉、米,,困难,,焖,一口大锅,700,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/乡村啤酒鸭.md
-冬瓜桑拿鸡,冬瓜、鸡肉,,简单,,蒸,一口大锅,701,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/冬瓜桑拿鸡.md
+冬瓜桑拿鸡,冬瓜、鸡肉,,简单,次日便当,蒸,一口大锅,701,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/冬瓜桑拿鸡.md
 冬瓜酿肉,冬瓜、猪肉、鸡蛋,,困难,,蒸,一口大锅,702,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/冬瓜酿肉/冬瓜酿肉.md
 凉拌鸡丝,鸡肉,,普通,凉菜,凉拌,一口大锅,703,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/凉拌鸡丝/凉拌鸡丝.md
 台式卤肉饭,猪肉、鸡蛋、米,,普通,,卤,一口大锅,704,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/台式卤肉饭/台式卤肉饭.md
@@ -734,7 +734,7 @@ biangbiang面,面食,BV1844y157GL,简单,,油泼,一口大锅,393
 煎烤羊排,羊肉,,困难,,煎,一口大锅,733,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/煎烤羊排/煎烤羊排.md
 牛排,牛肉,,困难,,煎,一口大锅,734,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/牛排/牛排.md
 猪肉烩酸菜,猪肉,,困难,,炖,一口大锅,735,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/猪肉烩酸菜.md
-瘦肉土豆片,猪肉、土豆,,普通,,炒,一口大锅,736,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/瘦肉土豆片/瘦肉土豆片.md
+瘦肉土豆片,猪肉、土豆,,普通,次日便当,炒,一口大锅,736,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/瘦肉土豆片/瘦肉土豆片.md
 白菜猪肉炖粉条,猪肉、白菜、土豆,,普通,,炖,一口大锅,737,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/白菜猪肉炖粉条.md
 空气炸锅脆皮现腌炸鸡,鸡肉、洋葱、鸡蛋,,困难,,炸,空气炸锅,738,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/空气炸锅脆皮现腌炸鸡/空气炸锅脆皮现腌炸鸡.md
 粉蒸肉,猪肉、土豆,,困难,,蒸,一口大锅,739,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/粉蒸肉.md
@@ -754,7 +754,7 @@ biangbiang面,面食,BV1844y157GL,简单,,油泼,一口大锅,393
 荷兰豆炒腊肠,腊肠,,简单,,炒,一口大锅,753,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/荷兰豆炒腊肠/荷兰豆炒腊肠.md
 萝卜炖羊排,羊肉、白萝卜,,困难,,炖,一口大锅,754,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/萝卜炖羊排.md
 葱烧鸡腿,鸡肉,,简单,,烧,一口大锅,755,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/葱烧鸡腿.md
-蒜苔炒肉末,猪肉,,简单,,炒,一口大锅,756,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/蒜苔炒肉末.md
+蒜苔炒肉末,猪肉,,简单,次日便当,炒,一口大锅,756,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/蒜苔炒肉末.md
 蚂蚁上树,猪肉,,普通,,炒,一口大锅,757,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/蚂蚁上树.md
 西红柿土豆炖牛肉,牛肉、土豆、番茄、洋葱,,困难,,炖,一口大锅,758,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/西红柿土豆炖牛肉/西红柿土豆炖牛肉.md
 西红柿牛腩,番茄、牛肉,,困难,,炖,一口大锅,759,https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/西红柿牛腩/西红柿牛腩.md
@@ -797,8 +797,8 @@ biangbiang面,面食,BV1844y157GL,简单,,油泼,一口大锅,393
 勾芡香菇汤,菌菇,,普通,汤,煮,一口大锅,796,https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/勾芡香菇汤/勾芡香菇汤.md
 奶油蘑菇汤,菌菇、洋葱,,简单,汤,煮,一口大锅,797,https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/奶油蘑菇汤.md
 山药南瓜炖鸡汤,鸡肉,,简单,汤,炖,一口大锅,798,https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/山药南瓜炖鸡汤.md
-排骨山药玉米汤,猪肉、胡萝卜、玉米,,简单,汤,煮,一口大锅,799,https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/排骨山药玉米汤/排骨山药玉米汤.md
-排骨苦瓜汤,猪肉、苦瓜,,困难,汤,煮,一口大锅,800,https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/排骨苦瓜汤/排骨苦瓜汤.md
+排骨山药玉米汤,猪肉、胡萝卜、玉米,,简单,汤、次日便当,煮,一口大锅,799,https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/排骨山药玉米汤/排骨山药玉米汤.md
+排骨苦瓜汤,猪肉、苦瓜,,困难,汤、次日便当,煮,一口大锅,800,https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/排骨苦瓜汤/排骨苦瓜汤.md
 昂刺鱼豆腐汤,鱼、豆腐,,普通,汤,煮,一口大锅,801,https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/昂刺鱼豆腐汤/昂刺鱼豆腐汤.md
 生汆丸子汤,猪肉,,困难,汤,汆,一口大锅,802,https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/生汆丸子汤.md
 番茄牛肉蛋花汤,牛肉、番茄、鸡蛋,,普通,汤,煮,一口大锅,803,https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/番茄牛肉蛋花汤.md
@@ -812,7 +812,7 @@ biangbiang面,面食,BV1844y157GL,简单,,油泼,一口大锅,393
 可乐炒饭,米、鸡蛋、香肠,,普通,,炒,一口大锅,811,https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/可乐炒饭.md
 咸肉菜饭,青菜、米,,困难,,焖,一口大锅,812,https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/咸肉菜饭.md
 微波炉腊肠煲仔饭,米、腊肠、鸡蛋,,简单,,微波加热,微波炉,813,https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/微波炉腊肠煲仔饭/微波炉腊肠煲仔饭.md
-意式肉酱面,面食、猪肉、洋葱,,简单,,煮,一口大锅,814,https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/意式肉酱面/意式肉酱面.md
+意式肉酱面,面食、猪肉、洋葱,,简单,次日便当,煮,一口大锅,814,https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/意式肉酱面/意式肉酱面.md
 扬州炒饭,米、鸡蛋、虾、午餐肉、胡萝卜、玉米,,困难,,炒,一口大锅,815,https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/扬州炒饭/扬州炒饭.md
 日式咖喱饭,米、土豆、胡萝卜、洋葱,,困难,,煮,一口大锅,816,https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/日式咖喱饭/日式咖喱饭.md
 日式肥牛丼饭,洋葱、牛肉、鸡蛋,,困难,,煮,一口大锅,817,https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/日式肥牛丼饭/日式肥牛丼饭.md
