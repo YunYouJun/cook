@@ -28,6 +28,27 @@ extension XCUIApplication {
         let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@ OR label CONTAINS %@", name, name), object: menu)
         XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed, file: file, line: line)
     }
+
+    /// 决定页先把选中的菜停稳，再进入既有详情。
+    @MainActor
+    func confirmDecidedRecipe(file: StaticString = #filePath, line: UInt = #line) {
+        let open = buttons["cook.decide.open"]
+        XCTAssertTrue(open.waitForExistence(timeout: 10), "决定页应出现", file: file, line: line)
+        let ready = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "isEnabled == true AND isHittable == true"),
+            object: open
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed, "挑选停稳后才能打开做法", file: file, line: line)
+        let recipe = descendants(matching: .any)["cook.decide.recipe"]
+        let named = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true AND label != '' AND label != '正在挑选'"),
+            object: recipe
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [named], timeout: 10), .completed, "应播报选中的菜，而不是停在挑选中", file: file, line: line)
+        open.tap()
+        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: open)
+        XCTAssertEqual(XCTWaiter.wait(for: [gone], timeout: 10), .completed, file: file, line: line)
+    }
 }
 
 /// 按 VoiceOver 读到的名字走一遍主流程：选食材 → 筛选 → 看看能做什么 → 打开菜谱 → 收藏。

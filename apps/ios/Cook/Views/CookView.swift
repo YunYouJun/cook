@@ -2,14 +2,16 @@ import CookCore
 import SwiftData
 import SwiftUI
 
-/// 找菜：优先输入与食材快选，场景放在筛选中，三道灵感位于选择区之后。
+/// Ingredient selection stays first; the inspiration section shares the random decision sheet.
 /// 窄屏（iPhone、折叠屏外屏、分屏后变窄）点底部按钮进入推荐结果；
 /// 宽屏（iPad、iPhone Duo 展开、大屏 iPhone 横屏）左边选食材，右边的推荐结果跟着实时更新
 struct CookView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(CookSession.self) private var session
+    @Environment(AppRouter.self) private var router
     @Environment(FeedbackClient.self) private var feedback
     @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }, sort: \FridgeItem.expiresAt) private var fridgeItems: [FridgeItem]
     @State private var showingFilters = false
@@ -27,6 +29,9 @@ struct CookView: View {
     @AppStorage("cook.presentation") private var presentation = CookPresentation.list
     @State private var cookPath = NavigationPath()
     @State private var detailPath = NavigationPath()
+    @State private var decideRequest: CookDecideRequest?
+    @State private var lastDecidedID: Int?
+    @State private var inspirationVisible = false
 
     var body: some View {
         let matchCount = session.candidates(in: store).count
@@ -37,7 +42,7 @@ struct CookView: View {
         Group {
             if presentation == .kitchen {
                 NavigationStack(path: $cookPath) {
-                    CloudKitchenView(presentation: $presentation, input: $input, inputMessage: notice?.message, submitInput: applySentence, previewInput: previewSentence, decide: openRecipe, showResults: { cookPath.append(ResultsRoute()) }, isDetailPresented: !cookPath.isEmpty)
+                    CloudKitchenView(presentation: $presentation, input: $input, inputMessage: notice?.message, submitInput: applySentence, previewInput: previewSentence, decide: openRecipe, showResults: { cookPath.append(ResultsRoute()) }, isDetailPresented: !cookPath.isEmpty, isSearchPresented: searchIntent != nil)
                         .navigationDestination(for: ResultsRoute.self) { _ in ResultsView() }
                         .recipeDestinations()
                 }
@@ -124,7 +129,13 @@ struct CookView: View {
                     }
                 }
             }
-            CookInspirationSection(decide: openRecipe, isDetailPresented: sizeClass == .regular ? !detailPath.isEmpty : !cookPath.isEmpty)
+            CookInspirationSection(
+                decide: openRecipe,
+                isDetailPresented: sizeClass == .regular ? !detailPath.isEmpty : !cookPath.isEmpty,
+                suppressesShake: decideRequest != nil || showingFilters || searchIntent != nil,
+                isVisible: $inspirationVisible,
+                presentRandom: { decideRequest = CookDecideRequest(batchIDs: $0) }
+            )
             NavigationLink("管理食材和厨具") { PersonalCatalogView() }
         }
         .accessibilityIdentifier("cook.chooser")
@@ -146,12 +157,24 @@ struct CookView: View {
                 .accessibilityIdentifier("cook.filters")
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Button("清空") {
+                Button {
                     withAnimation(.snappy) { session.clearStuff() }
+                } label: {
+                    Label("清空", systemImage: "arrow.counterclockwise")
+                        .labelStyle(.iconOnly)
                 }
                 .disabled(!session.hasSelection)
+                .accessibilityHint("清空本次找菜条件，保留长期偏好")
                 CookPresentationToggle(selection: $presentation, usesCurrentSubtitle: dynamicTypeSize.isAccessibilitySize)
             }
+        }
+        .cookDecideSheet(request: $decideRequest, lastDecidedID: $lastDecidedID) { route in
+            openRecipe(route)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
+            let detailShown = sizeClass == .regular ? !detailPath.isEmpty : !cookPath.isEmpty
+            guard scenePhase == .active, router.tab == .cook, decideRequest == nil, !showingFilters, searchIntent == nil, !inspirationVisible, !detailShown else { return }
+            decideRequest = CookDecideRequest(batchIDs: nil)
         }
         // 选了食材却一道菜都没有，停留 3 秒后匿名记一次，用来发现缺哪些菜；条件一变就重新计时
         .task(id: emptySignal) {

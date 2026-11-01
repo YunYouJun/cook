@@ -60,7 +60,7 @@ final class CookDiscoveryUITests: XCTestCase {
     }
 
     @MainActor
-    func testDefaultThreeRecipesShuffleAndDecideWithoutExtraModesOrRandomTab() {
+    func testDefaultThreeRecipesShuffleAndDecideWithFourTabs() {
         let app = launch()
         XCTAssertFalse(app.buttons["随机"].exists)
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "discovery.mode").firstMatch.exists)
@@ -94,6 +94,7 @@ final class CookDiscoveryUITests: XCTestCase {
         let decide = app.buttons["discovery.decide"]
         reveal(decide, in: app)
         decide.tap()
+        app.confirmDecidedRecipe()
         wait(favoriteButton(in: app), "isHittable == true")
         XCTAssertEqual(app.webViews.count, 0)
         capture(app, "find-recipes-decide-real-detail")
@@ -219,6 +220,7 @@ final class CookDiscoveryUITests: XCTestCase {
         let decide = app.buttons["discovery.decide"]
         reveal(decide, in: app)
         decide.tap()
+        app.confirmDecidedRecipe()
         let reviewed = app.buttons["dietary.openReviewedRecipe"]
         wait(favoriteButton(in: app), "isHittable == true")
         reveal(reviewed, in: app, page: .recipe)
@@ -258,6 +260,7 @@ final class CookDiscoveryUITests: XCTestCase {
         let decide = app.buttons["discovery.decide"]
         reveal(decide, in: app)
         decide.tap()
+        app.confirmDecidedRecipe()
         wait(favoriteButton(in: app), "isHittable == true")
         XCTAssertEqual(app.webViews.count, 0)
         capture(app, "find-recipes-largest-decided-detail")
@@ -332,12 +335,14 @@ final class CookDiscoveryUITests: XCTestCase {
         let decide = app.buttons["discovery.decide"]
         reveal(decide, in: app)
         decide.tap()
+        app.confirmDecidedRecipe()
         wait(favoriteButton(in: app), "isHittable == true")
         let decidedTitle = visibleRecipeTitle(in: app)
         XCTAssertFalse(decidedTitle.isEmpty)
         XCTAssertNotEqual(decidedTitle, "找到的菜")
         XCTAssertNotEqual(decidedTitle, "找菜")
         decide.tap()
+        app.confirmDecidedRecipe()
         let decidedAgain = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             let title = self.visibleRecipeTitle(in: app)
             return !title.isEmpty && title != decidedTitle && title != "找到的菜" && title != "找菜"

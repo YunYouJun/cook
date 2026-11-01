@@ -1,7 +1,7 @@
 import UIKit
 
 extension Notification.Name {
-    /// 摇一摇手机，由做菜页的统一找菜流程处理。
+    /// Shared by the visible find-recipes view or decision sheet.
     static let deviceDidShake = Notification.Name("fun.yunle.cook.deviceDidShake")
 }
 

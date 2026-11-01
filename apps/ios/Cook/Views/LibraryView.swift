@@ -25,6 +25,9 @@ struct LibraryView: View {
     @State private var query = ""
     @State private var selection: RecipeRoute?
     @State private var confirmingClear = false
+    @State private var compactColumn: NavigationSplitViewColumn = .sidebar
+    @State private var decideRequest: CookDecideRequest?
+    @State private var lastDecidedID: Int?
 
     private var recipes: [Recipe] {
         let base: [Recipe]
@@ -43,7 +46,7 @@ struct LibraryView: View {
         let visible = recipes
         let favoriteIds = Set(favorites.map(\.recipeId))
 
-        NavigationSplitView {
+        NavigationSplitView(preferredCompactColumn: $compactColumn) {
             List(selection: $selection) {
                 Picker("范围", selection: $scope) {
                     ForEach(Scope.allCases) { scope in
@@ -74,6 +77,17 @@ struct LibraryView: View {
             .navigationBarTitleDisplayMode(.large)
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜索菜名或食材")
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        decideRequest = CookDecideRequest(batchIDs: nil, ignoringKeyword: true)
+                    } label: {
+                        Label("今天吃什么", systemImage: "dice")
+                            .labelStyle(.iconOnly)
+                            .frame(minWidth: 44, minHeight: 44)
+                    }
+                    .accessibilityHint("按当前食材、忌口和饮食目标随机选一道")
+                    .accessibilityIdentifier("library.random")
+                }
                 if scope == .recent, !visits.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("清空") { confirmingClear = true }
@@ -91,6 +105,10 @@ struct LibraryView: View {
                     ContentUnavailableView("选一道菜看看", systemImage: "book", description: Text("从左边的列表里选"))
                 }
             }
+        }
+        .cookDecideSheet(request: $decideRequest, lastDecidedID: $lastDecidedID) { route in
+            selection = route
+            compactColumn = .detail
         }
     }
 

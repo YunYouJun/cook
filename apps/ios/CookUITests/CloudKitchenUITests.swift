@@ -178,6 +178,7 @@ final class CloudKitchenUITests: XCTestCase {
                                     "随机操作必须完整露在固定底栏之上")
         }
         app.buttons["discovery.decide"].tap()
+        app.confirmDecidedRecipe()
         XCTAssertTrue(app.buttons["收藏"].waitForExistence(timeout: 10))
     }
 

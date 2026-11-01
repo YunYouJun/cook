@@ -160,11 +160,11 @@ jobs:
           RESULTS: ${{ toJSON(needs) }}
         run: node -e 'if (Object.values(JSON.parse(process.env.RESULTS)).some(job => job.result !== "success")) process.exit(1)'
 
-  # iOS 的 CookCore 跑和 Web 共用的用例（ubuntu 镜像自带 Swift）
+  # Run shared CookCore fixtures on Linux with an explicitly installed toolchain.
   swift:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -176,6 +176,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm run convert
+      - name: Install Swift
+        uses: swift-actions/setup-swift@v2.4.0
+        with:
+          swift-version: 6.2.1
       - run: swift --version
       - run: swift test --package-path apps/ios/CookCore
       - run: bash scripts/test-private-recipe-roundtrip.sh

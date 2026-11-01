@@ -123,7 +123,6 @@ final class DietaryGoalsUITests: XCTestCase {
             bar.buttons.element(boundBy: 0).tap()
         }
         revealCookingControl(app.buttons["discovery.decide"], in: app)
-        XCTAssertFalse(app.buttons["随机"].exists)
     }
 
     @MainActor
@@ -177,6 +176,7 @@ final class DietaryGoalsUITests: XCTestCase {
         assertGoalValue("减少添加糖", in: app)
         revealCookingControl(app.buttons["discovery.decide"], in: app)
         app.buttons["discovery.decide"].tap()
+        app.confirmDecidedRecipe()
         XCTAssertTrue(app.buttons["dietary.openReviewedRecipe"].waitForExistence(timeout: 10))
     }
 
@@ -405,6 +405,7 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(decide.isEnabled)
         capture(app, named: "dietary-accessibility-unified-find-recipes")
         decide.tap()
+        app.confirmDecidedRecipe()
         let reviewed = app.buttons["dietary.openReviewedRecipe"]
         XCTAssertTrue(reviewed.waitForExistence(timeout: 10))
         reviewed.tap()
