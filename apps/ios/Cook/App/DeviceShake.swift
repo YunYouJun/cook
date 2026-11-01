@@ -1,7 +1,7 @@
 import UIKit
 
 extension Notification.Name {
-    /// 摇一摇手机，由做菜页的统一找菜流程处理。
+    /// 摇一摇手机。找菜页在未打开详情时处理：灵感可见则从当前一批决定，否则从全部当前候选决定。
     static let deviceDidShake = Notification.Name("fun.yunle.cook.deviceDidShake")
 }
 

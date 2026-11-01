@@ -161,6 +161,9 @@ final class CloudKitchenUITests: XCTestCase {
         let tomato = app.buttons["kitchen.scene.tomato"]
         XCTAssertTrue(tomato.waitForExistence(timeout: 30))
         XCTAssertTrue(tomato.isHittable)
+        let today = app.buttons["cook.decideToday"]
+        XCTAssertTrue(today.isHittable, "云厨房首屏应能直接今天吃什么，不用先滚过台面")
+        XCTAssertLessThan(today.frame.maxY, tomato.frame.minY)
         capture(app, name: "云厨房首屏与干净底栏")
 
         let header = app.descendants(matching: .any).matching(identifier: "discovery.cardHeader").firstMatch
@@ -178,6 +181,7 @@ final class CloudKitchenUITests: XCTestCase {
                                     "随机操作必须完整露在固定底栏之上")
         }
         app.buttons["discovery.decide"].tap()
+        app.confirmDecidedRecipe()
         XCTAssertTrue(app.buttons["收藏"].waitForExistence(timeout: 10))
     }
 
@@ -206,6 +210,9 @@ final class CloudKitchenUITests: XCTestCase {
         XCTAssertTrue(modelTomato.isHittable, "切换云厨房后，应直接看到并操作台面食材")
         XCTAssertLessThan(modelTomato.frame.midY, app.buttons["kitchen.cook"].frame.minY,
                           "台面应显示在首屏内容区域，推荐和随机操作排在后面")
+        let today = app.buttons["cook.decideToday"]
+        XCTAssertTrue(today.isHittable, "云厨房标题栏应能直接今天吃什么")
+        XCTAssertLessThan(today.frame.maxY, modelTomato.frame.minY)
         let shuffle = app.buttons["discovery.shuffle"]
         if shuffle.isHittable {
             XCTAssertGreaterThan(shuffle.frame.minY, modelTomato.frame.maxY,

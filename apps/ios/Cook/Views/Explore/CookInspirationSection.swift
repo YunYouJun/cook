@@ -3,37 +3,27 @@ import SwiftData
 import SwiftUI
 import UIKit
 
-/// 找菜页内的三道候选，浏览、换批和随机决定共享当前条件。
+/// 找菜页内的三道候选。浏览和换批留在选择区之后；「帮我决定」打开和标题栏相同的决定页。
 struct CookInspirationSection: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
     @Environment(FavoriteActions.self) private var favoriteActions
+    @Environment(AppRouter.self) private var router
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }) private var favorites: [Favorite]
     let decide: (RecipeRoute) -> Void
     var isDetailPresented = false
+    /// 筛选、决定页或其他弹层已经打开时，不再从灵感区响应摇一摇。
+    var suppressesShake = false
+    @Binding var isVisible: Bool
+    let presentRandom: ([Int]) -> Void
     @State private var batchIDs: [Int] = []
-    @State private var lastDecisionID: Int?
     @State private var revision = 0
-    @State private var isVisible = false
     @AccessibilityFocusState private var resultsFocused: Bool
 
     private var context: [String] {
-        var parts: [String] = []
-        if let goal = session.dietaryGoal { parts.append("饮食目标：\(goal.title)") }
-        if !session.selectedStuff.isEmpty {
-            parts.append("已有食材：\(session.selectedStuff.joined(separator: "、"))")
-            parts.append("推荐方式：\(session.mode.displayTitle)")
-        }
-        if let tool = session.tool { parts.append("厨具：\(store.toolLabel(tool))") }
-        let keyword = session.keyword.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !keyword.isEmpty { parts.append("菜名：\(keyword)") }
-        if let scene = session.discoveryScene { parts.append("想法：\(scene.label)") }
-        if !session.avoid.isEmpty { parts.append("忌口：\(session.avoid.joined(separator: "、"))") }
-        if session.noSpicy { parts.append("不吃辣") }
-        parts += session.methodGroups + session.difficulty
-        return parts
+        CookDiscoverySummary.lines(session: session, store: store)
     }
 
     var body: some View {
@@ -55,7 +45,7 @@ struct CookInspirationSection: View {
                         .accessibilityIdentifier("discovery.context")
                 }
                 if !batch.isEmpty {
-                    CookInspirationActions(canShuffle: canShuffle, shuffle: { shuffle(from: pool) }, decide: { choose(from: batch, candidates: candidates) })
+                    CookInspirationActions(canShuffle: canShuffle, shuffle: { shuffle(from: pool) }, decide: { presentRandom(batch.map(\.id)) })
                 }
             }
             .padding(.vertical, 4)
@@ -107,8 +97,8 @@ struct CookInspirationSection: View {
         .onAppear { isVisible = true }
         .onDisappear { isVisible = false }
         .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
-            guard isVisible, scenePhase == .active, !isDetailPresented, !batch.isEmpty else { return }
-            choose(from: batch, candidates: candidates)
+            guard isVisible, scenePhase == .active, router.tab == .cook, !isDetailPresented, !suppressesShake, !batch.isEmpty else { return }
+            presentRandom(batch.map(\.id))
         }
         .sensoryFeedback(.selection, trigger: revision)
     }
@@ -122,14 +112,7 @@ struct CookInspirationSection: View {
     }
 
     private var emptyExplanation: String {
-        if let goal = session.dietaryGoal, let message = store.dietaryUnavailableMessage(for: goal) { return message }
-        if session.discoveryScene != nil {
-            return "当前条件和这次的想法暂时没有交集，可以取消场景，或调整食材、厨具和筛选。"
-        }
-        if !session.keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "换个菜名试试，或清除菜名继续看看。已有食材、忌口和饮食目标会继续保留。"
-        }
-        return "还没找到符合这些条件的菜，试试调整食材、厨具或筛选。"
+        CookDiscoverySummary.emptyExplanation(session: session, store: store)
     }
 
     private func route(for recipe: Recipe, candidates: CookCandidateSnapshot) -> RecipeRoute {
@@ -147,12 +130,6 @@ struct CookInspirationSection: View {
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { batchIDs = next.map(\.id) }
         revision += 1
         UIAccessibility.post(notification: .announcement, argument: "已换一组灵感，显示 \(next.count) 道菜")
-    }
-
-    private func choose(from batch: [Recipe], candidates: CookCandidateSnapshot) {
-        guard let recipe = store.randomRecipe(from: batch, excluding: lastDecisionID) else { return }
-        lastDecisionID = recipe.id
-        decide(route(for: recipe, candidates: candidates))
     }
 }
 
@@ -212,7 +189,7 @@ private struct CookInspirationActions: View {
                 .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())
         }
-        .accessibilityHint("从这几道里选一道，直接看做法，也可以摇一摇手机")
+        .accessibilityHint("从这几道里选一道，先展示再打开做法，也可以摇一摇手机")
         .accessibilityIdentifier("discovery.decide")
     }
 }

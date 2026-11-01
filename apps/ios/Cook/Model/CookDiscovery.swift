@@ -130,4 +130,22 @@ enum CookDiscovery {
         let repeated = unique.filter { seen.contains($0.name.trimmingCharacters(in: .whitespacesAndNewlines)) }
         return Array((fresh.shuffled() + repeated.shuffled()).prefix(count))
     }
+
+    /// 决定页洗牌时的过渡菜。最后一道是选中结果；池里只有一道时不再伪造中间过程。
+    /// 减少动态效果时界面应直接展示结果，不要播放这段序列。
+    static func decideReel(in pool: [Recipe], landing: Recipe, steps: Int = 4) -> [Recipe] {
+        let lead = max(0, steps)
+        let others = pool.filter { $0.id != landing.id }
+        guard lead > 0, !others.isEmpty else { return [landing] }
+        var reel: [Recipe] = []
+        var bag = others.shuffled()
+        for _ in 0..<lead {
+            if bag.isEmpty { bag = others.shuffled() }
+            guard let next = bag.first else { break }
+            bag.removeFirst()
+            reel.append(next)
+        }
+        reel.append(landing)
+        return reel
+    }
 }

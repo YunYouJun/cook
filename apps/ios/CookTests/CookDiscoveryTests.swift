@@ -112,4 +112,15 @@ final class CookDiscoveryTests: XCTestCase {
         XCTAssertEqual(context.hasChanges, pendingChanges)
         XCTAssertEqual(session.candidates(in: store), candidates)
     }
+
+    func testDecideReelLandsOnTheChosenRecipe() {
+        let landing = recipes[2]
+        XCTAssertEqual(CookDiscovery.decideReel(in: [landing], landing: landing).map(\.id), [3])
+        XCTAssertEqual(CookDiscovery.decideReel(in: recipes, landing: landing, steps: 0).map(\.id), [3])
+        let reel = CookDiscovery.decideReel(in: recipes, landing: landing, steps: 4)
+        XCTAssertEqual(reel.count, 5)
+        XCTAssertEqual(reel.last?.id, 3)
+        XCTAssertTrue(reel.dropLast().allSatisfy { $0.id != 3 })
+        XCTAssertTrue(reel.dropLast().allSatisfy { recipe in recipes.contains { $0.id == recipe.id } })
+    }
 }

@@ -1,7 +1,7 @@
 import UIKit
 import XCTest
 
-/// 首屏优先选食材；场景在筛选里，灵感和随机操作放在选择区之后。
+/// 首屏优先选食材，标题栏可直接今天吃什么。场景在筛选里，三道灵感仍在选择区之后。
 final class CookDiscoveryUITests: XCTestCase {
     override func setUp() { continueAfterFailure = false }
 
@@ -72,7 +72,17 @@ final class CookDiscoveryUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["蔬菜"].isHittable, "蔬菜快选应回到首屏")
         XCTAssertFalse(app.buttons["discovery.shuffle"].isHittable, "随机操作不应挤在食材前面")
         XCTAssertFalse(app.buttons["discovery.decide"].isHittable, "随机操作不应遮挡首屏快选")
+        let today = app.buttons["cook.decideToday"]
+        XCTAssertTrue(today.isHittable, "今天吃什么应在首屏可点，无需滚过食材")
+        XCTAssertLessThan(today.frame.maxY, potato.frame.minY, "决定入口应位于食材快选之上")
         capture(app, "find-recipes-compact-ingredient-first")
+        today.tap()
+        app.confirmDecidedRecipe()
+        wait(favoriteButton(in: app), "isHittable == true")
+        XCTAssertEqual(app.webViews.count, 0)
+        capture(app, "find-recipes-toolbar-decide-detail")
+        goBack(in: app)
+        XCTAssertTrue(today.waitForExistence(timeout: 10))
         let recipes = recipeLinks(in: app)
         reveal(recipes.firstMatch, in: app)
         waitForThreeRecipes(in: app)
@@ -94,6 +104,7 @@ final class CookDiscoveryUITests: XCTestCase {
         let decide = app.buttons["discovery.decide"]
         reveal(decide, in: app)
         decide.tap()
+        app.confirmDecidedRecipe()
         wait(favoriteButton(in: app), "isHittable == true")
         XCTAssertEqual(app.webViews.count, 0)
         capture(app, "find-recipes-decide-real-detail")
@@ -183,6 +194,15 @@ final class CookDiscoveryUITests: XCTestCase {
         XCTAssertTrue(context.label.contains("微波炉"))
         XCTAssertTrue(context.label.contains("推荐方式：全部推荐"))
         capture(app, "find-recipes-empty-scene")
+        let today = app.buttons["cook.decideToday"]
+        XCTAssertTrue(today.isHittable, "空结果时也能直接打开今天吃什么")
+        today.tap()
+        let decideEmpty = app.staticTexts["cook.decide.empty"]
+        XCTAssertTrue(decideEmpty.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["cook.decide.open"].exists, "没有候选时不应放宽条件并给出一道菜")
+        XCTAssertTrue(app.staticTexts["cook.decide.context"].label.contains("家常") || app.staticTexts["cook.decide.context"].label.contains("想法"))
+        app.buttons["cook.decide.close"].tap()
+        wait(decideEmpty, "exists == false")
         let reset = app.buttons["discovery.reset"]
         reveal(reset, in: app)
         reset.tap()
@@ -219,6 +239,10 @@ final class CookDiscoveryUITests: XCTestCase {
         let decide = app.buttons["discovery.decide"]
         reveal(decide, in: app)
         decide.tap()
+        let sheetContext = app.staticTexts["cook.decide.context"]
+        XCTAssertTrue(sheetContext.waitForExistence(timeout: 10))
+        XCTAssertTrue(sheetContext.label.contains("减少添加糖"), "决定页应带上当前饮食目标")
+        app.confirmDecidedRecipe()
         let reviewed = app.buttons["dietary.openReviewedRecipe"]
         wait(favoriteButton(in: app), "isHittable == true")
         reveal(reviewed, in: app, page: .recipe)
@@ -237,6 +261,7 @@ final class CookDiscoveryUITests: XCTestCase {
     func testLargestTextCanChooseSceneSearchAndDecideOnOnePage() {
         let app = launch(contentSize: .accessibilityExtraExtraExtraLarge)
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "discovery.mode").firstMatch.exists)
+        XCTAssertTrue(app.buttons["cook.decideToday"].isHittable, "最大辅助字号下今天吃什么仍在标题栏")
         openFilters(in: app)
         let home = app.buttons["discovery.scene.home"]
         reveal(home, in: app, page: .filters)
@@ -258,6 +283,7 @@ final class CookDiscoveryUITests: XCTestCase {
         let decide = app.buttons["discovery.decide"]
         reveal(decide, in: app)
         decide.tap()
+        app.confirmDecidedRecipe()
         wait(favoriteButton(in: app), "isHittable == true")
         XCTAssertEqual(app.webViews.count, 0)
         capture(app, "find-recipes-largest-decided-detail")
@@ -277,6 +303,9 @@ final class CookDiscoveryUITests: XCTestCase {
                              "右栏应直接展示完整结果，而不是三道灵感的入口")
         let tomato = app.buttons.matching(NSPredicate(format: "label == %@", "番茄")).firstMatch
         XCTAssertTrue(tomato.isHittable, "左栏首屏应能直接选择常用食材")
+        let today = app.buttons["cook.decideToday"]
+        XCTAssertTrue(today.isHittable, "宽屏左栏标题栏也应能直接今天吃什么")
+        XCTAssertLessThan(today.frame.maxY, tomato.frame.minY)
         let decide = app.buttons["discovery.decide"]
         if decide.isHittable {
             // 大屏有空间同时显示后置灵感；验证相对顺序，不要求它一定离屏。
@@ -332,12 +361,14 @@ final class CookDiscoveryUITests: XCTestCase {
         let decide = app.buttons["discovery.decide"]
         reveal(decide, in: app)
         decide.tap()
+        app.confirmDecidedRecipe()
         wait(favoriteButton(in: app), "isHittable == true")
         let decidedTitle = visibleRecipeTitle(in: app)
         XCTAssertFalse(decidedTitle.isEmpty)
         XCTAssertNotEqual(decidedTitle, "找到的菜")
         XCTAssertNotEqual(decidedTitle, "找菜")
         decide.tap()
+        app.confirmDecidedRecipe()
         let decidedAgain = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             let title = self.visibleRecipeTitle(in: app)
             return !title.isEmpty && title != decidedTitle && title != "找到的菜" && title != "找菜"

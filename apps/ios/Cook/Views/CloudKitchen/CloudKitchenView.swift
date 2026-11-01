@@ -12,12 +12,14 @@ struct CloudKitchenView: View {
     let decide: (RecipeRoute) -> Void
     let showResults: () -> Void
     var isDetailPresented = false
+    var isSearchPresented = false
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(AppRouter.self) private var router
     @ScaledMetric(relativeTo: .caption) var minIngredientWidth: CGFloat = 68
     @State private var showingFilters = false
     @State private var showingAllIngredients = false
@@ -25,6 +27,9 @@ struct CloudKitchenView: View {
     @State private var visible = true
     @State private var sceneStatus = CloudKitchenSceneStatus.loading
     @State private var needsIngredients = false
+    @State private var decideRequest: CookDecideRequest?
+    @State private var lastDecidedID: Int?
+    @State private var inspirationVisible = false
     @AppStorage("cook.kitchen.rotationEnabled") private var allowsRotation = false
 
     private var background: Color {
@@ -69,7 +74,13 @@ struct CloudKitchenView: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
 
-                CookInspirationSection(decide: decide, isDetailPresented: isDetailPresented)
+                CookInspirationSection(
+                    decide: decide,
+                    isDetailPresented: isDetailPresented,
+                    suppressesShake: decideRequest != nil || showingFilters || isSearchPresented,
+                    isVisible: $inspirationVisible,
+                    presentRandom: { decideRequest = CookDecideRequest(batchIDs: $0) }
+                )
             }
             .listSectionSpacing(.compact)
             .contentMargins(.top, 8, for: .scrollContent)
@@ -103,10 +114,18 @@ struct CloudKitchenView: View {
                 .accessibilityIdentifier("cook.filters")
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
+                CookDecideToolbarButton {
+                    decideRequest = CookDecideRequest(batchIDs: nil)
+                }
                 Button("清空") { session.clearStuff() }
                     .disabled(!session.hasSelection)
                 CookPresentationToggle(selection: $presentation, usesCurrentSubtitle: dynamicTypeSize.isAccessibilitySize)
             }
+        }
+        .cookDecideSheet(request: $decideRequest, lastDecidedID: $lastDecidedID, openRecipe: decide)
+        .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
+            guard scenePhase == .active, router.tab == .cook, !isDetailPresented, decideRequest == nil, !showingFilters, !isSearchPresented, !inspirationVisible else { return }
+            decideRequest = CookDecideRequest(batchIDs: nil)
         }
         .sheet(isPresented: $showingFilters) {
             FilterSheet()
