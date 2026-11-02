@@ -44,6 +44,12 @@ final class CookDiscoveryUITests: XCTestCase {
         wait(suggestion, "exists == true AND isHittable == true")
         suggestion.tap()
         wait(clearKeyword, "exists == false")
+        if app.windows.firstMatch.horizontalSizeClass == .regular, app.keyboards.firstMatch.exists {
+            let hideKeyboard = app.keyboards.buttons.matching(NSPredicate(format: "label IN %@ OR identifier == %@", ["隐藏键盘", "Hide keyboard"], "Hide keyboard")).firstMatch
+            XCTAssertTrue(hideKeyboard.waitForExistence(timeout: 5), app.keyboards.debugDescription)
+            hideKeyboard.tap()
+            wait(app.keyboards.firstMatch, "exists == false")
+        }
 
         let context = app.staticTexts["discovery.context"]
         reveal(context, in: app)
@@ -201,7 +207,8 @@ final class CookDiscoveryUITests: XCTestCase {
         XCTAssertTrue(context.label.contains("微波炉"))
         for name in ["土豆", "微波炉"] {
             let item = app.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch
-            reveal(item, in: app, towardTop: true)
+            // Potato is above the inspiration section; the tool is below it after returning to potato.
+            reveal(item, in: app, towardTop: name == "土豆")
             XCTAssertTrue(item.isSelected)
         }
         capture(app, "find-recipes-restored-after-scene-reset")
