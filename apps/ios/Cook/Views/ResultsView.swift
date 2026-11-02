@@ -55,6 +55,7 @@ struct ResultsView: View {
                     } label: {
                         Label("更多选项", systemImage: "ellipsis.circle")
                     }
+                    .accessibilityLabel("更多选项，饮食目标：\(session.dietaryGoal?.title ?? "不限目标")")
                     .accessibilityValue(session.dietaryGoal?.title ?? "不限目标")
                     .accessibilityIdentifier("results.options")
                 }

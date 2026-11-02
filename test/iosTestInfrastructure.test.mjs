@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
@@ -12,18 +12,9 @@ const root = fileURLToPath(new URL('..', import.meta.url))
 const fixtures = JSON.parse(readFileSync(new URL('./fixtures/ios-infrastructure-failures.json', import.meta.url), 'utf8'))
 
 function workflowCommand() {
-  const lines = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8').split('\n')
-  const step = lines.findIndex(line => line.trim() === '- name: Build and test')
-  assert.notEqual(step, -1)
-  const start = lines.findIndex((line, index) => index > step && line === '        run: |') + 1
-  assert.ok(start > step)
-  const commands = []
-  for (const line of lines.slice(start)) {
-    if (line && !line.startsWith('          '))
-      break
-    commands.push(line.slice(10))
-  }
-  return commands.join('\n')
+  const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
+  assert.match(workflow, /run: bash scripts\/run-ios-ci-tests.sh/)
+  return readFileSync(join(root, 'scripts/run-ios-ci-tests.sh'), 'utf8')
 }
 
 // Replay only the external Xcode/simulator boundary. The actual checked-in CI
@@ -66,7 +57,7 @@ function replay(scenarios, verify) {
     }
   `)
   try {
-    const result = spawnSync('bash', ['-e', '-c', workflowCommand()], {
+    const runs = ['phone', 'pad'].flatMap(device => ['regression-main', 'regression-discovery', 'dietary'].map(suite => spawnSync('bash', ['-e', '-c', workflowCommand()], {
       cwd: root,
       encoding: 'utf8',
       timeout: 15_000,
@@ -76,13 +67,14 @@ function replay(scenarios, verify) {
         RUNNER_TEMP: temporary,
         GITHUB_OUTPUT: outputPath,
         GITHUB_STEP_SUMMARY: join(temporary, 'step-summary'),
-        IPHONE: 'phone',
-        IPAD: 'pad',
+        DEVICE: device,
+        IOS_SUITE: suite,
         COOK_IOS_CALLS: callsPath,
         COOK_IOS_SCENARIOS: scenarioPath,
       },
-    })
-    assert.equal(result.error, undefined)
+    })))
+    for (const run of runs) assert.equal(run.error, undefined)
+    const result = { status: runs.some(run => run.status !== 0) ? 1 : 0, stderr: runs.map(run => run.stderr).join('\n') }
     const calls = readFileSync(callsPath, 'utf8').trim().split('\n').map(JSON.parse)
     const summary = name => JSON.parse(readFileSync(join(temporary, 'xcresult', `${name}.xcresult`, 'summary.json'), 'utf8'))
     verify({ result, calls, summary, output: existsSync(outputPath) ? readFileSync(outputPath, 'utf8') : '' })
@@ -92,18 +84,21 @@ function replay(scenarios, verify) {
   }
 }
 
-test('the six serial invocations target existing UI audits with parallel testing disabled', () => {
+test('the matrix preserves serial invocations and uses compiled products on existing devices', () => {
   replay({}, ({ result, calls, output }) => {
     assert.equal(result.status, 0, result.stderr)
-    assert.equal(calls.length, 6)
-    assert.deepEqual(calls.map(call => call.name), ['phone-regression', 'phone-dietary-standard', 'phone-dietary-maximum', 'pad-regression', 'pad-dietary-standard', 'pad-dietary-maximum'])
+    assert.equal(calls.length, 10)
+    assert.deepEqual(calls.map(call => call.name), ['phone', 'pad'].flatMap(device => ['regression-main', 'regression-discovery', 'dietary-standard', 'dietary-maximum', 'dietary-regression'].map(stage => `${device}-${stage}`)))
     for (const { args } of calls) {
+      assert.equal(args[0], 'test-without-building')
+      assert.equal(args[args.indexOf('-test-timeouts-enabled') + 1], 'YES')
       assert.equal(args[args.indexOf('-parallel-testing-enabled') + 1], 'NO')
       for (const argument of args.filter(value => /^-(?:only|skip)-testing:/.test(value))) {
         const [target, suite, method] = argument.split(':')[1].split('/')
         assert.equal(target, 'CookUITests')
         const source = readFileSync(join(root, 'apps/ios/CookUITests', `${suite}.swift`), 'utf8')
-        assert.match(source, new RegExp(`\\bfunc\\s+${method}\\s*\\(`), `CI selector must name an existing test: ${argument}`)
+        if (method)
+          assert.match(source, new RegExp(`\\bfunc\\s+${method}\\s*\\(`), `CI selector must name an existing test: ${argument}`)
       }
     }
     assert.equal(output, '')
@@ -113,7 +108,7 @@ test('the six serial invocations target existing UI audits with parallel testing
 test('a captured audit-service timeout repeats only that isolated case and preserves both results', () => {
   replay({ 'pad-dietary-standard': [fixtures.auditTimeout] }, ({ result, calls, summary, output }) => {
     assert.equal(result.status, 0, result.stderr)
-    assert.equal(calls.length, 7)
+    assert.equal(calls.length, 11)
     assert.equal(summary('pad-dietary-standard').failedTests, 1)
     assert.equal(summary('pad-dietary-standard-infrastructure-retry').passedTests, 1)
     assert.match(output, /infrastructure_retries=true/)
@@ -124,7 +119,7 @@ test('a captured audit-service timeout repeats only that isolated case and prese
 test('a captured runner bootstrap stall repeats only the isolated maximum-size case', () => {
   replay({ 'pad-dietary-maximum': [fixtures.bootstrap] }, ({ result, calls, summary }) => {
     assert.equal(result.status, 0, result.stderr)
-    assert.equal(calls.length, 7)
+    assert.equal(calls.length, 11)
     assert.equal(summary('pad-dietary-maximum').failedTests, 1)
     assert.equal(summary('pad-dietary-maximum-infrastructure-retry').passedTests, 1)
   })
@@ -140,18 +135,18 @@ test('an infrastructure error that repeats still fails after one retry', () => {
 })
 
 test('the captured keyboard assertion never retries the regular regression', () => {
-  replay({ 'phone-regression': [fixtures.keyboardAssertion] }, ({ result, calls, output }) => {
+  replay({ 'phone-regression-main': [fixtures.keyboardAssertion] }, ({ result, calls, output }) => {
     assert.equal(result.status, 1)
-    assert.equal(calls.length, 6)
+    assert.equal(calls.length, 10)
     assert.equal(output, '')
   })
 })
 
 test('a later successful infrastructure retry cannot erase an earlier business failure', () => {
-  replay({ 'phone-regression': [fixtures.keyboardAssertion], 'pad-dietary-standard': [fixtures.auditTimeout] }, ({ result, calls, summary, output }) => {
+  replay({ 'phone-regression-main': [fixtures.keyboardAssertion], 'pad-dietary-standard': [fixtures.auditTimeout] }, ({ result, calls, summary, output }) => {
     assert.equal(result.status, 1)
-    assert.equal(calls.length, 7)
-    assert.equal(summary('phone-regression').failedTests, 1)
+    assert.equal(calls.length, 11)
+    assert.equal(summary('phone-regression-main').failedTests, 1)
     assert.equal(summary('pad-dietary-standard-infrastructure-retry').passedTests, 1)
     assert.match(output, /infrastructure_retries=true/)
   })
@@ -171,8 +166,61 @@ test('business assertions, real audit findings, skipped tests and mixed failures
     change(failure)
     replay({ 'pad-dietary-standard': [failure] }, ({ result, calls, output }) => {
       assert.equal(result.status, 1)
-      assert.equal(calls.length, 6)
+      assert.equal(calls.length, 10)
       assert.equal(output, '')
     })
   }
+})
+
+test('native CI bounds build and test time and runs device groups independently', () => {
+  const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
+  assert.match(workflow, /device: \[iphone, ipad\]/)
+  assert.match(workflow, /suite: \[regression-main, regression-discovery, dietary\]/)
+  assert.match(workflow, /name: Build for testing\n\s+timeout-minutes: 15/)
+  assert.match(workflow, /name: Build and test\n\s+timeout-minutes: 45/)
+  assert.match(workflow, /cancel-in-progress: true/)
+})
+
+test('the stable ios gate rejects failed, cancelled and unexpectedly skipped matrices', () => {
+  const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
+  const gate = workflow.slice(workflow.indexOf('\n  ios:\n'))
+  const command = gate.split('        run: |\n')[1].split('\n').map(line => line.slice(10)).join('\n')
+  for (const [changes, docs, ios, success] of [
+    ['success', 'false', 'success', true],
+    ['success', 'true', 'skipped', true],
+    ['success', 'false', 'failure', false],
+    ['success', 'false', 'cancelled', false],
+    ['success', 'false', 'skipped', false],
+    ['failure', 'true', 'skipped', false],
+    ['success', 'true', 'cancelled', false],
+  ]) {
+    const result = spawnSync('bash', ['-e', '-c', command], {
+      env: { ...process.env, CHANGES_RESULT: changes, DOCS_ONLY: docs, IOS_RESULT: ios },
+    })
+    assert.equal(result.status === 0, success, `${changes}/${docs}/${ios}`)
+  }
+})
+
+test('every UI method is assigned exactly once per device, including both isolated audits', () => {
+  replay({}, ({ calls }) => {
+    const directory = join(root, 'apps/ios/CookUITests')
+    for (const file of readdirSync(directory).filter(file => file.endsWith('.swift'))) {
+      const source = readFileSync(join(directory, file), 'utf8')
+      const suite = source.match(/final class (\w+): XCTestCase/)?.[1]
+      if (!suite)
+        continue
+      for (const match of source.matchAll(/func (test\w+)\(/g)) {
+        const identifier = `CookUITests/${suite}/${match[1]}`
+        const matches = selector => identifier === selector || identifier.startsWith(`${selector}/`)
+        for (const device of ['phone', 'pad']) {
+          const selected = calls.filter(call => call.name.startsWith(`${device}-`)).filter(({ args }) => {
+            const only = args.filter(arg => arg.startsWith('-only-testing:')).map(arg => arg.slice(14))
+            const skip = args.filter(arg => arg.startsWith('-skip-testing:')).map(arg => arg.slice(14))
+            return (!only.length || only.some(matches)) && !skip.some(matches)
+          })
+          assert.equal(selected.length, 1, `${device}: ${identifier} must run exactly once`)
+        }
+      }
+    }
+  })
 })

@@ -29,6 +29,21 @@ extension XCUIApplication {
         XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed, file: file, line: line)
     }
 
+    /// Hittable can still describe a partly covered List row; keep its full frame above the inset.
+    @MainActor
+    func revealFilterOption(_ option: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        let list = collectionViews["filter.options"]
+        let summary = otherElements["filter.summary"]
+        XCTAssertTrue(list.waitForExistence(timeout: 10), file: file, line: line)
+        for _ in 0..<8 {
+            let bottom = summary.exists ? summary.frame.minY : list.frame.maxY
+            if option.exists && option.isHittable && option.frame.minY >= list.frame.minY
+                && option.frame.maxY <= bottom { return }
+            list.swipeUp(velocity: .slow)
+        }
+        XCTFail("筛选选项未完整露出：\(option.identifier)", file: file, line: line)
+    }
+
     /// 决定页先把选中的菜停稳，再进入既有详情。
     @MainActor
     func confirmDecidedRecipe(file: StaticString = #filePath, line: UInt = #line) {
@@ -39,7 +54,7 @@ extension XCUIApplication {
             object: open
         )
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed, "挑选停稳后才能打开做法", file: file, line: line)
-        let recipe = descendants(matching: .any)["cook.decide.recipe"]
+        let recipe = otherElements["cook.decide.recipe"]
         let named = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == true AND label != '' AND label != '正在挑选'"),
             object: recipe

@@ -8,8 +8,11 @@ final class CookDiscoveryUITests: XCTestCase {
     @MainActor
     func testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients() {
         let app = launch()
-        let results = app.buttons["cook.showResults"]
-        reveal(results, in: app)
+        let wide = app.windows.firstMatch.horizontalSizeClass == .regular
+        let results = wide
+            ? app.collectionViews["dietary.results"].staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "当前候选")).firstMatch
+            : app.buttons["cook.showResults"]
+        XCTAssertTrue(results.waitForExistence(timeout: 10))
         let catalogCount = results.label.filter { $0.isASCII && $0.isNumber }
         XCTAssertGreaterThan(Int(catalogCount) ?? 0, 0, "默认页面应可浏览真实菜谱目录")
 
@@ -30,7 +33,7 @@ final class CookDiscoveryUITests: XCTestCase {
         let app = launch()
         submit("蒸蛋", in: app)
         let clearKeyword = app.buttons["cook.clearKeyword"]
-        reveal(clearKeyword, in: app)
+        reveal(clearKeyword, in: app, towardTop: true)
         XCTAssertTrue(clearKeyword.exists)
 
         let query = app.textFields["cook.query"]
@@ -70,29 +73,32 @@ final class CookDiscoveryUITests: XCTestCase {
         let potato = app.buttons.matching(NSPredicate(format: "label == %@", "土豆")).firstMatch
         XCTAssertTrue(potato.isHittable, "常用食材必须无需滚动就能点选")
         XCTAssertTrue(app.staticTexts["蔬菜"].isHittable, "蔬菜快选应回到首屏")
-        XCTAssertFalse(app.buttons["discovery.shuffle"].isHittable, "随机操作不应挤在食材前面")
-        XCTAssertFalse(app.buttons["discovery.decide"].isHittable, "随机操作不应遮挡首屏快选")
+        for identifier in ["discovery.shuffle", "discovery.decide"] {
+            let action = app.buttons[identifier]
+            // A tall iPad can show both sections. Verify ordering, not phone-only invisibility.
+            if app.windows.firstMatch.horizontalSizeClass != .regular {
+                XCTAssertFalse(action.isHittable, "随机操作不应挤在食材首屏")
+            } else if action.exists && action.isHittable {
+                XCTAssertGreaterThan(action.frame.minY, potato.frame.maxY, "随机操作应位于食材之后")
+            }
+        }
         capture(app, "find-recipes-compact-ingredient-first")
         let recipes = recipeLinks(in: app)
         reveal(recipes.firstMatch, in: app)
-        waitForThreeRecipes(in: app)
-        let previous = Set(recipes.allElementsBoundByIndex.map(\.identifier))
+        let previous = waitForThreeRecipes(in: app)
         XCTAssertEqual(previous.count, 3)
         capture(app, "find-recipes-default-three")
 
         let shuffle = app.buttons["discovery.shuffle"]
-        reveal(shuffle, in: app)
+        reveal(shuffle, in: app, towardTop: true)
         XCTAssertTrue(shuffle.isEnabled)
         shuffle.tap()
-        let changed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            let updated = Set(recipes.allElementsBoundByIndex.map(\.identifier))
-            return updated.count == 3 && updated.isDisjoint(with: previous)
-        }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [changed], timeout: 10), .completed)
+        let updated = waitForThreeRecipes(in: app)
+        XCTAssertTrue(updated.isDisjoint(with: previous), "换一批应提供三道不同于上一批的菜")
         capture(app, "find-recipes-shuffled-three")
 
         let decide = app.buttons["discovery.decide"]
-        reveal(decide, in: app)
+        reveal(decide, in: app, towardTop: true)
         decide.tap()
         app.confirmDecidedRecipe()
         wait(favoriteButton(in: app), "isHittable == true")
@@ -189,13 +195,13 @@ final class CookDiscoveryUITests: XCTestCase {
         reset.tap()
         wait(empty, "exists == false")
         XCTAssertFalse(app.buttons["cook.clearScene"].exists)
-        reveal(recipeLinks(in: app).firstMatch, in: app)
+        reveal(recipeLinks(in: app).firstMatch, in: app, towardTop: true)
         XCTAssertTrue(recipeLinks(in: app).firstMatch.exists)
         XCTAssertTrue(context.label.contains("土豆"))
         XCTAssertTrue(context.label.contains("微波炉"))
         for name in ["土豆", "微波炉"] {
             let item = app.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch
-            reveal(item, in: app)
+            reveal(item, in: app, towardTop: true)
             XCTAssertTrue(item.isSelected)
         }
         capture(app, "find-recipes-restored-after-scene-reset")
@@ -413,10 +419,19 @@ final class CookDiscoveryUITests: XCTestCase {
     }
 
     @MainActor
-    private func waitForThreeRecipes(in app: XCUIApplication) {
+    @discardableResult
+    private func waitForThreeRecipes(in app: XCUIApplication) -> Set<String> {
         let recipes = recipeLinks(in: app)
-        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in recipes.count == 3 }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed)
+        let chooser = app.collectionViews["cook.chooser"]
+        var identifiers = Set<String>()
+        // iPad's narrow sidebar lazily realizes tall recipe rows; collect the whole batch by scrolling.
+        for _ in 0..<8 {
+            identifiers.formUnion(recipes.allElementsBoundByIndex.map(\.identifier))
+            if identifiers.count >= 3 { break }
+            chooser.swipeUp()
+        }
+        XCTAssertEqual(identifiers.count, 3, "灵感区应包含三道不同菜谱")
+        return identifiers
     }
 
     @MainActor
@@ -474,13 +489,13 @@ final class CookDiscoveryUITests: XCTestCase {
         let window = app.windows.firstMatch
         var visibleTop = window.frame.minY
         var visibleBottom = window.frame.maxY
-        for _ in 0..<30 {
+        for _ in 0..<10 {
             let frame = element.exists ? element.frame : CGRect.null
             // 固定底部结果按钮本身无需滚动，不能拿自己的上沿当遮挡边界。
-            if element.isHittable && ["cook.showResults", "kitchen.cook"].contains(element.identifier) { return }
+            if element.exists && element.isHittable && ["cook.showResults", "kitchen.cook"].contains(element.identifier) { return }
             let bars = app.navigationBars.allElementsBoundByIndex.filter(\.isHittable)
             let navigation = bars.first(where: { !frame.isNull && frame.midX >= $0.frame.minX && frame.midX <= $0.frame.maxX })
-                ?? bars.first ?? app.navigationBars.firstMatch
+                ?? (page == .recipe ? bars.last : bars.first) ?? app.navigationBars.firstMatch
             let navigationFrame = navigation.isHittable ? navigation.frame : CGRect.null
             let top = navigationFrame.isNull ? window.frame.minY : navigationFrame.maxY
             var bottom = window.frame.maxY
@@ -502,12 +517,16 @@ final class CookDiscoveryUITests: XCTestCase {
                     if count.exists { bottom = min(bottom, count.frame.minY - 12) }
                 }
             }
+            // After choosing an ingredient suggestion, the keyboard can still cover the lower list.
+            // Start inside visible content so the drag scrolls/dismisses it instead of hitting keys.
+            let keyboard = app.keyboards.firstMatch
+            if keyboard.exists { bottom = min(bottom, keyboard.frame.minY) }
             visibleTop = top
             visibleBottom = bottom
             let withinViewport = page == .filters
                 ? frame.minY >= top && frame.maxY <= bottom
                 : frame.midY >= top && frame.midY <= bottom
-            if element.isHittable && !frame.isNull && withinViewport { return }
+            if !frame.isNull && element.isHittable && withinViewport { return }
             let above = !frame.isNull && frame.minY < top
             let scrollBack = towardTop || above
             let x = navigationFrame.isNull ? window.frame.midX : navigationFrame.midX

@@ -2,6 +2,7 @@ import UIKit
 import XCTest
 
 final class DietaryGoalsUITests: XCTestCase {
+    override func setUp() { continueAfterFailure = false }
 
     @MainActor
     func testNextDayLunchAndWeightGoalIntersectAndShowSourceOilUnits() {
@@ -22,9 +23,10 @@ final class DietaryGoalsUITests: XCTestCase {
         let options = app.collectionViews["filter.options"]
         let lunch = options.buttons["discovery.scene.next-day-lunch"]
         XCTAssertTrue(lunch.waitForExistence(timeout: 10))
-        for _ in 0..<3 where !lunch.isHittable { options.swipeUp() }
-        XCTAssertTrue(lunch.isHittable)
+        app.revealFilterOption(lunch)
         lunch.tap()
+        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: lunch)
+        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed)
         let count = app.descendants(matching: .any).matching(identifier: "filter.resultCount").firstMatch
         XCTAssertTrue(count.waitForExistence(timeout: 10))
         XCTAssertEqual(count.label.filter { $0.isASCII && $0.isNumber }, "10")
@@ -139,7 +141,9 @@ final class DietaryGoalsUITests: XCTestCase {
                                  file: StaticString = #filePath, line: UInt = #line) {
         let resultsOptions = app.buttons["results.options"].firstMatch
         if resultsOptions.exists && resultsOptions.isHittable {
-            XCTAssertEqual(resultsOptions.value as? String, value, file: file, line: line)
+            let selected = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "value == %@ OR label CONTAINS %@", value, "饮食目标：\(value)"), object: resultsOptions)
+            XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed, file: file, line: line)
             return
         }
         let filters = app.buttons["cook.filters"].firstMatch
@@ -363,6 +367,7 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(done.waitForExistence(timeout: 5))
         assertRememberControlAbsent(in: app)
         done.tap()
+        XCTAssertTrue(done.waitForNonExistence(timeout: 10))
         assertGoalValue("不限目标", in: app)
         let candidate = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
         XCTAssertTrue(candidate.waitForExistence(timeout: 10), "取消目标后继续浏览当前目录，不退回空页面")
