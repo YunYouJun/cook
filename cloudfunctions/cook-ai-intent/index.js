@@ -6,6 +6,7 @@ const ENV_ID = 'yunlefun-8g7ybcxc7345c490'
 const IDENTITY_URL = `https://${ENV_ID}.api.tcloudbasegateway.com/auth/v1/user/me`
 const ACCOUNT_URL = `https://${ENV_ID}.api.tcloudbasegateway.com/v1/functions/account-api`
 const MODEL_URL = 'https://api.deepseek.com/chat/completions'
+const MODEL_TIMEOUT_MS = 20_000
 const MAX_BODY_BYTES = 8192
 const MAX_MODEL_BYTES = 65_536
 const STATUS = {
@@ -48,16 +49,25 @@ function positiveInteger(value, maximum) {
 
 /** Incomplete deployment configuration always closes the managed model path. */
 function readConfig(env = process.env) {
+  const provider = env.YUNLEFUN_AI_DEFAULT_PROVIDER ?? env.COOK_AI_PROVIDER ?? 'deepseek'
+  const model = provider === 'cloudbase'
+    ? env.YUNLEFUN_AI_DEFAULT_CLOUDBASE_MODEL ?? env.COOK_AI_CLOUDBASE_MODEL ?? 'deepseek-v4.1-flash'
+    : env.YUNLEFUN_AI_DEFAULT_DEEPSEEK_MODEL ?? env.COOK_AI_DEEPSEEK_MODEL ?? 'deepseek-flash'
   const apiKey = env.COOK_AI_DEEPSEEK_API_KEY ?? ''
   const quotaSalt = env.COOK_AI_QUOTA_SALT ?? ''
   const userDailyLimit = positiveInteger(env.COOK_AI_USER_DAILY_LIMIT, 1000)
   const userMinuteLimit = positiveInteger(env.COOK_AI_USER_MINUTE_LIMIT, 60)
   const dailyRequestBudget = positiveInteger(env.COOK_AI_DAILY_REQUEST_BUDGET, 10_000)
-  const configured = apiKey.length > 0 && Buffer.byteLength(apiKey) <= 512 && /^[\x21-\x7E]+$/.test(apiKey)
+  const validApiKey = apiKey.length > 0 && Buffer.byteLength(apiKey) <= 512 && /^[\x21-\x7E]+$/.test(apiKey)
+  const configured = ['deepseek', 'cloudbase'].includes(provider)
+    && typeof model === 'string' && /^deepseek-[a-z0-9][a-z0-9.-]{0,99}$/.test(model) && model.trim() === model
+    && (provider === 'cloudbase' || validApiKey)
     && quotaSalt.length >= 32 && quotaSalt.length <= 512
     && userDailyLimit !== null && userMinuteLimit !== null && dailyRequestBudget !== null
   return {
     enabled: env.COOK_AI_ENABLED === 'true' && configured,
+    provider,
+    model,
     apiKey,
     quotaSalt,
     userDailyLimit,
@@ -215,8 +225,25 @@ function modelPrompt(contract) {
   ].join('\n')
 }
 
-/** Fixed network targets retain the user's identity without granting the function an account admin token. */
-function createHttpAdapters({ fetchImpl = globalThis.fetch, config, contract }) {
+function parseModelResponse(body) {
+  if (!isRecord(body) || Buffer.byteLength(JSON.stringify(body)) > MAX_MODEL_BYTES)
+    throw new IntentServiceError('INVALID_MODEL_RESPONSE', 'provider_envelope')
+  const choices = body.choices
+  const choice = Array.isArray(choices) && choices.length === 1 ? choices[0] : null
+  const content = choice?.message?.content
+  if (choice?.finish_reason !== 'stop' || choice?.message?.role !== 'assistant'
+    || choice.message.tool_calls != null
+    || typeof content !== 'string' || Buffer.byteLength(content) > 32_768) {
+    throw new IntentServiceError('INVALID_MODEL_RESPONSE', 'provider_envelope')
+  }
+  try {
+    return JSON.parse(content)
+  }
+  catch { throw new IntentServiceError('INVALID_MODEL_RESPONSE', 'provider_content_json') }
+}
+
+/** Fixed targets keep user tokens on account APIs and model credentials in the selected provider. */
+function createAdapters({ fetchImpl = globalThis.fetch, getModel = getCloudBaseModel, config, contract }) {
   async function fixedFetch(url, options, timeoutMs, failureCode) {
     try {
       const http = await fetchImpl(url, {
@@ -268,42 +295,47 @@ function createHttpAdapters({ fetchImpl = globalThis.fetch, config, contract }) 
     },
     async complete(text) {
       try {
+        const request = {
+          model: config.model,
+          thinking: { type: 'disabled' },
+          response_format: { type: 'json_object' },
+          max_tokens: 2048,
+          stream: false,
+          messages: [{ role: 'system', content: modelPrompt(contract) }, { role: 'user', content: text }],
+        }
+        if (config.provider === 'cloudbase') {
+          // The SDK can execute registered tools by default; one step permits only a condition draft.
+          const result = await getModel().generateText({ ...request, maxSteps: 1 })
+          if (result?.error)
+            throw result.error
+          if (!Array.isArray(result?.rawResponses) || result.rawResponses.length !== 1)
+            throw new IntentServiceError('INVALID_MODEL_RESPONSE', 'provider_envelope')
+          return parseModelResponse(result.rawResponses[0])
+        }
+        if (config.provider !== 'deepseek')
+          throw new IntentServiceError('SERVICE_UNAVAILABLE')
         const http = await fixedFetch(MODEL_URL, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${config.apiKey}`, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-          body: JSON.stringify({
-            model: 'deepseek-flash',
-            thinking: { type: 'disabled' },
-            response_format: { type: 'json_object' },
-            max_tokens: 2048,
-            stream: false,
-            messages: [{ role: 'system', content: modelPrompt(contract) }, { role: 'user', content: text }],
-          }),
-        }, 20_000, 'INVALID_MODEL_RESPONSE')
+          body: JSON.stringify(request),
+        }, MODEL_TIMEOUT_MS, 'INVALID_MODEL_RESPONSE')
         if (http.status === 408 || http.status === 504)
           throw new IntentServiceError('MODEL_TIMEOUT')
         if (http.status === 429)
           throw new IntentServiceError('RATE_LIMITED')
         if (!http.ok)
           throw new IntentServiceError('SERVICE_UNAVAILABLE')
-        const body = await boundedJson(http, MAX_MODEL_BYTES, 'INVALID_MODEL_RESPONSE')
-        const choices = body?.choices
-        const choice = Array.isArray(choices) && choices.length === 1 ? choices[0] : null
-        const content = choice?.message?.content
-        if (choice?.finish_reason !== 'stop' || choice?.message?.role !== 'assistant'
-          || typeof content !== 'string' || Buffer.byteLength(content) > 32_768) {
-          throw new IntentServiceError('INVALID_MODEL_RESPONSE', 'provider_envelope')
-        }
-        try {
-          return JSON.parse(content)
-        }
-        catch { throw new IntentServiceError('INVALID_MODEL_RESPONSE', 'provider_content_json') }
+        return parseModelResponse(await boundedJson(http, MAX_MODEL_BYTES, 'INVALID_MODEL_RESPONSE'))
       }
       catch (error) {
         if (error instanceof IntentServiceError)
           throw error
-        if (['AbortError', 'TimeoutError'].includes(error?.name))
+        if (['AbortError', 'TimeoutError'].includes(error?.name)
+          || ['408', '504', 'ETIMEDOUT', 'ESOCKETTIMEDOUT', 'ECONNABORTED'].includes(String(error?.code))) {
           throw new IntentServiceError('MODEL_TIMEOUT')
+        }
+        if (['429', 'EXCEED_CONCURRENT_REQUEST_LIMIT', 'EXCEED_REQUEST_LIMIT', 'RATE_LIMIT_EXCEEDED', 'rate_limit_exceeded'].includes(String(error?.code)))
+          throw new IntentServiceError('RATE_LIMITED')
         throw new IntentServiceError('SERVICE_UNAVAILABLE')
       }
     },
@@ -356,6 +388,17 @@ function createHandler({ verifyIdentity, readMembership, reserveQuota, complete,
 }
 
 let app
+let cloudBaseModel
+function getCloudBaseModel() {
+  if (!cloudBaseModel) {
+    const cloudbase = require('@cloudbase/node-sdk')
+    // DefaultSimpleModel ignores per-call timeout options in SDK 3.18.3; set the transport timeout here.
+    const modelApp = cloudbase.init({ env: ENV_ID, timeout: MODEL_TIMEOUT_MS })
+    cloudBaseModel = modelApp.ai().createModel('cloudbase')
+  }
+  return cloudBaseModel
+}
+
 function getDatabase() {
   if (!app) {
     const cloudbase = require('@cloudbase/node-sdk')
@@ -371,10 +414,13 @@ function loadContract() {
   catch { return null }
 }
 
+// Each deployed instance keeps one environment snapshot; switching requires a config deployment.
+const deploymentConfig = Object.freeze(readConfig())
+
 async function main(event) {
-  const config = readConfig()
+  const config = deploymentConfig
   const contract = loadContract()
-  const adapters = createHttpAdapters({ config, contract })
+  const adapters = createAdapters({ config, contract })
   return createHandler({
     ...adapters,
     config,
@@ -391,4 +437,4 @@ async function main(event) {
 
 exports.main = main
 exports.createHandler = createHandler
-exports._internal = { ACCOUNT_URL, ENV_ID, IDENTITY_URL, MODEL_URL, IntentServiceError, createHttpAdapters, readConfig, validContract, validateIntent }
+exports._internal = { ACCOUNT_URL, ENV_ID, IDENTITY_URL, MODEL_URL, IntentServiceError, createAdapters, readConfig, validContract, validateIntent }

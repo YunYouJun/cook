@@ -13,7 +13,7 @@
 
 ## 额度与保存
 
-当前试运行配置为每位会员每天 10 次、每分钟 3 次，全服务每天最多 100 次。每天按北京时间零点划分，模型每次最多输出 2048 token，文本最多 1000 字。这是有输入／输出上限的请求预算，不是人民币金额预算。未配置完整限额、凭据或服务开关时保持不可用。
+当前试运行配置为每位会员每天 10 次、每分钟 3 次，全服务每天最多 100 次。每天按北京时间零点划分，模型每次最多输出 2048 token，文本最多 1000 字。这是有输入／输出上限的请求预算，不是人民币金额预算。未配置完整限额、所选通道需要的凭据或服务开关时保持不可用。两条模型通道共用配额，切换不会重置请求预算。
 
 `cook_ai_quota` 是独立的 `ADMINONLY` 集合。用户标识由服务端密钥生成 HMAC 摘要，仅记录时间窗口、请求数和过期时间；全局、用户日及用户分钟计数在同一事务更新。只重试已知事务冲突，达到限额或存储异常时不调用模型。请求已准入后，上游失败或超时也不退回额度，避免不确定结果导致预算超用。
 
@@ -23,18 +23,57 @@
 
 云函数为 Event Function，经现有 HTTP Access 网关暴露，运行时 `Nodejs18.15`，超时 45 秒。函数 SDK 调用沿用环境的 `auth != null` 默认规则；HTTP 请求仍必须通过函数内的用户令牌及会员校验。没有修改整个环境的其他函数安全规则。
 
-服务端变量：
+平台默认通道通过部署环境变量配置，云函数启动时解析为不可变快照；运行时不查询通道配置数据库，也没有轮询或缓存到期刷新。修改部署配置并发布后由新实例使用新值，发布期间已经开始的请求按原实例的快照完成；App 不需要重新发版。
 
-| 名称                           | 用途                           |
-| ------------------------------ | ------------------------------ |
-| `COOK_AI_ENABLED`              | 仅字面值 `true` 才启用         |
-| `COOK_AI_DEEPSEEK_API_KEY`     | 服务端专用 DeepSeek 凭据       |
-| `COOK_AI_QUOTA_SALT`           | 至少 32 字符的安全随机摘要密钥 |
-| `COOK_AI_USER_DAILY_LIMIT`     | 用户日请求限额                 |
-| `COOK_AI_USER_MINUTE_LIMIT`    | 用户分钟请求限额               |
-| `COOK_AI_DAILY_REQUEST_BUDGET` | 全服务日请求预算               |
+| 名称                                  | 用途                                                     |
+| ------------------------------------- | -------------------------------------------------------- |
+| `YUNLEFUN_AI_DEFAULT_PROVIDER`        | 云乐坊默认文字模型通道：`deepseek`（默认）或 `cloudbase` |
+| `YUNLEFUN_AI_DEFAULT_DEEPSEEK_MODEL`  | 直连默认型号，默认 `deepseek-flash`                      |
+| `YUNLEFUN_AI_DEFAULT_CLOUDBASE_MODEL` | CloudBase 默认型号，默认 `deepseek-v4.1-flash`           |
+| `COOK_AI_ENABLED`                     | Cook 服务开关，仅字面值 `true` 才启用                    |
+| `COOK_AI_DEEPSEEK_API_KEY`            | 仅直连通道必需的服务端凭据                               |
+| `COOK_AI_QUOTA_SALT`                  | 至少 32 字符的安全随机摘要密钥                           |
+| `COOK_AI_USER_DAILY_LIMIT`            | 用户日请求限额                                           |
+| `COOK_AI_USER_MINUTE_LIMIT`           | 用户分钟请求限额                                         |
+| `COOK_AI_DAILY_REQUEST_BUDGET`        | 全服务日请求预算                                         |
 
-凭据通过云函数配置注入，不写仓库或客户端。更新代码使用单函数代码更新，保留已有环境变量；修改配置时读取、合并现有值，不将仓库中的安全默认关闭配置直接覆盖到已启用环境。关闭开关可立即停止新模型调用，本地识别与个人 Key 不受影响。
+平台变量优先于旧的 `COOK_AI_PROVIDER`、`COOK_AI_DEEPSEEK_MODEL`、`COOK_AI_CLOUDBASE_MODEL`；没有配置平台变量时继续兼容旧部署，再使用内置默认值。显式空值或非法值关闭模型服务，不静默回退。服务开关、Key 与所有业务额度仍由 Cook 自己配置，客户端不能覆盖通道、型号或调用地址。
+
+### 统一默认通道与部署范围
+
+三个 `YUNLEFUN_AI_DEFAULT_*` 变量是云乐坊共享部署约定。环境变量属于各服务或云函数，设置 Cook 的变量不会自动修改其他业务；统一发布时须把同一组平台变量注入所有继承默认通道的服务，并分别确认部署成功。CMS、ADV.JS、Chat Runtime 已有的显式型号、能力和计费策略继续由各业务管理，不因默认通道改变而被覆盖。
+
+这次尚未上线的 Admin 动态保存入口、配置 API、数据库读取和 30 秒缓存已撤回。后台不能再通过保存数据库文档切换线上通道，也不把通道开关替换为即时修改生产环境变量的按钮。详细约定见 `YunLeFun/admin/docs/ai-provider-settings.md`。
+
+通道配置不再依赖 `platform_ai_settings` 或 `platform_ai_settings_audit`。此前准备的两个平台私有集合未写入配置，当前源码不再访问；本次没有修改或删除线上资源。会员身份与 `cook_ai_quota` 的配额读写照常保留，零查询仅指模型通道配置。
+
+### 配置与切换步骤
+
+在部署平台或 CloudBase 控制台中为目标云函数设置下列变量。仅修改本机 `.env` 不会同步远端云函数；仅更新函数代码也不会把本机环境变量自动注入已有配置。
+
+官方直连：
+
+```dotenv
+YUNLEFUN_AI_DEFAULT_PROVIDER=deepseek
+YUNLEFUN_AI_DEFAULT_DEEPSEEK_MODEL=deepseek-flash
+```
+
+保留现有 `COOK_AI_DEEPSEEK_API_KEY`，费用由 DeepSeek 官方账户承担。
+
+CloudBase 托管：
+
+```dotenv
+YUNLEFUN_AI_DEFAULT_PROVIDER=cloudbase
+YUNLEFUN_AI_DEFAULT_CLOUDBASE_MODEL=deepseek-v4.1-flash
+```
+
+也可以将托管型号设为已启用的 `deepseek-v4.1-flash-1017`。函数使用 `@cloudbase/node-sdk` 与固定 `cloudbase` 分组，复用业务环境 `yunlefun-8g7ybcxc7345c490` 的 Event Function 身份，无需额外管理员 Key 或 DeepSeek Key。上线前核对型号已启用且环境有适用额度；托管模型按 CloudBase 规则结算，详见[Node SDK 接入](https://docs.cloudbase.net/ai/model/nodejs-access)。
+
+发布时读取并合并现有云函数配置，只修改这三个通道变量，保留 Key、摘要密钥、服务开关与请求预算。通过配置更新／发布使新实例加载新值，再验收会员能力、一次有效解析与对应通道用量。只更新代码时使用单函数代码更新，保留已有环境变量，不将仓库中 `COOK_AI_ENABLED=false` 的安全默认配置覆盖到已启用环境。回滚时恢复此前变量快照并重新发布；全业务统一切换不具有跨服务原子性。
+
+两条通道分别配置型号，只校验所选通道，型号名称限定为 `deepseek-*`。CloudBase 模式不受未配置 DeepSeek Key 影响。发布尚未完成时不能依据本地配置或后台页面认定线上已切换。
+
+两条通道均关闭思考、请求 JSON、限制输出为 2048 token，并使用同一份提示词及完整输出校验。CloudBase 只允许一次生成，不执行 SDK 注册的工具；截断、工具调用、超大或非法响应均拒绝。`source=deepseek` 表示模型来源，保持现有客户端协议。每次调用使用 20 秒模型传输超时，不自动重试或切换到另一通道，上游失败仍消耗已预留的一次配额。模型凭据、账号令牌和原始错误不会返回客户端。
 
 原生的 `COOK_AI_SERVICE_URL` 构建设置默认指向已核验的业务地址，可显式覆盖；置空会关闭会员通道。仅允许指定 HTTPS 地址，无重定向、Cookie 或缓存。正常会员请求超时 45 秒，资源超时 50 秒；客户端取消会取消传输，已到达服务器的请求仍可能消耗一次预留额度。
 
@@ -56,6 +95,20 @@ node --test test/cookAiIntent.test.mjs test/aiIntentContract.test.mjs
 可以通过 SwiftPM 使用社区 [SwiftOpenAI](https://github.com/jamesrochabrun/SwiftOpenAI#deepseek) 或 [MacPaw/OpenAI](https://github.com/MacPaw/OpenAI)。二者支持 OpenAI 兼容服务，适合后续多模型或流式扩展。
 
 当前会员接口是云乐坊业务接口，只有一次受限 JSON 请求；模型 SDK 无法替代会员核验、额度和账号切换隔离。因此继续复用原生 URLSession 账号层与严格传输策略，不额外引入模型 SDK。CloudBase 的[官方 iOS Swift 指南](https://docs.cloudbase.net/quick-start/frameworks/ios-swift)同样使用 HTTP API。
+
+## 2026-11-03 双通道源码验证
+
+后端与生成词典共 31 项 Node 测试通过。覆盖共享部署变量优先级、旧环境变量兼容、非法配置关闭服务、CloudBase 免 DeepSeek Key、身份与会员准入、共享配额、非法输出、超时和限频错误。实际入口通过隔离模块运行验证：启动后修改注入变量不改变旧实例通道，新实例使用新值；通道配置不访问数据库，解析只访问配额集合。失败不重试或切换通道。
+
+此前使用实际的 `@cloudbase/node-sdk@3.18.3` 和传输替身验证了 `cloudbase` 分组、两种型号、JSON 与 token 参数、20 秒传输配置、响应解析及 429 映射。该检查未执行 CloudBase 远程推理。
+
+### 2026-11-03 生产发布
+
+主线提交 [`01a58757`](https://github.com/YunYouJun/cook/commit/01a587578ff6189de1fba7633d5c376a2703fd1a) 已通过单函数代码更新发布，状态为 `Active`。生产包四个源文件已下载并逐字节核对；环境变量、运行时、超时、内存和依赖安装配置保持原值，继续使用 DeepSeek 官方直连 `deepseek-flash`。本次未合入开发分支上的菜谱／iOS 功能，生产契约仍为 `faf919fc0041`。
+
+复用受管生产会员测试号完成能力检查与一次「鸡蛋，不吃辣」解析，均为 HTTP 200，结果通过契约及条件核对。未登录、无效令牌为 401，GET 为 405。CloudBase 通道已具备部署配置能力，本次未切换或执行其远程推理验收。完整回执见[发布证据](./evidence/ai-provider-deployment-2026-11-03.json)。
+
+Admin 的 `/cloudbase/functions` 当前支持查看函数配置和更新超时、内存、依赖安装配置；前端没有环境变量编辑或 Git 重部署入口。后续如需后台触发发布，应接固定的 owner 部署流程，校验提交、保留现有凭据并记录发布结果；本次没有新增该入口。
 
 ## 2026-10-29 验证
 
