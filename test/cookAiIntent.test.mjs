@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 // eslint-disable-next-line test/no-import-node-test -- The independently deployed function is tested without the Nuxt or Vitest runtime.
 import test from 'node:test'
+import { runInNewContext } from 'node:vm'
 
 const require = createRequire(import.meta.url)
 const { createHandler, _internal } = require('../cloudfunctions/cook-ai-intent/index.js')
 const { COLLECTION, QuotaError, cleanupExpiredQuota, createQuotaReservation } = require('../cloudfunctions/cook-ai-intent/quota.js')
 
-const { IntentServiceError, ACCOUNT_URL, IDENTITY_URL, MODEL_URL, createHttpAdapters, readConfig, validateIntent } = _internal
+const { IntentServiceError, ACCOUNT_URL, IDENTITY_URL, MODEL_URL, createAdapters, readConfig, validateIntent } = _internal
 
 const NOW = Date.parse('2026-10-29T01:00:00Z')
 const USER_TOKEN = 'fixture-user-token'
@@ -95,7 +97,7 @@ function envelope(value = intent(), overrides = {}) {
   return { choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: JSON.stringify(value) }, ...overrides }] }
 }
 
-function networkFixture(overrides = {}) {
+function networkFixture(overrides = {}, { config = CONFIG, getModel } = {}) {
   const requests = []
   const fetchImpl = async (url, options) => {
     requests.push({ url, options })
@@ -113,7 +115,21 @@ function networkFixture(overrides = {}) {
       return jsonResponse(envelope(), { url })
     throw new Error('Unexpected endpoint')
   }
-  return { requests, ...createHttpAdapters({ fetchImpl, config: CONFIG, contract: CONTRACT }) }
+  return { requests, config, ...createAdapters({ fetchImpl, getModel, config, contract: CONTRACT }) }
+}
+
+function cloudbaseFixture({ generateText = async () => ({ rawResponses: [envelope()] }), config = readConfig({ ...ENV, COOK_AI_PROVIDER: 'cloudbase', COOK_AI_DEEPSEEK_API_KEY: '' }) } = {}) {
+  const modelCalls = []
+  const getModel = () => {
+    modelCalls.push(['init'])
+    return {
+      async generateText(request) {
+        modelCalls.push(['generate', request])
+        return generateText(request)
+      },
+    }
+  }
+  return { modelCalls, ...networkFixture({}, { config, getModel }) }
 }
 
 class FakeDatabase {
@@ -150,6 +166,8 @@ class FakeDatabase {
 
 test('configuration requires an explicit gate and every bounded deployment value', () => {
   assert.equal(CONFIG.enabled, true)
+  assert.equal(CONFIG.provider, 'deepseek')
+  assert.equal(CONFIG.model, 'deepseek-flash')
   for (const key of Object.keys(ENV)) {
     const changed = { ...ENV }
     delete changed[key]
@@ -169,6 +187,140 @@ test('configuration requires an explicit gate and every bounded deployment value
   ]) {
     assert.equal(readConfig({ ...ENV, [key]: value }).enabled, false, `${key}=${value}`)
   }
+})
+
+test('provider selection validates only the active model and requires a key only for direct DeepSeek', () => {
+  const cloudbaseEnv = { ...ENV, COOK_AI_PROVIDER: 'cloudbase' }
+  delete cloudbaseEnv.COOK_AI_DEEPSEEK_API_KEY
+  assert.equal(readConfig(cloudbaseEnv).enabled, true)
+  assert.equal(readConfig(cloudbaseEnv).model, 'deepseek-v4.1-flash')
+  assert.equal(readConfig({ ...cloudbaseEnv, COOK_AI_DEEPSEEK_API_KEY: 'unsafe\nkey', COOK_AI_DEEPSEEK_MODEL: 'invalid' }).enabled, true)
+  assert.equal(readConfig({ ...ENV, COOK_AI_CLOUDBASE_MODEL: 'invalid' }).enabled, true)
+  assert.equal(readConfig({ ...ENV, COOK_AI_DEEPSEEK_MODEL: 'deepseek-reasoner' }).model, 'deepseek-reasoner')
+  for (const provider of ['', 'unknown', 'CloudBase', 'custom-deepseek-open'])
+    assert.equal(readConfig({ ...ENV, COOK_AI_PROVIDER: provider }).enabled, false)
+  for (const key of Object.keys(cloudbaseEnv)) {
+    if (key === 'COOK_AI_PROVIDER')
+      continue
+    const changed = { ...cloudbaseEnv }
+    delete changed[key]
+    assert.equal(readConfig(changed).enabled, false, key)
+  }
+  for (const provider of ['deepseek', 'cloudbase']) {
+    const modelVariable = provider === 'cloudbase' ? 'COOK_AI_CLOUDBASE_MODEL' : 'COOK_AI_DEEPSEEK_MODEL'
+    for (const model of ['', 'hy3', 'deepseek-flash\n', 'deepseek flash', 'https://evil.example', 'deepseek-', `deepseek-${'a'.repeat(101)}`])
+      assert.equal(readConfig({ ...ENV, COOK_AI_PROVIDER: provider, [modelVariable]: model }).enabled, false, model)
+  }
+  assert.equal(readConfig({ ...cloudbaseEnv, COOK_AI_PROVIDER: 'deepseek' }).enabled, false)
+})
+
+test('platform deployment defaults override legacy Cook routing without changing business limits', () => {
+  for (const provider of ['deepseek', 'cloudbase']) {
+    const config = readConfig({
+      ...ENV,
+      COOK_AI_PROVIDER: provider === 'deepseek' ? 'cloudbase' : 'deepseek',
+      COOK_AI_DEEPSEEK_MODEL: 'deepseek-chat',
+      COOK_AI_CLOUDBASE_MODEL: 'deepseek-v4.1-flash',
+      YUNLEFUN_AI_DEFAULT_PROVIDER: provider,
+      YUNLEFUN_AI_DEFAULT_DEEPSEEK_MODEL: 'deepseek-flash',
+      YUNLEFUN_AI_DEFAULT_CLOUDBASE_MODEL: 'deepseek-v4.1-flash-1017',
+    })
+    assert.equal(config.provider, provider)
+    assert.equal(config.model, provider === 'deepseek' ? 'deepseek-flash' : 'deepseek-v4.1-flash-1017')
+    assert.equal(config.enabled, true)
+    for (const key of ['apiKey', 'quotaSalt', 'userDailyLimit', 'userMinuteLimit', 'dailyRequestBudget'])
+      assert.equal(config[key], CONFIG[key])
+  }
+  const cloudbase = { ...ENV, YUNLEFUN_AI_DEFAULT_PROVIDER: 'cloudbase', COOK_AI_DEEPSEEK_API_KEY: '' }
+  assert.equal(readConfig(cloudbase).enabled, true)
+  assert.equal(readConfig({ ...cloudbase, YUNLEFUN_AI_DEFAULT_PROVIDER: 'deepseek' }).enabled, false)
+  assert.equal(readConfig({ ...cloudbase, COOK_AI_ENABLED: 'false' }).enabled, false)
+  for (const key of ['COOK_AI_QUOTA_SALT', 'COOK_AI_USER_DAILY_LIMIT', 'COOK_AI_USER_MINUTE_LIMIT', 'COOK_AI_DAILY_REQUEST_BUDGET'])
+    assert.equal(readConfig({ ...cloudbase, [key]: '' }).enabled, false, key)
+})
+
+test('invalid platform routing fails closed rather than falling back to valid legacy values', () => {
+  for (const provider of ['', 'unknown', 'CloudBase', 'custom-deepseek-open'])
+    assert.equal(readConfig({ ...ENV, YUNLEFUN_AI_DEFAULT_PROVIDER: provider }).enabled, false)
+  for (const provider of ['deepseek', 'cloudbase']) {
+    const selected = provider === 'deepseek' ? 'YUNLEFUN_AI_DEFAULT_DEEPSEEK_MODEL' : 'YUNLEFUN_AI_DEFAULT_CLOUDBASE_MODEL'
+    const other = provider === 'deepseek' ? 'YUNLEFUN_AI_DEFAULT_CLOUDBASE_MODEL' : 'YUNLEFUN_AI_DEFAULT_DEEPSEEK_MODEL'
+    for (const model of ['', 'hy3', 'deepseek-flash\n', 'deepseek flash', 'https://evil.example'])
+      assert.equal(readConfig({ ...ENV, YUNLEFUN_AI_DEFAULT_PROVIDER: provider, [selected]: model }).enabled, false)
+    assert.equal(readConfig({ ...ENV, YUNLEFUN_AI_DEFAULT_PROVIDER: provider, [other]: 'unused-invalid-model' }).enabled, true)
+  }
+})
+
+test('deployed entry point keeps its startup routing snapshot and accesses only quota collections', async () => {
+  const source = await readFile(new URL('../cloudfunctions/cook-ai-intent/index.js', import.meta.url), 'utf8')
+  const environment = { ...ENV, YUNLEFUN_AI_DEFAULT_PROVIDER: 'deepseek' }
+  const database = new FakeDatabase()
+  const collections = []
+  database.command = { lt: value => ({ lt: value }) }
+  database.collection = (name) => {
+    collections.push(name)
+    assert.equal(name, COLLECTION)
+    return { where: () => ({ limit: () => ({ get: async () => ({ data: [] }) }) }) }
+  }
+  const models = []
+  const httpModels = []
+  let initializations = 0
+  function boot() {
+    const sandbox = {
+      exports: {},
+      AbortSignal,
+      Date: class extends Date {
+        static now() { return NOW }
+      },
+      async fetch(url, options) {
+        if (url === IDENTITY_URL)
+          return jsonResponse({ sub: 'verified-user', status: 'ACTIVE' })
+        if (url === ACCOUNT_URL)
+          return jsonResponse({ membership: { isActive: true, expireAt: NOW + 60_000 } })
+        assert.equal(url, MODEL_URL)
+        httpModels.push(JSON.parse(options.body).model)
+        return jsonResponse(envelope())
+      },
+      require(name) {
+        if (name === 'node:process')
+          return { env: environment }
+        if (name === './contract.json')
+          return CONTRACT
+        if (name === '@cloudbase/node-sdk') {
+          return { SYMBOL_CURRENT_ENV: 'fixture-environment', init: () => {
+            initializations++
+            return {
+              database: () => database,
+              ai: () => ({ createModel: (group) => {
+                assert.equal(group, 'cloudbase')
+                return { generateText: async (request) => {
+                  models.push(request.model)
+                  return { rawResponses: [envelope()] }
+                } }
+              } }),
+            }
+          } }
+        }
+        if (name === './quota')
+          return require('../cloudfunctions/cook-ai-intent/quota.js')
+        return require(name)
+      },
+    }
+    runInNewContext(source, sandbox)
+    return sandbox.exports.main
+  }
+  const deployed = boot()
+  assert.equal((await deployed(event({ action: 'capabilities' }))).statusCode, 200)
+  assert.equal(initializations, 0)
+  environment.YUNLEFUN_AI_DEFAULT_PROVIDER = 'cloudbase'
+  environment.YUNLEFUN_AI_DEFAULT_CLOUDBASE_MODEL = 'deepseek-v4.1-flash-1017'
+  assert.equal((await deployed(event())).statusCode, 200)
+  assert.deepEqual(httpModels, ['deepseek-flash'])
+  assert.deepEqual(models, [])
+  assert.equal((await boot()(event())).statusCode, 200)
+  assert.deepEqual(models, ['deepseek-v4.1-flash-1017'])
+  assert.deepEqual(collections, [COLLECTION, COLLECTION])
+  assert.equal(database.attempts, 2)
 })
 
 test('capabilities authenticates and reports only service and membership availability', async () => {
@@ -218,6 +370,8 @@ test('unsupported methods, malformed and oversized bodies, spoof fields and miss
     event({ action: 'capabilities', isMember: true }),
     event(input({ uid: 'spoof' })),
     event(input({ isMember: true })),
+    event(input({ provider: 'cloudbase' })),
+    event(input({ model: 'deepseek-v4.1-flash' })),
     event(input({ stuff: [] })),
     event(input({ text: '' })),
     event(input({ text: ' \n' })),
@@ -326,7 +480,9 @@ test('strict model contract rejects unknown nested fields, recipe IDs, illegal v
 })
 
 test('production HTTP adapters forward user bearer only to fixed platform endpoints and model key only to provider', async () => {
-  const network = networkFixture()
+  const network = networkFixture({}, { getModel: () => {
+    throw new Error('Direct mode must not initialize CloudBase AI')
+  } })
   const f = fixture(network)
   assert.equal((await f.handler(event())).statusCode, 200)
   assert.deepEqual(network.requests.map(request => request.url), [IDENTITY_URL, ACCOUNT_URL, MODEL_URL])
@@ -346,6 +502,131 @@ test('production HTTP adapters forward user bearer only to fixed platform endpoi
   assert.ok(body.messages[0].content.includes(JSON.stringify(CONTRACT)))
   for (const secret of [USER_TOKEN, PROVIDER_KEY, 'verified-user', 'private-favorite'])
     assert.ok(!provider.body.includes(secret), secret)
+})
+
+test('direct DeepSeek uses its configured model without initializing CloudBase AI', async () => {
+  const config = readConfig({ ...ENV, COOK_AI_PROVIDER: 'deepseek', COOK_AI_DEEPSEEK_MODEL: 'deepseek-chat' })
+  const network = networkFixture({}, { config, getModel: () => {
+    throw new Error('Unexpected CloudBase AI call')
+  } })
+  assert.equal((await fixture(network).handler(event())).statusCode, 200)
+  assert.equal(JSON.parse(network.requests[2].options.body).model, 'deepseek-chat')
+})
+
+test('CloudBase uses the selected model and shared contract without forwarding account or DeepSeek credentials', async () => {
+  for (const model of ['deepseek-v4.1-flash', 'deepseek-v4.1-flash-1017']) {
+    const config = readConfig({ ...ENV, COOK_AI_PROVIDER: 'cloudbase', COOK_AI_CLOUDBASE_MODEL: model })
+    const network = cloudbaseFixture({ config })
+    const f = fixture(network)
+    const result = await f.handler(event())
+    assert.equal(result.statusCode, 200)
+    assert.deepEqual(JSON.parse(result.body), { ok: true, intent: intent() })
+    assert.deepEqual(network.requests.map(request => request.url), [IDENTITY_URL, ACCOUNT_URL])
+    assert.deepEqual(network.modelCalls.map(call => call[0]), ['init', 'generate'])
+    const request = network.modelCalls[1][1]
+    assert.equal(request.model, model)
+    assert.equal(request.max_tokens, 2048)
+    assert.equal(request.maxSteps, 1)
+    assert.deepEqual(request.thinking, { type: 'disabled' })
+    assert.deepEqual(request.response_format, { type: 'json_object' })
+    assert.equal(request.stream, false)
+    assert.deepEqual(request.messages.map(message => message.role), ['system', 'user'])
+    assert.equal(request.messages[1].content, input().text)
+    assert.ok(request.messages[0].content.includes(JSON.stringify(CONTRACT)))
+    for (const secret of [USER_TOKEN, PROVIDER_KEY, ENV.COOK_AI_QUOTA_SALT, 'verified-user'])
+      assert.ok(!JSON.stringify(request).includes(secret))
+    assert.deepEqual(f.calls, [['quota', { uid: 'verified-user', now: NOW }]])
+  }
+})
+
+test('CloudBase initialization waits for valid configuration, identity, membership, contract and quota', async () => {
+  const cases = [
+    [{ config: readConfig({ ...ENV, COOK_AI_PROVIDER: 'invalid' }) }, event(), 503, 'SERVICE_UNAVAILABLE'],
+    [{}, event(input(), {}), 401, 'LOGIN_REQUIRED'],
+    [{ verifyIdentity: async () => { throw new IntentServiceError('LOGIN_REQUIRED') } }, event(), 401, 'LOGIN_REQUIRED'],
+    [{ readMembership: async () => ({ isActive: false, expireAt: null }) }, event(), 403, 'MEMBERSHIP_REQUIRED'],
+    [{ contract: null }, event(), 503, 'SERVICE_UNAVAILABLE'],
+    [{}, event(input({ dataVersion: 'old' })), 409, 'VERSION_MISMATCH'],
+    [{ reserveQuota: async () => { throw new QuotaError('BUDGET_EXHAUSTED') } }, event(), 429, 'BUDGET_EXHAUSTED'],
+    [{ now: () => NOW + 60_000 }, event(), 403, 'MEMBERSHIP_REQUIRED'],
+  ]
+  for (const [changes, request, status, code] of cases) {
+    const network = cloudbaseFixture()
+    await assertCode(fixture({ ...network, ...changes }).handler, request, status, code)
+    assert.deepEqual(network.modelCalls, [])
+    assert.ok(network.requests.every(request => request.url !== MODEL_URL))
+  }
+  const network = cloudbaseFixture()
+  assert.equal((await fixture(network).handler(event({ action: 'capabilities' }))).statusCode, 200)
+  assert.deepEqual(network.modelCalls, [])
+})
+
+test('CloudBase rejects truncated, oversized, tool and invalid JSON responses through the shared validation', async () => {
+  for (const result of [
+    null,
+    {},
+    { text: JSON.stringify(intent()) },
+    { rawResponses: [] },
+    { rawResponses: [envelope(), envelope()] },
+    { rawResponses: [null] },
+    { rawResponses: [envelope(intent(), { finish_reason: 'length' })] },
+    { rawResponses: [envelope(intent(), { message: { role: 'tool', content: '{}' } })] },
+    { rawResponses: [envelope(intent(), { message: { role: 'assistant', content: '{}', tool_calls: [] } })] },
+    { rawResponses: [envelope(intent(), { message: { role: 'assistant', content: '{' } })] },
+    { rawResponses: [envelope(intent(), { message: { role: 'assistant', content: '字'.repeat(11_000) } })] },
+    { rawResponses: [{ ...envelope(), padding: 'x'.repeat(65_536) }] },
+    { rawResponses: [envelope(intent({ source: 'cloudbase' }))] },
+    { rawResponses: [envelope(intent({ query: { ...intent().query, stuff: ['火星菜'] } }))] },
+  ]) {
+    const network = cloudbaseFixture({ generateText: async () => result })
+    const f = fixture(network)
+    await assertCode(f.handler, event(), 502, 'INVALID_MODEL_RESPONSE')
+    assert.deepEqual(network.modelCalls.map(call => call[0]), ['init', 'generate'])
+    assert.deepEqual(network.requests.map(request => request.url), [IDENTITY_URL, ACCOUNT_URL])
+    assert.equal(f.calls.filter(call => call[0] === 'quota').length, 1)
+  }
+})
+
+test('CloudBase SDK errors are redacted and mapped without retries or a direct-provider fallback', async () => {
+  for (const [error, status, code] of [
+    [new DOMException('private timeout', 'TimeoutError'), 504, 'MODEL_TIMEOUT'],
+    [Object.assign(new Error(`private ${PROVIDER_KEY}`), { code: 'ETIMEDOUT' }), 504, 'MODEL_TIMEOUT'],
+    [Object.assign(new Error('private timeout'), { code: '504' }), 504, 'MODEL_TIMEOUT'],
+    [Object.assign(new Error('private rate limit'), { code: '429' }), 429, 'RATE_LIMITED'],
+    [Object.assign(new Error('private rate limit'), { code: 'EXCEED_CONCURRENT_REQUEST_LIMIT' }), 429, 'RATE_LIMITED'],
+    [Object.assign(new Error(`private ${USER_TOKEN}`), { code: 'UNAUTHORIZED' }), 503, 'SERVICE_UNAVAILABLE'],
+    [new Error(`private ${PROVIDER_KEY}`), 503, 'SERVICE_UNAVAILABLE'],
+  ]) {
+    for (const generateText of [async () => {
+      throw error
+    }, async () => ({ error })]) {
+      const network = cloudbaseFixture({ generateText })
+      const f = fixture(network)
+      await assertCode(f.handler, event(), status, code)
+      assert.deepEqual(network.modelCalls.map(call => call[0]), ['init', 'generate'])
+      assert.deepEqual(network.requests.map(request => request.url), [IDENTITY_URL, ACCOUNT_URL])
+      assert.equal(f.calls.filter(call => call[0] === 'quota').length, 1)
+    }
+  }
+})
+
+test('switching provider shares the same quota and cannot create a second daily budget', async () => {
+  const db = new FakeDatabase()
+  const config = { ...CONFIG, dailyRequestBudget: 1 }
+  const reserveQuota = createQuotaReservation(db, config)
+  assert.equal((await fixture({ ...networkFixture(), reserveQuota }).handler(event())).statusCode, 200)
+  const network = cloudbaseFixture()
+  await assertCode(fixture({ ...network, reserveQuota }).handler, event(), 429, 'BUDGET_EXHAUSTED')
+  assert.deepEqual(network.modelCalls, [])
+  assert.equal([...db.rows.values()].find(row => row.scope === 'global-day').count, 1)
+})
+
+test('weight awareness is accepted only when the trusted contract explicitly offers it', () => {
+  const value = intent({ goal: 'weight-aware' })
+  assert.throws(() => validateIntent(value, CONTRACT), IntentServiceError)
+  const enabled = { ...CONTRACT, availableGoals: ['weight-aware', ...CONTRACT.availableGoals] }
+  assert.equal(validateIntent(value, enabled).goal, 'weight-aware')
+  assert.throws(() => validateIntent({ ...value, calories: 400 }, enabled), IntentServiceError)
 })
 
 test('production identity gate rejects anonymous, missing UID, unusable status and redirects without any account or model call', async () => {
