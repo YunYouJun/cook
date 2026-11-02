@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-11-03T01:13:28+08:00",
+  "sourceRepository": "https://github.com/YunYouJun/cook",
+  "sourceCommit": "01a587578ff6189de1fba7633d5c376a2703fd1a",
+  "environment": "yunlefun-8g7ybcxc7345c490",
+  "function": "cook-ai-intent",
+  "functionType": "Event",
+  "runtime": "Nodejs18.15",
+  "status": "Active",
+  "codeUpdateRequestId": "4e29b70b-1424-4343-b6ea-44e1382b2fd8",
+  "sourceArchiveSha256": "e43460faeefec28bb912bb6316213dbd18855e7c11d4a5492bbc586587eb3587",
+  "filesSha256": {
+    "index.js": "37bb5047d38fea4480718d6b440f524656c8a75bcfb1f80a6cf0fb48d23ba709",
+    "quota.js": "93be2893216d5e92e735b1636e48f8ce9fb4a05766f0d16c0d7ae142cf2dd201",
+    "contract.json": "721abeb4b3e70a7b68001af2fe3af0528024d46a99928ffb31d36c6b82f08f6e",
+    "package.json": "31e8e88f9ec2462a4bbb2d9fb0e99fa54dcfb18cf7c3f265736cdf50c556e69f"
+  },
+  "environmentVariablesUnchanged": true,
+  "routing": {
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "configurationReadsDatabase": false
+  },
+  "contract": {
+    "schemaVersion": 1,
+    "policyVersion": 1,
+    "dataVersion": "faf919fc0041",
+    "unchanged": true
+  },
+  "checks": {
+    "functionTests": 30,
+    "contractTests": 1,
+    "allFourDeployedSourceFilesMatch": true,
+    "unauthenticatedPostStatus": 401,
+    "invalidBearerStatus": 401,
+    "unsupportedGetStatus": 405,
+    "memberCapabilitiesStatus": 200,
+    "memberParseStatus": 200,
+    "eggsAndNoSpicyVerified": true
+  },
+  "testIdentity": {
+    "id": "production-member-active",
+    "environment": "production",
+    "scenario": "member-active"
+  },
+  "cloudbaseRemoteInferenceVerified": false,
+  "adminRedeploymentTriggerImplemented": false
+}
