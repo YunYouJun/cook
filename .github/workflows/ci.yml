@@ -11,6 +11,10 @@ on:
       - main
       - dev
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -187,10 +191,16 @@ jobs:
           COOK_SWIFT_SCRATCH_PATH: apps/ios/CookCore/.build
 
   # 云食册 iOS App：XcodeGen 生成工程，在 iPhone 和 iPad 模拟器上编译并跑测试（窄屏和宽屏两种布局）
-  ios:
+  ios-tests:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: xcode-27
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [iphone, ipad]
+        suite: [regression-main, regression-discovery, dietary]
     env:
       # Match native UI validation with a pinned compiler and XCTest toolchain.
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
@@ -211,60 +221,23 @@ jobs:
       - name: Select compatible simulators
         id: simulators
         run: pnpm exec tsx scripts/select-ios-test-devices.ts >> "$GITHUB_OUTPUT"
+      - name: Build for testing
+        timeout-minutes: 15
+        run: |
+          xcodebuild build-for-testing -project apps/ios/Cook.xcodeproj -scheme Cook \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/cook-derived-data" CODE_SIGNING_ALLOWED=NO
       - name: Build and test
+        timeout-minutes: 45
         id: ios_tests
         env:
-          IPHONE: ${{ steps.simulators.outputs.iphone }}
-          IPAD: ${{ steps.simulators.outputs.ipad }}
-        run: |
-          xcrun simctl list runtimes
-          xcrun simctl list devices available
-          # 连启动也串行；每个字体审计使用独立测试宿主和新启动的模拟器。
-          # 两项审计从常规回归中移出后分别执行，保留所有用例、审计类别和失败。
-          result=0
-          standard_audit=CookUITests/DietaryGoalsUITests/testNativeGoalPickerAccessibilityAndReviewedSummary
-          maximum_audit=CookUITests/DietaryGoalsUITests/testLargestTextCanChooseSavedGoalReadAndDecide
-          run_once() {
-            local device="$1" stage="$2" code=0
-            shift 2
-            echo "Running $stage on $device"
-            if xcrun simctl bootstatus "$device" -b; then
-              xcodebuild test -project apps/ios/Cook.xcodeproj -scheme Cook -destination "id=$device" \
-                -destination-timeout 180 -parallel-testing-enabled NO \
-                "$@" -resultBundlePath "$RUNNER_TEMP/xcresult/$device-$stage.xcresult" \
-                CODE_SIGNING_ALLOWED=NO || code=$?
-            else
-              code=1
-            fi
-            xcrun simctl shutdown "$device" || result=1
-            return "$code"
-          }
-          run_tests() {
-            local device="$1" stage="$2"
-            shift 2
-            if run_once "$device" "$stage" "$@"; then
-              return
-            fi
-            # Keep the failed bundle. Only these two known audit-infrastructure
-            # errors may repeat once in a new host on the same existing device.
-            if [[ "$stage" == dietary-standard || "$stage" == dietary-maximum ]] &&
-              node scripts/classify-ios-test-retry.mjs "$RUNNER_TEMP/xcresult/$device-$stage.xcresult" "${1-}"; then
-              echo "::warning title=Isolated iOS infrastructure retry::$device $stage failed before audit completion; original result bundle retained"
-              echo "infrastructure_retries=true" >> "$GITHUB_OUTPUT"
-              run_once "$device" "$stage-infrastructure-retry" "$@" || result=1
-            else
-              result=1
-            fi
-          }
-          for device in "$IPHONE" "$IPAD"; do
-            run_tests "$device" regression "-skip-testing:$standard_audit" "-skip-testing:$maximum_audit"
-            run_tests "$device" dietary-standard "-only-testing:$standard_audit"
-            run_tests "$device" dietary-maximum "-only-testing:$maximum_audit"
-          done
-          exit "$result"
+          DEVICE: ${{ steps.simulators.outputs[matrix.device] }}
+          IOS_SUITE: ${{ matrix.suite }}
+        run: bash scripts/run-ios-ci-tests.sh
       # 跑多个设备时 xcodebuild 的日志里只有失败的用例名，没有原因，从结果包里读出来
       - name: Show test failures
-        if: failure()
+        timeout-minutes: 5
+        if: ${{ failure() || cancelled() }}
         run: |
           for bundle in "$RUNNER_TEMP"/xcresult/*.xcresult; do
             [ -d "$bundle" ] || continue
@@ -279,10 +252,28 @@ jobs:
           done
       # 截图和每一步的操作记录都在结果包里，下载后用 Xcode 打开
       - name: Upload test results
-        if: ${{ failure() || steps.ios_tests.outputs.infrastructure_retries == 'true' }}
+        if: ${{ failure() || cancelled() || steps.ios_tests.outputs.infrastructure_retries == 'true' }}
         uses: actions/upload-artifact@v7
         with:
-          name: ios-xcresult
+          name: ios-xcresult-${{ matrix.device }}-${{ matrix.suite }}
           path: ${{ runner.temp }}/xcresult/
           if-no-files-found: ignore
           retention-days: 7
+
+  # Preserve the stable required-check name while requiring every native matrix cell.
+  ios:
+    needs: [changes, ios-tests]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Require every iOS group or verified documentation-only changes
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
+          IOS_RESULT: ${{ needs.ios-tests.result }}
+        run: |
+          if [[ "$CHANGES_RESULT" == success && "$DOCS_ONLY" == true && "$IOS_RESULT" == skipped ]]; then
+            exit 0
+          fi
+          [[ "$IOS_RESULT" == success ]]
