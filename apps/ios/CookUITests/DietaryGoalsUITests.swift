@@ -2,6 +2,8 @@ import UIKit
 import XCTest
 
 final class DietaryGoalsUITests: XCTestCase {
+    override func setUp() { continueAfterFailure = false }
+
     @MainActor
     private func app(contentSize: UIContentSizeCategory = .large, showsIntroduction: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
@@ -94,7 +96,9 @@ final class DietaryGoalsUITests: XCTestCase {
                                  file: StaticString = #filePath, line: UInt = #line) {
         let resultsOptions = app.buttons["results.options"].firstMatch
         if resultsOptions.exists && resultsOptions.isHittable {
-            XCTAssertEqual(resultsOptions.value as? String, value, file: file, line: line)
+            let selected = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "value == %@ OR label CONTAINS %@", value, "饮食目标：\(value)"), object: resultsOptions)
+            XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed, file: file, line: line)
             return
         }
         let filters = app.buttons["cook.filters"].firstMatch
@@ -318,6 +322,7 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(done.waitForExistence(timeout: 5))
         assertRememberControlAbsent(in: app)
         done.tap()
+        XCTAssertTrue(done.waitForNonExistence(timeout: 10))
         assertGoalValue("不限目标", in: app)
         let candidate = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
         XCTAssertTrue(candidate.waitForExistence(timeout: 10), "取消目标后继续浏览当前目录，不退回空页面")

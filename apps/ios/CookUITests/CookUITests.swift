@@ -39,7 +39,7 @@ extension XCUIApplication {
             object: open
         )
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed, "挑选停稳后才能打开做法", file: file, line: line)
-        let recipe = descendants(matching: .any)["cook.decide.recipe"]
+        let recipe = otherElements["cook.decide.recipe"]
         let named = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == true AND label != '' AND label != '正在挑选'"),
             object: recipe

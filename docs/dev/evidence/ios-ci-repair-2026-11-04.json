@@ -1,0 +1,53 @@
+{
+  "date": "2026-11-04",
+  "baselineCommit": "e6febf43b016f652d66087a8d806ccaf9d4c2ec5",
+  "toolchain": "Xcode 27.1 (27A9275)",
+  "checks": [
+    {
+      "result": "Failed",
+      "totalTestCount": 1,
+      "passedTests": 0,
+      "failedTests": 1,
+      "skippedTests": 0,
+      "name": "baseline-goal",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [
+        {
+          "test": "DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone()",
+          "message": "XCTAssertEqual failed: (\"Optional(\"\")\") is not equal to (\"Optional(\"不限目标\")\")"
+        }
+      ]
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 7,
+      "passedTests": 7,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "fixed-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": []
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 3,
+      "passedTests": 3,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "fixed-iphone",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": []
+    }
+  ],
+  "orchestration": {
+    "command": "node --test test/iosTestInfrastructure.test.mjs",
+    "passed": 10,
+    "failed": 0
+  },
+  "staticChecks": [
+    "ESLint on changed workflow and test harness",
+    "actionlint with the existing xcode-27 custom runner label allowed",
+    "bash -n scripts/run-ios-ci-tests.sh",
+    "git diff --check"
+  ]
+}
