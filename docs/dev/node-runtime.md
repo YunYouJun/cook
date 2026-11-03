@@ -8,12 +8,12 @@ EdgeOne 构建固定为平台已预装的 `24.18.0`，通过 `edgeone.json` 的 
 
 ## CloudBase 生产迁移
 
-CloudBase 的目标为 `Nodejs24.11`。2026-11-03 已通过临时 Event Function 实测：实际 Node 为 `24.11.1`，预打包的 `@cloudbase/node-sdk@3.18.3`、CloudBase AI 模型实例与内置 fetch 均可初始化。没有执行模型推理或业务写入，临时函数已删除。
+CloudBase 使用 `Nodejs24.11`。2026-11-04 临时 Event Function 完成 Node 24 创建、SDK 与 fetch 初始化、测试隔离、定时器恢复，以及 Node 18 回滚验证；实际 Node 为 `24.11.1`，临时函数已删除。没有执行模型推理或业务写入。
 
-目前生产的 `cook-ai-intent`、`cook-user-data`、`cook-feedback`、`cook-feedback-test` 仍为 `Nodejs18.15`。修改源码部署配置不会升级已有函数的运行时；平台运行时在创建时固定，迁移需要重建。正式迁移前保留当前部署配置，避免把目标版本误当作已完成的升级。
+2026-11-04 已逐个重建 `cook-ai-intent`、`cook-user-data`、`cook-feedback`、`cook-feedback-test` 并核验为 `Active / Nodejs24.11`。部署文件内容、环境变量、角色、网络、权限、默认别名和 HTTP 路由均保留。函数 SDK 的未登录拒绝、HTTP 方法与请求校验、测试反馈的环境隔离均通过。本次使用线上原包迁移，业务源码及菜谱词典保持此前线上版本。
 
-按函数逐个执行受控替换，保留部署包、环境变量、入口、超时、内存、角色、网络、权限和路由；已有 SDK 调用名和 HTTP 地址继续复用。`cook-feedback` 的私有 Support SDK 使用现有部署包，避免混入 SDK 版本变化。新运行时使用预打包依赖并关闭云端安装；超过 ZIP 直传大小限制的包通过管理 SDK 的 COS 上传方式发布。
+新运行时使用预打包依赖并关闭云端安装。`cloudbaserc.json` 已移除 `node_modules` 忽略规则，发布目录必须包含所需生产依赖；不要将未安装依赖的源码目录直接部署。AI 和用户数据函数应在独立临时目录按各自 `package.json` 安装生产依赖，再打包发布；反馈函数使用 `scripts/prepare-support-feedback.mjs` 生成包含经校验私有 Support SDK 的独立包及部署配置。完成后回收临时目录。超过 ZIP 直传大小限制的包通过管理 SDK 的 COS 上传方式发布。
 
-生产替换需安排可接受的维护窗口，并在每个函数恢复可用后再继续。失败时用原部署包和配置恢复旧运行时。迁移涉及函数 ID 和版本资源变化，不能按普通代码更新执行。Admin 的两个定时函数与完整步骤见 [Admin Node 运行时迁移说明](https://github.com/YunLeFun/admin/blob/main/docs/node-runtime-upgrade.md)。
+后续普通代码发布应使用代码更新接口并保留线上环境变量，不将仓库中的安全默认值 `COOK_AI_ENABLED=false` 覆盖到已启用环境。运行时在创建时固定；再次跨运行时迁移仍需备份并逐个重建，不能按普通代码更新执行。创建参数必须按 CloudBase 请求结构逐层映射，不能回填查询响应中的 `EipAddress` 等只读字段。Admin 的请求映射器、两个定时函数和完整回执见 [Admin Node 运行时迁移说明](https://github.com/YunLeFun/admin/blob/main/docs/node-runtime-upgrade.md)。
 
 依据：[Node.js 24.22.2 LTS](https://nodejs.org/en/blog/release/v24.22.2)、[CloudBase 运行时](https://docs.cloudbase.net/cloud-function/runtime-support)、[运行时不可原地修改](https://cloud.tencent.com/document/api/583/18580)。

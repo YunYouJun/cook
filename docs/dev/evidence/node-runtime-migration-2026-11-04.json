@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-11-03T17:00:03.146Z",
+  "environment": "yunlefun-8g7ybcxc7345c490",
+  "functionType": "Event",
+  "targetRuntime": "Nodejs24.11",
+  "preflight": {
+    "name": "codex-node24-3e975687",
+    "startedAt": "2026-11-03T16:51:03.771Z",
+    "runtimes": [
+      {
+        "runtime": "Nodejs24.11",
+        "actualNode": "24.11.1",
+        "configurationPreserved": true,
+        "sdkReady": true,
+        "aiReady": true,
+        "fetchReady": true,
+        "testIsolationPassed": true,
+        "createRequestId": "13c11dc5-ea8b-4bf0-9be9-e50067bc8bcc"
+      },
+      {
+        "runtime": "Nodejs18.15",
+        "actualNode": "18.15.0",
+        "configurationPreserved": true,
+        "sdkReady": true,
+        "aiReady": true,
+        "fetchReady": true,
+        "testIsolationPassed": true,
+        "createRequestId": "f517bb7f-fd59-4ff0-943b-cf3cdb7fa594"
+      }
+    ],
+    "timers": [
+      {
+        "runtime": "Nodejs24.11",
+        "exactCronRestored": true,
+        "oldTimersAbsentBeforeRestore": true
+      },
+      {
+        "runtime": "Nodejs18.15",
+        "exactCronRestored": true,
+        "oldTimersAbsentBeforeRestore": true
+      }
+    ],
+    "deleted": true,
+    "passed": true,
+    "finishedAt": "2026-11-03T16:51:42.205Z"
+  },
+  "functions": [
+    {
+      "name": "cook-feedback-test",
+      "runtime": "Nodejs24.11",
+      "status": "Active",
+      "previousFunctionId": "lam-h280hkdr",
+      "functionId": "lam-d9bco3gp",
+      "originalArchiveSha256": "87f475b9ec7c202b2e430ada2f8ad35a4480809e96954c70bc0167bed38748fb",
+      "deployedArchiveSha256": "9c4ee75520c3484e17affb49b64a2a270a2e50f3b811302785af1187e5a5bc45",
+      "allFileContentsPreserved": true,
+      "configurationPreserved": true,
+      "environmentVariablesPreserved": true,
+      "cloudDependencyInstallation": false,
+      "defaultAliasPreserved": true,
+      "triggers": [],
+      "checks": [
+        "SDK handler initialized and body validation passed",
+        "production payload rejected by test function",
+        "HTTP GET 401",
+        "HTTP POST 400"
+      ]
+    },
+    {
+      "name": "cook-user-data",
+      "runtime": "Nodejs24.11",
+      "status": "Active",
+      "previousFunctionId": "lam-s18qc4gd",
+      "functionId": "lam-b9b15bd7",
+      "originalArchiveSha256": "a08e63bfece244293b210b04cec8c5763658296dea602df5dd5a92d636db33dc",
+      "deployedArchiveSha256": "5a74e8a55947f112115e98179f10e2e02c7da44860b1f9bc4ed5afbd1b1df290",
+      "allFileContentsPreserved": true,
+      "configurationPreserved": true,
+      "environmentVariablesPreserved": true,
+      "cloudDependencyInstallation": false,
+      "defaultAliasPreserved": true,
+      "triggers": [],
+      "checks": [
+        "unauthenticated SDK call rejected"
+      ]
+    },
+    {
+      "name": "cook-feedback",
+      "runtime": "Nodejs24.11",
+      "status": "Active",
+      "previousFunctionId": "lam-h1zq8odj",
+      "functionId": "lam-id35efmz",
+      "originalArchiveSha256": "feca67a92d634d9afc65cd2933f16d5af85dcd9e111c7fa6d167ad46e3808a1b",
+      "deployedArchiveSha256": "393959089c7e2b5ad6a8f70206193f2219ab9f264f8b322539c26b2a6de22545",
+      "allFileContentsPreserved": true,
+      "configurationPreserved": true,
+      "environmentVariablesPreserved": true,
+      "cloudDependencyInstallation": false,
+      "defaultAliasPreserved": true,
+      "triggers": [],
+      "checks": [
+        "SDK handler initialized and body validation passed",
+        "HTTP GET 401",
+        "HTTP POST 400"
+      ]
+    },
+    {
+      "name": "cook-ai-intent",
+      "runtime": "Nodejs24.11",
+      "status": "Active",
+      "previousFunctionId": "lam-9b8vntd3",
+      "functionId": "lam-n7fz45u7",
+      "originalArchiveSha256": "e43460faeefec28bb912bb6316213dbd18855e7c11d4a5492bbc586587eb3587",
+      "deployedArchiveSha256": "63503209fd95a5124c9e820316ff5e8b98537b49d829f42be7d986fd7d0b0fa0",
+      "allFileContentsPreserved": true,
+      "configurationPreserved": true,
+      "environmentVariablesPreserved": true,
+      "cloudDependencyInstallation": false,
+      "defaultAliasPreserved": true,
+      "triggers": [],
+      "checks": [
+        "HTTP GET 405",
+        "HTTP POST 401"
+      ]
+    }
+  ],
+  "httpChecks": [
+    {
+      "function": "cook-feedback-test",
+      "host": "api.yunle.fun",
+      "method": "GET",
+      "status": 401
+    },
+    {
+      "function": "cook-feedback-test",
+      "host": "api.yunle.fun",
+      "method": "POST",
+      "status": 400
+    },
+    {
+      "function": "cook-feedback-test",
+      "host": "api.yunle.fun",
+      "method": "POST",
+      "status": 400,
+      "code": "ENVIRONMENT_MISMATCH"
+    },
+    {
+      "function": "cook-feedback",
+      "host": "api.yunle.fun",
+      "method": "GET",
+      "status": 401
+    },
+    {
+      "function": "cook-feedback",
+      "host": "api.yunle.fun",
+      "method": "POST",
+      "status": 400
+    },
+    {
+      "function": "cook-ai-intent",
+      "host": "api.yunle.fun",
+      "method": "GET",
+      "status": 405
+    },
+    {
+      "function": "cook-ai-intent",
+      "host": "api.yunle.fun",
+      "method": "POST",
+      "status": 401
+    }
+  ],
+  "modelInferenceRun": false,
+  "scheduledBusinessManuallyInvoked": false,
+  "httpRoutesPreserved": true,
+  "invocationPoliciesPreserved": true,
+  "temporaryFunctionsAbsent": true,
+  "validation": {
+    "mappingTests": 5,
+    "adminMappingAndTimerTests": 16,
+    "cookAiTestsOnTaskBranch": 32,
+    "adminTypecheckPassed": true
+  },
+  "postDeploymentSdkVerification": {
+    "name": "codex-node24-read-3e08b65c",
+    "readOnly": true,
+    "verifiedAt": "2026-11-03T17:03:02.638Z",
+    "passed": true,
+    "actualNode": "24.11.1",
+    "cloudbaseSdkDatabaseReadPassed": true,
+    "runtimeHttpsFetchPassed": true,
+    "upstreamStatus": 405,
+    "deleted": true
+  },
+  "fullMigrationReceipt": "https://github.com/YunLeFun/admin/blob/main/docs/evidence/node-runtime-migration-2026-11-04.json"
+}
