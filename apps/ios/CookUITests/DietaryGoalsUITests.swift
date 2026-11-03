@@ -65,7 +65,7 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     private func openResultsGoalPicker(in app: XCUIApplication) {
-        let options = app.buttons["results.options"].firstMatch
+        let options = app.navigationBars.buttons.matching(identifier: "results.options").firstMatch
         XCTAssertTrue(options.waitForExistence(timeout: 10))
         options.tap()
         let goal = app.buttons["results.dietaryGoal"]
@@ -94,11 +94,21 @@ final class DietaryGoalsUITests: XCTestCase {
     @MainActor
     private func assertGoalValue(_ value: String, in app: XCUIApplication,
                                  file: StaticString = #filePath, line: UInt = #line) {
-        let resultsOptions = app.buttons["results.options"].firstMatch
+        // The control belongs to the navigation bar, not the potentially large
+        // recipe list that appears after removing the dietary goal.
+        let resultsOptions = app.navigationBars.buttons.matching(identifier: "results.options").firstMatch
         if resultsOptions.exists && resultsOptions.isHittable {
             let selected = XCTNSPredicateExpectation(
                 predicate: NSPredicate(format: "value == %@ OR label CONTAINS %@", value, "饮食目标：\(value)"), object: resultsOptions)
-            XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed, file: file, line: line)
+            let result = XCTWaiter.wait(for: [selected], timeout: 10)
+            if result != .completed {
+                let hierarchy = XCTAttachment(string: app.debugDescription)
+                hierarchy.name = "results-goal-accessibility"
+                hierarchy.lifetime = .keepAlways
+                add(hierarchy)
+                capture(app, named: "results-goal-value-mismatch")
+            }
+            XCTAssertEqual(result, .completed, file: file, line: line)
             return
         }
         let filters = app.buttons["cook.filters"].firstMatch
@@ -133,24 +143,46 @@ final class DietaryGoalsUITests: XCTestCase {
     private func revealCookingControl(_ control: XCUIElement, in app: XCUIApplication, towardTop: Bool = false) {
         let chooser = app.collectionViews["cook.chooser"]
         XCTAssertTrue(chooser.waitForExistence(timeout: 10))
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: chooser)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed)
+        var lastViewport = CGRect.null
+        var lastControlFrame = CGRect.null
         for _ in 0..<30 {
             let frame = control.exists ? control.frame : CGRect.null
+            lastControlFrame = frame
+            let hasFrame = !frame.isNull && !frame.isEmpty
             let window = app.windows.firstMatch
             let bars = app.navigationBars.allElementsBoundByIndex.filter(\.isHittable)
-            let bar = bars.first(where: { !frame.isNull && frame.midX >= $0.frame.minX && frame.midX <= $0.frame.maxX })
+            let bar = bars.first(where: { hasFrame && frame.midX >= $0.frame.minX && frame.midX <= $0.frame.maxX })
                 ?? bars.first ?? app.navigationBars.firstMatch
-            let top = bar.isHittable ? bar.frame.maxY : window.frame.minY
+            let top = max(chooser.frame.minY, bar.isHittable ? bar.frame.maxY : window.frame.minY) + 8
             let action = app.buttons["cook.showResults"]
-            let bottom = window.horizontalSizeClass != .regular && action.exists && action.isHittable
-                ? action.frame.minY : window.frame.maxY
-            if control.isHittable && !frame.isNull && frame.minY >= top && frame.maxY <= bottom { return }
-            if towardTop || (!frame.isNull && frame.minY < top) {
-                chooser.swipeDown(velocity: .slow)
-            } else {
-                chooser.swipeUp(velocity: .slow)
-            }
+            let bottom = min(chooser.frame.maxY, window.horizontalSizeClass != .regular && action.exists && action.isHittable
+                ? action.frame.minY : window.frame.maxY) - 8
+            let viewport = CGRect(x: chooser.frame.minX, y: top, width: chooser.frame.width, height: bottom - top)
+            lastViewport = viewport
+            guard viewport.height > 0 else { break }
+            if hasFrame && frame.minY >= top && frame.maxY <= bottom && control.isHittable { return }
+
+            let scrollBack = hasFrame ? frame.minY < top : towardTop
+            let needed = hasFrame ? (scrollBack ? top - frame.minY : frame.maxY - bottom) + 12 : viewport.height * 0.45
+            // A full swipe can jump from below the fixed footer to above the navigation bar.
+            // Drag only the measured overlap and hold before release to avoid a fling back past it.
+            let distance = min(max(needed, 44), viewport.height * 0.45)
+            let startY = viewport.midY + (scrollBack ? -distance / 2 : distance / 2)
+            let endY = viewport.midY + (scrollBack ? distance / 2 : -distance / 2)
+            let origin = window.coordinate(withNormalizedOffset: .zero)
+            origin.withOffset(CGVector(dx: viewport.midX - window.frame.minX, dy: startY - window.frame.minY))
+                .press(forDuration: 0.1,
+                       thenDragTo: origin.withOffset(CGVector(dx: viewport.midX - window.frame.minX, dy: endY - window.frame.minY)),
+                       withVelocity: .slow, thenHoldForDuration: 0.2)
         }
-        XCTFail("找菜操作应能完整滚入可点击区域：\(control.identifier)")
+        let hierarchy = XCTAttachment(string: app.debugDescription)
+        hierarchy.name = "find-recipes-control-accessibility"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
+        capture(app, named: "find-recipes-control-not-visible")
+        XCTFail("找菜操作应能完整滚入可点击区域：\(control.identifier)，控件：\(lastControlFrame)，可见区域：\(lastViewport)")
     }
 
     @MainActor

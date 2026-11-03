@@ -123,6 +123,96 @@
       "name": "decision-and-query-iphone",
       "device": "iPhone 16 Pro, iOS 26.5",
       "failures": []
+    },
+    {
+      "name": "baseline-phone-testNativeGoalPickerAccessibilityAndReviewedSummary",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPhone 18 Pro, iOS 27.0"
+    },
+    {
+      "name": "baseline-phone-testLargestTextCanChooseSavedGoalReadAndDecide",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPhone 18 Pro, iOS 27.0"
+    },
+    {
+      "name": "fixed-phone-standard",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPhone 18 Pro, iOS 27.0"
+    },
+    {
+      "name": "fixed-phone-maximum",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPhone 18 Pro, iOS 27.0"
+    },
+    {
+      "name": "fixed-phone-regression",
+      "result": "Passed",
+      "totalTestCount": 6,
+      "passedTests": 6,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPhone 18 Pro, iOS 27.0"
+    },
+    {
+      "name": "fixed-ipad-standard",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0"
+    },
+    {
+      "name": "fixed-ipad-maximum",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0"
+    },
+    {
+      "name": "fixed-ipad-controls",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0"
+    },
+    {
+      "name": "query-fixed-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 3,
+      "passedTests": 3,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "query-fixed-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
     }
   ],
   "orchestration": {
@@ -181,6 +271,25 @@
       "observed": "The query for an absent cloud-kitchen button retried for minutes and exhausted the 300-second test allowance.",
       "change": "Resolve the footer from the active presentation; the regular-width ingredient chooser has live results and no fixed result button.",
       "localFixedQueryCountForAbsentKitchenButton": 0
+    }
+  },
+  "thirdFollowUp": {
+    "baselineCommit": "08c6a35ae33f57adeed7ee5f31cabf0c68e600e5",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41710325443",
+    "largeTextScroll": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41710325443/job/126176856802",
+      "observed": "The maximum-text recording showed the decide button partially behind the fixed result action after full swipes repeatedly jumped past it. The original helper passed in two local audit runs, so the CI failure was intermittent.",
+      "change": "Measure the control overlap with the visible chooser viewport, drag only that distance with a held release, and require the entire frame to be hittable. Capture the viewport and hierarchy on failure.",
+      "artifact": {
+        "name": "ios-xcresult-iphone-dietary",
+        "sha256": "9826c73c166d9258275af3ab85829e8acf181e0dda6d8eed641b25e7d40bf12f"
+      }
+    },
+    "scopedQueries": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41710325443/job/126176857083",
+      "observed": "Both recordings showed the expected visible state: an enabled decide action and a restored 877-recipe list after clearing the goal. Global button queries took seconds and the state predicates expired.",
+      "change": "Resolve the unique decide button with firstMatch; scope the result goal query to navigation bars. Keep state and spoken-name assertions and capture hierarchy and screen for either readiness or goal-value failures.",
+      "reference": "https://developer.apple.com/documentation/xcuiautomation/xcuielementtypequeryprovider/firstmatch"
     }
   }
 }

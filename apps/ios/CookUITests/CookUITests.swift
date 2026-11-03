@@ -32,21 +32,16 @@ extension XCUIApplication {
     /// 决定页先把选中的菜停稳，再进入既有详情。
     @MainActor
     func confirmDecidedRecipe(file: StaticString = #filePath, line: UInt = #line) {
-        let open = buttons["cook.decide.open"]
+        // The identifier is unique; stop at the match instead of checking the
+        // underlying iPad recipe list for duplicate buttons on every poll.
+        let open = buttons.matching(identifier: "cook.decide.open").firstMatch
         XCTAssertTrue(open.waitForExistence(timeout: 10), "决定页应出现", file: file, line: line)
         let ready = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "isEnabled == true AND isHittable == true"),
             object: open
         )
-        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed, "挑选停稳后才能打开做法", file: file, line: line)
-        let recipe = staticTexts.matching(identifier: "cook.decide.recipe").firstMatch
-        let named = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "exists == true AND label != '' AND label != '正在挑选'"),
-            object: recipe
-        )
-        let namedResult = XCTWaiter.wait(for: [named], timeout: 10)
-        if namedResult != .completed {
-            XCTContext.runActivity(named: "决定页菜名播报诊断") { activity in
+        func captureDecisionFailure() {
+            XCTContext.runActivity(named: "决定页无障碍诊断") { activity in
                 let hierarchy = XCTAttachment(string: self.debugDescription)
                 hierarchy.name = "decided-recipe-accessibility"
                 hierarchy.lifetime = .keepAlways
@@ -56,6 +51,18 @@ extension XCUIApplication {
                 screen.lifetime = .keepAlways
                 activity.add(screen)
             }
+        }
+        let readyResult = XCTWaiter.wait(for: [ready], timeout: 10)
+        if readyResult != .completed { captureDecisionFailure() }
+        XCTAssertEqual(readyResult, .completed, "挑选停稳后才能打开做法", file: file, line: line)
+        let recipe = staticTexts.matching(identifier: "cook.decide.recipe").firstMatch
+        let named = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true AND label != '' AND label != '正在挑选'"),
+            object: recipe
+        )
+        let namedResult = XCTWaiter.wait(for: [named], timeout: 10)
+        if namedResult != .completed {
+            captureDecisionFailure()
         }
         XCTAssertEqual(namedResult, .completed, "应播报选中的菜，而不是停在挑选中", file: file, line: line)
         open.tap()
