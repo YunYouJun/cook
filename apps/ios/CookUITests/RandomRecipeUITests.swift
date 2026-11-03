@@ -108,7 +108,7 @@ final class RandomRecipeUITests: XCTestCase {
 
     @MainActor
     private func decidedRecipe(in app: XCUIApplication) -> XCUIElement {
-        app.descendants(matching: .any).matching(identifier: "cook.decide.recipe").firstMatch
+        app.staticTexts.matching(identifier: "cook.decide.recipe").firstMatch
     }
 
     @MainActor

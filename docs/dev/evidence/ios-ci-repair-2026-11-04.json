@@ -92,6 +92,37 @@
       "name": "fixed-filter-ipad",
       "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
       "failures": []
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "baseline-decide-repeat",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "repetitions": 3
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 6,
+      "passedTests": 6,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "decision-and-query-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": []
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "decision-and-query-iphone",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": []
     }
   ],
   "orchestration": {
@@ -127,6 +158,29 @@
     "budgetFailure": {
       "job": "https://github.com/YunYouJun/cook/actions/runs/41687621009/job/126097758322",
       "reason": "The 45-minute step deadline interrupted still-passing iPad UI tests after cold startup; retain per-case limits and allow 60 minutes for the complete group."
+    }
+  },
+  "secondFollowUp": {
+    "baselineCommit": "4c0c26d93393b596675e5c2a75e10063b89a23eb",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41697654842",
+    "decisionCard": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41697654842/job/126132749745",
+      "visibleRecipe": "排骨苦瓜汤",
+      "observed": "The recording showed a visible, settled card while the test assertion querying the generic Other role could not read the spoken name. Three local baseline iterations passed, so the CI failure was intermittent.",
+      "change": "Give the read-only summary static-text semantics, query that text role, and capture hierarchy and screen if the assertion fails.",
+      "artifact": {
+        "name": "ios-xcresult-ipad-dietary",
+        "sha256": "a437267a2f687ef5faf891189bfaab332fb7cdee7394c56c8a988d0da371d6d0",
+        "reclaimAfter": "Keep this compact report and source revisions; reclaim extracted local artifacts after final CI validation."
+      }
+    },
+    "discoveryQuery": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41697654842/job/126132749799",
+      "blockedIdentifier": "kitchen.cook",
+      "presentation": "regular-width ingredient chooser",
+      "observed": "The query for an absent cloud-kitchen button retried for minutes and exhausted the 300-second test allowance.",
+      "change": "Resolve the footer from the active presentation; the regular-width ingredient chooser has live results and no fixed result button.",
+      "localFixedQueryCountForAbsentKitchenButton": 0
     }
   }
 }

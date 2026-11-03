@@ -39,12 +39,25 @@ extension XCUIApplication {
             object: open
         )
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed, "挑选停稳后才能打开做法", file: file, line: line)
-        let recipe = otherElements["cook.decide.recipe"]
+        let recipe = staticTexts.matching(identifier: "cook.decide.recipe").firstMatch
         let named = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == true AND label != '' AND label != '正在挑选'"),
             object: recipe
         )
-        XCTAssertEqual(XCTWaiter.wait(for: [named], timeout: 10), .completed, "应播报选中的菜，而不是停在挑选中", file: file, line: line)
+        let namedResult = XCTWaiter.wait(for: [named], timeout: 10)
+        if namedResult != .completed {
+            XCTContext.runActivity(named: "决定页菜名播报诊断") { activity in
+                let hierarchy = XCTAttachment(string: self.debugDescription)
+                hierarchy.name = "decided-recipe-accessibility"
+                hierarchy.lifetime = .keepAlways
+                activity.add(hierarchy)
+                let screen = XCTAttachment(screenshot: self.screenshot())
+                screen.name = "decided-recipe-screen"
+                screen.lifetime = .keepAlways
+                activity.add(screen)
+            }
+        }
+        XCTAssertEqual(namedResult, .completed, "应播报选中的菜，而不是停在挑选中", file: file, line: line)
         open.tap()
         let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: open)
         XCTAssertEqual(XCTWaiter.wait(for: [gone], timeout: 10), .completed, file: file, line: line)
