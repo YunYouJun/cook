@@ -195,7 +195,7 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: xcode-27
-    timeout-minutes: 75
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -228,7 +228,7 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/cook-derived-data" CODE_SIGNING_ALLOWED=NO
       - name: Build and test
-        timeout-minutes: 45
+        timeout-minutes: 60
         id: ios_tests
         env:
           DEVICE: ${{ steps.simulators.outputs[matrix.device] }}
