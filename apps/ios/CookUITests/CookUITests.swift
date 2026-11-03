@@ -317,10 +317,20 @@ final class CookUITests: XCTestCase {
     }
 
     @MainActor
-    private func revealFilterOption(_ option: XCUIElement, in app: XCUIApplication) {
-        let list = app.descendants(matching: .any).matching(identifier: "filter.options").firstMatch
-        for _ in 0..<8 where !option.isHittable { list.swipeUp() }
-        XCTAssertTrue(option.isHittable)
+    private func revealFilterOption(_ option: XCUIElement, in app: XCUIApplication,
+                                    file: StaticString = #filePath, line: UInt = #line) {
+        let list = app.collectionViews["filter.options"]
+        let summary = app.otherElements["filter.summary"]
+        XCTAssertTrue(list.waitForExistence(timeout: timeout), file: file, line: line)
+        for _ in 0..<8 {
+            // iOS 27 can report a row beneath the fixed summary as hittable.
+            // Keep the whole row inside the unobscured list before tapping it.
+            let bottom = summary.exists ? min(list.frame.maxY, summary.frame.minY) : list.frame.maxY
+            if option.exists && option.isHittable && option.frame.minY >= list.frame.minY
+                && option.frame.maxY <= bottom { return }
+            list.swipeUp(velocity: .slow)
+        }
+        XCTFail("筛选选项未完整露出：\(option.label)", file: file, line: line)
     }
 
     /// 食材需要完全离开固定底栏遮挡，不能依赖 XCTest 的自动滚动。

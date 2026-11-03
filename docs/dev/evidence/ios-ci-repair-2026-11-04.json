@@ -37,6 +37,61 @@
       "name": "fixed-iphone",
       "device": "iPhone 16 Pro, iOS 26.5",
       "failures": []
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 213,
+      "passedTests": 213,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "ci-command-smoke",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": []
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "baseline-filter",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": []
+    },
+    {
+      "result": "Failed",
+      "totalTestCount": 1,
+      "passedTests": 0,
+      "failedTests": 1,
+      "skippedTests": 0,
+      "name": "baseline-filter-ios27",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "failures": [
+        {
+          "test": "CookUITests/testFilterCountUpdatesWithoutClosingSheet()",
+          "message": "XCTAssertEqual failed: (\"XCTWaiterResult(rawValue: 2)\") is not equal to (\"XCTWaiterResult(rawValue: 1)\") - 等了 30 秒，\"炒菜\" Button 仍不满足 isSelected == true"
+        }
+      ]
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "fixed-filter-ios27",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "failures": []
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "fixed-filter-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": []
     }
   ],
   "orchestration": {
@@ -49,5 +104,29 @@
     "actionlint with the existing xcode-27 custom runner label allowed",
     "bash -n scripts/run-ios-ci-tests.sh",
     "git diff --check"
-  ]
+  ],
+  "followUp": {
+    "baselineCommit": "ff5b994d614c594d399e0296133a29407a7cea18",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41687621009",
+    "filterFailure": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41687621009/job/126097758488",
+      "buttonFrame": {
+        "x": 38.7,
+        "y": 808.4,
+        "width": 103.1,
+        "height": 42.2
+      },
+      "summaryFrame": {
+        "x": 8,
+        "y": 793,
+        "width": 386,
+        "height": 73
+      },
+      "reason": "XCTest reported the covered button as hittable; require the entire button frame above the fixed summary before tapping."
+    },
+    "budgetFailure": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41687621009/job/126097758322",
+      "reason": "The 45-minute step deadline interrupted still-passing iPad UI tests after cold startup; retain per-case limits and allow 60 minutes for the complete group."
+    }
+  }
 }
