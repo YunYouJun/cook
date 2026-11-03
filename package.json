@@ -5,7 +5,7 @@
   "private": true,
   "packageManager": "pnpm@11.21.0",
   "engines": {
-    "node": ">=22.0.0",
+    "node": "^24.11.0",
     "pnpm": "11.21.0"
   },
   "scripts": {
@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^8.3.0",
-    "@types/node": "^25.9.5",
+    "@types/node": "^24.19.2",
     "@unocss/eslint-config": "^66.7.5",
     "@vue/test-utils": "^2.4.11",
     "@vueuse/core": "^14.4.0",
