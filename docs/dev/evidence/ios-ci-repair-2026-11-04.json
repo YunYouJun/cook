@@ -213,6 +213,33 @@
       "passedTests": 2,
       "failedTests": 0,
       "skippedTests": 0
+    },
+    {
+      "name": "baseline-kitchen-egg",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "native-waits-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 5,
+      "passedTests": 5,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "native-waits-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
     }
   ],
   "orchestration": {
@@ -290,6 +317,21 @@
       "observed": "Both recordings showed the expected visible state: an enabled decide action and a restored 877-recipe list after clearing the goal. Global button queries took seconds and the state predicates expired.",
       "change": "Resolve the unique decide button with firstMatch; scope the result goal query to navigation bars. Keep state and spoken-name assertions and capture hierarchy and screen for either readiness or goal-value failures.",
       "reference": "https://developer.apple.com/documentation/xcuiautomation/xcuielementtypequeryprovider/firstmatch"
+    }
+  },
+  "fourthFollowUp": {
+    "baselineCommit": "1404ccf57ef2cd787c0b700589aeaafc0e16c10e",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41723793298",
+    "kitchenSelection": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41723793298/job/126223503440",
+      "observed": "The recording showed the egg selected and the selection count updated to two after the 3D tap. The text-only button query still timed out waiting for selection. The same baseline passed locally.",
+      "change": "Assert selection through the active kitchen basket identifier instead of shared ingredient text, preserving the 3D tap, selected state, count and cross-presentation checks. Capture hierarchy and screenshot on failure."
+    },
+    "decisionDismissal": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41723793298/job/126223503323",
+      "observed": "The recording showed the recipe detail for 燕麦鸡蛋饼 after opening the settled card. The predicate waiting for the old decide action to disappear timed out.",
+      "change": "Wait for the recipe-detail action to appear, then use the native waitForNonExistence API to check that the decision action is gone. Keep diagnostics and both navigation assertions.",
+      "reference": "https://developer.apple.com/documentation/xcuiautomation/xcuielement/waitfornonexistence(timeout:)"
     }
   }
 }

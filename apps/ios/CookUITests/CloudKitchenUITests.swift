@@ -217,7 +217,19 @@ final class CloudKitchenUITests: XCTestCase {
         // overlapping targets accidentally selecting a neighboring ingredient.
         let modelEgg = app.buttons["kitchen.scene.egg"]
         modelEgg.tap()
-        waitUntil(app.buttons.matching(NSPredicate(format: "label == %@", "鸡蛋")).firstMatch, "isSelected == true")
+        // Assert the active kitchen basket independently of other views that
+        // use the same ingredient text.
+        let basketEgg = app.buttons.matching(identifier: "kitchen.ingredient.鸡蛋").firstMatch
+        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: basketEgg)
+        let selectionResult = XCTWaiter.wait(for: [selected], timeout: 10)
+        if selectionResult != .completed {
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "kitchen-egg-selection-accessibility"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            capture(app, name: "kitchen-egg-selection-mismatch")
+        }
+        XCTAssertEqual(selectionResult, .completed)
         XCTAssertEqual(app.staticTexts["kitchen.selectionCount"].label, "已选 2 样")
 
         app.selectCookingPresentation("食材快选")

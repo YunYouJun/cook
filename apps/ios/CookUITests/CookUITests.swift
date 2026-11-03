@@ -66,8 +66,13 @@ extension XCUIApplication {
         }
         XCTAssertEqual(namedResult, .completed, "应播报选中的菜，而不是停在挑选中", file: file, line: line)
         open.tap()
-        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: open)
-        XCTAssertEqual(XCTWaiter.wait(for: [gone], timeout: 10), .completed, file: file, line: line)
+        let detail = buttons.matching(identifier: "recipe.openKitchen").firstMatch
+        let opened = detail.waitForExistence(timeout: 10)
+        if !opened { captureDecisionFailure() }
+        XCTAssertTrue(opened, "看做法应进入菜谱详情", file: file, line: line)
+        let dismissed = open.waitForNonExistence(timeout: 10)
+        if !dismissed { captureDecisionFailure() }
+        XCTAssertTrue(dismissed, "打开做法后决定页应关闭", file: file, line: line)
     }
 }
 
