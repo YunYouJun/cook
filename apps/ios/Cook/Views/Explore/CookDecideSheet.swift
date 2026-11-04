@@ -295,6 +295,7 @@ private struct CookDecideSheet: View {
                 .strokeBorder(.quaternary, lineWidth: 1)
         }
         .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isStaticText)
         .accessibilityLabel(shuffling ? "正在挑选" : accessibilitySummary(recipe, match: match))
         .accessibilityIdentifier("cook.decide.recipe")
     }

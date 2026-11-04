@@ -1,0 +1,676 @@
+{
+  "date": "2026-11-04",
+  "baselineCommit": "e6febf43b016f652d66087a8d806ccaf9d4c2ec5",
+  "toolchain": "Xcode 27.1 (27A9275)",
+  "checks": [
+    {
+      "result": "Failed",
+      "totalTestCount": 1,
+      "passedTests": 0,
+      "failedTests": 1,
+      "skippedTests": 0,
+      "name": "baseline-goal",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [
+        {
+          "test": "DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone()",
+          "message": "XCTAssertEqual failed: (\"Optional(\"\")\") is not equal to (\"Optional(\"不限目标\")\")"
+        }
+      ]
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 7,
+      "passedTests": 7,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "fixed-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": []
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 3,
+      "passedTests": 3,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "fixed-iphone",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": []
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 213,
+      "passedTests": 213,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "ci-command-smoke",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": []
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "baseline-filter",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": []
+    },
+    {
+      "result": "Failed",
+      "totalTestCount": 1,
+      "passedTests": 0,
+      "failedTests": 1,
+      "skippedTests": 0,
+      "name": "baseline-filter-ios27",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "failures": [
+        {
+          "test": "CookUITests/testFilterCountUpdatesWithoutClosingSheet()",
+          "message": "XCTAssertEqual failed: (\"XCTWaiterResult(rawValue: 2)\") is not equal to (\"XCTWaiterResult(rawValue: 1)\") - 等了 30 秒，\"炒菜\" Button 仍不满足 isSelected == true"
+        }
+      ]
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "fixed-filter-ios27",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "failures": []
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "fixed-filter-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": []
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "baseline-decide-repeat",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "repetitions": 3
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 6,
+      "passedTests": 6,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "decision-and-query-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": []
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "decision-and-query-iphone",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": []
+    },
+    {
+      "name": "baseline-phone-testNativeGoalPickerAccessibilityAndReviewedSummary",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPhone 18 Pro, iOS 27.0"
+    },
+    {
+      "name": "baseline-phone-testLargestTextCanChooseSavedGoalReadAndDecide",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPhone 18 Pro, iOS 27.0"
+    },
+    {
+      "name": "fixed-phone-standard",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPhone 18 Pro, iOS 27.0"
+    },
+    {
+      "name": "fixed-phone-maximum",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPhone 18 Pro, iOS 27.0"
+    },
+    {
+      "name": "fixed-phone-regression",
+      "result": "Passed",
+      "totalTestCount": 6,
+      "passedTests": 6,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPhone 18 Pro, iOS 27.0"
+    },
+    {
+      "name": "fixed-ipad-standard",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0"
+    },
+    {
+      "name": "fixed-ipad-maximum",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0"
+    },
+    {
+      "name": "fixed-ipad-controls",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0"
+    },
+    {
+      "name": "query-fixed-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 3,
+      "passedTests": 3,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "query-fixed-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "baseline-kitchen-egg",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "native-waits-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 5,
+      "passedTests": 5,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "native-waits-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "baseline-native-selected",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "property-waits-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Failed",
+      "totalTestCount": 6,
+      "passedTests": 4,
+      "failedTests": 2,
+      "skippedTests": 0,
+      "failures": [
+        {
+          "test": "CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval()",
+          "message": "XCTAssertEqual failed: (\"Optional(\"西\")\") is not equal to (\"Optional(\"西红柿\")\")"
+        },
+        {
+          "test": "CookUITests/testPantryShelfRemembersChoicesAndRestoresDefaults()",
+          "message": "XCTAssertTrue failed - 常备调料入口应完整进入弹层的可见列表"
+        }
+      ],
+      "variant": "Intermediate property/existence waiter experiment before the filter-sheet expansion and input setup fixes."
+    },
+    {
+      "name": "expanded-picker-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "complete-main-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 12,
+      "passedTests": 12,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "complete-main-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 12,
+      "passedTests": 12,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "scoped-main-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 12,
+      "passedTests": 12,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "variant": "Scoped recipe/ingredient queries and native state dispatch, before extracting the shared waiter."
+    },
+    {
+      "name": "scoped-main-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 12,
+      "passedTests": 12,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "variant": "Scoped recipe/ingredient queries and native state dispatch, before extracting the shared waiter."
+    },
+    {
+      "name": "shared-waits-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Failed",
+      "totalTestCount": 10,
+      "passedTests": 9,
+      "failedTests": 1,
+      "skippedTests": 0,
+      "failures": [
+        {
+          "test": "PrivateRecipesUITests/testPrivateRecipeCreateEditDelete()",
+          "message": "Test exceeded execution time allowance of 5 minutes"
+        }
+      ],
+      "variant": "Broad one-off migration experiment: CloudKitchen, account/history and amount checks passed; private-recipe CRUD exceeded its allowance during simulator animation waits. The extra one-off migrations outside the affected helper suites were reverted; final source preserves the original private-recipe waits."
+    },
+    {
+      "name": "shared-final-cloud-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 6,
+      "passedTests": 5,
+      "failedTests": 0,
+      "skippedTests": 1
+    },
+    {
+      "name": "shared-final-main-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "shared-final-discovery-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 3,
+      "passedTests": 3,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "compound-waits-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 4,
+      "passedTests": 4,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "decision-container-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 3,
+      "passedTests": 3,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "post-presentation-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "post-presentation-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "post-presentation-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "feedback-isolated-control-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "isolated-contribution-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Failed",
+      "totalTestCount": 1,
+      "passedTests": 0,
+      "failedTests": 1,
+      "skippedTests": 0
+    },
+    {
+      "name": "form-animations-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 3,
+      "passedTests": 3,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "form-animations-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 3,
+      "passedTests": 3,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "final-maximum-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "final-maximum-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "goal-navigation-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 8,
+      "passedTests": 8,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "goal-navigation-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 8,
+      "passedTests": 8,
+      "failedTests": 0,
+      "skippedTests": 0
+    }
+  ],
+  "orchestration": {
+    "command": "node --test test/iosTestInfrastructure.test.mjs",
+    "passed": 10,
+    "failed": 0
+  },
+  "staticChecks": [
+    "ESLint on changed workflow and test harness",
+    "actionlint with the existing xcode-27 custom runner label allowed",
+    "bash -n scripts/run-ios-ci-tests.sh",
+    "git diff --check"
+  ],
+  "followUp": {
+    "baselineCommit": "ff5b994d614c594d399e0296133a29407a7cea18",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41687621009",
+    "filterFailure": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41687621009/job/126097758488",
+      "buttonFrame": {
+        "x": 38.7,
+        "y": 808.4,
+        "width": 103.1,
+        "height": 42.2
+      },
+      "summaryFrame": {
+        "x": 8,
+        "y": 793,
+        "width": 386,
+        "height": 73
+      },
+      "reason": "XCTest reported the covered button as hittable; require the entire button frame above the fixed summary before tapping."
+    },
+    "budgetFailure": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41687621009/job/126097758322",
+      "reason": "The 45-minute step deadline interrupted still-passing iPad UI tests after cold startup; retain per-case limits and allow 60 minutes for the complete group."
+    }
+  },
+  "secondFollowUp": {
+    "baselineCommit": "4c0c26d93393b596675e5c2a75e10063b89a23eb",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41697654842",
+    "decisionCard": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41697654842/job/126132749745",
+      "visibleRecipe": "排骨苦瓜汤",
+      "observed": "The recording showed a visible, settled card while the test assertion querying the generic Other role could not read the spoken name. Three local baseline iterations passed, so the CI failure was intermittent.",
+      "change": "Give the read-only summary static-text semantics, query that text role, and capture hierarchy and screen if the assertion fails.",
+      "artifact": {
+        "name": "ios-xcresult-ipad-dietary",
+        "sha256": "a437267a2f687ef5faf891189bfaab332fb7cdee7394c56c8a988d0da371d6d0",
+        "reclaimAfter": "Keep this compact report and source revisions; reclaim extracted local artifacts after final CI validation."
+      }
+    },
+    "discoveryQuery": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41697654842/job/126132749799",
+      "blockedIdentifier": "kitchen.cook",
+      "presentation": "regular-width ingredient chooser",
+      "observed": "The query for an absent cloud-kitchen button retried for minutes and exhausted the 300-second test allowance.",
+      "change": "Resolve the footer from the active presentation; the regular-width ingredient chooser has live results and no fixed result button.",
+      "localFixedQueryCountForAbsentKitchenButton": 0
+    }
+  },
+  "thirdFollowUp": {
+    "baselineCommit": "08c6a35ae33f57adeed7ee5f31cabf0c68e600e5",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41710325443",
+    "largeTextScroll": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41710325443/job/126176856802",
+      "observed": "The maximum-text recording showed the decide button partially behind the fixed result action after full swipes repeatedly jumped past it. The original helper passed in two local audit runs, so the CI failure was intermittent.",
+      "change": "Measure the control overlap with the visible chooser viewport, drag only that distance with a held release, and require the entire frame to be hittable. Capture the viewport and hierarchy on failure.",
+      "artifact": {
+        "name": "ios-xcresult-iphone-dietary",
+        "sha256": "9826c73c166d9258275af3ab85829e8acf181e0dda6d8eed641b25e7d40bf12f"
+      }
+    },
+    "scopedQueries": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41710325443/job/126176857083",
+      "observed": "Both recordings showed the expected visible state: an enabled decide action and a restored 877-recipe list after clearing the goal. Global button queries took seconds and the state predicates expired.",
+      "change": "Resolve the unique decide button with firstMatch; scope the result goal query to navigation bars. Keep state and spoken-name assertions and capture hierarchy and screen for either readiness or goal-value failures.",
+      "reference": "https://developer.apple.com/documentation/xcuiautomation/xcuielementtypequeryprovider/firstmatch"
+    }
+  },
+  "fourthFollowUp": {
+    "baselineCommit": "1404ccf57ef2cd787c0b700589aeaafc0e16c10e",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41723793298",
+    "kitchenSelection": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41723793298/job/126223503440",
+      "observed": "The recording showed the egg selected and the selection count updated to two after the 3D tap. The text-only button query still timed out waiting for selection. The same baseline passed locally.",
+      "change": "Assert selection through the active kitchen basket identifier instead of shared ingredient text, preserving the 3D tap, selected state, count and cross-presentation checks. Capture hierarchy and screenshot on failure."
+    },
+    "decisionDismissal": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41723793298/job/126223503323",
+      "observed": "The recording showed the recipe detail for 燕麦鸡蛋饼 after opening the settled card. The predicate waiting for the old decide action to disappear timed out.",
+      "change": "Wait for the recipe-detail action to appear, then use the native waitForNonExistence API to check that the decision action is gone. Keep diagnostics and both navigation assertions.",
+      "reference": "https://developer.apple.com/documentation/xcuiautomation/xcuielement/waitfornonexistence(timeout:)"
+    }
+  },
+  "fifthFollowUp": {
+    "baselineCommit": "00978099eee8c0f554c0fc8dbc0cb5545e37b40e",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41730870403",
+    "selectionWait": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41730870403/job/126248386133",
+      "observed": "The fresh accessibility hierarchy contained exactly one Button labelled 番茄, marked Selected, matching the screenshot. The predicate waiting for isSelected still timed out after 30 seconds. The baseline passed locally.",
+      "selectedButtonFrame": {
+        "x": 32,
+        "y": 321,
+        "width": 106.4,
+        "height": 44
+      },
+      "change": "Use the native key-path property waiter for positive and negative selection checks, preserving the timeout and failure diagnostics. Use the same native property wait for the kitchen basket selection.",
+      "reference": "https://developer.apple.com/documentation/xcuiautomation/xcuielement"
+    },
+    "pickerPreparation": {
+      "observed": "Broader local testing exposed partial search text and filter rows that remained below the visible medium sheet. Short content drags repeatedly returned to medium without bringing the row into view.",
+      "hiddenAvoidRowFrame": {
+        "x": 242,
+        "y": 1396.5,
+        "width": 548,
+        "height": 52.5
+      },
+      "visibleContentFrame": {
+        "x": 226,
+        "y": 686.5,
+        "width": 580,
+        "height": 619.5
+      },
+      "change": "Expand a medium filter sheet through its native toolbar before scrolling to hidden options. Scope drags to the unobscured content and require the entire target row to be visible. Reuse this helper for pantry and avoid entries; wait for complete search text before asserting the unchanged input value.",
+      "reference": "https://developer.apple.com/documentation/swiftui/view/presentationcontentinteraction(_:)"
+    }
+  },
+  "sixthFollowUp": {
+    "baselineCommit": "1788d3b9327062a38c91a92c2c4f5e1bead4dffa",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41743710283",
+    "job": "https://github.com/YunYouJun/cook/actions/runs/41743710283/job/126291532637",
+    "observed": "Both the screenshot and fresh accessibility hierarchy showed the 番茄炒蛋 result row. The global first-match query timed out waiting for existence. The local full main class had passed on both devices.",
+    "visibleRow": {
+      "identifier": "dietary.recipe.250",
+      "label": "番茄炒蛋、炒锅 · 普通",
+      "frame": {
+        "x": 420,
+        "y": 498.5,
+        "width": 592,
+        "height": 76.5
+      }
+    },
+    "change": "Scope ingredient queries to the chooser collection and initial recipe queries to the result collection, retaining spoken-label matching. Use native existence, selection, enabled and hittable wait APIs for simple states; composite waits share the original 30-second deadline and recheck both states. Keep predicates for text/value conditions and all failure diagnostics.",
+    "reference": "https://developer.apple.com/documentation/xcuiautomation/xcuielement",
+    "relatedPhoneFailure": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41743710283/job/126291532715",
+      "test": "CloudKitchenUITests/testLargestTextViewMenuKeepsControlsAndSelectionUsable()",
+      "observed": "The maximum-text recording showed 土豆 selected with a checkmark while the generic isSelected predicate timed out.",
+      "change": "The four repeated wait helpers now delegate boolean states to the common native waiter; affected dietary checks and decision readiness reuse it too."
+    },
+    "sharedWaitHelper": {
+      "entryPoint": "XCUIElement.waitForState",
+      "callers": [
+        "CookUITests",
+        "CloudKitchenUITests",
+        "CookDiscoveryUITests",
+        "RandomRecipeUITests",
+        "dietary chooser/selection checks",
+        "decision readiness"
+      ],
+      "behavior": "Native polling for boolean attributes; compound states keep one original deadline and poll until both states match. Text/value predicates and geometric/animation predicates retain their existing checks. Every shared-wait failure captures the current accessibility hierarchy and screen.",
+      "validation": "Both complete 12-case main classes passed before extraction. Final targeted runs cover cloud-kitchen large text, history/account, discovery, random recipes, dietary goals and all three compound state combinations; CI orchestration checks passed 10/10."
+    }
+  },
+  "seventhFollowUp": {
+    "baselineCommit": "3b71650fc550395c4be24ab042d433953d0e3c71",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41756452314",
+    "decisionDismissal": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41756452314/job/126333732902",
+      "observed": "The detail action appeared, but the retained global query for the destroyed decision button timed out while evaluating snapshots.",
+      "change": "Check the decision navigation title before opening, then use a fresh navigation-bar query for its disappearance and retain the positive detail assertion."
+    },
+    "clearedGoal": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41756452314/job/126333732943",
+      "observed": "The captured accessibility tree contained the expected results.options label 更多选项，饮食目标：不限目标 while the compound value/label predicate timed out.",
+      "change": "Use the native exact label property waiter and fresh navigation-button queries after goal/filter dismissal."
+    },
+    "contributionForm": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41756452314/job/126333732950",
+      "observed": "The contribution test exceeded 300 seconds. Local scoped input queries fixed scrolling/typing; a fresh-host control still reproduced repeated 60-second App animations complete notification not received waits after typing.",
+      "change": "Query native input roles inside the form, reveal controls above the keyboard with measured drags, and disable UIKit animations only for the three functional feedback cases through a Debug ui-testing launch flag. Preserve all submission and retained-draft assertions.",
+      "discardedExperiment": "Separate simulator/test-host invocations did not prevent the animation wait; no additional form invocations or retries were added to CI."
+    },
+    "localInfrastructure": "A local simulator touch-synthesis stall exceeded two hours before the animation experiment. Subsequent local commands used an owned 20-minute process-group watchdog and caffeinate; these guards are temporary local tooling, not CI retries."
+  },
+  "eighthFollowUp": {
+    "baselineCommit": "f1f9307e129b704f96aedeae050731908f394666",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41782134808",
+    "job": "https://github.com/YunYouJun/cook/actions/runs/41782134808/job/126416058285",
+    "observed": "The other five iOS groups passed. Both iPad accessibility audits passed. One regular dietary case failed while waiting for the destroyed dietary.done button through a fresh navigationBars.buttons query. At 55 seconds the recording shows the goal picker already dismissed, with the parent 筛选 sheet and the selected 减少添加糖 row visible.",
+    "change": "Scope completion actions to their named navigation bar, then assert that the dismissed goal/filter navigation bar disappears using a fresh query. Keep the dismissal assertion and all selected-goal, visible-result and persistence checks.",
+    "artifact": {
+      "id": 13301502986,
+      "name": "ios-xcresult-ipad-dietary",
+      "sha256": "f0dfa089cf1af5d9667c6d12d5b47a103fbb7f471beda11ccb5b6482449cd146"
+    }
+  }
+}

@@ -30,7 +30,7 @@ open apps/ios/Cook.xcodeproj
 swift test --package-path apps/ios/CookCore   # 只跑核心逻辑
 ```
 
-CI 的 `ios` job 在 iPhone 和 iPad 模拟器上先后跑单元测试和 UI 测试。失败时 `Show test failures` 一步会写出失败原因，完整结果包（截图、每一步的操作记录）在这次运行的 Artifacts 里，名为 `ios-xcresult`，下载后用 Xcode 打开。
+CI 的 `ios-tests` 矩阵在 iPhone 和 iPad 模拟器上分组跑单元测试、UI 测试与无障碍审计，`ios` 汇总所有分组的结果。失败时 `Show test failures` 会写出原因，完整结果包位于 Artifacts，名为 `ios-xcresult-<device>-<suite>`，下载后用 Xcode 打开。分组、超时和有限重试规则见 [iOS CI](../../docs/dev/ios-ci.md)。
 
 本地可运行 `pnpm exec tsx scripts/select-ios-test-devices.ts` 选择当前 Xcode 能使用的现有 iPhone／iPad；脚本按实际设备类型识别机型，也能复用自定义名称的设备，并优先保留已验证的 13 英寸 M5 iPad 覆盖。后续按输出的 UDID 运行，常规测试显式设置 `-parallel-testing-enabled NO`。脚本不会创建或清空设备；仅在共享池缺少必要覆盖时新建。需要全新应用状态或隔离时，使用测试数据隔离、其他兼容现有设备或串行排队，不另建同系统同机型副本。
 

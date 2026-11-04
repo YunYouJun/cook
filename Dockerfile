@@ -1,4 +1,4 @@
-FROM node:24-alpine AS builder
+FROM node:24.22.2-alpine AS builder
 
 RUN apk update
 RUN npm install -g pnpm@11.21.0

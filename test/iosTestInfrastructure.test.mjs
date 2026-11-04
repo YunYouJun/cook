@@ -177,7 +177,7 @@ test('native CI bounds build and test time and runs device groups independently'
   assert.match(workflow, /device: \[iphone, ipad\]/)
   assert.match(workflow, /suite: \[regression-main, regression-discovery, dietary\]/)
   assert.match(workflow, /name: Build for testing\n\s+timeout-minutes: 15/)
-  assert.match(workflow, /name: Build and test\n\s+timeout-minutes: 45/)
+  assert.match(workflow, /name: Build and test\n\s+timeout-minutes: 60/)
   assert.match(workflow, /cancel-in-progress: true/)
 })
 

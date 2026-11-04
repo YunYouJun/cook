@@ -217,7 +217,18 @@ final class CloudKitchenUITests: XCTestCase {
         // overlapping targets accidentally selecting a neighboring ingredient.
         let modelEgg = app.buttons["kitchen.scene.egg"]
         modelEgg.tap()
-        waitUntil(app.buttons.matching(NSPredicate(format: "label == %@", "鸡蛋")).firstMatch, "isSelected == true")
+        // Assert the active kitchen basket independently of other views that
+        // use the same ingredient text.
+        let basketEgg = app.buttons.matching(identifier: "kitchen.ingredient.鸡蛋").firstMatch
+        let selectionResult: XCTWaiter.Result = basketEgg.wait(for: \.isSelected, toEqual: true, timeout: 10) ? .completed : .timedOut
+        if selectionResult != .completed {
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "kitchen-egg-selection-accessibility"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            capture(app, name: "kitchen-egg-selection-mismatch")
+        }
+        XCTAssertEqual(selectionResult, .completed)
         XCTAssertEqual(app.staticTexts["kitchen.selectionCount"].label, "已选 2 样")
 
         app.selectCookingPresentation("食材快选")
@@ -317,9 +328,9 @@ final class CloudKitchenUITests: XCTestCase {
         capture(app, name: "关闭旋转后恢复固定视角")
     }
 
+    @MainActor
     private func waitUntil(_ element: XCUIElement, _ predicate: String) {
-        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: predicate), object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 10), .completed)
+        XCTAssertEqual(element.waitForState(predicate, timeout: 10), .completed)
     }
 
     @MainActor
@@ -372,8 +383,7 @@ final class CloudKitchenUITests: XCTestCase {
             let current = app.cookingPresentationOption(currentSelection)
             assertMenuCurrentSelection(current, usesCurrentSubtitle: usesCurrentSubtitle, file: file, line: line)
             current.tap()
-            let closed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: quick)
-            XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 10), .completed, file: file, line: line)
+            XCTAssertEqual(quick.waitForState("exists == false", timeout: 10), .completed, file: file, line: line)
             waitUntil(menu, "value == '\(currentSelection)' OR label CONTAINS '\(currentSelection)'")
         }
     }

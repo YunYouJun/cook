@@ -25,8 +25,7 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(lunch.waitForExistence(timeout: 10))
         app.revealFilterOption(lunch)
         lunch.tap()
-        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: lunch)
-        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed)
+        XCTAssertEqual(lunch.waitForState("isSelected == true", timeout: 10), .completed)
         let count = app.descendants(matching: .any).matching(identifier: "filter.resultCount").firstMatch
         XCTAssertTrue(count.waitForExistence(timeout: 10))
         XCTAssertEqual(count.label.filter { $0.isASCII && $0.isNumber }, "10")
@@ -96,21 +95,22 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     private func finishGoalSelection(in app: XCUIApplication, closingFilters: Bool = false) {
-        let done = app.buttons["dietary.done"]
+        let done = app.navigationBars["饮食目标"].buttons["dietary.done"]
         XCTAssertTrue(done.waitForExistence(timeout: 10))
         done.tap()
-        XCTAssertTrue(done.waitForNonExistence(timeout: 10))
+        // Resolve the dismissed navigation container, not its destroyed action.
+        XCTAssertTrue(app.navigationBars.matching(identifier: "饮食目标").firstMatch.waitForNonExistence(timeout: 10))
         if closingFilters {
-            let filterDone = app.buttons["filter.done"]
+            let filterDone = app.navigationBars["筛选"].buttons["filter.done"]
             XCTAssertTrue(filterDone.waitForExistence(timeout: 10))
             filterDone.tap()
-            XCTAssertTrue(filterDone.waitForNonExistence(timeout: 10))
+            XCTAssertTrue(app.navigationBars.matching(identifier: "筛选").firstMatch.waitForNonExistence(timeout: 10))
         }
     }
 
     @MainActor
     private func openResultsGoalPicker(in app: XCUIApplication) {
-        let options = app.buttons["results.options"].firstMatch
+        let options = app.navigationBars.buttons.matching(identifier: "results.options").firstMatch
         XCTAssertTrue(options.waitForExistence(timeout: 10))
         options.tap()
         let goal = app.buttons["results.dietaryGoal"]
@@ -139,11 +139,20 @@ final class DietaryGoalsUITests: XCTestCase {
     @MainActor
     private func assertGoalValue(_ value: String, in app: XCUIApplication,
                                  file: StaticString = #filePath, line: UInt = #line) {
-        let resultsOptions = app.buttons["results.options"].firstMatch
+        // The control belongs to the navigation bar, not the potentially large
+        // recipe list that appears after removing the dietary goal.
+        let resultsOptions = app.navigationBars.buttons.matching(identifier: "results.options").firstMatch
         if resultsOptions.exists && resultsOptions.isHittable {
-            let selected = XCTNSPredicateExpectation(
-                predicate: NSPredicate(format: "value == %@ OR label CONTAINS %@", value, "饮食目标：\(value)"), object: resultsOptions)
-            XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed, file: file, line: line)
+            let expectedLabel = "更多选项，饮食目标：\(value)"
+            let result: XCTWaiter.Result = resultsOptions.wait(for: \.label, toEqual: expectedLabel, timeout: 10) ? .completed : .timedOut
+            if result != .completed {
+                let hierarchy = XCTAttachment(string: app.debugDescription)
+                hierarchy.name = "results-goal-accessibility"
+                hierarchy.lifetime = .keepAlways
+                add(hierarchy)
+                capture(app, named: "results-goal-value-mismatch")
+            }
+            XCTAssertEqual(result, .completed, file: file, line: line)
             return
         }
         let filters = app.buttons["cook.filters"].firstMatch
@@ -152,9 +161,9 @@ final class DietaryGoalsUITests: XCTestCase {
         let picker = app.collectionViews["filter.options"].buttons["dietary.openPicker"]
         XCTAssertTrue(picker.waitForExistence(timeout: 10), file: file, line: line)
         XCTAssertEqual(picker.value as? String, value, file: file, line: line)
-        let done = app.buttons["filter.done"]
+        let done = app.navigationBars["筛选"].buttons["filter.done"]
         done.tap()
-        XCTAssertTrue(done.waitForNonExistence(timeout: 10), file: file, line: line)
+        XCTAssertTrue(app.navigationBars.matching(identifier: "筛选").firstMatch.waitForNonExistence(timeout: 10), file: file, line: line)
     }
 
     @MainActor
@@ -178,24 +187,45 @@ final class DietaryGoalsUITests: XCTestCase {
     private func revealCookingControl(_ control: XCUIElement, in app: XCUIApplication, towardTop: Bool = false) {
         let chooser = app.collectionViews["cook.chooser"]
         XCTAssertTrue(chooser.waitForExistence(timeout: 10))
+        XCTAssertEqual(chooser.waitForState("isHittable == true", timeout: 10), .completed)
+        var lastViewport = CGRect.null
+        var lastControlFrame = CGRect.null
         for _ in 0..<30 {
             let frame = control.exists ? control.frame : CGRect.null
+            lastControlFrame = frame
+            let hasFrame = !frame.isNull && !frame.isEmpty
             let window = app.windows.firstMatch
             let bars = app.navigationBars.allElementsBoundByIndex.filter(\.isHittable)
-            let bar = bars.first(where: { !frame.isNull && frame.midX >= $0.frame.minX && frame.midX <= $0.frame.maxX })
+            let bar = bars.first(where: { hasFrame && frame.midX >= $0.frame.minX && frame.midX <= $0.frame.maxX })
                 ?? bars.first ?? app.navigationBars.firstMatch
-            let top = bar.isHittable ? bar.frame.maxY : window.frame.minY
+            let top = max(chooser.frame.minY, bar.isHittable ? bar.frame.maxY : window.frame.minY) + 8
             let action = app.buttons["cook.showResults"]
-            let bottom = window.horizontalSizeClass != .regular && action.exists && action.isHittable
-                ? action.frame.minY : window.frame.maxY
-            if control.isHittable && !frame.isNull && frame.minY >= top && frame.maxY <= bottom { return }
-            if towardTop || (!frame.isNull && frame.minY < top) {
-                chooser.swipeDown(velocity: .slow)
-            } else {
-                chooser.swipeUp(velocity: .slow)
-            }
+            let bottom = min(chooser.frame.maxY, window.horizontalSizeClass != .regular && action.exists && action.isHittable
+                ? action.frame.minY : window.frame.maxY) - 8
+            let viewport = CGRect(x: chooser.frame.minX, y: top, width: chooser.frame.width, height: bottom - top)
+            lastViewport = viewport
+            guard viewport.height > 0 else { break }
+            if hasFrame && frame.minY >= top && frame.maxY <= bottom && control.isHittable { return }
+
+            let scrollBack = hasFrame ? frame.minY < top : towardTop
+            let needed = hasFrame ? (scrollBack ? top - frame.minY : frame.maxY - bottom) + 12 : viewport.height * 0.45
+            // A full swipe can jump from below the fixed footer to above the navigation bar.
+            // Drag only the measured overlap and hold before release to avoid a fling back past it.
+            let distance = min(max(needed, 44), viewport.height * 0.45)
+            let startY = viewport.midY + (scrollBack ? -distance / 2 : distance / 2)
+            let endY = viewport.midY + (scrollBack ? distance / 2 : -distance / 2)
+            let origin = window.coordinate(withNormalizedOffset: .zero)
+            origin.withOffset(CGVector(dx: viewport.midX - window.frame.minX, dy: startY - window.frame.minY))
+                .press(forDuration: 0.1,
+                       thenDragTo: origin.withOffset(CGVector(dx: viewport.midX - window.frame.minX, dy: endY - window.frame.minY)),
+                       withVelocity: .slow, thenHoldForDuration: 0.2)
         }
-        XCTFail("找菜操作应能完整滚入可点击区域：\(control.identifier)")
+        let hierarchy = XCTAttachment(string: app.debugDescription)
+        hierarchy.name = "find-recipes-control-accessibility"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
+        capture(app, named: "find-recipes-control-not-visible")
+        XCTFail("找菜操作应能完整滚入可点击区域：\(control.identifier)，控件：\(lastControlFrame)，可见区域：\(lastViewport)")
     }
 
     @MainActor
@@ -323,8 +353,7 @@ final class DietaryGoalsUITests: XCTestCase {
         }
         XCTAssertTrue(beef.isHittable)
         beef.tap()
-        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: beef)
-        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed)
+        XCTAssertEqual(beef.waitForState("isSelected == true", timeout: 10), .completed)
         if app.windows.firstMatch.horizontalSizeClass == .regular {
             XCTAssertTrue(app.buttons["dietary.clearGoal"].waitForExistence(timeout: 10))
         } else {
@@ -363,11 +392,11 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(none.waitForExistence(timeout: 10))
         none.tap()
         XCTAssertTrue(none.isSelected)
-        let done = app.buttons["dietary.done"]
+        let done = app.navigationBars["饮食目标"].buttons["dietary.done"]
         XCTAssertTrue(done.waitForExistence(timeout: 5))
         assertRememberControlAbsent(in: app)
         done.tap()
-        XCTAssertTrue(done.waitForNonExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars.matching(identifier: "饮食目标").firstMatch.waitForNonExistence(timeout: 10))
         assertGoalValue("不限目标", in: app)
         let candidate = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
         XCTAssertTrue(candidate.waitForExistence(timeout: 10), "取消目标后继续浏览当前目录，不退回空页面")

@@ -7,32 +7,32 @@
     {
       "name": "cook-ai-intent",
       "timeout": 45,
-      "runtime": "Nodejs18.15",
+      "runtime": "Nodejs24.11",
       "memorySize": 256,
-      "installDependency": true,
+      "installDependency": false,
       "handler": "index.main",
       "envVariables": { "COOK_AI_ENABLED": "false" },
-      "ignore": ["*.local", "node_modules"]
+      "ignore": ["*.local"]
     },
     {
       "name": "cook-user-data",
       "timeout": 10,
-      "runtime": "Nodejs18.15",
+      "runtime": "Nodejs24.11",
       "memorySize": 256,
-      "installDependency": true,
+      "installDependency": false,
       "handler": "index.main",
       "envVariables": {},
-      "ignore": ["*.local", "node_modules"]
+      "ignore": ["*.local"]
     },
     {
       "name": "cook-feedback",
       "timeout": 30,
-      "runtime": "Nodejs18.15",
+      "runtime": "Nodejs24.11",
       "memorySize": 256,
-      "installDependency": true,
+      "installDependency": false,
       "handler": "index.main",
       "envVariables": {},
-      "ignore": ["*.local", "node_modules"]
+      "ignore": ["*.local"]
     }
   ]
 }

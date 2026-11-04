@@ -494,6 +494,21 @@ final class CookDiscoveryUITests: XCTestCase {
         case .filters: wait(app.buttons["完成"], "isHittable == true", file: file, line: line)
         }
         let window = app.windows.firstMatch
+        let bottomAction: XCUIElement?
+        if page == .findRecipes {
+            let presentation = app.buttons["cook.presentation"]
+            let kitchen = presentation.value as? String == "云厨房" || presentation.label.contains("云厨房")
+            if kitchen {
+                bottomAction = app.buttons["kitchen.cook"]
+            } else if window.horizontalSizeClass != .regular {
+                bottomAction = app.buttons["cook.showResults"]
+            } else {
+                // Wide ingredient selection has live results, with no fixed result button.
+                bottomAction = nil
+            }
+        } else {
+            bottomAction = nil
+        }
         var visibleTop = window.frame.minY
         var visibleBottom = window.frame.maxY
         for _ in 0..<10 {
@@ -507,13 +522,7 @@ final class CookDiscoveryUITests: XCTestCase {
             let top = navigationFrame.isNull ? window.frame.minY : navigationFrame.maxY
             var bottom = window.frame.maxY
             if page == .findRecipes {
-                let kitchen = app.buttons.matching(identifier: "kitchen.cook").firstMatch
-                if kitchen.exists && kitchen.isHittable {
-                    bottom = kitchen.frame.minY
-                } else if window.horizontalSizeClass != .regular {
-                    let results = app.buttons.matching(identifier: "cook.showResults").firstMatch
-                    if results.exists && results.isHittable { bottom = results.frame.minY }
-                }
+                if let bottomAction, bottomAction.exists && bottomAction.isHittable { bottom = bottomAction.frame.minY }
             } else if page == .filters {
                 // 整个固定汇总容器都会遮挡列表，不能仅按文字或窗口边界推算。
                 let summary = app.descendants(matching: .any).matching(identifier: "filter.summary").firstMatch
@@ -559,10 +568,10 @@ final class CookDiscoveryUITests: XCTestCase {
         wait(target ?? app.buttons["cook.presentation"], "isHittable == true")
     }
 
+    @MainActor
     private func wait(_ element: XCUIElement, _ predicate: String,
                       file: StaticString = #filePath, line: UInt = #line) {
-        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: predicate), object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 10), .completed, file: file, line: line)
+        XCTAssertEqual(element.waitForState(predicate, timeout: 10), .completed, file: file, line: line)
     }
 
     @MainActor

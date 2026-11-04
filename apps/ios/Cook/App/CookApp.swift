@@ -2,6 +2,7 @@ import CookCore
 import os
 import SwiftData
 import SwiftUI
+import UIKit
 import UserNotifications
 
 /// 启动阶段打点，在 Instruments 的 Points of Interest 里看耗时
@@ -47,6 +48,11 @@ struct CookApp: App {
                                                 managedService: ManagedCookAIService(endpoint: inMemory ? nil : ManagedCookAIService.configuredEndpoint)))
         #if DEBUG
             if uiTesting {
+                // Functional form tests exercise validation and draft retention.
+                // Avoid XCTest waiting indefinitely for keyboard/layout animation completion.
+                if ProcessInfo.processInfo.arguments.contains("-ui-testing-disable-animations") {
+                    UIView.setAnimationsEnabled(false)
+                }
                 // Reset the fixture without a launch-domain override that would lock later UI changes.
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-presentation") {
                     UserDefaults.standard.set(CookPresentation.list.rawValue, forKey: "cook.presentation")

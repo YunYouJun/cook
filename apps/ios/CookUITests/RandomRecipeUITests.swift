@@ -114,7 +114,7 @@ final class RandomRecipeUITests: XCTestCase {
 
     @MainActor
     private func decidedRecipe(in app: XCUIApplication) -> XCUIElement {
-        app.descendants(matching: .any).matching(identifier: "cook.decide.recipe").firstMatch
+        app.staticTexts.matching(identifier: "cook.decide.recipe").firstMatch
     }
 
     @MainActor
@@ -158,9 +158,7 @@ final class RandomRecipeUITests: XCTestCase {
     @MainActor
     private func wait(_ element: XCUIElement, _ predicate: String, _ argument: String? = nil,
                       file: StaticString = #filePath, line: UInt = #line) {
-        let condition = argument.map { NSPredicate(format: predicate, $0) } ?? NSPredicate(format: predicate)
-        let expectation = XCTNSPredicateExpectation(predicate: condition, object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 20), .completed, file: file, line: line)
+        XCTAssertEqual(element.waitForState(predicate, timeout: 20, argument: argument), .completed, file: file, line: line)
     }
 
     @MainActor

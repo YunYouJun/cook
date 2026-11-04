@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version-file: .nvmrc
       - name: Test change detection
         run: node --test test/ciChanges.test.mjs
       - name: Test isolated iOS infrastructure recovery
@@ -48,7 +48,7 @@ jobs:
       - name: Set node
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
 
       - name: Install
@@ -68,7 +68,7 @@ jobs:
       - name: Set node
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
 
       - name: Install
@@ -89,7 +89,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
@@ -108,17 +108,16 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [24]
         os: [ubuntu-latest]
       fail-fast: false
 
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use repository Node.js version
         uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org/
           cache: pnpm
 
@@ -175,7 +174,7 @@ jobs:
       - name: Set node
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -196,7 +195,7 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: xcode-27
-    timeout-minutes: 75
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -211,7 +210,7 @@ jobs:
       - name: Set node
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -229,7 +228,7 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/cook-derived-data" CODE_SIGNING_ALLOWED=NO
       - name: Build and test
-        timeout-minutes: 45
+        timeout-minutes: 60
         id: ios_tests
         env:
           DEVICE: ${{ steps.simulators.outputs[matrix.device] }}

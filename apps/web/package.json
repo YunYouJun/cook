@@ -36,7 +36,7 @@
     "@nuxtjs/color-mode": "^4.0.1",
     "@nuxtjs/ionic": "1.0.2",
     "@pinia/nuxt": "^0.11.3",
-    "@types/node": "^25.9.5",
+    "@types/node": "^24.19.2",
     "@unocss/nuxt": "^66.7.5",
     "@vite-pwa/nuxt": "^1.1.1",
     "@vueuse/core": "^14.4.0",
