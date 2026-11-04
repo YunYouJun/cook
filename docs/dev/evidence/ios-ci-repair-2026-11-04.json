@@ -1195,5 +1195,39 @@
       "iphone": "Five affected iPhone journeys passed 5/5 on iOS 26.5: cloud inspiration, maximum-text menu, maximum-text discovery detail, cloud goal preservation, and the complete maximum-text goal audit/review/decision journey. All five requested accessibility audit categories passed."
     },
     "remoteValidation": "Swift and all six general checks passed. The iPhone regression-main and iPad dietary groups passed. The iPad regression-main group was still running when these fixes were prepared."
+  },
+  "fifteenthFollowUp": {
+    "baselineCommit": "4c7dc4980c174186315469ca75e8c21a282402b3",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41874012353",
+    "job": "https://github.com/YunYouJun/cook/actions/runs/41874012353/job/126731817855",
+    "observed": "All six CloudKitchen cases passed. Discovery and random completed 19/20 overall. The repeated iPad detail-replacement journey opened two inspiration recipes, then timed out resolving the global recipe.openKitchen button after confirming its first random decision. The query performed internal snapshot retries and exhausted the 300-second test allowance before the selected recipe navigation readiness check could run.",
+    "diagnosticLimit": "The retained runner spindump shows XCTest collecting diagnostics for the failed existence query. It does not establish an App crash or identify a blocked App frame; no failing recording or console log was available in this result. Do not infer an App crash from this evidence.",
+    "change": "First require the selected recipe navigation and its actual favorite button to become interactive. Then require recipe.detail and resolve recipe.openKitchen only inside that native List. Keep the workbench-presence assertion, selected-title assertion, interactive-detail assertion and original per-operation/test time limits. No test-case retry is added.",
+    "artifact": {
+      "id": 13351730287,
+      "sha256": "39d26a706fd75686a2fedf12e90b2ca34945d5057ac39de1b41e7647aca40552"
+    },
+    "inspection": "Downloaded only checksum-verified metadata and the runner diagnostic payload. Reclaim task-owned partial extractions after final validation.",
+    "navigationOrderValidation": {
+      "ipad": "Repeated detail replacement and maximum-text discovery passed 2/2 (64.469s and 88.801s).",
+      "iphone": "Cloud inspiration, maximum-text discovery and the full maximum-text dietary audit/review/decision journey passed 3/3 before the unique-list query change."
+    },
+    "nestedGoalList": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41874012353/job/126731817879",
+      "observed": "Both independent accessibility audit journeys and five regular dietary cases passed. Empty-goal cancellation failed on its final reopened goal sheet while resolving dietary.choices. The toolbar had already been confirmed hittable. The recording shows the goal sheet visibly presented over the filter sheet and beef recipe results until cleanup.",
+      "stackEvidence": "The retained App spindump identifies the live Cook process and shows its main thread in XCTElementQuery._firstMatchingSnapshotForInput, XCTFilteringTransformerIterator.nextMatch, XCTElementSnapshotDescendantsEnumerator.nextObject and XCElementSnapshot.children. No Cook business frame blocks the sampled thread; the traversal belongs to injected XCTest automation.",
+      "change": "Use element for the uniquely identified dietary.choices container, checking ambiguity through complete query resolution instead of the lazy firstMatch path seen in the sample. Apply the same unique-container resolution to the decided recipe.detail List. Retain child matching and all selection/navigation/audit assertions. Remote CI must validate this framework-specific workaround.",
+      "apiReference": "https://developer.apple.com/documentation/xcuiautomation/xcuielementquery/element",
+      "artifact": {
+        "id": 13351213841,
+        "sha256": "e96f39d4c497d83d2df2fb04dbc76c43ed4788c967179f65417a927e439dbafb"
+      },
+      "inspection": "Checksum-verified metadata, the App spindump and the failing recording were inspected. The duplicate exported recording was reclaimed; its retained xcresult source payload can regenerate it."
+    },
+    "uniqueListValidation": {
+      "ipad": "Three executed cases passed: repeated detail replacement (76.896s), empty-goal cancellation/reopened picker (91.256s), and the full maximum-text dietary audit/review/decision journey (129.197s). The separately selected discovery dietary-goal/decided-detail journey also passed (71.305s), for 4/4 total.",
+      "iphone": "Four affected cases passed on iOS 26.5: discovery dietary goal (69.410s), maximum-text discovery (83.006s), empty-goal cancellation (78.040s), and the full maximum-text dietary audit/review/decision journey (151.144s). All five requested accessibility audit categories passed on both devices.",
+      "coverage": "Existing test method names, group assignments, per-operation timeouts and case allowances are unchanged. No assertion or test-case retry was added."
+    }
   }
 }

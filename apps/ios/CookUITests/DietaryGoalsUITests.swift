@@ -21,7 +21,7 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     private func goalOption(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
-        app.collectionViews.matching(identifier: "dietary.choices").firstMatch
+        app.collectionViews.matching(identifier: "dietary.choices").element
             .buttons.matching(identifier: identifier).firstMatch
     }
 
@@ -30,7 +30,7 @@ final class DietaryGoalsUITests: XCTestCase {
         let openedFilters = openGoalPicker(in: app)
         let option = goalOption("dietary.goal.\(goal)", in: app)
         XCTAssertTrue(option.waitForExistence(timeout: 10))
-        XCTAssertFalse(app.collectionViews.matching(identifier: "dietary.choices").firstMatch
+        XCTAssertFalse(app.collectionViews.matching(identifier: "dietary.choices").element
             .buttons.matching(identifier: "dietary.goal.weight-aware").firstMatch.exists)
         option.tap()
         XCTAssertTrue(option.isSelected)
@@ -68,7 +68,10 @@ final class DietaryGoalsUITests: XCTestCase {
             .buttons.matching(identifier: "dietary.done").firstMatch
         XCTAssertEqual(done.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
                        "饮食目标弹层应完成呈现并可操作")
-        XCTAssertTrue(app.collectionViews.matching(identifier: "dietary.choices").firstMatch.waitForExistence(timeout: 10))
+        // Xcode 27 can stall in its lazy first-match snapshot traversal after
+        // reopening this nested sheet. Resolve the uniquely identified List
+        // with ambiguity checking before querying any of its options.
+        XCTAssertTrue(app.collectionViews.matching(identifier: "dietary.choices").element.waitForExistence(timeout: 10))
     }
 
     @MainActor
@@ -514,7 +517,7 @@ final class DietaryGoalsUITests: XCTestCase {
     private func assertRememberControlAbsent(in app: XCUIApplication,
                                             file: StaticString = #filePath, line: UInt = #line) {
         // The policy covers the choice list and its toolbar, not unrelated app tabs.
-        let choices = app.collectionViews.matching(identifier: "dietary.choices").firstMatch
+        let choices = app.collectionViews.matching(identifier: "dietary.choices").element
         let navigation = app.navigationBars.matching(identifier: "饮食目标").firstMatch
         for container in [choices, navigation] {
             XCTAssertTrue(container.waitForExistence(timeout: 10), file: file, line: line)
