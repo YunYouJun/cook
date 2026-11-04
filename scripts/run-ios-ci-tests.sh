@@ -45,6 +45,20 @@ run_tests() {
   fi
 }
 case "$IOS_SUITE" in
+  pr-regression)
+    # All App units and dietary interactions, plus representative core flows.
+    # Full UI coverage and the two isolated system audits run on pushes/manual runs.
+    run_tests "$DEVICE" pr-regression \
+      -only-testing:CookTests \
+      -only-testing:CookUITests/DietaryGoalsUITests \
+      "-skip-testing:$standard_audit" "-skip-testing:$maximum_audit" \
+      -only-testing:CookUITests/CookUITests/testCookFlowByAccessibilityLabels \
+      -only-testing:CookUITests/CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval \
+      -only-testing:CookUITests/CookUITests/testPantryShelfRemembersChoicesAndRestoresDefaults \
+      -only-testing:CookUITests/CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients \
+      -only-testing:CookUITests/CloudKitchenUITests/testKitchenAndListShareSelectionAndPotOpensRealRecipes \
+      -only-testing:CookUITests/RandomRecipeUITests/testLargestTextRandomSharesDietaryGoalAndPreservesEmptyResults
+    ;;
   regression-main)
     # Everything else, including all App unit tests and newly added UI suites.
     run_tests "$DEVICE" regression-main \

@@ -19,7 +19,7 @@ function workflowCommand() {
 
 // Replay only the external Xcode/simulator boundary. The actual checked-in CI
 // shell and retry classifier execute unchanged; no local simulator is touched.
-function replay(scenarios, verify) {
+function replay(scenarios, verify, suites = ['regression-main', 'regression-discovery', 'dietary']) {
   const temporary = mkdtempSync(join(tmpdir(), 'cook-ios-ci-replay-'))
   const bin = join(temporary, 'bin')
   mkdirSync(bin)
@@ -57,7 +57,7 @@ function replay(scenarios, verify) {
     }
   `)
   try {
-    const runs = ['phone', 'pad'].flatMap(device => ['regression-main', 'regression-discovery', 'dietary'].map(suite => spawnSync('bash', ['-e', '-c', workflowCommand()], {
+    const runs = ['phone', 'pad'].flatMap(device => suites.map(suite => spawnSync('bash', ['-e', '-c', workflowCommand()], {
       cwd: root,
       encoding: 'utf8',
       timeout: 15_000,
@@ -75,7 +75,7 @@ function replay(scenarios, verify) {
     })))
     for (const run of runs) assert.equal(run.error, undefined)
     const result = { status: runs.some(run => run.status !== 0) ? 1 : 0, stderr: runs.map(run => run.stderr).join('\n') }
-    const calls = readFileSync(callsPath, 'utf8').trim().split('\n').map(JSON.parse)
+    const calls = existsSync(callsPath) ? readFileSync(callsPath, 'utf8').trim().split('\n').map(JSON.parse) : []
     const summary = name => JSON.parse(readFileSync(join(temporary, 'xcresult', `${name}.xcresult`, 'summary.json'), 'utf8'))
     verify({ result, calls, summary, output: existsSync(outputPath) ? readFileSync(outputPath, 'utf8') : '' })
   }
@@ -175,9 +175,13 @@ test('business assertions, real audit findings, skipped tests and mixed failures
 test('native CI bounds build and test time and runs device groups independently', () => {
   const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
   assert.match(workflow, /device: \[iphone, ipad\]/)
-  assert.match(workflow, /suite: \[regression-main, regression-discovery, dietary\]/)
+  const suites = workflow.match(/suite: \$\{\{ fromJSON\(github.event_name == 'pull_request' && '([^']+)' \|\| '([^']+)'\) \}\}/)
+  assert.ok(suites, 'PRs use the focused matrix; push and manual runs use the full matrix')
+  assert.deepEqual(JSON.parse(suites[1]), ['pr-regression'])
+  assert.deepEqual(JSON.parse(suites[2]), ['regression-main', 'regression-discovery', 'dietary'])
+  assert.match(workflow, /\n {2}workflow_dispatch:/)
   assert.match(workflow, /name: Build for testing\n\s+timeout-minutes: 15/)
-  assert.match(workflow, /name: Build and test\n\s+timeout-minutes: 60/)
+  assert.match(workflow, /name: Build and test\n\s+timeout-minutes: \$\{\{ github.event_name == 'pull_request' && 45 \|\| 60 \}\}/)
   assert.match(workflow, /cancel-in-progress: true/)
 })
 
@@ -223,4 +227,50 @@ test('every UI method is assigned exactly once per device, including both isolat
       }
     }
   })
+})
+
+test('PR regression retains all App units, dietary functions and the original failing flows on both devices', () => {
+  replay({}, ({ result, calls, output }) => {
+    assert.equal(result.status, 0, result.stderr)
+    assert.deepEqual(calls.map(call => call.name), ['phone-pr-regression', 'pad-pr-regression'])
+    const required = [
+      'CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval',
+      'CookUITests/testPantryShelfRemembersChoicesAndRestoresDefaults',
+      'CookUITests/testCookFlowByAccessibilityLabels',
+      'CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients',
+      'CloudKitchenUITests/testKitchenAndListShareSelectionAndPotOpensRealRecipes',
+      'RandomRecipeUITests/testLargestTextRandomSharesDietaryGoalAndPreservesEmptyResults',
+    ].map(test => `CookUITests/${test}`)
+    const dietary = readFileSync(join(root, 'apps/ios/CookUITests/DietaryGoalsUITests.swift'), 'utf8')
+    for (const [, method] of dietary.matchAll(/func (test\w+)\(/g)) {
+      if (!['testNativeGoalPickerAccessibilityAndReviewedSummary', 'testLargestTextCanChooseSavedGoalReadAndDecide'].includes(method))
+        required.push(`CookUITests/DietaryGoalsUITests/${method}`)
+    }
+    for (const { args } of calls) {
+      const only = args.filter(arg => arg.startsWith('-only-testing:')).map(arg => arg.slice(14))
+      const skip = args.filter(arg => arg.startsWith('-skip-testing:')).map(arg => arg.slice(14))
+      const selected = test => only.some(selector => test === selector || test.startsWith(`${selector}/`))
+        && !skip.some(selector => test === selector || test.startsWith(`${selector}/`))
+      assert.ok(only.includes('CookTests'), 'the complete App unit-test target must run')
+      assert.ok(!skip.some(selector => selector.startsWith('CookTests')), 'App unit tests must not be excluded')
+      for (const test of required) assert.ok(selected(test), `${test} must run on both devices`)
+      for (const method of ['testNativeGoalPickerAccessibilityAndReviewedSummary', 'testLargestTextCanChooseSavedGoalReadAndDecide'])
+        assert.ok(!selected(`CookUITests/DietaryGoalsUITests/${method}`), 'system audits run in the full matrix')
+      for (const selector of only.filter(selector => selector.startsWith('CookUITests/'))) {
+        const [, suite, method] = selector.split('/')
+        const source = readFileSync(join(root, 'apps/ios/CookUITests', `${suite}.swift`), 'utf8')
+        if (method)
+          assert.match(source, new RegExp(`\\bfunc\\s+${method}\\s*\\(`))
+      }
+    }
+    assert.equal(output, '')
+  }, ['pr-regression'])
+})
+
+test('a PR assertion failure is not retried or hidden by the other device', () => {
+  replay({ 'pad-pr-regression': [fixtures.keyboardAssertion] }, ({ result, calls, output }) => {
+    assert.equal(result.status, 1)
+    assert.equal(calls.length, 2)
+    assert.equal(output, '')
+  }, ['pr-regression'])
 })
