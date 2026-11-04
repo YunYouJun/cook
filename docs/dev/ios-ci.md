@@ -27,3 +27,7 @@ UI 测试的布尔状态等待优先复用 `CookUITests.swift` 中的 `waitForSt
 三个反馈表单的功能测试通过 `-ui-testing-disable-animations` 在 Debug 测试进程中关闭 UIKit 动画，避免输入后的动画完成通知卡住 XCTest。交互、校验、错误与草稿保留断言保持执行；其他回归与无障碍审计使用正常动画。
 
 修改编排后运行 `node --test test/iosTestInfrastructure.test.mjs`。该检查执行真实 Bash 脚本，只替换外部 Xcode / 模拟器边界，并验证每个现有 UI 用例在每种设备上恰好分配一次、重试分类及汇总门禁。
+
+原生视图菜单由 Coordinator 保留当前菜单配置；只有呈现方式或辅助字号说明变化时才重建菜单，避免无关 SwiftUI 刷新替换 UIKit 正在呈现的菜单。单元测试同时检查菜单身份保持与实际选项状态更新，UI 测试继续验证连续开关、44pt 边缘命中和最大字号。
+
+快选和云厨房共用 `CookPresentationToolbarItem`。iOS 26.5 验收曾发现系统共享胶囊将自定义内容父容器限制为 36pt；该自定义项使用独立 44pt 玻璃胶囊，保持真实的上下边缘命中区域，避免只扩大内部 UIButton。

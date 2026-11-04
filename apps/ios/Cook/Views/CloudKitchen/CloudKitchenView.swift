@@ -114,15 +114,15 @@ struct CloudKitchenView: View {
                 .accessibilityValue(session.dietaryGoal.map { "饮食目标：\($0.title)" } ?? "")
                 .accessibilityIdentifier("cook.filters")
             }
-            ToolbarItemGroup(placement: .topBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 Button { session.clearStuff() } label: {
                     Label("清空", systemImage: "arrow.counterclockwise")
                         .labelStyle(.iconOnly)
                 }
                 .disabled(!session.hasSelection)
                 .accessibilityHint("清空本次找菜条件，保留长期偏好")
-                CookPresentationToggle(selection: $presentation, usesCurrentSubtitle: dynamicTypeSize.isAccessibilitySize)
             }
+            CookPresentationToolbarItem(selection: $presentation, usesCurrentSubtitle: dynamicTypeSize.isAccessibilitySize)
         }
         .cookDecideSheet(request: $decideRequest, lastDecidedID: $lastDecidedID, openRecipe: decide)
         .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
