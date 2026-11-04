@@ -51,16 +51,25 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     private func finishGoalSelection(in app: XCUIApplication, closingFilters: Bool = false) {
-        let done = app.navigationBars["饮食目标"].buttons["dietary.done"]
+        let done = app.navigationBars.matching(identifier: "饮食目标").firstMatch
+            .buttons.matching(identifier: "dietary.done").firstMatch
         XCTAssertTrue(done.waitForExistence(timeout: 10))
         done.tap()
-        // Resolve the dismissed navigation container, not its destroyed action.
-        XCTAssertTrue(app.navigationBars.matching(identifier: "饮食目标").firstMatch.waitForNonExistence(timeout: 10))
+        // A missing-element query traverses the entire accessibility tree on CI.
+        // Verify dismissal by requiring the real presenting page to accept input.
         if closingFilters {
-            let filterDone = app.navigationBars["筛选"].buttons["filter.done"]
-            XCTAssertTrue(filterDone.waitForExistence(timeout: 10))
+            let filterDone = app.navigationBars.matching(identifier: "筛选").firstMatch
+                .buttons.matching(identifier: "filter.done").firstMatch
+            XCTAssertEqual(filterDone.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
+                           "目标弹层关闭后，筛选页完成按钮应恢复可点击")
             filterDone.tap()
-            XCTAssertTrue(app.navigationBars.matching(identifier: "筛选").firstMatch.waitForNonExistence(timeout: 10))
+            XCTAssertEqual(app.buttons.matching(identifier: "cook.filters").firstMatch
+                .waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
+                "筛选弹层关闭后，找菜页应恢复可操作")
+        } else {
+            XCTAssertEqual(app.navigationBars.buttons.matching(identifier: "results.options").firstMatch
+                .waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
+                "目标弹层关闭后，结果页应恢复可操作")
         }
     }
 
@@ -93,12 +102,13 @@ final class DietaryGoalsUITests: XCTestCase {
     }
 
     @MainActor
-    private func assertGoalValue(_ value: String, in app: XCUIApplication,
+    private func assertGoalValue(_ value: String, in app: XCUIApplication, standaloneResults: Bool = false,
                                  file: StaticString = #filePath, line: UInt = #line) {
         // The control belongs to the navigation bar, not the potentially large
         // recipe list that appears after removing the dietary goal.
         let resultsOptions = app.navigationBars.buttons.matching(identifier: "results.options").firstMatch
-        if resultsOptions.exists && resultsOptions.isHittable {
+        if standaloneResults {
+            XCTAssertEqual(resultsOptions.waitForState("exists == true AND isHittable == true", timeout: 10), .completed, file: file, line: line)
             let expectedLabel = "更多选项，饮食目标：\(value)"
             let result: XCTWaiter.Result = resultsOptions.wait(for: \.label, toEqual: expectedLabel, timeout: 10) ? .completed : .timedOut
             if result != .completed {
@@ -117,9 +127,9 @@ final class DietaryGoalsUITests: XCTestCase {
         let picker = app.collectionViews["filter.options"].buttons["dietary.openPicker"]
         XCTAssertTrue(picker.waitForExistence(timeout: 10), file: file, line: line)
         XCTAssertEqual(picker.value as? String, value, file: file, line: line)
-        let done = app.navigationBars["筛选"].buttons["filter.done"]
+        let done = app.navigationBars.matching(identifier: "筛选").firstMatch.buttons.matching(identifier: "filter.done").firstMatch
         done.tap()
-        XCTAssertTrue(app.navigationBars.matching(identifier: "筛选").firstMatch.waitForNonExistence(timeout: 10), file: file, line: line)
+        XCTAssertEqual(filters.waitForState("exists == true AND isHittable == true", timeout: 10), .completed, file: file, line: line)
     }
 
     @MainActor
@@ -136,28 +146,31 @@ final class DietaryGoalsUITests: XCTestCase {
             let bar = app.navigationBars.allElementsBoundByIndex.last(where: { $0.isHittable }) ?? app.navigationBars.firstMatch
             bar.buttons.element(boundBy: 0).tap()
         }
-        revealCookingControl(app.buttons["discovery.decide"], in: app)
+        revealCookingControl(app.collectionViews.matching(identifier: "cook.chooser").firstMatch
+            .buttons.matching(identifier: "discovery.decide").firstMatch, in: app)
     }
 
     @MainActor
     private func revealCookingControl(_ control: XCUIElement, in app: XCUIApplication, towardTop: Bool = false) {
-        let chooser = app.collectionViews["cook.chooser"]
+        let chooser = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
         XCTAssertTrue(chooser.waitForExistence(timeout: 10))
-        XCTAssertEqual(chooser.waitForState("isHittable == true", timeout: 10), .completed)
+        let window = app.windows.firstMatch
+        // Collection containers need not have their own tap point on older iOS.
+        // The page must be interactive; the individual target is checked below.
+        XCTAssertEqual(app.buttons.matching(identifier: "cook.filters").firstMatch
+            .waitForState("exists == true AND isHittable == true", timeout: 10), .completed)
+        XCTAssertTrue(window.frame.intersects(chooser.frame), "找菜列表应在当前窗口中可见")
+        let bar = app.navigationBars.matching(identifier: "找菜").firstMatch
+        let action: XCUIElement? = window.horizontalSizeClass == .regular
+            ? nil : app.buttons.matching(identifier: "cook.showResults").firstMatch
         var lastViewport = CGRect.null
         var lastControlFrame = CGRect.null
         for _ in 0..<30 {
             let frame = control.exists ? control.frame : CGRect.null
             lastControlFrame = frame
             let hasFrame = !frame.isNull && !frame.isEmpty
-            let window = app.windows.firstMatch
-            let bars = app.navigationBars.allElementsBoundByIndex.filter(\.isHittable)
-            let bar = bars.first(where: { hasFrame && frame.midX >= $0.frame.minX && frame.midX <= $0.frame.maxX })
-                ?? bars.first ?? app.navigationBars.firstMatch
-            let top = max(chooser.frame.minY, bar.isHittable ? bar.frame.maxY : window.frame.minY) + 8
-            let action = app.buttons["cook.showResults"]
-            let bottom = min(chooser.frame.maxY, window.horizontalSizeClass != .regular && action.exists && action.isHittable
-                ? action.frame.minY : window.frame.maxY) - 8
+            let top = max(chooser.frame.minY, bar.frame.maxY) + 8
+            let bottom = min(chooser.frame.maxY, action?.frame.minY ?? window.frame.maxY) - 8
             let viewport = CGRect(x: chooser.frame.minX, y: top, width: chooser.frame.width, height: bottom - top)
             lastViewport = viewport
             guard viewport.height > 0 else { break }
@@ -209,7 +222,8 @@ final class DietaryGoalsUITests: XCTestCase {
         add(attachment)
         returnToFindRecipes(app)
         assertGoalValue("减少添加糖", in: app)
-        revealCookingControl(app.buttons["discovery.decide"], in: app)
+        revealCookingControl(app.collectionViews.matching(identifier: "cook.chooser").firstMatch
+            .buttons.matching(identifier: "discovery.decide").firstMatch, in: app)
         app.buttons["discovery.decide"].tap()
         app.confirmDecidedRecipe()
         XCTAssertTrue(app.buttons["dietary.openReviewedRecipe"].waitForExistence(timeout: 10))
@@ -295,7 +309,8 @@ final class DietaryGoalsUITests: XCTestCase {
     func testEmptyGoalCanBeCancelledWithoutLosingSelectedIngredients() {
         let app = app()
         select("less-added-sugar", in: app)
-        let beef = app.buttons["牛肉"]
+        let beef = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
+            .buttons.matching(NSPredicate(format: "label == %@", "牛肉")).firstMatch
         XCTAssertTrue(beef.waitForExistence(timeout: 10))
         // Keep the whole chip above the fixed action bar before tapping it.
         let action = app.buttons["cook.showResults"]
@@ -316,7 +331,8 @@ final class DietaryGoalsUITests: XCTestCase {
             XCTAssertFalse(action.isEnabled, "目标与食材没有匹配时不应打开空结果页")
         }
         // 无候选时 iPhone 的结果入口禁用，仍能在找菜页直接取消目标。
-        let cancel = app.buttons["cook.clearGoal"]
+        let cancel = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
+            .buttons.matching(identifier: "cook.clearGoal").firstMatch
         revealCookingControl(cancel, in: app, towardTop: true)
         XCTAssertTrue(cancel.waitForExistence(timeout: 10))
         cancel.tap()
@@ -326,13 +342,12 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(beef.isSelected)
         showResults(app)
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已选：牛肉")).firstMatch.exists)
-        let resultOptions = app.buttons["results.options"].firstMatch
         let openedFilters: Bool
-        if resultOptions.exists && resultOptions.isHittable {
+        if app.windows.firstMatch.horizontalSizeClass == .regular {
+            openedFilters = openGoalPicker(in: app)
+        } else {
             openResultsGoalPicker(in: app)
             openedFilters = false
-        } else {
-            openedFilters = openGoalPicker(in: app)
         }
         XCTAssertTrue(app.buttons["dietary.goal.none"].isSelected)
         finishGoalSelection(in: app, closingFilters: openedFilters)
@@ -348,12 +363,11 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(none.waitForExistence(timeout: 10))
         none.tap()
         XCTAssertTrue(none.isSelected)
-        let done = app.navigationBars["饮食目标"].buttons["dietary.done"]
+        let done = app.navigationBars.matching(identifier: "饮食目标").firstMatch.buttons.matching(identifier: "dietary.done").firstMatch
         XCTAssertTrue(done.waitForExistence(timeout: 5))
         assertRememberControlAbsent(in: app)
         done.tap()
-        XCTAssertTrue(app.navigationBars.matching(identifier: "饮食目标").firstMatch.waitForNonExistence(timeout: 10))
-        assertGoalValue("不限目标", in: app)
+        assertGoalValue("不限目标", in: app, standaloneResults: true)
         let candidate = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
         XCTAssertTrue(candidate.waitForExistence(timeout: 10), "取消目标后继续浏览当前目录，不退回空页面")
     }
@@ -436,7 +450,8 @@ final class DietaryGoalsUITests: XCTestCase {
         summary.lifetime = .keepAlways
         add(summary)
         returnToFindRecipes(app)
-        let decide = app.buttons["discovery.decide"]
+        let decide = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
+            .buttons.matching(identifier: "discovery.decide").firstMatch
         XCTAssertTrue(decide.isEnabled)
         capture(app, named: "dietary-accessibility-unified-find-recipes")
         decide.tap()

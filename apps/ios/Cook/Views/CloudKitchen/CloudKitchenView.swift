@@ -82,6 +82,7 @@ struct CloudKitchenView: View {
                     presentRandom: { decideRequest = CookDecideRequest(batchIDs: $0) }
                 )
             }
+            .accessibilityIdentifier("kitchen.content")
             .listSectionSpacing(.compact)
             .contentMargins(.top, 8, for: .scrollContent)
             .scrollDismissesKeyboard(.interactively)

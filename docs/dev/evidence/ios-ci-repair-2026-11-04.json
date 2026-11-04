@@ -476,6 +476,74 @@
       "passedTests": 8,
       "failedTests": 0,
       "skippedTests": 0
+    },
+    {
+      "name": "active-page-valid-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "active-page-valid-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "goal-dismissal-negative-control-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "result": "Failed",
+      "totalTestCount": 1,
+      "passedTests": 0,
+      "failedTests": 1,
+      "skippedTests": 0,
+      "expectedResult": "Failed",
+      "purpose": "Intentional omission of the first done.tap(); the parent-page interactivity guard must fail while the goal sheet stays presented."
+    },
+    {
+      "name": "active-scope-goals-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "result": "Failed",
+      "totalTestCount": 6,
+      "passedTests": 4,
+      "failedTests": 2,
+      "skippedTests": 0,
+      "purpose": "Compatibility baseline: two scrolling helpers failed at the old collection-container hittability precondition while the page and its selected beef button remained visible."
+    },
+    {
+      "name": "active-scope-full-ipad/CloudKitchenUITests",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 6,
+      "passedTests": 6,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "sourceBundle": "active-scope-full-ipad",
+      "scope": "Completed CloudKitchenUITests suite only; the subsequent dietary run was interrupted for the compatibility helper change."
+    },
+    {
+      "name": "active-scope-final-goals-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 8,
+      "passedTests": 8,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "active-scope-scroll-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
     }
   ],
   "orchestration": {
@@ -671,6 +739,37 @@
       "id": 13301502986,
       "name": "ios-xcresult-ipad-dietary",
       "sha256": "f0dfa089cf1af5d9667c6d12d5b47a103fbb7f471beda11ccb5b6482449cd146"
+    }
+  },
+  "ninthFollowUp": {
+    "baselineCommit": "7b3200ccfc7d937ac20426e63047d21e820834dc",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41789172935",
+    "missingElementTraversal": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41789172935/job/126438447569",
+      "observed": "The same first dietary regression case timed out resolving a missing navigation bar. The recording at 50 seconds again shows the goal picker closed and its parent filter sheet active. Both audits and the other five regular dietary cases passed.",
+      "diagnostic": "The earlier spindump sampled XCTElementQuery._firstMatchingSnapshotForInput -> XCTFilteringTransformerIterator.nextMatch -> XCTElementSnapshotDescendantsEnumerator.nextObject -> XCElementSnapshot.children on the App main thread. This supports exhaustive missing-element traversal as the cause; changing the missing element type did not solve it.",
+      "change": "Verify dismissal by requiring the actual presenting page control to exist and become hittable, then interact with that page. Use explicit known origins instead of probing for an optional absent results toolbar. Preserve selected goals, picker-until-done, saved settings, visible recipes and ingredient assertions.",
+      "apiReference": "https://developer.apple.com/documentation/xcuiautomation/xcuielementtypequeryprovider/firstmatch",
+      "artifact": {
+        "id": 13304590490,
+        "sha256": "1a6e3bcd684a35726fc8ce59432618308428b5f93ecd884430a33096e882baaa"
+      }
+    },
+    "kitchenQueryScope": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41789172935/job/126438447588",
+      "observed": "A global navigation-bar enumeration and global zero-WebView count took tens of seconds before the pot event synthesis timed out. The other 19 discovery cases passed.",
+      "change": "Identify the native kitchen content List, scope its projected buttons and zero-WebView assertion to that container, use the known Find Recipes navigation bar, and choose the footer from the active presentation instead of probing an absent one. Keep the actual projected taps, native-rendering check, selection and recipe navigation assertions."
+    },
+    "localNegativeControlInfrastructure": "Two initial iOS 27 negative-control attempts were killed before reaching the intentional omitted-dismissal action; they do not establish that the new guard rejects the mutation. Corrected source passed the two affected cases on iPad iOS 27 and iPhone iOS 26.5.",
+    "dismissalNegativeControl": {
+      "name": "goal-dismissal-negative-control-compat",
+      "observed": "The intentionally omitted goal-sheet dismissal failed the new parent-filter-button existence/hittability assertion at line 63 in 27.746 seconds. Restoring done.tap() passed both affected scenarios on iPad iOS 27 and iPhone iOS 26.5.",
+      "expectedFailureText": "目标弹层关闭后，筛选页完成按钮应恢复可点击"
+    },
+    "compatibilityScrollGuard": {
+      "observed": "The screenshot showed the Find Recipes page, active filters control and selected beef; the collection existed at (0,0,402,874) but reported no container hit point. Two old-iOS scrolling helpers stopped before their actual target checks.",
+      "change": "Require an active page control and a visible list frame, retain full target visibility and target hittability, scope chooser targets to the chooser, and use its known navigation bar and actual footer.",
+      "supersededLocalRun": "Stopped active-scope-full-ipad after all six CloudKitchen tests passed, to rebuild the changed dietary scrolling helper. This interrupted bundle is not a full-suite success."
     }
   }
 }
