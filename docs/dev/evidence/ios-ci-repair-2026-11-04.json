@@ -604,6 +604,55 @@
       "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
       "failures": [],
       "variant": "Rebuilt final source after removing the unsupported TabBar experiment. Both discovery and library dice scenarios passed with the original Random-button absence assertions."
+    },
+    {
+      "result": "Failed",
+      "totalTestCount": 2,
+      "passedTests": 1,
+      "failedTests": 1,
+      "skippedTests": 0,
+      "name": "menu-identity-baseline",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [
+        {
+          "test": "CookPresentationToggleTests/testUnrelatedRefreshKeepsExistingMenuAndActions()",
+          "message": "The menu and action identity assertions both failed before the configuration guard."
+        }
+      ],
+      "variant": "Expected-failure baseline; the menu state/subtitle transition test passed."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 8,
+      "passedTests": 8,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "stable-menu-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "variant": "Two new menu identity/state unit tests and the full six-case CloudKitchen UI class before the compatibility toolbar wrapper change."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 4,
+      "passedTests": 4,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "shared-menu-toolbar-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": [],
+      "variant": "Final shared toolbar item: two identity/state unit tests plus full maximum-text menu and standard presentation-switching UI scenarios. Both upper/lower edge touches passed in quick-list and kitchen modes."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 8,
+      "passedTests": 8,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "shared-menu-toolbar-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "variant": "Final source: both new menu unit tests plus all six CloudKitchen UI tests, including landscape, maximum text, camera rotation and standard menu switching."
     }
   ],
   "orchestration": {
@@ -864,5 +913,45 @@
     "remainingAbsenceChecks": "Bound obsolete discovery controls to the active content and toolbar, empty states to the active content, and zero-WebView checks to identified recipe detail/article content. Reuse the verified parent-control dietary dismissal helper across discovery and random flows.",
     "discardedTabExperiment": "A TabBar-only absence helper passed on iPhone but failed on iPadOS 27 adaptive top tabs. Reverted it and retained the original typed Random-button absence assertions; rebuilt final source and both affected iPad scenarios passed.",
     "orchestrationValidation": "Final node --test test/iosTestInfrastructure.test.mjs passed 10/10; all 54 UI methods remain assigned exactly once per device, without adding UI assertion retries."
+  },
+  "eleventhFollowUp": {
+    "baselineCommit": "43bc2a1dbcd336a7dd079de5ec16a15f8713b674",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41814421728",
+    "job": "https://github.com/YunYouJun/cook/actions/runs/41814421728/job/126521633310",
+    "observed": "Both dietary groups passed. Nineteen of twenty iPad discovery scenarios passed, including rotation and reviewed-recipe navigation. The largest-text menu scenario failed looking for its quick-list option immediately after two edge-touch open/current-selection/close checks. Recording and failure hierarchy show the Find Recipes page with no presented menu.",
+    "inference": "CookPresentationToggle.updateUIView recreated the UIButton menu and icon on every SwiftUI update, even without a selection or accessibility-subtitle change. Replacing presentation objects during unrelated updates can interfere with the native menu lifecycle.",
+    "change": "Keep the existing native menu and actions for unchanged selection/subtitle configuration. Rebuild the menu and icon when that configuration changes; action callbacks still read the coordinator’s current binding. Preserve every UI menu, 44pt edge-hit, selected-state and largest-text assertion.",
+    "regressionProof": "Two focused unit tests cover menu/action identity across unrelated refreshes and selected-state/subtitle changes. Before the guard, the identity case failed both identity assertions while the state-transition case passed. With the guard, both passed.",
+    "baselineDiagnostics": "The expected-failure unit run finished its assertions; its owned simctl diagnostic collector was terminated after collection stalled. xcodebuild finalized with status 65. No running tests were interrupted.",
+    "artifact": {
+      "id": 13315768360,
+      "sha256": "0827f6942007e7ec23e0bc194db7da5bbfac0a90de9b898ba01d2acbda62a2fd"
+    },
+    "compatibilityHitArea": {
+      "observed": "On iOS 26.5 the custom UIButton reported a 44pt frame but its SwiftUI toolbar parents were only 36pt high. The first upper-edge tap failed before any menu selection. A fixed 44pt frame alone did not change the clipped parent. Removing the shared capsule for the quick-list toolbar made both edge taps pass; the corresponding kitchen toolbar then exposed the same clipping.",
+      "change": "Use one CookPresentationToolbarItem for both presentations. Give the custom item its own 44pt glass capsule on iOS 26+, outside the system shared toolbar capsule; keep the UIKit native menu and standard older-system path.",
+      "reference": "https://developer.apple.com/documentation/swiftui/toolbarcontent/sharedbackgroundvisibility(_:)",
+      "preFixFrames": {
+        "parent": [
+          338,
+          66,
+          44,
+          36
+        ],
+        "button": [
+          338,
+          62,
+          44,
+          44
+        ]
+      },
+      "experiments": [
+        "stable-menu-compat: 3/4 passed; largest-text first quick-list edge tap failed",
+        "stable-menu-frame-compat: 3/4 passed; explicit frame alone kept the 36pt parent and failed the same edge tap",
+        "stable-menu-toolbar-compat: 3/4 passed; both quick-list edges passed, then the unchanged kitchen parent failed its first edge tap"
+      ]
+    },
+    "completeRunResult": "Swift and five of six native groups passed. Only the iPad discovery group failed, with 19/20 scenarios passing and the maximum-text menu lookup failing. Both main groups completed successfully.",
+    "finalLocalValidation": "The shared native toolbar and cached menu passed 8/8 on iPadOS 27 and 4/4 on iOS 26.5. Existing UI assertions, edge taps and gesture checks were retained."
   }
 }

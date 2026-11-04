@@ -156,7 +156,7 @@ struct CookView: View {
                 .accessibilityValue(session.dietaryGoal.map { "已选 \(count) 项，饮食目标：\($0.title)" } ?? (count > 0 ? "已选 \(count) 项" : ""))
                 .accessibilityIdentifier("cook.filters")
             }
-            ToolbarItemGroup(placement: .topBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     withAnimation(.snappy) { session.clearStuff() }
                 } label: {
@@ -165,8 +165,8 @@ struct CookView: View {
                 }
                 .disabled(!session.hasSelection)
                 .accessibilityHint("清空本次找菜条件，保留长期偏好")
-                CookPresentationToggle(selection: $presentation, usesCurrentSubtitle: dynamicTypeSize.isAccessibilitySize)
             }
+            CookPresentationToolbarItem(selection: $presentation, usesCurrentSubtitle: dynamicTypeSize.isAccessibilitySize)
         }
         .cookDecideSheet(request: $decideRequest, lastDecidedID: $lastDecidedID) { route in
             openRecipe(route)

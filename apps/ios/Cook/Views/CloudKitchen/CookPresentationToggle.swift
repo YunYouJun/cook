@@ -6,6 +6,28 @@ enum CookPresentation: String {
     case kitchen
 }
 
+/// Keep the custom button's full hit area outside the system's 36pt shared capsule.
+struct CookPresentationToolbarItem: ToolbarContent {
+    @Binding var selection: CookPresentation
+    var usesCurrentSubtitle: Bool
+
+    var body: some ToolbarContent {
+        if #available(iOS 26.0, *) {
+            ToolbarItem(placement: .topBarTrailing) {
+                control.glassEffect(.regular.interactive(), in: Capsule())
+            }
+            .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .topBarTrailing) { control }
+        }
+    }
+
+    private var control: some View {
+        CookPresentationToggle(selection: $selection, usesCurrentSubtitle: usesCurrentSubtitle)
+            .frame(width: 44, height: 44)
+    }
+}
+
 /// An icon-only toolbar menu with named options and an accessible current selection.
 struct CookPresentationToggle: UIViewRepresentable {
     @Binding var selection: CookPresentation
@@ -30,20 +52,7 @@ struct CookPresentationToggle: UIViewRepresentable {
 
     func updateUIView(_ button: UIButton, context: Context) {
         context.coordinator.selection = $selection
-        button.configuration?.image = UIImage(systemName: selection == .list ? "list.bullet" : "cube", withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .regular))
-        let coordinator = context.coordinator
-        let quick = UIAction(title: "食材快选", image: UIImage(systemName: "list.bullet"), state: !usesCurrentSubtitle && selection == .list ? .on : .off) { [weak coordinator] _ in
-            coordinator?.selection.wrappedValue = .list
-        }
-        let kitchen = UIAction(title: "云厨房", image: UIImage(systemName: "cube"), state: !usesCurrentSubtitle && selection == .kitchen ? .on : .off) { [weak coordinator] _ in
-            coordinator?.selection.wrappedValue = .kitchen
-        }
-        if usesCurrentSubtitle {
-            // 系统勾选栏在最大辅助字号下可能与首字接触，改用可缩放的文字说明当前项。
-            quick.subtitle = selection == .list ? "当前视图" : nil
-            kitchen.subtitle = selection == .kitchen ? "当前视图" : nil
-        }
-        button.menu = UIMenu(options: usesCurrentSubtitle ? [] : .singleSelection, children: [quick, kitchen])
+        context.coordinator.updateMenu(on: button, selection: selection, usesCurrentSubtitle: usesCurrentSubtitle)
         button.isEnabled = context.environment.isEnabled
         button.accessibilityLabel = "切换视图"
         button.accessibilityValue = selectionName
@@ -59,6 +68,29 @@ struct CookPresentationToggle: UIViewRepresentable {
 
     final class Coordinator {
         var selection: Binding<CookPresentation>
+        private var menuSelection: CookPresentation?
+        private var menuUsesCurrentSubtitle: Bool?
         init(selection: Binding<CookPresentation>) { self.selection = selection }
+
+        func updateMenu(on button: UIButton, selection: CookPresentation, usesCurrentSubtitle: Bool) {
+            // Replacing a presented menu during an unrelated SwiftUI refresh can
+            // dismiss it or interrupt its next presentation.
+            guard button.menu == nil || menuSelection != selection || menuUsesCurrentSubtitle != usesCurrentSubtitle else { return }
+            menuSelection = selection
+            menuUsesCurrentSubtitle = usesCurrentSubtitle
+            button.configuration?.image = UIImage(systemName: selection == .list ? "list.bullet" : "cube", withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .regular))
+            let quick = UIAction(title: "食材快选", image: UIImage(systemName: "list.bullet"), state: !usesCurrentSubtitle && selection == .list ? .on : .off) { [weak self] _ in
+                self?.selection.wrappedValue = .list
+            }
+            let kitchen = UIAction(title: "云厨房", image: UIImage(systemName: "cube"), state: !usesCurrentSubtitle && selection == .kitchen ? .on : .off) { [weak self] _ in
+                self?.selection.wrappedValue = .kitchen
+            }
+            if usesCurrentSubtitle {
+                // 系统勾选栏在最大辅助字号下可能与首字接触，改用可缩放的文字说明当前项。
+                quick.subtitle = selection == .list ? "当前视图" : nil
+                kitchen.subtitle = selection == .kitchen ? "当前视图" : nil
+            }
+            button.menu = UIMenu(options: usesCurrentSubtitle ? [] : .singleSelection, children: [quick, kitchen])
+        }
     }
 }
