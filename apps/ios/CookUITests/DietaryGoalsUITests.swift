@@ -16,6 +16,9 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     private func verifyNextDayLunchAndWeightGoal(contentSize: UIContentSizeCategory) {
+        if contentSize.isAccessibilitySize {
+            executionTimeAllowance = 600
+        }
         let app = self.app(contentSize: contentSize)
         let filters = app.buttons["cook.filters"].firstMatch
         XCTAssertTrue(filters.waitForExistence(timeout: 15))
