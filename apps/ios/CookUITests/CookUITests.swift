@@ -106,16 +106,23 @@ extension XCUIApplication {
     @MainActor
     func completeDietarySelection(closingFilters: Bool, returningTo control: XCUIElement,
                                   file: StaticString = #filePath, line: UInt = #line) {
-        let done = navigationBars.matching(identifier: "饮食目标").firstMatch
-            .buttons.matching(identifier: "dietary.done").firstMatch
+        let goalNavigation = navigationBars.matching(identifier: "饮食目标").firstMatch
+        let done = goalNavigation.buttons.matching(identifier: "dietary.done").firstMatch
         XCTAssertTrue(done.waitForExistence(timeout: 10), file: file, line: line)
         done.tap()
+        // The parent can exist while the child sheet still owns accessibility focus.
+        // Wait within the small navigation namespace before resolving its next action.
+        XCTAssertTrue(goalNavigation.waitForNonExistence(timeout: 10),
+                      "饮食目标弹层应先完成关闭", file: file, line: line)
         if closingFilters {
-            let filterDone = navigationBars.matching(identifier: "筛选").firstMatch
-                .buttons.matching(identifier: "filter.done").firstMatch
-            XCTAssertEqual(filterDone.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
-                           "目标弹层关闭后，筛选页应恢复可操作", file: file, line: line)
+            let filterNavigation = navigationBars.matching(identifier: "筛选").firstMatch
+            let filterDone = filterNavigation.buttons.matching(identifier: "filter.done").firstMatch
+            XCTAssertTrue(filterDone.waitForExistence(timeout: 10), file: file, line: line)
+            // The real tap and observed dismissal validate readiness without an
+            // extra hit-test snapshot during the sheet transition.
             filterDone.tap()
+            XCTAssertTrue(filterNavigation.waitForNonExistence(timeout: 10),
+                          "完成按钮应关闭筛选弹层", file: file, line: line)
         }
         XCTAssertEqual(control.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
                        "弹层关闭后，其实际入口页面应恢复可操作", file: file, line: line)
@@ -138,8 +145,7 @@ extension XCUIApplication {
     /// 通过实际菜单选择布局；工具栏在部分系统上只转发无障碍标签。
     @MainActor
     func selectCookingPresentation(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
-        let menus = navigationBars.matching(identifier: "找菜").firstMatch
-            .buttons.matching(identifier: "cook.presentation")
+        let menus = navigationBars.buttons.matching(identifier: "cook.presentation")
         let menu = menus.firstMatch
         XCTAssertTrue(menu.waitForExistence(timeout: 20), file: file, line: line)
         if menu.value as? String == name || menu.label.contains(name) { return }
