@@ -200,6 +200,8 @@ jobs:
     timeout-minutes: 90
     strategy:
       fail-fast: false
+      # Leave capacity for the two PR jobs while a full branch matrix runs.
+      max-parallel: ${{ github.event_name == 'pull_request' && 2 || 3 }}
       matrix:
         device: [iphone, ipad]
         # PRs keep two focused device jobs; pushes and manual runs retain full coverage.

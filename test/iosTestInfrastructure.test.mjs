@@ -179,6 +179,8 @@ test('native CI bounds build and test time and runs device groups independently'
   assert.ok(suites, 'PRs use the focused matrix; push and manual runs use the full matrix')
   assert.deepEqual(JSON.parse(suites[1]), ['pr-regression'])
   assert.deepEqual(JSON.parse(suites[2]), ['regression-main', 'regression-discovery', 'dietary'])
+  const nativeJob = workflow.slice(workflow.indexOf('\n  ios-tests:\n'), workflow.indexOf('\n  ios:\n'))
+  assert.match(nativeJob, /max-parallel: \$\{\{ github.event_name == 'pull_request' && 2 \|\| 3 \}\}/)
   assert.match(workflow, /\n {2}workflow_dispatch:/)
   assert.match(workflow, /name: Build for testing\n\s+timeout-minutes: 15/)
   assert.match(workflow, /name: Build and test\n\s+timeout-minutes: \$\{\{ github.event_name == 'pull_request' && 45 \|\| 60 \}\}/)
