@@ -16,30 +16,24 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     private func verifyNextDayLunchAndWeightGoal(contentSize: UIContentSizeCategory) {
-        if contentSize.isAccessibilitySize {
+        if contentSize.isAccessibilityCategory {
             executionTimeAllowance = 600
         }
         let app = self.app(contentSize: contentSize)
-        let filters = app.buttons["cook.filters"].firstMatch
-        XCTAssertTrue(filters.waitForExistence(timeout: 15))
-        filters.tap()
-        let options = app.collectionViews["filter.options"]
+        let options = openFilterOptions(in: app)
         let lunch = options.buttons["discovery.scene.next-day-lunch"]
         XCTAssertTrue(lunch.waitForExistence(timeout: 10))
         app.revealFilterOption(lunch)
         lunch.tap()
         XCTAssertEqual(lunch.waitForState("isSelected == true", timeout: 10), .completed)
-        let count = app.descendants(matching: .any).matching(identifier: "filter.resultCount").firstMatch
-        XCTAssertTrue(count.waitForExistence(timeout: 10))
-        XCTAssertEqual(count.label.filter { $0.isASCII && $0.isNumber }, "10")
+        assertFilterCount("10", in: app)
         XCTAssertTrue(options.staticTexts["discovery.explanation"].label.contains("冷藏"))
-        app.buttons["filter.done"].tap()
+        closeFilterOptions(in: app)
 
         select("weight-aware", in: app)
-        filters.tap()
-        XCTAssertTrue(count.waitForExistence(timeout: 10))
-        XCTAssertEqual(count.label.filter { $0.isASCII && $0.isNumber }, "9")
-        app.buttons["filter.done"].tap()
+        _ = openFilterOptions(in: app)
+        assertFilterCount("9", in: app)
+        closeFilterOptions(in: app)
         showResults(app)
         guard let recipe = revealRecipe("dietary.recipe.333", in: app, maximumSwipes: 5) else { return }
         recipe.tap()
@@ -51,6 +45,29 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(reason.label.contains("5–10 ml"), reason.label)
         capture(app, named: "weight-aware-next-day-lunch-source-units-\(contentSize.rawValue)")
     }
+
+    @MainActor
+    private func assertFilterCount(_ expected: String, in app: XCUIApplication,
+                                   file: StaticString = #filePath, line: UInt = #line) {
+        // Reopening the sheet replaces its summary. Resolve a new count from the
+        // current footer instead of retaining a resolved element from the old sheet.
+        let summary = app.otherElements.matching(identifier: "filter.summary").firstMatch
+        XCTAssertTrue(summary.waitForExistence(timeout: 10), file: file, line: line)
+        let count = summary.descendants(matching: .any).matching(identifier: "filter.resultCount").firstMatch
+        XCTAssertTrue(count.waitForExistence(timeout: 10), file: file, line: line)
+        XCTAssertEqual(count.label.filter { $0.isASCII && $0.isNumber }, expected, file: file, line: line)
+    }
+
+    @MainActor
+    private func closeFilterOptions(in app: XCUIApplication,
+                                    file: StaticString = #filePath, line: UInt = #line) {
+        let navigation = app.navigationBars.matching(identifier: "筛选").firstMatch
+        let done = navigation.buttons.matching(identifier: "filter.done").firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 10), file: file, line: line)
+        done.tap()
+        XCTAssertTrue(navigation.waitForNonExistence(timeout: 10), file: file, line: line)
+    }
+
     @MainActor
     private func app(contentSize: UIContentSizeCategory = .large, showsIntroduction: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
