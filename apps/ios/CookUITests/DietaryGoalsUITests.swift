@@ -54,12 +54,12 @@ final class DietaryGoalsUITests: XCTestCase {
         let done = app.buttons["dietary.done"]
         XCTAssertTrue(done.waitForExistence(timeout: 10))
         done.tap()
-        XCTAssertTrue(done.waitForNonExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars.buttons.matching(identifier: "dietary.done").firstMatch.waitForNonExistence(timeout: 10))
         if closingFilters {
             let filterDone = app.buttons["filter.done"]
             XCTAssertTrue(filterDone.waitForExistence(timeout: 10))
             filterDone.tap()
-            XCTAssertTrue(filterDone.waitForNonExistence(timeout: 10))
+            XCTAssertTrue(app.navigationBars.buttons.matching(identifier: "filter.done").firstMatch.waitForNonExistence(timeout: 10))
         }
     }
 
@@ -98,9 +98,8 @@ final class DietaryGoalsUITests: XCTestCase {
         // recipe list that appears after removing the dietary goal.
         let resultsOptions = app.navigationBars.buttons.matching(identifier: "results.options").firstMatch
         if resultsOptions.exists && resultsOptions.isHittable {
-            let selected = XCTNSPredicateExpectation(
-                predicate: NSPredicate(format: "value == %@ OR label CONTAINS %@", value, "饮食目标：\(value)"), object: resultsOptions)
-            let result = XCTWaiter.wait(for: [selected], timeout: 10)
+            let expectedLabel = "更多选项，饮食目标：\(value)"
+            let result: XCTWaiter.Result = resultsOptions.wait(for: \.label, toEqual: expectedLabel, timeout: 10) ? .completed : .timedOut
             if result != .completed {
                 let hierarchy = XCTAttachment(string: app.debugDescription)
                 hierarchy.name = "results-goal-accessibility"
@@ -352,7 +351,7 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(done.waitForExistence(timeout: 5))
         assertRememberControlAbsent(in: app)
         done.tap()
-        XCTAssertTrue(done.waitForNonExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars.buttons.matching(identifier: "dietary.done").firstMatch.waitForNonExistence(timeout: 10))
         assertGoalValue("不限目标", in: app)
         let candidate = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
         XCTAssertTrue(candidate.waitForExistence(timeout: 10), "取消目标后继续浏览当前目录，不退回空页面")

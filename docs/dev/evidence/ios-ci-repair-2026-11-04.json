@@ -368,6 +368,96 @@
       "passedTests": 4,
       "failedTests": 0,
       "skippedTests": 0
+    },
+    {
+      "name": "decision-container-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 3,
+      "passedTests": 3,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "post-presentation-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "post-presentation-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "post-presentation-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "feedback-isolated-control-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "isolated-contribution-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Failed",
+      "totalTestCount": 1,
+      "passedTests": 0,
+      "failedTests": 1,
+      "skippedTests": 0
+    },
+    {
+      "name": "form-animations-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 3,
+      "passedTests": 3,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "form-animations-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 3,
+      "passedTests": 3,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "final-maximum-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "final-maximum-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0
     }
   ],
   "orchestration": {
@@ -531,5 +621,26 @@
       "behavior": "Native polling for boolean attributes; compound states keep one original deadline and poll until both states match. Text/value predicates and geometric/animation predicates retain their existing checks. Every shared-wait failure captures the current accessibility hierarchy and screen.",
       "validation": "Both complete 12-case main classes passed before extraction. Final targeted runs cover cloud-kitchen large text, history/account, discovery, random recipes, dietary goals and all three compound state combinations; CI orchestration checks passed 10/10."
     }
+  },
+  "seventhFollowUp": {
+    "baselineCommit": "3b71650fc550395c4be24ab042d433953d0e3c71",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41756452314",
+    "decisionDismissal": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41756452314/job/126333732902",
+      "observed": "The detail action appeared, but the retained global query for the destroyed decision button timed out while evaluating snapshots.",
+      "change": "Check the decision navigation title before opening, then use a fresh navigation-bar query for its disappearance and retain the positive detail assertion."
+    },
+    "clearedGoal": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41756452314/job/126333732943",
+      "observed": "The captured accessibility tree contained the expected results.options label 更多选项，饮食目标：不限目标 while the compound value/label predicate timed out.",
+      "change": "Use the native exact label property waiter and fresh navigation-button queries after goal/filter dismissal."
+    },
+    "contributionForm": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41756452314/job/126333732950",
+      "observed": "The contribution test exceeded 300 seconds. Local scoped input queries fixed scrolling/typing; a fresh-host control still reproduced repeated 60-second App animations complete notification not received waits after typing.",
+      "change": "Query native input roles inside the form, reveal controls above the keyboard with measured drags, and disable UIKit animations only for the three functional feedback cases through a Debug ui-testing launch flag. Preserve all submission and retained-draft assertions.",
+      "discardedExperiment": "Separate simulator/test-host invocations did not prevent the animation wait; no additional form invocations or retries were added to CI."
+    },
+    "localInfrastructure": "A local simulator touch-synthesis stall exceeded two hours before the animation experiment. Subsequent local commands used an owned 20-minute process-group watchdog and caffeinate; these guards are temporary local tooling, not CI retries."
   }
 }

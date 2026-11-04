@@ -104,6 +104,9 @@ extension XCUIApplication {
         // underlying iPad recipe list for duplicate buttons on every poll.
         let open = buttons.matching(identifier: "cook.decide.open").firstMatch
         XCTAssertTrue(open.waitForExistence(timeout: 10), "决定页应出现", file: file, line: line)
+        let decisionTitle = "今天吃什么"
+        XCTAssertTrue(navigationBars.matching(identifier: decisionTitle).firstMatch.waitForExistence(timeout: 10),
+                      "决定弹层应有导航标题", file: file, line: line)
         func captureDecisionFailure() {
             XCTContext.runActivity(named: "决定页无障碍诊断") { activity in
                 let hierarchy = XCTAttachment(string: self.debugDescription)
@@ -133,7 +136,9 @@ extension XCUIApplication {
         let opened = detail.waitForExistence(timeout: 10)
         if !opened { captureDecisionFailure() }
         XCTAssertTrue(opened, "看做法应进入菜谱详情", file: file, line: line)
-        let dismissed = open.waitForNonExistence(timeout: 10)
+        // The action is destroyed with its sheet. Query the presentation's small
+        // navigation namespace, rather than searching every underlying recipe button.
+        let dismissed = navigationBars.matching(identifier: decisionTitle).firstMatch.waitForNonExistence(timeout: 10)
         if !dismissed { captureDecisionFailure() }
         XCTAssertTrue(dismissed, "打开做法后决定页应关闭", file: file, line: line)
     }
@@ -223,7 +228,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testRecipeFeedbackKeepsRecipeAndDraftOnFailure() {
         let app = XCUIApplication()
-        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent", "-ui-testing-disable-animations"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launch()
@@ -251,7 +256,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testRecipeContributionHasDedicatedFieldsAndKeepsDraftOnFailure() {
         let app = XCUIApplication()
-        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent", "-ui-testing-disable-animations"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launchEnvironment["COOK_UI_TEST_FEEDBACK_ENVIRONMENT"] = "production"
@@ -273,9 +278,10 @@ final class CookUITests: XCTestCase {
         wait(app.navigationBars["菜谱投稿"], "exists == true")
         XCTAssertFalse(app.buttons["feedback.category"].exists)
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "feedback.note").firstMatch.exists)
-        let name = app.textFields["contribution.name"]
-        let source = app.descendants(matching: .any).matching(identifier: "contribution.source").firstMatch
-        let details = app.descendants(matching: .any).matching(identifier: "contribution.details").firstMatch
+        let form = app.collectionViews["feedback.form"]
+        let name = feedbackInput("contribution.name", in: form)
+        let source = feedbackInput("contribution.source", in: form)
+        let details = feedbackInput("contribution.details", in: form)
         let submit = app.buttons["feedback.submit"]
         XCTAssertEqual(submit.label, "提交菜谱")
         XCTAssertFalse(submit.isEnabled)
@@ -286,9 +292,11 @@ final class CookUITests: XCTestCase {
         tap(name)
         name.typeText("Tomato eggs")
         XCTAssertFalse(submit.isEnabled)
+        revealFeedbackControl(source, in: form, navigationTitle: "菜谱投稿", app: app)
         tap(source)
         source.typeText("https://example.com/recipe")
-        XCTAssertTrue(submit.isEnabled)
+        wait(submit, "isEnabled == true")
+        revealFeedbackControl(details, in: form, navigationTitle: "菜谱投稿", app: app)
         tap(details)
         details.typeText("Easy to cook")
         // -ui-testing injects a failing local transport; no request leaves the device.
@@ -300,13 +308,12 @@ final class CookUITests: XCTestCase {
         tap(failed.buttons["取消"])
         wait(failed, "exists == false")
         // A small screen may have recycled the earlier Form rows while the keyboard was open.
-        let form = app.descendants(matching: .any).matching(identifier: "feedback.form").firstMatch
         wait(form, "exists == true")
-        for _ in 0..<6 where !name.exists || !name.isHittable { form.swipeDown() }
+        revealFeedbackControl(name, in: form, navigationTitle: "菜谱投稿", app: app)
         XCTAssertEqual(name.value as? String, "Tomato eggs")
-        for _ in 0..<6 where !source.exists || !source.isHittable { form.swipeUp() }
+        revealFeedbackControl(source, in: form, navigationTitle: "菜谱投稿", app: app)
         XCTAssertEqual(source.value as? String, "https://example.com/recipe")
-        for _ in 0..<6 where !details.exists || !details.isHittable { form.swipeUp() }
+        revealFeedbackControl(details, in: form, navigationTitle: "菜谱投稿", app: app)
         XCTAssertEqual(details.value as? String, "Easy to cook")
         XCTAssertTrue(submit.isEnabled)
     }
@@ -314,7 +321,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     func testTestFeedbackFailureKeepsDraftWithoutProductionFallbacks() {
         let app = XCUIApplication()
-        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent", "-ui-testing-disable-animations"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launchEnvironment["COOK_UI_TEST_FEEDBACK_ENVIRONMENT"] = "test"
@@ -657,6 +664,50 @@ final class CookUITests: XCTestCase {
         wait(search, "isHittable == true", file: file, line: line)
         search.tap()
         wait(app.keyboards.firstMatch, "exists == true", file: file, line: line)
+    }
+
+    @MainActor
+    private func feedbackInput(_ identifier: String, in form: XCUIElement) -> XCUIElement {
+        // A vertical SwiftUI TextField can expose either native text-input role.
+        // Exclude its outer container so typing reaches the editor itself.
+        let types = [XCUIElement.ElementType.textField.rawValue, XCUIElement.ElementType.textView.rawValue]
+        return form.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@ AND elementType IN %@", identifier, types as NSArray)).firstMatch
+    }
+
+    @MainActor
+    private func revealFeedbackControl(_ control: XCUIElement, in form: XCUIElement,
+                                       navigationTitle: String, app: XCUIApplication,
+                                       file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(form.waitForExistence(timeout: timeout), file: file, line: line)
+        let window = app.windows.firstMatch
+        let navigation = app.navigationBars[navigationTitle]
+        for _ in 0..<16 {
+            let keyboard = app.keyboards.firstMatch
+            let top = max(form.frame.minY, navigation.frame.maxY) + 8
+            let bottom = min(form.frame.maxY, keyboard.exists && keyboard.isHittable ? keyboard.frame.minY : window.frame.maxY) - 8
+            let viewport = CGRect(x: form.frame.minX, y: top, width: form.frame.width, height: bottom - top)
+            guard viewport.height > 0 else { break }
+            let frame = control.exists ? control.frame : CGRect.null
+            let hasFrame = !frame.isNull && !frame.isEmpty
+            if hasFrame && frame.minY >= top && frame.maxY <= bottom && control.isHittable { return }
+            let scrollBack = hasFrame && frame.minY < top
+            let overlap = hasFrame ? (scrollBack ? top - frame.minY : frame.maxY - bottom) + 12 : viewport.height * 0.45
+            let distance = min(max(overlap, 44), viewport.height * 0.45)
+            let startY = viewport.midY + (scrollBack ? -distance / 2 : distance / 2)
+            let endY = viewport.midY + (scrollBack ? distance / 2 : -distance / 2)
+            let origin = window.coordinate(withNormalizedOffset: .zero)
+            origin.withOffset(CGVector(dx: viewport.midX - window.frame.minX, dy: startY - window.frame.minY))
+                .press(forDuration: 0.1,
+                       thenDragTo: origin.withOffset(CGVector(dx: viewport.midX - window.frame.minX, dy: endY - window.frame.minY)),
+                       withVelocity: .slow, thenHoldForDuration: 0.2)
+        }
+        let hierarchy = XCTAttachment(string: app.debugDescription)
+        hierarchy.name = "feedback-control-accessibility"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
+        capture(app, "feedback-control-not-visible")
+        XCTFail("表单控件应完整露出并可点击：\(control.identifier)", file: file, line: line)
     }
 
     @MainActor
