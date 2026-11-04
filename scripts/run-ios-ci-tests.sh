@@ -52,13 +52,15 @@ run_tests() {
 }
 case "$IOS_SUITE" in
   pr-regression)
-    # All App units and dietary interactions, plus representative core flows.
-    # Full UI coverage and the two isolated system audits run on pushes/manual runs.
+    # All App units plus ten UI gates on each device. Keep both lunch text sizes
+    # and the recent failure regression; repeated long journeys run in the full matrix.
     run_tests "$DEVICE" pr-regression \
       -only-testing:CookTests \
-      -only-testing:CookUITests/DietaryGoalsUITests \
-      "-skip-testing:$standard_audit" "-skip-testing:$maximum_audit" \
-      -only-testing:CookUITests/CookUITests/testCookFlowByAccessibilityLabels \
+      -only-testing:CookUITests/DietaryGoalsUITests/testNextDayLunchAndWeightGoalIntersectAndShowSourceOilUnits \
+      -only-testing:CookUITests/DietaryGoalsUITests/testNextDayLunchAndWeightGoalAtAccessibilitySize \
+      -only-testing:CookUITests/DietaryGoalsUITests/testGoalEntryStaysInFiltersAcrossLaunchesAndSelectionRemainsVisible \
+      -only-testing:CookUITests/DietaryGoalsUITests/testEmptyGoalCanBeCancelledWithoutLosingSelectedIngredients \
+      -only-testing:CookUITests/DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone \
       -only-testing:CookUITests/CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval \
       -only-testing:CookUITests/CookUITests/testPantryShelfRemembersChoicesAndRestoresDefaults \
       -only-testing:CookUITests/CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients \

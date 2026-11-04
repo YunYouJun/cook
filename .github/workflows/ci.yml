@@ -233,7 +233,7 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/cook-derived-data" CODE_SIGNING_ALLOWED=NO
       - name: Build and test
-        timeout-minutes: ${{ github.event_name == 'pull_request' && 45 || 60 }}
+        timeout-minutes: ${{ github.event_name == 'pull_request' && 35 || 60 }}
         id: ios_tests
         env:
           DEVICE: ${{ steps.simulators.outputs[matrix.device] }}

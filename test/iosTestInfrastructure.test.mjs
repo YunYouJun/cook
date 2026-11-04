@@ -239,7 +239,7 @@ test('native CI bounds build and test time and runs device groups independently'
   assert.match(nativeJob, /max-parallel: \$\{\{ github.event_name == 'pull_request' && 2 \|\| 3 \}\}/)
   assert.match(workflow, /\n {2}workflow_dispatch:/)
   assert.match(workflow, /name: Build for testing\n\s+timeout-minutes: 15/)
-  assert.match(workflow, /name: Build and test\n\s+timeout-minutes: \$\{\{ github.event_name == 'pull_request' && 45 \|\| 60 \}\}/)
+  assert.match(workflow, /name: Build and test\n\s+timeout-minutes: \$\{\{ github.event_name == 'pull_request' && 35 \|\| 60 \}\}/)
   assert.match(workflow, /cancel-in-progress: true/)
 })
 
@@ -287,23 +287,30 @@ test('every UI method is assigned exactly once per device, including both isolat
   })
 })
 
-test('PR regression retains all App units, dietary functions and the original failing flows on both devices', () => {
+test('PR regression retains all App units and ten critical UI flows while long journeys stay in the full matrix', () => {
   replay({}, ({ result, calls, output }) => {
     assert.equal(result.status, 0, result.stderr)
     assert.deepEqual(calls.map(call => call.name), ['phone-pr-regression', 'pad-pr-regression'])
     const required = [
       'CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval',
       'CookUITests/testPantryShelfRemembersChoicesAndRestoresDefaults',
-      'CookUITests/testCookFlowByAccessibilityLabels',
       'CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients',
       'CloudKitchenUITests/testKitchenAndListShareSelectionAndPotOpensRealRecipes',
       'RandomRecipeUITests/testLargestTextRandomSharesDietaryGoalAndPreservesEmptyResults',
+      'DietaryGoalsUITests/testNextDayLunchAndWeightGoalIntersectAndShowSourceOilUnits',
+      'DietaryGoalsUITests/testNextDayLunchAndWeightGoalAtAccessibilitySize',
+      'DietaryGoalsUITests/testGoalEntryStaysInFiltersAcrossLaunchesAndSelectionRemainsVisible',
+      'DietaryGoalsUITests/testEmptyGoalCanBeCancelledWithoutLosingSelectedIngredients',
+      'DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone',
     ].map(test => `CookUITests/${test}`)
-    const dietary = readFileSync(join(root, 'apps/ios/CookUITests/DietaryGoalsUITests.swift'), 'utf8')
-    for (const [, method] of dietary.matchAll(/func (test\w+)\(/g)) {
-      if (!['testNativeGoalPickerAccessibilityAndReviewedSummary', 'testLargestTextCanChooseSavedGoalReadAndDecide'].includes(method))
-        required.push(`CookUITests/DietaryGoalsUITests/${method}`)
-    }
+    const fullOnly = [
+      'CookUITests/testCookFlowByAccessibilityLabels',
+      'DietaryGoalsUITests/testGoalSelectionIsSavedAndUpdatedInFiltersAcrossLaunches',
+      'DietaryGoalsUITests/testGoalBrowsingOpensReviewedTextAndPreservesGoalWhenDeciding',
+      'DietaryGoalsUITests/testCloudKitchenKeepsGoalAndCanBrowseWithoutIngredients',
+      'DietaryGoalsUITests/testNativeGoalPickerAccessibilityAndReviewedSummary',
+      'DietaryGoalsUITests/testLargestTextCanChooseSavedGoalReadAndDecide',
+    ].map(test => `CookUITests/${test}`)
     for (const { args } of calls) {
       const only = args.filter(arg => arg.startsWith('-only-testing:')).map(arg => arg.slice(14))
       const skip = args.filter(arg => arg.startsWith('-skip-testing:')).map(arg => arg.slice(14))
@@ -312,8 +319,9 @@ test('PR regression retains all App units, dietary functions and the original fa
       assert.ok(only.includes('CookTests'), 'the complete App unit-test target must run')
       assert.ok(!skip.some(selector => selector.startsWith('CookTests')), 'App unit tests must not be excluded')
       for (const test of required) assert.ok(selected(test), `${test} must run on both devices`)
-      for (const method of ['testNativeGoalPickerAccessibilityAndReviewedSummary', 'testLargestTextCanChooseSavedGoalReadAndDecide'])
-        assert.ok(!selected(`CookUITests/DietaryGoalsUITests/${method}`), 'system audits run in the full matrix')
+      for (const test of fullOnly)
+        assert.ok(!selected(test), `${test} runs in the full matrix, without repeating on PRs`)
+      assert.equal(only.filter(selector => selector.startsWith('CookUITests/')).length, 10)
       for (const selector of only.filter(selector => selector.startsWith('CookUITests/'))) {
         const [, suite, method] = selector.split('/')
         const source = readFileSync(join(root, 'apps/ios/CookUITests', `${suite}.swift`), 'utf8')
