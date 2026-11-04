@@ -1,5 +1,7 @@
 <script setup lang="ts">
-// help
+import { cookDocumentHead, publicPages } from '~/constants'
+
+useHead(cookDocumentHead(publicPages.help))
 </script>
 
 <template>

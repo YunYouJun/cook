@@ -1,0 +1,27 @@
+# 食用手册（Cook / 云食册）
+
+> 根据家里现有的食材和厨具找菜谱。食用手册免费使用，也叫 Cook；原生 iOS 版名为云食册。
+
+在网页版点选食材和厨具，或用一句话描述口味、忌口和做法，查看能做的家常菜。也可以收藏、浏览菜谱，或随机决定今天吃什么。基础找菜不要求登录。
+
+## 名称
+
+- 食用手册：网页版产品名
+- Cook：英文名与开源仓库名
+- 云食册：原生 iOS 应用名
+
+## 链接
+
+- [网页版](https://cook.yunyoujun.cn/)：根据现有食材和厨具找菜
+- [关于与常见问题](https://cook.yunyoujun.cn/about/)：产品说明、iOS 版介绍与 FAQ
+- [今天吃什么](https://cook.yunyoujun.cn/random)：随机看一道菜
+- [菜谱](https://cook.yunyoujun.cn/library)：按菜名浏览收录的菜谱
+- [帮助](https://cook.yunyoujun.cn/help)：匹配模式和一句话找菜
+- [产品官网与文档](https://cook.yunle.fun/)：使用指南、隐私政策与发布信息
+- [GitHub](https://github.com/YunYouJun/cook)：开源代码与菜谱数据
+
+## 域名
+
+- `cook.yunyoujun.cn`：食用手册网页版的标准地址
+- `cook.yunle.fun`：产品官网与文档的标准地址
+- `cook.yunle.app`：开发预览，不是对外标准地址

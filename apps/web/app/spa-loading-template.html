@@ -56,7 +56,12 @@
       <div class="cook-boot-tabs"><i></i><i></i><i></i><i></i></div>
     </div>
   </div>
-  <noscript>请启用 JavaScript 来选择食材和查看菜谱。</noscript>
+  <noscript>
+    <h1>食用手册</h1>
+    <p>
+      根据家里现有的食材和厨具找菜谱。食用手册（Cook）免费使用，也叫云食册。请启用 JavaScript 来选择食材和查看菜谱。
+    </p>
+  </noscript>
 </div>
 <style>
   /* Mirror app.vue, ChooseFood and ResultsPanel without waiting for app CSS/JS. */
@@ -244,10 +249,19 @@
   .cook-boot noscript {
     position: absolute;
     inset: auto 16px calc(150px + env(safe-area-inset-bottom, 0px));
-    padding: 12px;
+    padding: 12px 16px;
     background: var(--boot-surface);
     text-align: center;
     font-size: 14px;
+    line-height: 1.6;
+  }
+  .cook-boot noscript h1 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .cook-boot noscript p {
+    margin: 0;
   }
   @media (min-width: 1024px) {
     .cook-boot-sidebar {

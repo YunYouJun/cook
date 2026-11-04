@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { iosVersion, links } from '../constants'
+import { productFaq } from '../structured-data'
 
 const docs = [
   { title: '使用指南', text: '从选食材到打开做法', link: '/guide/getting-started' },
@@ -35,21 +36,9 @@ const docs = [
       <h3 class="faq-title">
         使用前，你可能想知道
       </h3>
-      <details open>
-        <summary>云食册和食用手册是什么关系？</summary>
-        <p>云食册是食用手册的原生 iOS 应用，沿用根据食材找菜的思路。网页版继续使用「食用手册」这个名字；iOS 版增加私人菜谱、冰箱与本地临期提醒等功能。</p>
-      </details>
-      <details>
-        <summary>需要登录吗？数据会自动同步吗？</summary>
-        <p>基础选食材、找菜和查看做法不要求注册或登录。云乐坊账号与 Apple 账户相互独立，iOS 与网页版目前不会自动同步。请使用相应版本的导出功能定期备份；iCloud 同步仍待生产环境和双设备验收。</p>
-      </details>
-      <details>
-        <summary>没有网络时还能用吗？</summary>
-        <p>iOS 版的本地菜谱与内置图文正文可离线阅读；配图、外部视频、账号服务与 iCloud 同步需要网络。网页版不承诺完整离线可用。</p>
-      </details>
-      <details>
-        <summary>食材提醒可以判断是否安全食用吗？</summary>
-        <p>不能。食材日期和临期提醒只用于日常安排，不是食品安全检测。请结合包装说明、实际储存条件与食材状态判断；有过敏、特殊饮食或健康问题时，请咨询专业人士。</p>
+      <details v-for="(item, index) in productFaq" :key="item.question" :open="index === 0">
+        <summary>{{ item.question }}</summary>
+        <p>{{ item.answer }}</p>
       </details>
     </div>
   </section>

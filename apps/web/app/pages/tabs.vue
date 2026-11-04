@@ -1,10 +1,6 @@
 <script lang="ts" setup>
 import { getPrimaryNavigation } from '../config'
 
-useHead({
-  title: 'Cook Tabs',
-})
-
 const router = useRouter()
 
 const navigation = computed(() => getPrimaryNavigation(router.currentRoute.value.path))
