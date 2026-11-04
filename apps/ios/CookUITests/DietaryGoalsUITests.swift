@@ -90,15 +90,37 @@ final class DietaryGoalsUITests: XCTestCase {
     }
 
     @MainActor
-    private func openFiltersGoalPicker(in app: XCUIApplication) {
+    private func openFilterOptions(in app: XCUIApplication,
+                                   file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
         let filters = app.cookingToolbarButton("cook.filters")
-        XCTAssertTrue(filters.waitForExistence(timeout: 15))
+        XCTAssertEqual(filters.waitForState("exists == true AND isHittable == true", timeout: 15), .completed,
+                       file: file, line: line)
         filters.tap()
-        // Resolve the unique row inside its sheet instead of lazily traversing every app button.
+        // Require the presented sheet's own toolbar before snapshotting its List.
+        let done = app.navigationBars.matching(identifier: "筛选").firstMatch
+            .buttons.matching(identifier: "filter.done").firstMatch
+        XCTAssertEqual(done.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
+                       "筛选弹层应完成呈现并可操作", file: file, line: line)
         let options = app.collectionViews.matching(identifier: "filter.options").firstMatch
-        let picker = options.buttons.matching(identifier: "dietary.openPicker").firstMatch
+        XCTAssertTrue(options.waitForExistence(timeout: 10), file: file, line: line)
+        return options
+    }
+
+    @MainActor
+    private func waitForGoalPicker(in app: XCUIApplication) {
+        let done = app.navigationBars.matching(identifier: "饮食目标").firstMatch
+            .buttons.matching(identifier: "dietary.done").firstMatch
+        XCTAssertEqual(done.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
+                       "饮食目标弹层应完成呈现并可操作")
+        XCTAssertTrue(app.collectionViews.matching(identifier: "dietary.choices").firstMatch.waitForExistence(timeout: 10))
+    }
+
+    @MainActor
+    private func openFiltersGoalPicker(in app: XCUIApplication) {
+        let picker = openFilterOptions(in: app).buttons.matching(identifier: "dietary.openPicker").firstMatch
         XCTAssertTrue(picker.waitForExistence(timeout: 10))
         picker.tap()
+        waitForGoalPicker(in: app)
     }
 
     @MainActor
@@ -117,6 +139,7 @@ final class DietaryGoalsUITests: XCTestCase {
         let goal = app.buttons["results.dietaryGoal"]
         XCTAssertTrue(goal.waitForExistence(timeout: 10))
         goal.tap()
+        waitForGoalPicker(in: app)
     }
 
     @MainActor
@@ -158,9 +181,7 @@ final class DietaryGoalsUITests: XCTestCase {
             return
         }
         let filters = app.cookingToolbarButton("cook.filters")
-        XCTAssertTrue(filters.waitForExistence(timeout: 15), file: file, line: line)
-        filters.tap()
-        let picker = app.collectionViews.matching(identifier: "filter.options").firstMatch
+        let picker = openFilterOptions(in: app, file: file, line: line)
             .buttons.matching(identifier: "dietary.openPicker").firstMatch
         XCTAssertTrue(picker.waitForExistence(timeout: 10), file: file, line: line)
         XCTAssertEqual(picker.value as? String, value, file: file, line: line)
@@ -203,7 +224,20 @@ final class DietaryGoalsUITests: XCTestCase {
         // Navigation and footer boundaries stay fixed during this scroll. Resolve them once;
         // repeated Window/CollectionView snapshots can stall on a busy split-view runner.
         let navigationBottom = bar.frame.maxY
-        let actionTop = action?.frame.minY ?? windowFrame.maxY
+        let actionTop: CGFloat
+        if let action {
+            XCTAssertTrue(action.waitForExistence(timeout: 10), "找菜页应显示固定结果入口")
+            // Empty matches intentionally disable this button, but it still covers content.
+            if action.isEnabled {
+                XCTAssertEqual(action.waitForState("isHittable == true", timeout: 10), .completed,
+                               "有候选时，固定结果入口应恢复可操作")
+            }
+            let actionFrame = action.frame
+            XCTAssertTrue(!actionFrame.isEmpty && windowFrame.intersects(actionFrame), "固定结果入口应在窗口中可见")
+            actionTop = actionFrame.minY
+        } else {
+            actionTop = windowFrame.maxY
+        }
         var lastViewport = CGRect.null
         var lastControlFrame = CGRect.null
         for _ in 0..<30 {

@@ -8,7 +8,7 @@ final class CloudKitchenUITests: XCTestCase {
     func testLargestTextViewMenuKeepsControlsAndSelectionUsable() {
         XCUIDevice.shared.orientation = .portrait
         let app = launchMenuFixture(contentSize: .accessibilityExtraExtraExtraLarge)
-        let menu = app.buttons["cook.presentation"]
+        let menu = app.cookingToolbarButton("cook.presentation")
         capture(app, name: "largest-quick-initial")
         assertMenuControlFits(menu, in: app)
         let potato = chooserButton("土豆", in: app)
@@ -65,7 +65,7 @@ final class CloudKitchenUITests: XCTestCase {
             throw XCTSkip("此用例检查 iPad 横屏双栏")
         }
         XCTAssertGreaterThan(window.frame.width, window.frame.height)
-        let menu = app.buttons["cook.presentation"]
+        let menu = app.cookingToolbarButton("cook.presentation")
         assertMenuControlFits(menu, in: app)
         let resultList = app.descendants(matching: .any).matching(identifier: "dietary.results").firstMatch
         XCTAssertTrue(resultList.waitForExistence(timeout: 10))
@@ -114,7 +114,7 @@ final class CloudKitchenUITests: XCTestCase {
         terminateAppAfterTest(app)
         app.launch()
 
-        let menu = app.buttons["cook.presentation"]
+        let menu = app.cookingToolbarButton("cook.presentation")
         XCTAssertTrue(menu.waitForExistence(timeout: 20))
         XCTAssertTrue(menu.value as? String == "食材快选" || menu.label.contains("食材快选"))
         let tomato = chooserButton("番茄", in: app)
@@ -157,7 +157,7 @@ final class CloudKitchenUITests: XCTestCase {
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         terminateAppAfterTest(app)
         app.launch()
-        let presentation = app.buttons["cook.presentation"]
+        let presentation = app.cookingToolbarButton("cook.presentation")
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
         app.selectCookingPresentation("云厨房")
         let tomato = kitchenButton("kitchen.scene.tomato", in: app)
@@ -186,6 +186,8 @@ final class CloudKitchenUITests: XCTestCase {
 
     @MainActor
     func testKitchenAndListShareSelectionAndPotOpensRealRecipes() {
+        // This journey switches both layouts and opens/returns from real details.
+        executionTimeAllowance = 600
         let app = XCUIApplication()
         // This flow checks shared selection and real recipes. Dedicated menu,
         // edge-hit and rotation cases keep normal animations enabled.
@@ -195,7 +197,7 @@ final class CloudKitchenUITests: XCTestCase {
         terminateAppAfterTest(app)
         app.launch()
 
-        let presentation = app.buttons["cook.presentation"]
+        let presentation = app.cookingToolbarButton("cook.presentation")
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
         app.selectCookingPresentation("食材快选")
         XCTAssertFalse(app.navigationBars.matching(identifier: "找菜").firstMatch
@@ -275,7 +277,7 @@ final class CloudKitchenUITests: XCTestCase {
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         terminateAppAfterTest(app)
         app.launch()
-        let presentation = app.buttons["cook.presentation"]
+        let presentation = app.cookingToolbarButton("cook.presentation")
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
         app.selectCookingPresentation("云厨房")
 
@@ -360,7 +362,7 @@ final class CloudKitchenUITests: XCTestCase {
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         terminateAppAfterTest(app)
         app.launch()
-        XCTAssertTrue(app.buttons["cook.presentation"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.cookingToolbarButton("cook.presentation").waitForExistence(timeout: 20))
         return app
     }
 
