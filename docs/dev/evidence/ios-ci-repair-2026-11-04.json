@@ -653,6 +653,39 @@
       "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
       "failures": [],
       "variant": "Final source: both new menu unit tests plus all six CloudKitchen UI tests, including landscape, maximum text, camera rotation and standard menu switching."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 6,
+      "passedTests": 6,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "bounded-dietary-navigation-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "variant": "All six regular dietary journeys with bounded navigation/choice/result queries and unchanged 300-second default; compiled before the two explicit 600-second journey allowances were added."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 6,
+      "passedTests": 6,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "bounded-dietary-navigation-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": [],
+      "variant": "All six regular dietary journeys with bounded navigation/choice/result queries and unchanged 300-second default; compiled before the two explicit 600-second journey allowances were added."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "dietary-final-budget-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "variant": "Rebuilt final source with explicit per-journey allowances; empty-goal cancellation completed in 65.711 seconds. Individual assertions and the original workflow actions are unchanged."
     }
   ],
   "orchestration": {
@@ -953,5 +986,30 @@
     },
     "completeRunResult": "Swift and five of six native groups passed. Only the iPad discovery group failed, with 19/20 scenarios passing and the maximum-text menu lookup failing. Both main groups completed successfully.",
     "finalLocalValidation": "The shared native toolbar and cached menu passed 8/8 on iPadOS 27 and 4/4 on iOS 26.5. Existing UI assertions, edge taps and gesture checks were retained."
+  },
+  "twelfthFollowUp": {
+    "baselineCommit": "4609ff733570194ffc610a53a5d2eca267149cfa",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41822726515",
+    "completedGroups": "Swift and all five other native groups passed, including all twenty iPad discovery cases and both complete main groups with the new menu tests.",
+    "firstAttempt": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41822726515/job/126549876407",
+      "observed": "Both iPad accessibility audit cases passed. Before any regular dietary case started, CookUITests-Runner exited while bootstrapping at XCTWaiter(StallHandling) handleStalledWait. The result bundle contained only the synthetic runner failure for this invocation.",
+      "recovery": "One failed-group rerun was requested after all other groups completed; successful jobs were retained. No UI assertion was retried automatically.",
+      "artifact": {
+        "id": 13319192534,
+        "sha256": "66561164590d5f8cd01851ae436dbf206adecb7db7f7a93b8d18e48786681a39"
+      }
+    },
+    "secondAttempt": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41822726515/job/126582849233",
+      "observed": "The runner started successfully. Both audits and five regular cases passed. The empty-goal cancellation case crossed its 300-second allowance while continuing through its original interactions; it reached teardown at 360 seconds without a reported assertion failure. This timeout was treated as a real failure and was not rerun unchanged.",
+      "trace": "The first global cook.filters tap began at 31.98s, resolved its button at 59.85s and synthesized at 68.07s. Goal selection and parent-control checks took over 200 seconds before the ingredient was selected. The later reveal helper queried identical window/list frames repeatedly.",
+      "artifact": {
+        "id": 13327932597,
+        "sha256": "1974aa194f4519fc58315dc10df3c87909821f1e2dd81ec46c4304c2a03fd3d8"
+      }
+    },
+    "change": "Resolve Find Recipes toolbar buttons inside the known navigation bar, goal options inside their choices list and recipe rows inside their result list. Reuse one window frame per reveal call and one chooser frame per iteration while recalculating the actual viewport after scrolling. Apply existing App teardown to dietary fixtures. Preserve all goal, ingredient, native selection, full-visibility and dismissal assertions; keep 300 seconds for other regular cases and use an explicit 600-second ceiling for the two multi-page/relaunch journeys. The empty-goal trace reached its last checks at 360 seconds; the saved-goal journey took 263.821 seconds and contains multiple App relaunches. Every individual assertion still retains its existing wait deadline, and timeouts remain failures.",
+    "orchestrationValidation": "node --test test/iosTestInfrastructure.test.mjs passed 10/10; all 54 UI methods remain assigned exactly once per device. No assertion or case retry was added."
   }
 }

@@ -121,6 +121,12 @@ extension XCUIApplication {
                        "弹层关闭后，其实际入口页面应恢复可操作", file: file, line: line)
     }
 
+    @MainActor
+    func cookingToolbarButton(_ identifier: String) -> XCUIElement {
+        navigationBars.matching(identifier: "找菜").firstMatch
+            .buttons.matching(identifier: identifier).firstMatch
+    }
+
     /// 菜单辅助字号使用“当前视图”副标题；以稳定标题前缀定位同一个原生选项。
     @MainActor
     func cookingPresentationOption(_ title: String) -> XCUIElement {
@@ -130,7 +136,7 @@ extension XCUIApplication {
     /// 通过实际菜单选择布局；工具栏在部分系统上只转发无障碍标签。
     @MainActor
     func selectCookingPresentation(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
-        let menu = buttons["cook.presentation"]
+        let menu = cookingToolbarButton("cook.presentation")
         XCTAssertTrue(menu.waitForExistence(timeout: 20), file: file, line: line)
         if menu.value as? String == name || menu.label.contains(name) { return }
         menu.tap()
