@@ -68,6 +68,7 @@ export default defineConfig(withYunlefun({
           items: [
             { text: 'Cook CLI', link: '/dev/cli' },
             { text: '文档站部署', link: '/dev/docs-site' },
+            { text: 'Docker 部署', link: '/dev/docker' },
             { text: '移动应用', link: '/dev/app' },
             { text: '原生 Android 开发计划', link: '/dev/android-roadmap' },
             { text: 'TestFlight 外部测试', link: '/dev/ios-external-testflight' },

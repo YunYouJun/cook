@@ -1,0 +1,10 @@
+services:
+  cook:
+    build:
+      context: .
+      args:
+        NUXT_PUBLIC_CLARITY_PROJECT_ID: ${NUXT_PUBLIC_CLARITY_PROJECT_ID-ks1ebw03i5}
+        NUXT_PUBLIC_CLARITY_DOMAINS: ${NUXT_PUBLIC_CLARITY_DOMAINS-cook.yunyoujun.cn,cook.yunle.fun}
+    ports:
+      - '${COOK_HOST:-127.0.0.1}:${COOK_PORT:-8080}:80'
+    restart: unless-stopped
