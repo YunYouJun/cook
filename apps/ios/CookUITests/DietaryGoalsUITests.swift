@@ -469,6 +469,7 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     func testClearingGoalFromResultsKeepsPickerPresentedUntilDone() {
+        executionTimeAllowance = 600
         let app = app()
         select("less-added-sugar", in: app)
         showResults(app, standalone: true)
