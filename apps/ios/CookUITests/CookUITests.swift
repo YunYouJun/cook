@@ -1,6 +1,74 @@
 import UIKit
 import XCTest
 
+extension XCUIElement {
+    /// Use native state polling for boolean attributes; retain predicates for text and value checks.
+    /// Compound states share one deadline and all failures retain the current UI hierarchy.
+    @MainActor
+    func waitForState(_ condition: String, timeout: TimeInterval, argument: String? = nil) -> XCTWaiter.Result {
+        let element = self
+        let result: XCTWaiter.Result
+        let deadline = Date().addingTimeInterval(timeout)
+        func remaining() -> TimeInterval { max(0, deadline.timeIntervalSinceNow) }
+        func waitForBoth(_ first: () -> Bool, _ second: () -> Bool,
+                         matching: () -> Bool) -> XCTWaiter.Result {
+            repeat {
+                guard first(), second() else { return .timedOut }
+                if matching() { return .completed }
+                // A property may change again while the other becomes ready.
+                // Continue polling states within the same deadline; perform no UI actions.
+            } while remaining() > 0
+            return .timedOut
+        }
+        switch condition {
+        case "exists == true":
+            result = element.waitForExistence(timeout: timeout) ? .completed : .timedOut
+        case "exists == false":
+            result = element.waitForNonExistence(timeout: timeout) ? .completed : .timedOut
+        case "isSelected == true", "isSelected == false":
+            // CI can already show Selected in the fresh hierarchy while a
+            // predicate still waits. Use the native waiter for SwiftUI selection.
+            let selected = condition == "isSelected == true"
+            result = element.wait(for: \.isSelected, toEqual: selected, timeout: timeout) ? .completed : .timedOut
+        case "isHittable == true", "hittable == true":
+            result = element.wait(for: \.isHittable, toEqual: true, timeout: timeout) ? .completed : .timedOut
+        case "isEnabled == true", "isEnabled == false":
+            let enabled = condition == "isEnabled == true"
+            result = element.wait(for: \.isEnabled, toEqual: enabled, timeout: timeout) ? .completed : .timedOut
+        case "exists == true AND isEnabled == true":
+            result = waitForBoth({ element.waitForExistence(timeout: remaining()) },
+                                 { element.wait(for: \.isEnabled, toEqual: true, timeout: remaining()) },
+                                 matching: { element.exists && element.isEnabled })
+        case "exists == true AND isHittable == true":
+            result = waitForBoth({ element.waitForExistence(timeout: remaining()) },
+                                 { element.wait(for: \.isHittable, toEqual: true, timeout: remaining()) },
+                                 matching: { element.exists && element.isHittable })
+        case "isEnabled == true AND isHittable == true":
+            result = waitForBoth({ element.wait(for: \.isEnabled, toEqual: true, timeout: remaining()) },
+                                 { element.wait(for: \.isHittable, toEqual: true, timeout: remaining()) },
+                                 matching: { element.isEnabled && element.isHittable })
+        default:
+            let predicate = argument.map { NSPredicate(format: condition, $0) } ?? NSPredicate(format: condition)
+            let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+            result = XCTWaiter().wait(for: [expectation], timeout: timeout)
+        }
+        if result != .completed {
+            XCTContext.runActivity(named: "等待控件状态：\(condition)") { activity in
+                let app = XCUIApplication()
+                let hierarchy = XCTAttachment(string: app.debugDescription)
+                hierarchy.name = "Accessibility hierarchy after failed wait"
+                hierarchy.lifetime = .keepAlways
+                activity.add(hierarchy)
+                let screenshot = XCTAttachment(screenshot: app.screenshot())
+                screenshot.name = "Screen after failed wait"
+                screenshot.lifetime = .keepAlways
+                activity.add(screenshot)
+            }
+        }
+        return result
+    }
+}
+
 extension XCUIApplication {
     /// Ordinary scenarios start from the same view, goal and text size.
     /// Reset flags leave presentation changes available to the actual UI.
@@ -36,10 +104,6 @@ extension XCUIApplication {
         // underlying iPad recipe list for duplicate buttons on every poll.
         let open = buttons.matching(identifier: "cook.decide.open").firstMatch
         XCTAssertTrue(open.waitForExistence(timeout: 10), "决定页应出现", file: file, line: line)
-        let ready = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "isEnabled == true AND isHittable == true"),
-            object: open
-        )
         func captureDecisionFailure() {
             XCTContext.runActivity(named: "决定页无障碍诊断") { activity in
                 let hierarchy = XCTAttachment(string: self.debugDescription)
@@ -52,8 +116,7 @@ extension XCUIApplication {
                 activity.add(screen)
             }
         }
-        let readyResult = XCTWaiter.wait(for: [ready], timeout: 10)
-        if readyResult != .completed { captureDecisionFailure() }
+        let readyResult = open.waitForState("isEnabled == true AND isHittable == true", timeout: 10)
         XCTAssertEqual(readyResult, .completed, "挑选停稳后才能打开做法", file: file, line: line)
         let recipe = staticTexts.matching(identifier: "cook.decide.recipe").firstMatch
         let named = XCTNSPredicateExpectation(
@@ -144,7 +207,7 @@ final class CookUITests: XCTestCase {
         showCookingResults(in: app)
 
         // 结果行合成一个元素，读出菜名和厨具难度
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch)
+        tap(app.collectionViews["dietary.results"].buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch)
 
         // 检查收藏按钮及保存后的状态；UI 测试使用独立的内存数据库。
         let favorite = app.buttons["收藏"]
@@ -167,7 +230,7 @@ final class CookUITests: XCTestCase {
         selectCookingIngredient("番茄")
         selectCookingIngredient("鸡蛋")
         showCookingResults(in: app)
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch)
+        tap(app.collectionViews["dietary.results"].buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch)
         let report = app.buttons["recipe.feedback"]
         for _ in 0..<4 where !report.isHittable { app.swipeUp() }
         tap(report)
@@ -298,8 +361,9 @@ final class CookUITests: XCTestCase {
         selectCookingIngredient("番茄")
         selectCookingIngredient("鸡蛋")
         showCookingResults(in: app)
-        let recipe = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch
-        tap(recipe)
+        let recipeName = NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")
+        let recipe = app.buttons.matching(recipeName).firstMatch
+        tap(app.collectionViews["dietary.results"].buttons.matching(recipeName).firstMatch)
         tap(app.navigationBars.buttons["收藏"])
         wait(app.buttons["取消收藏"], "exists == true")
         let library = app.buttons.matching(NSPredicate(format: "label IN %@", ["菜谱", "book"])).firstMatch
@@ -332,7 +396,7 @@ final class CookUITests: XCTestCase {
     @MainActor
     private func showCookingResults(in app: XCUIApplication) {
         if app.windows.firstMatch.horizontalSizeClass == .regular {
-            let results = app.descendants(matching: .any).matching(identifier: "dietary.results").firstMatch
+            let results = app.collectionViews.matching(identifier: "dietary.results").firstMatch
             wait(results, "exists == true")
         } else {
             let button = app.buttons["cook.showResults"]
@@ -397,7 +461,9 @@ final class CookUITests: XCTestCase {
     @MainActor
     private func selectCookingIngredient(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
         let app = XCUIApplication()
-        let ingredient = app.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch
+        let chooser = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
+        XCTAssertTrue(chooser.waitForExistence(timeout: timeout), file: file, line: line)
+        let ingredient = chooser.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch
         wait(ingredient, "exists == true", file: file, line: line)
         let window = app.windows.firstMatch
         let action = app.buttons["cook.showResults"]
@@ -604,28 +670,7 @@ final class CookUITests: XCTestCase {
     /// 等控件满足条件，超时就让用例失败，失败信息里写明是哪个控件、等的什么
     @MainActor
     private func wait(_ element: XCUIElement, _ condition: String, file: StaticString = #filePath, line: UInt = #line) {
-        let result: XCTWaiter.Result
-        switch condition {
-        case "isSelected == true", "isSelected == false":
-            // CI can already show Selected in the fresh hierarchy while a
-            // predicate still waits. Use the native waiter for SwiftUI selection.
-            let selected = condition == "isSelected == true"
-            result = element.wait(for: \.isSelected, toEqual: selected, timeout: timeout) ? .completed : .timedOut
-        default:
-            let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: condition), object: element)
-            result = XCTWaiter().wait(for: [expectation], timeout: timeout)
-        }
-        if result != .completed {
-            let app = XCUIApplication()
-            let hierarchy = XCTAttachment(string: app.debugDescription)
-            hierarchy.name = "Accessibility hierarchy after failed wait"
-            hierarchy.lifetime = .keepAlways
-            add(hierarchy)
-            let screenshot = XCTAttachment(screenshot: app.screenshot())
-            screenshot.name = "Screen after failed wait"
-            screenshot.lifetime = .keepAlways
-            add(screenshot)
-        }
+        let result = element.waitForState(condition, timeout: timeout)
         XCTAssertEqual(result, .completed, "等了 \(Int(timeout)) 秒，\(element.description) 仍不满足 \(condition)", file: file, line: line)
     }
 
@@ -716,7 +761,7 @@ final class CookUITests: XCTestCase {
         selectCookingIngredient("鸡蛋")
         wait(app.buttons["鸡蛋"], "isSelected == true")
         showCookingResults(in: app)
-        let recipe = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch
+        let recipe = app.collectionViews["dietary.results"].buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch
         XCTAssertTrue(recipe.waitForExistence(timeout: timeout))
         tap(recipe)
         let favorite = app.navigationBars.buttons["收藏"]

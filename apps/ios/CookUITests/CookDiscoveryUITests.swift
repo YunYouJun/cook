@@ -568,10 +568,10 @@ final class CookDiscoveryUITests: XCTestCase {
         wait(target ?? app.buttons["cook.presentation"], "isHittable == true")
     }
 
+    @MainActor
     private func wait(_ element: XCUIElement, _ predicate: String,
                       file: StaticString = #filePath, line: UInt = #line) {
-        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: predicate), object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 10), .completed, file: file, line: line)
+        XCTAssertEqual(element.waitForState(predicate, timeout: 10), .completed, file: file, line: line)
     }
 
     @MainActor

@@ -143,8 +143,7 @@ final class DietaryGoalsUITests: XCTestCase {
     private func revealCookingControl(_ control: XCUIElement, in app: XCUIApplication, towardTop: Bool = false) {
         let chooser = app.collectionViews["cook.chooser"]
         XCTAssertTrue(chooser.waitForExistence(timeout: 10))
-        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: chooser)
-        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed)
+        XCTAssertEqual(chooser.waitForState("isHittable == true", timeout: 10), .completed)
         var lastViewport = CGRect.null
         var lastControlFrame = CGRect.null
         for _ in 0..<30 {
@@ -310,8 +309,7 @@ final class DietaryGoalsUITests: XCTestCase {
         }
         XCTAssertTrue(beef.isHittable)
         beef.tap()
-        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: beef)
-        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed)
+        XCTAssertEqual(beef.waitForState("isSelected == true", timeout: 10), .completed)
         if app.windows.firstMatch.horizontalSizeClass == .regular {
             XCTAssertTrue(app.buttons["dietary.clearGoal"].waitForExistence(timeout: 10))
         } else {

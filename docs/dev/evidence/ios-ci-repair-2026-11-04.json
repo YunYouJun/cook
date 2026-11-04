@@ -268,7 +268,7 @@
           "message": "XCTAssertTrue failed - 常备调料入口应完整进入弹层的可见列表"
         }
       ],
-      "variant": "Intermediate property/existence waiter experiment. The final helper retains existing existence/composite predicates and uses native selected-state waits."
+      "variant": "Intermediate property/existence waiter experiment before the filter-sheet expansion and input setup fixes."
     },
     {
       "name": "expanded-picker-ipad",
@@ -294,6 +294,78 @@
       "result": "Passed",
       "totalTestCount": 12,
       "passedTests": 12,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "scoped-main-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 12,
+      "passedTests": 12,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "variant": "Scoped recipe/ingredient queries and native state dispatch, before extracting the shared waiter."
+    },
+    {
+      "name": "scoped-main-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 12,
+      "passedTests": 12,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "variant": "Scoped recipe/ingredient queries and native state dispatch, before extracting the shared waiter."
+    },
+    {
+      "name": "shared-waits-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Failed",
+      "totalTestCount": 10,
+      "passedTests": 9,
+      "failedTests": 1,
+      "skippedTests": 0,
+      "failures": [
+        {
+          "test": "PrivateRecipesUITests/testPrivateRecipeCreateEditDelete()",
+          "message": "Test exceeded execution time allowance of 5 minutes"
+        }
+      ],
+      "variant": "Broad one-off migration experiment: CloudKitchen, account/history and amount checks passed; private-recipe CRUD exceeded its allowance during simulator animation waits. The extra one-off migrations outside the affected helper suites were reverted; final source preserves the original private-recipe waits."
+    },
+    {
+      "name": "shared-final-cloud-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 6,
+      "passedTests": 5,
+      "failedTests": 0,
+      "skippedTests": 1
+    },
+    {
+      "name": "shared-final-main-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "shared-final-discovery-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 3,
+      "passedTests": 3,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "compound-waits-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 4,
+      "passedTests": 4,
       "failedTests": 0,
       "skippedTests": 0
     }
@@ -421,6 +493,43 @@
       },
       "change": "Expand a medium filter sheet through its native toolbar before scrolling to hidden options. Scope drags to the unobscured content and require the entire target row to be visible. Reuse this helper for pantry and avoid entries; wait for complete search text before asserting the unchanged input value.",
       "reference": "https://developer.apple.com/documentation/swiftui/view/presentationcontentinteraction(_:)"
+    }
+  },
+  "sixthFollowUp": {
+    "baselineCommit": "1788d3b9327062a38c91a92c2c4f5e1bead4dffa",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41743710283",
+    "job": "https://github.com/YunYouJun/cook/actions/runs/41743710283/job/126291532637",
+    "observed": "Both the screenshot and fresh accessibility hierarchy showed the 番茄炒蛋 result row. The global first-match query timed out waiting for existence. The local full main class had passed on both devices.",
+    "visibleRow": {
+      "identifier": "dietary.recipe.250",
+      "label": "番茄炒蛋、炒锅 · 普通",
+      "frame": {
+        "x": 420,
+        "y": 498.5,
+        "width": 592,
+        "height": 76.5
+      }
+    },
+    "change": "Scope ingredient queries to the chooser collection and initial recipe queries to the result collection, retaining spoken-label matching. Use native existence, selection, enabled and hittable wait APIs for simple states; composite waits share the original 30-second deadline and recheck both states. Keep predicates for text/value conditions and all failure diagnostics.",
+    "reference": "https://developer.apple.com/documentation/xcuiautomation/xcuielement",
+    "relatedPhoneFailure": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41743710283/job/126291532715",
+      "test": "CloudKitchenUITests/testLargestTextViewMenuKeepsControlsAndSelectionUsable()",
+      "observed": "The maximum-text recording showed 土豆 selected with a checkmark while the generic isSelected predicate timed out.",
+      "change": "The four repeated wait helpers now delegate boolean states to the common native waiter; affected dietary checks and decision readiness reuse it too."
+    },
+    "sharedWaitHelper": {
+      "entryPoint": "XCUIElement.waitForState",
+      "callers": [
+        "CookUITests",
+        "CloudKitchenUITests",
+        "CookDiscoveryUITests",
+        "RandomRecipeUITests",
+        "dietary chooser/selection checks",
+        "decision readiness"
+      ],
+      "behavior": "Native polling for boolean attributes; compound states keep one original deadline and poll until both states match. Text/value predicates and geometric/animation predicates retain their existing checks. Every shared-wait failure captures the current accessibility hierarchy and screen.",
+      "validation": "Both complete 12-case main classes passed before extraction. Final targeted runs cover cloud-kitchen large text, history/account, discovery, random recipes, dietary goals and all three compound state combinations; CI orchestration checks passed 10/10."
     }
   }
 }

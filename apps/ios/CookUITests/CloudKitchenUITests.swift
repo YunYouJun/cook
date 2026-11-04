@@ -328,9 +328,9 @@ final class CloudKitchenUITests: XCTestCase {
         capture(app, name: "关闭旋转后恢复固定视角")
     }
 
+    @MainActor
     private func waitUntil(_ element: XCUIElement, _ predicate: String) {
-        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: predicate), object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 10), .completed)
+        XCTAssertEqual(element.waitForState(predicate, timeout: 10), .completed)
     }
 
     @MainActor
@@ -383,8 +383,7 @@ final class CloudKitchenUITests: XCTestCase {
             let current = app.cookingPresentationOption(currentSelection)
             assertMenuCurrentSelection(current, usesCurrentSubtitle: usesCurrentSubtitle, file: file, line: line)
             current.tap()
-            let closed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: quick)
-            XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 10), .completed, file: file, line: line)
+            XCTAssertEqual(quick.waitForState("exists == false", timeout: 10), .completed, file: file, line: line)
             waitUntil(menu, "value == '\(currentSelection)' OR label CONTAINS '\(currentSelection)'")
         }
     }

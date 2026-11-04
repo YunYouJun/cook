@@ -16,4 +16,8 @@
 
 失败、取消或发生基础设施重试时，结果上传为 `ios-xcresult-<device>-<suite>`，保留 7 天。`Show test failures` 会输出结果包中的错误；下载 Artifacts 后可用 Xcode 打开完整记录。
 
+UI 测试的布尔状态等待优先复用 `CookUITests.swift` 中的 `waitForState`，由 XCTest 原生 API 检查存在、选中、启用和可点击状态；复合条件共用调用方原有的等待期限。文本、值和几何条件继续使用对应谓词。辅助方法失败时会保留当前无障碍树和截图。
+
+已知控件所属列表时，将查询限定到 `cook.chooser`、`dietary.results` 等实际容器。滚动前根据弹层导航栏与固定底栏确定可见区域，必要时先展开半屏弹层，再确认目标的完整边界进入可点击区域。
+
 修改编排后运行 `node --test test/iosTestInfrastructure.test.mjs`。该检查执行真实 Bash 脚本，只替换外部 Xcode / 模拟器边界，并验证每个现有 UI 用例在每种设备上恰好分配一次、重试分类及汇总门禁。
