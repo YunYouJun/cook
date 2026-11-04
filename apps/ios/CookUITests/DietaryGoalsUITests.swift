@@ -55,6 +55,7 @@ final class DietaryGoalsUITests: XCTestCase {
                                "-UIPreferredContentSizeCategoryName", contentSize.rawValue]
         if showsIntroduction { app.launchArguments.append("-ui-testing-show-dietary-introduction") }
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        terminateAppAfterTest(app)
         app.launch()
         let presentation = app.buttons["cook.presentation"]
         XCTAssertTrue(presentation.waitForExistence(timeout: 15))
@@ -184,23 +185,29 @@ final class DietaryGoalsUITests: XCTestCase {
         let chooser = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
         XCTAssertTrue(chooser.waitForExistence(timeout: 10))
         let window = app.windows.firstMatch
+        let windowFrame = app.frame
         // Collection containers need not have their own tap point on older iOS.
         // The page must be interactive; the individual target is checked below.
         XCTAssertEqual(app.buttons.matching(identifier: "cook.filters").firstMatch
             .waitForState("exists == true AND isHittable == true", timeout: 10), .completed)
-        XCTAssertTrue(window.frame.intersects(chooser.frame), "找菜列表应在当前窗口中可见")
         let bar = app.navigationBars.matching(identifier: "找菜").firstMatch
         let action: XCUIElement? = window.horizontalSizeClass == .regular
             ? nil : app.buttons.matching(identifier: "cook.showResults").firstMatch
+        // Navigation and footer boundaries stay fixed during this scroll. Resolve them once;
+        // repeated Window/CollectionView snapshots can stall on a busy split-view runner.
+        let navigationBottom = bar.frame.maxY
+        let actionTop = action?.frame.minY ?? windowFrame.maxY
         var lastViewport = CGRect.null
         var lastControlFrame = CGRect.null
         for _ in 0..<30 {
+            let chooserFrame = chooser.frame
+            XCTAssertTrue(windowFrame.intersects(chooserFrame), "找菜列表应在当前窗口中可见")
             let frame = control.exists ? control.frame : CGRect.null
             lastControlFrame = frame
             let hasFrame = !frame.isNull && !frame.isEmpty
-            let top = max(chooser.frame.minY, bar.frame.maxY) + 8
-            let bottom = min(chooser.frame.maxY, action?.frame.minY ?? window.frame.maxY) - 8
-            let viewport = CGRect(x: chooser.frame.minX, y: top, width: chooser.frame.width, height: bottom - top)
+            let top = max(chooserFrame.minY, navigationBottom) + 8
+            let bottom = min(chooserFrame.maxY, actionTop) - 8
+            let viewport = CGRect(x: chooserFrame.minX, y: top, width: chooserFrame.width, height: bottom - top)
             lastViewport = viewport
             guard viewport.height > 0 else { break }
             if hasFrame && frame.minY >= top && frame.maxY <= bottom && control.isHittable { return }
@@ -213,9 +220,9 @@ final class DietaryGoalsUITests: XCTestCase {
             let startY = viewport.midY + (scrollBack ? -distance / 2 : distance / 2)
             let endY = viewport.midY + (scrollBack ? distance / 2 : -distance / 2)
             let origin = window.coordinate(withNormalizedOffset: .zero)
-            origin.withOffset(CGVector(dx: viewport.midX - window.frame.minX, dy: startY - window.frame.minY))
+            origin.withOffset(CGVector(dx: viewport.midX - windowFrame.minX, dy: startY - windowFrame.minY))
                 .press(forDuration: 0.1,
-                       thenDragTo: origin.withOffset(CGVector(dx: viewport.midX - window.frame.minX, dy: endY - window.frame.minY)),
+                       thenDragTo: origin.withOffset(CGVector(dx: viewport.midX - windowFrame.minX, dy: endY - windowFrame.minY)),
                        withVelocity: .slow, thenHoldForDuration: 0.2)
         }
         let hierarchy = XCTAttachment(string: app.debugDescription)
@@ -345,9 +352,10 @@ final class DietaryGoalsUITests: XCTestCase {
     func testEmptyGoalCanBeCancelledWithoutLosingSelectedIngredients() {
         let app = app()
         select("less-added-sugar", in: app)
-        let beef = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
-            .buttons.matching(NSPredicate(format: "label == %@", "牛肉")).firstMatch
+        // Resolve the unique ingredient directly; retain the user-facing label assertion.
+        let beef = app.buttons.matching(identifier: "cook.ingredient.牛肉").firstMatch
         XCTAssertTrue(beef.waitForExistence(timeout: 10))
+        XCTAssertEqual(beef.label, "牛肉")
         // Keep the whole chip above the fixed action bar before tapping it.
         let action = app.buttons["cook.showResults"]
         for _ in 0..<8 {
