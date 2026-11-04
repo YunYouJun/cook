@@ -51,15 +51,16 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     private func finishGoalSelection(in app: XCUIApplication, closingFilters: Bool = false) {
-        let done = app.buttons["dietary.done"]
+        let done = app.navigationBars["饮食目标"].buttons["dietary.done"]
         XCTAssertTrue(done.waitForExistence(timeout: 10))
         done.tap()
-        XCTAssertTrue(app.navigationBars.buttons.matching(identifier: "dietary.done").firstMatch.waitForNonExistence(timeout: 10))
+        // Resolve the dismissed navigation container, not its destroyed action.
+        XCTAssertTrue(app.navigationBars.matching(identifier: "饮食目标").firstMatch.waitForNonExistence(timeout: 10))
         if closingFilters {
-            let filterDone = app.buttons["filter.done"]
+            let filterDone = app.navigationBars["筛选"].buttons["filter.done"]
             XCTAssertTrue(filterDone.waitForExistence(timeout: 10))
             filterDone.tap()
-            XCTAssertTrue(app.navigationBars.buttons.matching(identifier: "filter.done").firstMatch.waitForNonExistence(timeout: 10))
+            XCTAssertTrue(app.navigationBars.matching(identifier: "筛选").firstMatch.waitForNonExistence(timeout: 10))
         }
     }
 
@@ -116,9 +117,9 @@ final class DietaryGoalsUITests: XCTestCase {
         let picker = app.collectionViews["filter.options"].buttons["dietary.openPicker"]
         XCTAssertTrue(picker.waitForExistence(timeout: 10), file: file, line: line)
         XCTAssertEqual(picker.value as? String, value, file: file, line: line)
-        let done = app.buttons["filter.done"]
+        let done = app.navigationBars["筛选"].buttons["filter.done"]
         done.tap()
-        XCTAssertTrue(done.waitForNonExistence(timeout: 10), file: file, line: line)
+        XCTAssertTrue(app.navigationBars.matching(identifier: "筛选").firstMatch.waitForNonExistence(timeout: 10), file: file, line: line)
     }
 
     @MainActor
@@ -347,11 +348,11 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(none.waitForExistence(timeout: 10))
         none.tap()
         XCTAssertTrue(none.isSelected)
-        let done = app.buttons["dietary.done"]
+        let done = app.navigationBars["饮食目标"].buttons["dietary.done"]
         XCTAssertTrue(done.waitForExistence(timeout: 5))
         assertRememberControlAbsent(in: app)
         done.tap()
-        XCTAssertTrue(app.navigationBars.buttons.matching(identifier: "dietary.done").firstMatch.waitForNonExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars.matching(identifier: "饮食目标").firstMatch.waitForNonExistence(timeout: 10))
         assertGoalValue("不限目标", in: app)
         let candidate = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
         XCTAssertTrue(candidate.waitForExistence(timeout: 10), "取消目标后继续浏览当前目录，不退回空页面")

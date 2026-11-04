@@ -458,6 +458,24 @@
       "passedTests": 1,
       "failedTests": 0,
       "skippedTests": 0
+    },
+    {
+      "name": "goal-navigation-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 8,
+      "passedTests": 8,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "goal-navigation-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 8,
+      "passedTests": 8,
+      "failedTests": 0,
+      "skippedTests": 0
     }
   ],
   "orchestration": {
@@ -642,5 +660,17 @@
       "discardedExperiment": "Separate simulator/test-host invocations did not prevent the animation wait; no additional form invocations or retries were added to CI."
     },
     "localInfrastructure": "A local simulator touch-synthesis stall exceeded two hours before the animation experiment. Subsequent local commands used an owned 20-minute process-group watchdog and caffeinate; these guards are temporary local tooling, not CI retries."
+  },
+  "eighthFollowUp": {
+    "baselineCommit": "f1f9307e129b704f96aedeae050731908f394666",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41782134808",
+    "job": "https://github.com/YunYouJun/cook/actions/runs/41782134808/job/126416058285",
+    "observed": "The other five iOS groups passed. Both iPad accessibility audits passed. One regular dietary case failed while waiting for the destroyed dietary.done button through a fresh navigationBars.buttons query. At 55 seconds the recording shows the goal picker already dismissed, with the parent 筛选 sheet and the selected 减少添加糖 row visible.",
+    "change": "Scope completion actions to their named navigation bar, then assert that the dismissed goal/filter navigation bar disappears using a fresh query. Keep the dismissal assertion and all selected-goal, visible-result and persistence checks.",
+    "artifact": {
+      "id": 13301502986,
+      "name": "ios-xcresult-ipad-dietary",
+      "sha256": "f0dfa089cf1af5d9667c6d12d5b47a103fbb7f471beda11ccb5b6482449cd146"
+    }
   }
 }
