@@ -48,8 +48,8 @@ struct CookApp: App {
                                                 managedService: ManagedCookAIService(endpoint: inMemory ? nil : ManagedCookAIService.configuredEndpoint)))
         #if DEBUG
             if uiTesting {
-                // Functional UI tests exercise state and navigation assertions.
-                // Avoid XCTest stalls waiting for keyboard/layout/menu animation completion.
+                // Functional tests exercise controls, validation and draft retention.
+                // Avoid XCTest waiting indefinitely for keyboard/menu/layout animation completion.
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-disable-animations") {
                     UIView.setAnimationsEnabled(false)
                 }

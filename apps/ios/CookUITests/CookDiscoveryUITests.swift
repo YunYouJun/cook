@@ -222,7 +222,7 @@ final class CookDiscoveryUITests: XCTestCase {
         let goal = filterButton("dietary.openPicker", in: app)
         reveal(goal, in: app, page: .filters)
         goal.tap()
-        let sugar = app.collectionViews.matching(identifier: "dietary.choices").firstMatch.buttons.matching(identifier: "dietary.goal.less-added-sugar").firstMatch
+        let sugar = app.collectionViews.matching(identifier: "dietary.choices").element.buttons.matching(identifier: "dietary.goal.less-added-sugar").firstMatch
         XCTAssertTrue(sugar.waitForExistence(timeout: 10))
         sugar.tap()
         app.completeDietarySelection(closingFilters: true,

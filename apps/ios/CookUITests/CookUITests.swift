@@ -213,10 +213,6 @@ extension XCUIApplication {
         let summaryParts = recipe.label.components(separatedBy: "，")
         let possibleTitles = (1...summaryParts.count).map { summaryParts.prefix($0).joined(separator: "，") }
         open.tap()
-        let detail = buttons.matching(identifier: "recipe.openKitchen").firstMatch
-        let opened = detail.waitForExistence(timeout: 10)
-        if !opened { captureDecisionFailure() }
-        XCTAssertTrue(opened, "看做法应进入菜谱详情", file: file, line: line)
         // Require the selected recipe's navigation to become interactive instead
         // of traversing every app descendant to prove the old sheet is absent.
         let detailNavigation = navigationBars.matching(NSPredicate(format: "identifier IN %@", possibleTitles)).firstMatch
@@ -228,6 +224,15 @@ extension XCUIApplication {
         let dismissed = favorite.waitForState("exists == true AND isHittable == true", timeout: 10) == .completed
         if !dismissed { captureDecisionFailure() }
         XCTAssertTrue(dismissed, "打开做法后应进入可操作的选中菜谱详情", file: file, line: line)
+        // On iPad the chooser and old detail can remain in the hierarchy while
+        // the decision sheet closes. Query the body only after its navigation
+        // is ready, and keep the workbench lookup inside the actual detail List.
+        let content = collectionViews.matching(identifier: "recipe.detail").element
+        XCTAssertTrue(content.waitForExistence(timeout: 10), file: file, line: line)
+        let detail = content.buttons.matching(identifier: "recipe.openKitchen").firstMatch
+        let opened = detail.waitForExistence(timeout: 10)
+        if !opened { captureDecisionFailure() }
+        XCTAssertTrue(opened, "看做法应进入菜谱详情", file: file, line: line)
     }
 }
 
