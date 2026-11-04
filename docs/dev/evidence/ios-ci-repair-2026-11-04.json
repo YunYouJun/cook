@@ -1152,5 +1152,48 @@
       ]
     },
     "finalLocalValidation": "Complete discovery class passed 11/11 on iPad. Discovery plus affected CloudKitchen cases passed 12 with three pre-existing iPad-only skips on iPhone. Four changed CloudKitchen chooser journeys passed on iPad. Main cooking-flow label cases passed on both devices. Reopened-sheet cases passed on both devices; the largest-text iPhone audit and final enabled/disabled-footer journeys passed. Final orchestration replay passed 10/10."
+  },
+  "fourteenthFollowUp": {
+    "baselineCommit": "75f59120d4db07c989aa1ef2d44cba086881f90e",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41862066845",
+    "toolbar": {
+      "jobs": [
+        126686518936,
+        126686519039,
+        126686519254
+      ],
+      "observed": "Three layout-switch cases timed out querying cook.presentation beneath the navigation bar named 找菜. Both downloaded CI recordings show that the menu selection actually succeeded and the kitchen appeared; the failed element debug descriptions contain only the unresolved title-scoped query chain.",
+      "change": "Keep the unique button ID lookup bounded to navigationBars.buttons, without requiring the bar title to survive replacement of the NavigationSplitView with the kitchen NavigationStack. All menu value, real scene and preserved-selection checks remain."
+    },
+    "detail": {
+      "job": 126686519254,
+      "observed": "The maximum-text discovery case reached the correct recipe detail but XCTest failed to determine the hittability of its NavigationBar because the container had no activation point.",
+      "change": "Require the selected recipe navigation title, then wait for the actual favorite button in that bar to be hittable. Retain the selected-recipe and native-content assertions."
+    },
+    "goal": {
+      "job": 126686518936,
+      "observed": "The maximum-text goal row was hittable in the scrolling check, then the immediately following instantaneous hittability assertion failed after internal snapshot retries, without another swipe or tap.",
+      "change": "Use the shared native existence/hittability wait at the interaction boundary with a ten-second deadline. Keep all accessibility audit categories and downstream reviewed-recipe/decision checks; no test-case retry is added."
+    },
+    "artifacts": [
+      {
+        "id": 13344310853,
+        "sha256": "b6f3e759b177581d6c265665f8e8282e497258a59e4fb79c5021b15d3cdc8dc7"
+      },
+      {
+        "id": 13342832917,
+        "sha256": "73352ed7842b8323679fa7913e8d7ba56586a147397ddb069fa00f987d53ec54"
+      },
+      {
+        "id": 13342293855,
+        "sha256": "e1a66d0c20d55c8576b7541bc8376a64909009ac951f0050b70efc4a85e78d28"
+      }
+    ],
+    "inspection": "Inspected checksum-verified ZIP metadata and both failing layout-switch recordings. Partial extracted bundles and exported media are task-owned intermediates to reclaim after final validation.",
+    "localValidation": {
+      "ipad": "Complete CloudKitchen class plus maximum-text discovery journey passed 7/7; the detail-only intermediate run also passed.",
+      "iphone": "Five affected iPhone journeys passed 5/5 on iOS 26.5: cloud inspiration, maximum-text menu, maximum-text discovery detail, cloud goal preservation, and the complete maximum-text goal audit/review/decision journey. All five requested accessibility audit categories passed."
+    },
+    "remoteValidation": "Swift and all six general checks passed. The iPhone regression-main and iPad dietary groups passed. The iPad regression-main group was still running when these fixes were prepared."
   }
 }

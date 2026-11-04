@@ -123,8 +123,10 @@ extension XCUIApplication {
 
     @MainActor
     func cookingToolbarButton(_ identifier: String) -> XCUIElement {
-        navigationBars.matching(identifier: "找菜").firstMatch
-            .buttons.matching(identifier: identifier).firstMatch
+        // Replacing the iPad split view with the kitchen NavigationStack can
+        // leave the new bar without its title in AX. The control ID is unique
+        // across the small toolbar namespace and survives that transition.
+        navigationBars.buttons.matching(identifier: identifier).firstMatch
     }
 
     /// 菜单辅助字号使用“当前视图”副标题；以稳定标题前缀定位同一个原生选项。
@@ -212,7 +214,12 @@ extension XCUIApplication {
         // Require the selected recipe's navigation to become interactive instead
         // of traversing every app descendant to prove the old sheet is absent.
         let detailNavigation = navigationBars.matching(NSPredicate(format: "identifier IN %@", possibleTitles)).firstMatch
-        let dismissed = detailNavigation.waitForState("exists == true AND isHittable == true", timeout: 10) == .completed
+        XCTAssertTrue(detailNavigation.waitForExistence(timeout: 10),
+                      "详情导航标题应对应选中的菜谱", file: file, line: line)
+        // A navigation bar is a container and may have no activation point.
+        // Its actual favorite action proves the selected detail is interactive.
+        let favorite = detailNavigation.buttons.matching(NSPredicate(format: "label IN %@", ["收藏", "取消收藏"])).firstMatch
+        let dismissed = favorite.waitForState("exists == true AND isHittable == true", timeout: 10) == .completed
         if !dismissed { captureDecisionFailure() }
         XCTAssertTrue(dismissed, "打开做法后应进入可操作的选中菜谱详情", file: file, line: line)
     }

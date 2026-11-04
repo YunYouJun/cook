@@ -501,7 +501,10 @@ final class DietaryGoalsUITests: XCTestCase {
             if option.exists && option.isHittable { break }
             app.swipeUp()
         }
-        XCTAssertTrue(option.isHittable)
+        // The sheet's List can relayout after its first hit-test snapshot.
+        // Synchronize the actual interaction instead of asserting a second
+        // instantaneous snapshot immediately after the scrolling check.
+        XCTAssertEqual(option.waitForState("exists == true AND isHittable == true", timeout: 10), .completed)
         option.tap()
         let auditScreen = XCTAttachment(screenshot: app.screenshot())
         auditScreen.name = "dietary-picker-before-audits"
