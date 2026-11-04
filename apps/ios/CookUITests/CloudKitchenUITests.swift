@@ -7,7 +7,10 @@ final class CloudKitchenUITests: XCTestCase {
     @MainActor
     func testLargestTextViewMenuKeepsControlsAndSelectionUsable() {
         XCUIDevice.shared.orientation = .portrait
-        let app = launchMenuFixture(contentSize: .accessibilityExtraExtraExtraLarge)
+        // This case checks native menu geometry and selection. UIKit's menu
+        // animation completion callback can stall XCTest on slow CI hosts.
+        let app = launchMenuFixture(contentSize: .accessibilityExtraExtraExtraLarge,
+                                   disablesUIKitAnimations: true)
         let menu = app.cookingToolbarButton("cook.presentation")
         capture(app, name: "largest-quick-initial")
         assertMenuControlFits(menu, in: app)
@@ -273,6 +276,8 @@ final class CloudKitchenUITests: XCTestCase {
 
     @MainActor
     func testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled() {
+        // Includes scene replacement, camera gestures and foreground restoration.
+        executionTimeAllowance = 600
         let app = XCUIApplication()
         app.launchArguments = XCUIApplication.standardCookingLaunchArguments
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
@@ -353,12 +358,14 @@ final class CloudKitchenUITests: XCTestCase {
     }
 
     @MainActor
-    private func launchMenuFixture(contentSize: UIContentSizeCategory = .large) -> XCUIApplication {
+    private func launchMenuFixture(contentSize: UIContentSizeCategory = .large,
+                                   disablesUIKitAnimations: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         var arguments = XCUIApplication.standardCookingLaunchArguments
         if let index = arguments.firstIndex(of: "-UIPreferredContentSizeCategoryName") {
             arguments[index + 1] = contentSize.rawValue
         }
+        if disablesUIKitAnimations { arguments.append("-ui-testing-disable-animations") }
         app.launchArguments = arguments
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"

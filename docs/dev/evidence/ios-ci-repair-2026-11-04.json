@@ -1227,7 +1227,21 @@
     "uniqueListValidation": {
       "ipad": "Three executed cases passed: repeated detail replacement (76.896s), empty-goal cancellation/reopened picker (91.256s), and the full maximum-text dietary audit/review/decision journey (129.197s). The separately selected discovery dietary-goal/decided-detail journey also passed (71.305s), for 4/4 total.",
       "iphone": "Four affected cases passed on iOS 26.5: discovery dietary goal (69.410s), maximum-text discovery (83.006s), empty-goal cancellation (78.040s), and the full maximum-text dietary audit/review/decision journey (151.144s). All five requested accessibility audit categories passed on both devices.",
-      "coverage": "Existing test method names, group assignments, per-operation timeouts and case allowances are unchanged. No assertion or test-case retry was added."
+      "coverage": "The unique-list change preserves existing test method names, group assignments, per-operation timeouts and case allowances. No assertion or test-case retry was added."
+    },
+    "phoneCompletion": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41874012353/job/126731817968",
+      "observed": "Both failure summaries identify the 300-second case ceiling. The maximum-text menu geometry journey spent two separate 60-second waits without a UIKit animation-complete notification, then hit its case limit during ingredient scrolling at 298 seconds. Its later current-marker assertion ran after the watchdog fired; the final reported label includes 当前视图. The rotation journey was still progressing at 299 seconds, completed its final state assertions and capture around 300 seconds, then raced watchdog cleanup while terminating the App.",
+      "menuChange": "Reuse the existing Debug UI-testing animation flag only for the maximum-text menu functional fixture. It still opens the actual native menu with real 44pt edge touches, reads current-selection text, switches layouts and verifies preserved ingredients.",
+      "rotationChange": "Give the camera rotation, layout replacement and foreground-restoration journey an explicit 600-second ceiling. It keeps normal UIKit/SceneKit behavior, gesture/motion/selection assertions and original per-operation deadlines. Termination errors remain test failures.",
+      "artifact": {
+        "id": 13355351027,
+        "sha256": "314058efcb2c8e77d66e47416c2e5e59dd4fed5f3e82a37c40fd30d158676c80"
+      },
+      "localValidation": {
+        "ipad": "Maximum-text native menu geometry/selection and normal-animation camera rotation/restoration passed 2/2 (54.044s and 53.169s).",
+        "iphone": "The same two cases passed 2/2 on iOS 26.5 (60.329s and 48.099s). Real native menus, 44pt edge touches, current markers, preserved selection, camera movement/reset and foreground restoration assertions all execute."
+      }
     }
   }
 }
