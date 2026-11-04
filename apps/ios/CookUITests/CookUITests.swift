@@ -86,15 +86,19 @@ extension XCUIApplication {
     /// 通过实际菜单选择布局；工具栏在部分系统上只转发无障碍标签。
     @MainActor
     func selectCookingPresentation(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
-        let menu = buttons["cook.presentation"]
+        let menus = navigationBars.buttons.matching(identifier: "cook.presentation")
+        let menu = menus.firstMatch
         XCTAssertTrue(menu.waitForExistence(timeout: 20), file: file, line: line)
         if menu.value as? String == name || menu.label.contains(name) { return }
         menu.tap()
         let option = cookingPresentationOption(name)
         XCTAssertTrue(option.waitForExistence(timeout: 10), file: file, line: line)
         option.tap()
-        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@ OR label CONTAINS %@", name, name), object: menu)
-        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed, file: file, line: line)
+        // Switching layouts replaces the toolbar. Match the current toolbar's
+        // accessible selection instead of polling attributes on the old button.
+        let selected = menus.matching(NSPredicate(format: "value == %@ OR label CONTAINS %@", name, name)).firstMatch
+        XCTAssertEqual(selected.waitForState("exists == true", timeout: 10), .completed,
+                       "切换后的工具栏应播报当前视图：\(name)", file: file, line: line)
     }
 
     /// Hittable can still describe a partly covered List row; keep its full frame above the inset.
