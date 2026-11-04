@@ -17,14 +17,15 @@ final class CookDiscoveryUITests: XCTestCase {
         XCTAssertGreaterThan(Int(catalogCount) ?? 0, 0, "默认页面应可浏览真实菜谱目录")
 
         app.buttons["筛选"].tap()
-        let count = app.descendants(matching: .any).matching(identifier: "filter.resultCount").firstMatch
+        let summary = app.descendants(matching: .any).matching(identifier: "filter.summary").firstMatch
+        wait(summary, "exists == true")
+        let count = summary.descendants(matching: .any).matching(identifier: "filter.resultCount").firstMatch
         wait(count, "exists == true")
-        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "filter.selectionHint").firstMatch.exists)
+        XCTAssertFalse(summary.descendants(matching: .any).matching(identifier: "filter.selectionHint").firstMatch.exists)
         XCTAssertEqual(count.label.filter { $0.isASCII && $0.isNumber }, catalogCount,
                        "未选食材时，筛选预览也应使用页面正在浏览的目录数量")
         capture(app, "find-recipes-default-filter-count")
-        app.buttons["完成"].tap()
-        wait(count, "exists == false")
+        closeFilters(in: app)
         XCTAssertEqual(results.label.filter { $0.isASCII && $0.isNumber }, catalogCount)
     }
 
@@ -32,7 +33,7 @@ final class CookDiscoveryUITests: XCTestCase {
     func testIngredientAliasSuggestionClearsPreviousRecipeNameSearch() {
         let app = launch()
         submit("蒸蛋", in: app)
-        let clearKeyword = app.buttons["cook.clearKeyword"]
+        let clearKeyword = cookingContent(in: app).buttons.matching(identifier: "cook.clearKeyword").firstMatch
         reveal(clearKeyword, in: app, towardTop: true)
         XCTAssertTrue(clearKeyword.exists)
 
@@ -72,15 +73,15 @@ final class CookDiscoveryUITests: XCTestCase {
     func testDefaultThreeRecipesShuffleAndDecideWithFourTabs() {
         let app = launch()
         XCTAssertFalse(app.buttons["随机"].exists)
-        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "discovery.mode").firstMatch.exists)
-        XCTAssertFalse(app.buttons["cook.discovery"].exists)
-        XCTAssertFalse(app.buttons["discovery.scene.easy"].exists, "场景应收进筛选，不占用食材首屏")
+        assertObsoleteControlAbsent("discovery.mode", in: app)
+        assertObsoleteControlAbsent("cook.discovery", in: app)
+        assertObsoleteControlAbsent("discovery.scene.easy", in: app)
         XCTAssertTrue(app.textFields["cook.query"].isHittable)
         let potato = app.buttons.matching(NSPredicate(format: "label == %@", "土豆")).firstMatch
         XCTAssertTrue(potato.isHittable, "常用食材必须无需滚动就能点选")
         XCTAssertTrue(app.staticTexts["蔬菜"].isHittable, "蔬菜快选应回到首屏")
         for identifier in ["discovery.shuffle", "discovery.decide"] {
-            let action = app.buttons[identifier]
+            let action = cookingContent(in: app).buttons.matching(identifier: identifier).firstMatch
             // A tall iPad can show both sections. Verify ordering, not phone-only invisibility.
             if app.windows.firstMatch.horizontalSizeClass != .regular {
                 XCTAssertFalse(action.isHittable, "随机操作不应挤在食材首屏")
@@ -108,7 +109,7 @@ final class CookDiscoveryUITests: XCTestCase {
         decide.tap()
         app.confirmDecidedRecipe()
         wait(favoriteButton(in: app), "isHittable == true")
-        XCTAssertEqual(app.webViews.count, 0)
+        assertNativeRecipeContent(in: app)
         capture(app, "find-recipes-decide-real-detail")
     }
 
@@ -116,7 +117,7 @@ final class CookDiscoveryUITests: XCTestCase {
     func testSceneFavoritesAndKitchenUseTheSameFindRecipesFlow() {
         let app = launch()
         chooseScene("soup", in: app)
-        XCTAssertTrue(app.buttons["cook.clearScene"].exists)
+        XCTAssertTrue(cookingContent(in: app).buttons.matching(identifier: "cook.clearScene").firstMatch.exists)
         let recipe = recipeLinks(in: app).firstMatch
         reveal(recipe, in: app)
         recipe.press(forDuration: 1)
@@ -132,8 +133,8 @@ final class CookDiscoveryUITests: XCTestCase {
 
         app.selectCookingPresentation("云厨房")
         wait(app.buttons["kitchen.cook"], "exists == true")
-        XCTAssertFalse(app.buttons["cook.discovery"].exists)
-        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "discovery.mode").firstMatch.exists)
+        assertObsoleteControlAbsent("cook.discovery", in: app)
+        assertObsoleteControlAbsent("discovery.mode", in: app)
         XCTAssertTrue(app.textFields["cook.query"].exists)
         openFilters(in: app)
         XCTAssertTrue(app.buttons["discovery.scene.soup"].isSelected)
@@ -141,7 +142,7 @@ final class CookDiscoveryUITests: XCTestCase {
         reveal(recipeLinks(in: app).firstMatch, in: app)
         recipeLinks(in: app).firstMatch.tap()
         wait(favoriteButton(in: app), "isHittable == true")
-        XCTAssertEqual(app.webViews.count, 0)
+        assertNativeRecipeContent(in: app)
         capture(app, "find-recipes-kitchen-real-detail")
     }
 
@@ -155,13 +156,13 @@ final class CookDiscoveryUITests: XCTestCase {
         XCTAssertTrue(recipes.allElementsBoundByIndex.allSatisfy { $0.label.contains("番茄炒蛋") })
         XCTAssertTrue(app.staticTexts["discovery.context"].label.contains("番茄炒蛋"))
         capture(app, "find-recipes-name-search")
-        let clear = app.buttons["cook.clearKeyword"]
+        let clear = cookingContent(in: app).buttons.matching(identifier: "cook.clearKeyword").firstMatch
         reveal(clear, in: app, towardTop: true)
         clear.tap()
         wait(clear, "exists == false")
         reveal(recipes.firstMatch, in: app)
         waitForThreeRecipes(in: app)
-        XCTAssertFalse(app.buttons["cook.clearScene"].exists)
+        XCTAssertFalse(cookingContent(in: app).buttons.matching(identifier: "cook.clearScene").firstMatch.exists)
     }
 
     @MainActor
@@ -188,7 +189,7 @@ final class CookDiscoveryUITests: XCTestCase {
         selectIngredient("土豆", in: app)
         selectIngredient("微波炉", in: app)
         chooseScene("home", in: app)
-        let empty = app.staticTexts["discovery.empty"]
+        let empty = cookingContent(in: app).staticTexts.matching(identifier: "discovery.empty").firstMatch
         reveal(empty, in: app)
         XCTAssertTrue(empty.waitForExistence(timeout: 10))
         let context = app.staticTexts["discovery.context"]
@@ -200,7 +201,7 @@ final class CookDiscoveryUITests: XCTestCase {
         reveal(reset, in: app)
         reset.tap()
         wait(empty, "exists == false")
-        XCTAssertFalse(app.buttons["cook.clearScene"].exists)
+        XCTAssertFalse(cookingContent(in: app).buttons.matching(identifier: "cook.clearScene").firstMatch.exists)
         reveal(recipeLinks(in: app).firstMatch, in: app, towardTop: true)
         XCTAssertTrue(recipeLinks(in: app).firstMatch.exists)
         XCTAssertTrue(context.label.contains("土豆"))
@@ -224,9 +225,8 @@ final class CookDiscoveryUITests: XCTestCase {
         let sugar = app.buttons["dietary.goal.less-added-sugar"]
         XCTAssertTrue(sugar.waitForExistence(timeout: 10))
         sugar.tap()
-        app.buttons["dietary.done"].tap()
-        wait(sugar, "exists == false")
-        closeFilters(in: app)
+        app.completeDietarySelection(closingFilters: true,
+            returningTo: app.buttons.matching(identifier: "cook.filters").firstMatch)
         let context = app.staticTexts["discovery.context"]
         reveal(context, in: app)
         XCTAssertTrue(context.label.contains("减少添加糖"))
@@ -239,7 +239,7 @@ final class CookDiscoveryUITests: XCTestCase {
         reveal(reviewed, in: app, page: .recipe)
         reviewed.tap()
         XCTAssertTrue(app.otherElements["dietary.reviewSummary"].waitForExistence(timeout: 10))
-        XCTAssertEqual(app.webViews.count, 0)
+        assertNativeRecipeContent(in: app, article: true)
         capture(app, "find-recipes-dietary-reviewed-text")
         goBack(in: app, waitingFor: reviewed)
         goBack(in: app)
@@ -251,7 +251,7 @@ final class CookDiscoveryUITests: XCTestCase {
     @MainActor
     func testLargestTextCanChooseSceneSearchAndDecideOnOnePage() {
         let app = launch(contentSize: .accessibilityExtraExtraExtraLarge)
-        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "discovery.mode").firstMatch.exists)
+        assertObsoleteControlAbsent("discovery.mode", in: app)
         openFilters(in: app)
         let home = app.buttons["discovery.scene.home"]
         reveal(home, in: app, page: .filters)
@@ -275,7 +275,7 @@ final class CookDiscoveryUITests: XCTestCase {
         decide.tap()
         app.confirmDecidedRecipe()
         wait(favoriteButton(in: app), "isHittable == true")
-        XCTAssertEqual(app.webViews.count, 0)
+        assertNativeRecipeContent(in: app)
         capture(app, "find-recipes-largest-decided-detail")
     }
 
@@ -363,7 +363,7 @@ final class CookDiscoveryUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [decidedAgain], timeout: 10), .completed,
                        "至少有两道候选时，连续决定应排除上次选择并更新右栏详情")
         wait(favoriteButton(in: app), "isHittable == true")
-        XCTAssertEqual(app.webViews.count, 0)
+        assertNativeRecipeContent(in: app)
         capture(app, "find-recipes-ipad-decide-with-detail-open")
     }
 
@@ -408,6 +408,7 @@ final class CookDiscoveryUITests: XCTestCase {
         app.launchArguments = arguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        terminateAppAfterTest(app)
         app.launch()
         let presentation = app.buttons["cook.presentation"]
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
@@ -416,8 +417,25 @@ final class CookDiscoveryUITests: XCTestCase {
     }
 
     @MainActor
+    private func cookingContent(in app: XCUIApplication) -> XCUIElement {
+        let menu = app.navigationBars.buttons.matching(identifier: "cook.presentation").firstMatch
+        let kitchen = menu.value as? String == "云厨房" || menu.label.contains("云厨房")
+        return app.collectionViews.matching(identifier: kitchen ? "kitchen.content" : "cook.chooser").firstMatch
+    }
+
+    @MainActor
+    private func assertObsoleteControlAbsent(_ identifier: String, in app: XCUIApplication,
+                                            file: StaticString = #filePath, line: UInt = #line) {
+        let navigation = app.navigationBars.matching(identifier: "找菜").firstMatch
+        for container in [cookingContent(in: app), navigation] {
+            XCTAssertTrue(container.waitForExistence(timeout: 10), file: file, line: line)
+            XCTAssertFalse(container.descendants(matching: .any).matching(identifier: identifier).firstMatch.exists, file: file, line: line)
+        }
+    }
+
+    @MainActor
     private func recipeLinks(in app: XCUIApplication) -> XCUIElementQuery {
-        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "discovery.recipe."))
+        cookingContent(in: app).buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "discovery.recipe."))
     }
 
     @MainActor
@@ -467,8 +485,10 @@ final class CookDiscoveryUITests: XCTestCase {
 
     @MainActor
     private func closeFilters(in app: XCUIApplication) {
-        app.buttons["完成"].tap()
-        wait(app.buttons["完成"], "exists == false")
+        let done = app.navigationBars.matching(identifier: "筛选").firstMatch.buttons.matching(identifier: "filter.done").firstMatch
+        wait(done, "isHittable == true")
+        done.tap()
+        wait(app.buttons.matching(identifier: "cook.filters").firstMatch, "exists == true AND isHittable == true")
     }
 
     @MainActor

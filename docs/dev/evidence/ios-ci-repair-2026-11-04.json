@@ -544,6 +544,66 @@
       "passedTests": 2,
       "failedTests": 0,
       "skippedTests": 0
+    },
+    {
+      "name": "bounded-ui-handoff-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 7,
+      "passedTests": 7,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "bounded-ui-handoff-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "result": "Passed",
+      "totalTestCount": 4,
+      "passedTests": 4,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "result": "Failed",
+      "totalTestCount": 9,
+      "passedTests": 7,
+      "failedTests": 2,
+      "skippedTests": 0,
+      "name": "bounded-discovery-pages-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [
+        {
+          "test": "CookDiscoveryUITests/testDefaultThreeRecipesShuffleAndDecideWithFourTabs()",
+          "message": "Experimental TabBar container lookup failed: iPadOS 27 adaptive top tabs do not expose this node."
+        },
+        {
+          "test": "RandomRecipeUITests/testLibraryDiceImmediatelySuggestsAndRerollsWithoutChangingScope()",
+          "message": "Same experimental TabBar container lookup failed before business interactions."
+        }
+      ],
+      "variant": "The unsupported TabBar helper was removed; the original Random-button absence assertion is retained. The other seven new scoped-query scenarios passed."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 4,
+      "passedTests": 4,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "bounded-discovery-pages-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": [],
+      "variant": "Additional scoped discovery, native-detail and shared dietary-dismissal checks."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "bounded-adaptive-tabs-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "variant": "Rebuilt final source after removing the unsupported TabBar experiment. Both discovery and library dice scenarios passed with the original Random-button absence assertions."
     }
   ],
   "orchestration": {
@@ -771,5 +831,38 @@
       "change": "Require an active page control and a visible list frame, retain full target visibility and target hittability, scope chooser targets to the chooser, and use its known navigation bar and actual footer.",
       "supersededLocalRun": "Stopped active-scope-full-ipad after all six CloudKitchen tests passed, to rebuild the changed dietary scrolling helper. This interrupted bundle is not a full-suite success."
     }
+  },
+  "tenthFollowUp": {
+    "baselineCommit": "1e6bb4a1d59d0dfac1a56f125a51bc38b76c48ba",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41799631301",
+    "introAbsenceScope": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41799631301/job/126472126331",
+      "observed": "The iPad dietary group passed. On iPhone another global missing-element query, dietary.introduction, timed out in the entry-placement case before any picker interaction.",
+      "change": "Audit all dietary absence checks: scope introduction and direct-entry absence to the chooser, legacy controls to the goal choice list and its toolbar, and nutrition labels to the actual recipe article. All previously required absence assertions remain.",
+      "artifact": {
+        "id": 13309116745,
+        "sha256": "298a8ed1a02233bbb310c237f84de664459c4f399d24422a02ab5b131375cfc7"
+      }
+    },
+    "projectedCameraMarker": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41799631301/job/126472126160",
+      "observed": "The rotation recording at 71 seconds still shows the pot, while the new List-scoped projected-pot query resolves no matching element after the pan.",
+      "inference": "UIKit virtual projected accessibility elements can change their snapshot ancestry during camera updates; the added List scope was too restrictive for those virtual elements.",
+      "change": "Use globally unique first-match identifiers for projected scene buttons, retain bounded List queries for native controls and the zero-WebView check, keep all >3px movement, <2px reset/disabled movement, selection and persistence assertions, and capture the full hierarchy if camera movement fails.",
+      "artifact": {
+        "id": 13309321476,
+        "sha256": "1bfb6769cd4e422f4ef24cf7e28292ea088b456caced2560b662b40ddff58de0"
+      }
+    },
+    "appLifecycle": {
+      "observed": "A later discovery case failed while terminating the previous SUT instance at launch.",
+      "change": "Keep each discovery app proxy alive through an async teardown block and terminate known running instances before the next case. Do not ignore termination failures or retry cases.",
+      "apiReference": "https://developer.apple.com/documentation/xctest/xctestcase/addasyncteardownblock%3A?language=objc"
+    },
+    "decisionNavigation": "Replace the remaining global missing-decision-bar lookup with an interactive selected-recipe navigation-title check. Spoken-summary prefixes retain complete names that contain the summary separator; the real recipe detail action must also exist.",
+    "completeRunResult": "Swift and four native groups passed; iPad discovery and iPhone dietary failed. Overall CI was not green.",
+    "remainingAbsenceChecks": "Bound obsolete discovery controls to the active content and toolbar, empty states to the active content, and zero-WebView checks to identified recipe detail/article content. Reuse the verified parent-control dietary dismissal helper across discovery and random flows.",
+    "discardedTabExperiment": "A TabBar-only absence helper passed on iPhone but failed on iPadOS 27 adaptive top tabs. Reverted it and retained the original typed Random-button absence assertions; rebuilt final source and both affected iPad scenarios passed.",
+    "orchestrationValidation": "Final node --test test/iosTestInfrastructure.test.mjs passed 10/10; all 54 UI methods remain assigned exactly once per device, without adding UI assertion retries."
   }
 }

@@ -110,6 +110,7 @@ struct RecipeTextContent: View {
                 .frame(maxWidth: 680, alignment: .leading)
                 .frame(maxWidth: .infinity)
             }
+            .accessibilityIdentifier("recipe.textContent")
             .background(Color(uiColor: .systemGroupedBackground))
             .softScrollEdges(enabled: preparationInSidebar)
             .scrollEdgeBar(edge: .top) {

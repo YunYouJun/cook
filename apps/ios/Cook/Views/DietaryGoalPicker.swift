@@ -155,6 +155,7 @@ struct DietaryGoalSelectionSheet: View {
             }
             // Rebuild cached list row heights when Dynamic Type changes on older iOS versions.
             .id(dynamicTypeSize)
+            .accessibilityIdentifier("dietary.choices")
             .navigationTitle("饮食目标")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

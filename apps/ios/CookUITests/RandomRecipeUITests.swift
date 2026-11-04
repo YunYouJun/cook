@@ -29,7 +29,7 @@ final class RandomRecipeUITests: XCTestCase {
         openRandom(in: app)
         app.confirmDecidedRecipe()
         wait(favoriteButton(in: app), "isHittable == true")
-        XCTAssertEqual(app.webViews.count, 0)
+        assertNativeRecipeContent(in: app)
         capture(app, "library-random-detail-from-empty-favorites")
     }
 
@@ -72,8 +72,8 @@ final class RandomRecipeUITests: XCTestCase {
         let goal = app.buttons["dietary.goal.less-added-sugar"]
         wait(goal, "isHittable == true")
         goal.tap()
-        app.buttons["dietary.done"].tap()
-        app.buttons["filter.done"].tap()
+        app.completeDietarySelection(closingFilters: true,
+            returningTo: app.buttons.matching(identifier: "cook.decide.filters").firstMatch)
         wait(app.staticTexts["cook.decide.context"], "label CONTAINS '减少添加糖'")
         XCTAssertTrue(app.buttons["cook.decide.open"].isHittable, "Large-text actions must stay reachable")
         capture(app, "library-random-largest-text")
@@ -135,6 +135,7 @@ final class RandomRecipeUITests: XCTestCase {
         app.launchArguments = arguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        terminateAppAfterTest(app)
         app.launch()
         wait(app.buttons["cook.presentation"], "isHittable == true")
         return app
