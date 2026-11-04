@@ -240,6 +240,62 @@
       "passedTests": 2,
       "failedTests": 0,
       "skippedTests": 0
+    },
+    {
+      "name": "baseline-native-selected",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "property-waits-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Failed",
+      "totalTestCount": 6,
+      "passedTests": 4,
+      "failedTests": 2,
+      "skippedTests": 0,
+      "failures": [
+        {
+          "test": "CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval()",
+          "message": "XCTAssertEqual failed: (\"Optional(\"西\")\") is not equal to (\"Optional(\"西红柿\")\")"
+        },
+        {
+          "test": "CookUITests/testPantryShelfRemembersChoicesAndRestoresDefaults()",
+          "message": "XCTAssertTrue failed - 常备调料入口应完整进入弹层的可见列表"
+        }
+      ],
+      "variant": "Intermediate property/existence waiter experiment. The final helper retains existing existence/composite predicates and uses native selected-state waits."
+    },
+    {
+      "name": "expanded-picker-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "complete-main-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 12,
+      "passedTests": 12,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "complete-main-iphone",
+      "device": "iPhone 18 Pro, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 12,
+      "passedTests": 12,
+      "failedTests": 0,
+      "skippedTests": 0
     }
   ],
   "orchestration": {
@@ -332,6 +388,39 @@
       "observed": "The recording showed the recipe detail for 燕麦鸡蛋饼 after opening the settled card. The predicate waiting for the old decide action to disappear timed out.",
       "change": "Wait for the recipe-detail action to appear, then use the native waitForNonExistence API to check that the decision action is gone. Keep diagnostics and both navigation assertions.",
       "reference": "https://developer.apple.com/documentation/xcuiautomation/xcuielement/waitfornonexistence(timeout:)"
+    }
+  },
+  "fifthFollowUp": {
+    "baselineCommit": "00978099eee8c0f554c0fc8dbc0cb5545e37b40e",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41730870403",
+    "selectionWait": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41730870403/job/126248386133",
+      "observed": "The fresh accessibility hierarchy contained exactly one Button labelled 番茄, marked Selected, matching the screenshot. The predicate waiting for isSelected still timed out after 30 seconds. The baseline passed locally.",
+      "selectedButtonFrame": {
+        "x": 32,
+        "y": 321,
+        "width": 106.4,
+        "height": 44
+      },
+      "change": "Use the native key-path property waiter for positive and negative selection checks, preserving the timeout and failure diagnostics. Use the same native property wait for the kitchen basket selection.",
+      "reference": "https://developer.apple.com/documentation/xcuiautomation/xcuielement"
+    },
+    "pickerPreparation": {
+      "observed": "Broader local testing exposed partial search text and filter rows that remained below the visible medium sheet. Short content drags repeatedly returned to medium without bringing the row into view.",
+      "hiddenAvoidRowFrame": {
+        "x": 242,
+        "y": 1396.5,
+        "width": 548,
+        "height": 52.5
+      },
+      "visibleContentFrame": {
+        "x": 226,
+        "y": 686.5,
+        "width": 580,
+        "height": 619.5
+      },
+      "change": "Expand a medium filter sheet through its native toolbar before scrolling to hidden options. Scope drags to the unobscured content and require the entire target row to be visible. Reuse this helper for pantry and avoid entries; wait for complete search text before asserting the unchanged input value.",
+      "reference": "https://developer.apple.com/documentation/swiftui/view/presentationcontentinteraction(_:)"
     }
   }
 }

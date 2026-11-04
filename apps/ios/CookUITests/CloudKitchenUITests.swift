@@ -220,8 +220,7 @@ final class CloudKitchenUITests: XCTestCase {
         // Assert the active kitchen basket independently of other views that
         // use the same ingredient text.
         let basketEgg = app.buttons.matching(identifier: "kitchen.ingredient.鸡蛋").firstMatch
-        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: basketEgg)
-        let selectionResult = XCTWaiter.wait(for: [selected], timeout: 10)
+        let selectionResult: XCTWaiter.Result = basketEgg.wait(for: \.isSelected, toEqual: true, timeout: 10) ? .completed : .timedOut
         if selectionResult != .completed {
             let hierarchy = XCTAttachment(string: app.debugDescription)
             hierarchy.name = "kitchen-egg-selection-accessibility"

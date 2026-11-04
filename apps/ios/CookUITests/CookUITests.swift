@@ -347,15 +347,50 @@ final class CookUITests: XCTestCase {
         let list = app.collectionViews["filter.options"]
         let summary = app.otherElements["filter.summary"]
         XCTAssertTrue(list.waitForExistence(timeout: timeout), file: file, line: line)
-        for _ in 0..<8 {
+        let window = app.windows.firstMatch
+        let navigation = app.navigationBars["筛选"]
+        XCTAssertTrue(navigation.waitForExistence(timeout: timeout), file: file, line: line)
+        var viewport = CGRect.null
+        var expanded = false
+        for _ in 0..<20 {
             // iOS 27 can report a row beneath the fixed summary as hittable.
             // Keep the whole row inside the unobscured list before tapping it.
-            let bottom = summary.exists ? min(list.frame.maxY, summary.frame.minY) : list.frame.maxY
-            if option.exists && option.isHittable && option.frame.minY >= list.frame.minY
-                && option.frame.maxY <= bottom { return }
-            list.swipeUp(velocity: .slow)
+            let top = max(list.frame.minY, navigation.frame.maxY) + 8
+            let bottom = min(list.frame.maxY, summary.exists ? summary.frame.minY : window.frame.maxY) - 8
+            viewport = CGRect(x: list.frame.minX, y: top, width: list.frame.width, height: bottom - top)
+            guard viewport.height > 0 else { break }
+            let frame = option.exists ? option.frame : CGRect.null
+            let hasFrame = !frame.isNull && !frame.isEmpty
+            if hasFrame && frame.minY >= top && frame.maxY <= bottom && option.isHittable { return }
+            if !expanded && navigation.frame.minY > window.frame.minY + window.frame.height * 0.35 {
+                // A medium sheet resizes before its list scrolls. A short content
+                // drag can spring back to medium without moving the target row.
+                navigation.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                    .press(forDuration: 0.1,
+                           thenDragTo: window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15)),
+                           withVelocity: .slow, thenHoldForDuration: 0.2)
+                expanded = true
+                continue
+            }
+            // A collection view's frame can include covered content. Keep the
+            // gesture between the sheet's toolbar and summary.
+            let scrollBack = hasFrame && frame.minY < top
+            let overlap = hasFrame ? (scrollBack ? top - frame.minY : frame.maxY - bottom) + 12 : viewport.height * 0.45
+            let distance = min(max(overlap, 44), viewport.height * 0.45)
+            let startY = viewport.midY + (scrollBack ? -distance / 2 : distance / 2)
+            let endY = viewport.midY + (scrollBack ? distance / 2 : -distance / 2)
+            let origin = window.coordinate(withNormalizedOffset: .zero)
+            origin.withOffset(CGVector(dx: viewport.midX - window.frame.minX, dy: startY - window.frame.minY))
+                .press(forDuration: 0.1,
+                       thenDragTo: origin.withOffset(CGVector(dx: viewport.midX - window.frame.minX, dy: endY - window.frame.minY)),
+                       withVelocity: .slow, thenHoldForDuration: 0.2)
         }
-        XCTFail("筛选选项未完整露出：\(option.label)", file: file, line: line)
+        let hierarchy = XCTAttachment(string: app.debugDescription)
+        hierarchy.name = "filter-option-accessibility"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
+        capture(app, "filter-option-not-visible")
+        XCTFail("筛选选项未完整露出：\(option.label)，目标：\(option.frame)，列表：\(list.frame)，可见区域：\(viewport)", file: file, line: line)
     }
 
     /// 食材需要完全离开固定底栏遮挡，不能依赖 XCTest 的自动滚动。
@@ -451,12 +486,7 @@ final class CookUITests: XCTestCase {
 
         tap(app.buttons["筛选"])
         let pantry = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "家里常备")).firstMatch
-        let options = app.descendants(matching: .any).matching(identifier: "filter.options").firstMatch
-        for _ in 0..<6 {
-            if pantry.exists && pantry.isHittable && options.frame.contains(pantry.frame) { break }
-            options.swipeUp()
-        }
-        XCTAssertTrue(options.frame.contains(pantry.frame), "常备调料入口应完整进入弹层的可见列表")
+        revealFilterOption(pantry, in: app)
         tap(pantry)
         let oil = app.buttons["pantry.item.油"]
         let salt = app.buttons["pantry.item.盐"]
@@ -498,11 +528,7 @@ final class CookUITests: XCTestCase {
         app.launch()
         tap(app.buttons["筛选"])
         let avoid = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "忌口")).firstMatch
-        let options = app.descendants(matching: .any).matching(identifier: "filter.options").firstMatch
-        for _ in 0..<6 {
-            if avoid.exists && avoid.isHittable { break }
-            options.swipeUp()
-        }
+        revealFilterOption(avoid, in: app)
         tap(avoid)
         let search = app.searchFields["搜索食材或别名"]
 
@@ -514,6 +540,8 @@ final class CookUITests: XCTestCase {
                 focusSearch(search, in: app)
             }
             search.typeText(query)
+            let entered = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", query), object: search)
+            XCTAssertEqual(XCTWaiter.wait(for: [entered], timeout: 10), .completed)
             XCTAssertEqual(search.value as? String, query)
             let item = app.buttons["avoid.item.\(name)"]
             tap(item)
@@ -524,6 +552,8 @@ final class CookUITests: XCTestCase {
         tap(search.buttons["清除文本"])
         focusSearch(search, in: app)
         search.typeText("不存在的食材")
+        let entered = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "不存在的食材"), object: search)
+        XCTAssertEqual(XCTWaiter.wait(for: [entered], timeout: 10), .completed)
         XCTAssertEqual(search.value as? String, "不存在的食材")
         wait(app.staticTexts["avoid.noSearchResults"], "exists == true")
         let tomato = app.buttons["avoid.remove.番茄"]
@@ -574,8 +604,17 @@ final class CookUITests: XCTestCase {
     /// 等控件满足条件，超时就让用例失败，失败信息里写明是哪个控件、等的什么
     @MainActor
     private func wait(_ element: XCUIElement, _ condition: String, file: StaticString = #filePath, line: UInt = #line) {
-        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: condition), object: element)
-        let result = XCTWaiter().wait(for: [expectation], timeout: timeout)
+        let result: XCTWaiter.Result
+        switch condition {
+        case "isSelected == true", "isSelected == false":
+            // CI can already show Selected in the fresh hierarchy while a
+            // predicate still waits. Use the native waiter for SwiftUI selection.
+            let selected = condition == "isSelected == true"
+            result = element.wait(for: \.isSelected, toEqual: selected, timeout: timeout) ? .completed : .timedOut
+        default:
+            let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: condition), object: element)
+            result = XCTWaiter().wait(for: [expectation], timeout: timeout)
+        }
         if result != .completed {
             let app = XCUIApplication()
             let hierarchy = XCTAttachment(string: app.debugDescription)
