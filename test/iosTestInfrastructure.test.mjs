@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
+import { Buffer } from 'node:buffer'
+import { spawn, spawnSync } from 'node:child_process'
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
 // eslint-disable-next-line test/no-import-node-test -- CI orchestration must be checked before workspace dependencies are installed.
 import { test } from 'node:test'
+import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
@@ -83,6 +85,60 @@ function replay(scenarios, verify, suites = ['regression-main', 'regression-disc
     rmSync(temporary, { recursive: true, force: true })
   }
 }
+
+test('a slow Actions log consumer cannot block xcodebuild or hide its failure', async () => {
+  const temporary = mkdtempSync(join(tmpdir(), 'cook-ios-ci-log-'))
+  const bin = join(temporary, 'bin')
+  mkdirSync(bin)
+  const completed = join(temporary, 'xcode-completed')
+  const failure = '\nXCODE_FAILURE_EVIDENCE\n'
+  writeFileSync(join(bin, 'xcrun'), '#!/usr/bin/env bash\nexit 0\n')
+  writeFileSync(join(bin, 'xcodebuild'), `#!/usr/bin/env node
+    const fs = require('node:fs');
+    process.stdout.write('x'.repeat(1024 * 1024) + ${JSON.stringify(failure)}, () => {
+      fs.writeFileSync(process.env.COOK_XCODE_COMPLETED, 'done');
+      process.exitCode = 65;
+    });
+  `)
+  for (const command of ['xcrun', 'xcodebuild']) chmodSync(join(bin, command), 0o755)
+  const child = spawn('bash', ['-e', '-c', workflowCommand()], {
+    cwd: root,
+    detached: true,
+    env: {
+      ...process.env,
+      PATH: `${bin}:${process.env.PATH}`,
+      RUNNER_TEMP: temporary,
+      DEVICE: 'phone',
+      IOS_SUITE: 'pr-regression',
+      COOK_XCODE_COMPLETED: completed,
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  const closed = new Promise((resolve, reject) => {
+    child.once('error', reject)
+    child.once('close', code => resolve(code))
+  })
+  child.stderr.resume()
+  try {
+    // Deliberately leave the consumer paused while the external test tool fills
+    // more than a pipe buffer. Its own output must still finish before we drain.
+    const deadline = Date.now() + 5000
+    while (!existsSync(completed) && Date.now() < deadline) await delay(25)
+    assert.ok(existsSync(completed), 'xcodebuild must finish even when Actions stops draining stdout')
+    const chunks = []
+    child.stdout.on('data', chunk => chunks.push(chunk))
+    assert.equal(await closed, 1, 'the original test failure must fail the job')
+    assert.ok(Buffer.concat(chunks).toString().endsWith(failure), 'the full failure log must reach Actions afterward')
+    assert.ok(readFileSync(join(temporary, 'xcresult/phone-pr-regression.log'), 'utf8').endsWith(failure))
+  }
+  finally {
+    child.stdout.resume()
+    if (child.exitCode === null && child.signalCode === null)
+      process.kill(-child.pid, 'SIGTERM')
+    await closed
+    rmSync(temporary, { recursive: true, force: true })
+  }
+})
 
 test('the matrix preserves serial invocations and uses compiled products on existing devices', () => {
   replay({}, ({ result, calls, output }) => {

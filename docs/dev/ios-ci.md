@@ -20,6 +20,8 @@ PR 每台设备执行一组 `pr-regression`，共两个任务：全部 App 单�
 
 失败、取消或发生基础设施重试时，结果上传为 `ios-xcresult-<device>-<suite>`，保留 7 天。`Show test failures` 会输出结果包中的错误；下载 Artifacts 后可用 Xcode 打开完整记录。
 
+`xcodebuild` 的 stdout/stderr 先写入同目录的 `<device>-<stage>.log`，测试结束后再完整输出到 Actions，退出码继续决定成败。CI #698 的失败录像中目标选项已经显示，采样栈显示 App 在 XCTest 查询元素属性期间阻塞于 `writev`。日志管道回压是据此排查的一个方向；磁盘缓冲让 Actions 消费日志的速度不再直接限制测试进程输出。编排测试故意暂停 stdout 消费并输出超过管道容量的日志，验证测试工具仍能完成、完整失败日志保留且任务继续失败。没有重试或跳过相关业务用例。
+
 UI 测试的布尔状态等待优先复用 `CookUITests.swift` 中的 `waitForState`，由 XCTest 原生 API 检查存在、选中、启用和可点击状态；复合条件共用调用方原有的等待期限。精确属性相等也可使用原生 KeyPath 等待，其他文本匹配、值和几何条件保留对应谓词。辅助方法失败时会保留当前无障碍树和截图。
 
 已知控件所属列表时，将查询限定到 `cook.chooser`、`dietary.results` 等实际容器；饮食目标流程通过 `cookingToolbarButton` 将找菜工具栏查询限定到其导航栏，目标选项限定到 `dietary.choices`。滚动辅助方法在单次调用内复用窗口边界，每轮只读取一次列表边界，保留滚动后的实际可见区域检查。滚动前根据弹层导航栏与固定底栏确定可见区域，必要时先展开半屏弹层，再确认目标的完整边界进入可点击区域。

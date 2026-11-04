@@ -11,16 +11,22 @@ maximum_audit=CookUITests/DietaryGoalsUITests/testLargestTextCanChooseSavedGoalR
 run_once() {
   local device="$1" stage="$2" code=0 allowance=300
   shift 2
+  local log="$RUNNER_TEMP/xcresult/$device-$stage.log"
+  mkdir -p "$RUNNER_TEMP/xcresult"
   [[ "$stage" == dietary-standard* || "$stage" == dietary-maximum* ]] && allowance=600
   echo "Running $stage on $device"
   if xcrun simctl bootstatus "$device" -b; then
+    # Keep Actions console backpressure out of the Xcode / App logging path.
+    # Replay the complete output after testing; retain it with the result bundle.
+    echo "Capturing xcodebuild output in $log; full output follows when tests finish."
     xcodebuild test-without-building -project apps/ios/Cook.xcodeproj -scheme Cook -destination "id=$device" \
       -destination-timeout 180 -parallel-testing-enabled NO \
       -derivedDataPath "$RUNNER_TEMP/cook-derived-data" \
       -collect-test-diagnostics never \
       -test-timeouts-enabled YES -default-test-execution-time-allowance "$allowance" -maximum-test-execution-time-allowance 600 \
       "$@" -resultBundlePath "$RUNNER_TEMP/xcresult/$device-$stage.xcresult" \
-      CODE_SIGNING_ALLOWED=NO || code=$?
+      CODE_SIGNING_ALLOWED=NO > "$log" 2>&1 || code=$?
+    cat "$log" || code=1
   else
     code=1
   fi
