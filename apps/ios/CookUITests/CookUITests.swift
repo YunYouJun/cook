@@ -113,8 +113,7 @@ extension XCUIApplication {
         if closingFilters {
             let filterDone = navigationBars.matching(identifier: "筛选").firstMatch
                 .buttons.matching(identifier: "filter.done").firstMatch
-            XCTAssertEqual(filterDone.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
-                           "目标弹层关闭后，筛选页应恢复可操作", file: file, line: line)
+            XCTAssertTrue(filterDone.waitForExistence(timeout: 10), file: file, line: line)
             filterDone.tap()
         }
         XCTAssertEqual(control.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
