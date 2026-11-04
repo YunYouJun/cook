@@ -11,7 +11,7 @@ final class CloudKitchenUITests: XCTestCase {
         let menu = app.buttons["cook.presentation"]
         capture(app, name: "largest-quick-initial")
         assertMenuControlFits(menu, in: app)
-        let potato = app.buttons.matching(NSPredicate(format: "label == %@", "土豆")).firstMatch
+        let potato = chooserButton("土豆", in: app)
         XCTAssertTrue(potato.isHittable, "最大字号下首屏仍应能选择第一种常用食材")
         potato.tap()
         waitUntil(potato, "isSelected == true")
@@ -28,13 +28,13 @@ final class CloudKitchenUITests: XCTestCase {
         kitchen.tap()
 
         waitUntil(menu, "value == '云厨房' OR label CONTAINS '云厨房'")
-        let modelPotato = app.buttons["kitchen.scene.potato"]
+        let modelPotato = kitchenButton("kitchen.scene.potato", in: app)
         XCTAssertTrue(modelPotato.waitForExistence(timeout: 30))
         XCTAssertTrue(modelPotato.isSelected, "厨房应沿用快选中的土豆，不要求大字号台面始终在首屏")
-        let carrot = app.buttons["kitchen.ingredient.胡萝卜"]
+        let carrot = kitchenButton("kitchen.ingredient.胡萝卜", in: app)
         reveal(carrot, in: app, fullyVisible: true)
         XCTAssertTrue(carrot.isHittable)
-        XCTAssertLessThanOrEqual(carrot.frame.maxY, app.buttons["kitchen.cook"].frame.minY,
+        XCTAssertLessThanOrEqual(carrot.frame.maxY, app.buttons.matching(identifier: "kitchen.cook").firstMatch.frame.minY,
                                  "大字号食材应完整滚入固定底栏上方，不能靠压缩文字适配")
         capture(app, name: "largest-kitchen-ingredients")
         assertMenuControlFits(menu, in: app)
@@ -70,7 +70,7 @@ final class CloudKitchenUITests: XCTestCase {
         let resultList = app.descendants(matching: .any).matching(identifier: "dietary.results").firstMatch
         XCTAssertTrue(resultList.waitForExistence(timeout: 10))
         XCTAssertTrue(resultList.isHittable)
-        let potato = app.buttons.matching(NSPredicate(format: "label == %@", "土豆")).firstMatch
+        let potato = chooserButton("土豆", in: app)
         XCTAssertTrue(potato.isHittable)
         potato.tap()
         waitUntil(potato, "isSelected == true")
@@ -85,7 +85,7 @@ final class CloudKitchenUITests: XCTestCase {
         assertMenuOptionFits(kitchen, in: app)
         XCTAssertTrue(quick.isSelected)
         kitchen.tap()
-        let modelPotato = app.buttons["kitchen.scene.potato"]
+        let modelPotato = kitchenButton("kitchen.scene.potato", in: app)
         XCTAssertTrue(modelPotato.waitForExistence(timeout: 30))
         XCTAssertTrue(modelPotato.isSelected)
         assertMenuHitArea(menu, currentSelection: "云厨房", in: app)
@@ -116,7 +116,7 @@ final class CloudKitchenUITests: XCTestCase {
         let menu = app.buttons["cook.presentation"]
         XCTAssertTrue(menu.waitForExistence(timeout: 20))
         XCTAssertTrue(menu.value as? String == "食材快选" || menu.label.contains("食材快选"))
-        let tomato = app.buttons.matching(NSPredicate(format: "label == %@", "番茄")).firstMatch
+        let tomato = chooserButton("番茄", in: app)
         XCTAssertTrue(tomato.isHittable, "默认视图应直接支持食材快选")
         tomato.tap()
         waitUntil(tomato, "isSelected == true")
@@ -131,7 +131,7 @@ final class CloudKitchenUITests: XCTestCase {
         XCTAssertTrue(quick.isSelected, "菜单应标记当前使用的食材快选视图")
         kitchen.tap()
 
-        let modelTomato = app.buttons["kitchen.scene.tomato"]
+        let modelTomato = kitchenButton("kitchen.scene.tomato", in: app)
         XCTAssertTrue(modelTomato.waitForExistence(timeout: 30))
         XCTAssertTrue(modelTomato.isSelected, "切换布局应保留已选食材")
         XCTAssertTrue(menu.value as? String == "云厨房" || menu.label.contains("云厨房"))
@@ -158,14 +158,14 @@ final class CloudKitchenUITests: XCTestCase {
         let presentation = app.buttons["cook.presentation"]
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
         app.selectCookingPresentation("云厨房")
-        let tomato = app.buttons["kitchen.scene.tomato"]
+        let tomato = kitchenButton("kitchen.scene.tomato", in: app)
         XCTAssertTrue(tomato.waitForExistence(timeout: 30))
         XCTAssertTrue(tomato.isHittable)
         capture(app, name: "云厨房首屏与干净底栏")
 
-        let header = app.descendants(matching: .any).matching(identifier: "discovery.cardHeader").firstMatch
+        let header = kitchenContent(in: app).descendants(matching: .any).matching(identifier: "discovery.cardHeader").firstMatch
         reveal(header, in: app)
-        let action = app.buttons["kitchen.cook"]
+        let action = app.buttons.matching(identifier: "kitchen.cook").firstMatch
         capture(app, name: "云厨房完整灵感卡片")
         XCTAssertLessThanOrEqual(header.frame.maxY, action.frame.minY,
                                  "推荐卡片应能完整滚动到底部固定操作区之上")
@@ -193,8 +193,9 @@ final class CloudKitchenUITests: XCTestCase {
         let presentation = app.buttons["cook.presentation"]
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
         app.selectCookingPresentation("食材快选")
-        XCTAssertFalse(app.segmentedControls["cook.presentation"].exists)
-        let tomato = app.buttons.matching(NSPredicate(format: "label == %@", "番茄")).firstMatch
+        XCTAssertFalse(app.navigationBars.matching(identifier: "找菜").firstMatch
+            .segmentedControls.matching(identifier: "cook.presentation").firstMatch.exists)
+        let tomato = chooserButton("番茄", in: app)
         reveal(tomato, in: app)
         XCTAssertTrue(tomato.waitForExistence(timeout: 10))
         tomato.tap()
@@ -202,10 +203,10 @@ final class CloudKitchenUITests: XCTestCase {
         capture(app, name: "列表的紧凑视图入口")
 
         app.selectCookingPresentation("云厨房")
-        let modelTomato = app.buttons["kitchen.scene.tomato"]
+        let modelTomato = kitchenButton("kitchen.scene.tomato", in: app)
         XCTAssertTrue(modelTomato.waitForExistence(timeout: 30))
         XCTAssertTrue(modelTomato.isHittable, "切换云厨房后，应直接看到并操作台面食材")
-        XCTAssertLessThan(modelTomato.frame.midY, app.buttons["kitchen.cook"].frame.minY,
+        XCTAssertLessThan(modelTomato.frame.midY, app.buttons.matching(identifier: "kitchen.cook").firstMatch.frame.minY,
                           "台面应显示在首屏内容区域，推荐和随机操作排在后面")
         let shuffle = app.buttons["discovery.shuffle"]
         if shuffle.isHittable {
@@ -215,11 +216,11 @@ final class CloudKitchenUITests: XCTestCase {
         XCTAssertTrue(modelTomato.isSelected)
         // Tap the 3D ingredient at its projected screen location. This catches
         // overlapping targets accidentally selecting a neighboring ingredient.
-        let modelEgg = app.buttons["kitchen.scene.egg"]
+        let modelEgg = kitchenButton("kitchen.scene.egg", in: app)
         modelEgg.tap()
         // Assert the active kitchen basket independently of other views that
         // use the same ingredient text.
-        let basketEgg = app.buttons.matching(identifier: "kitchen.ingredient.鸡蛋").firstMatch
+        let basketEgg = kitchenButton("kitchen.ingredient.鸡蛋", in: app)
         let selectionResult: XCTWaiter.Result = basketEgg.wait(for: \.isSelected, toEqual: true, timeout: 10) ? .completed : .timedOut
         if selectionResult != .completed {
             let hierarchy = XCTAttachment(string: app.debugDescription)
@@ -229,18 +230,18 @@ final class CloudKitchenUITests: XCTestCase {
             capture(app, name: "kitchen-egg-selection-mismatch")
         }
         XCTAssertEqual(selectionResult, .completed)
-        XCTAssertEqual(app.staticTexts["kitchen.selectionCount"].label, "已选 2 样")
+        XCTAssertEqual(kitchenContent(in: app).staticTexts.matching(identifier: "kitchen.selectionCount").firstMatch.label, "已选 2 样")
 
         app.selectCookingPresentation("食材快选")
         reveal(tomato, in: app)
         XCTAssertTrue(tomato.waitForExistence(timeout: 10))
         XCTAssertTrue(tomato.isSelected)
         app.selectCookingPresentation("云厨房")
-        let pot = app.buttons["kitchen.scene.pot"]
+        let pot = kitchenButton("kitchen.scene.pot", in: app)
         reveal(pot, in: app)
         XCTAssertTrue(pot.waitForExistence(timeout: 30))
         capture(app, name: "原生云厨房与已选食材")
-        XCTAssertTrue(app.webViews.count == 0)
+        XCTAssertEqual(kitchenContent(in: app).webViews.count, 0, "云厨房内容应使用原生渲染")
         pot.tap()
 
         let recipe = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")).firstMatch
@@ -255,7 +256,7 @@ final class CloudKitchenUITests: XCTestCase {
         XCTAssertTrue(modelTomato.isSelected)
         app.buttons["清空"].tap()
         reveal(pot, in: app)
-        XCTAssertTrue(app.buttons["kitchen.cook"].isEnabled, "没有食材也能浏览当前候选")
+        XCTAssertTrue(app.buttons.matching(identifier: "kitchen.cook").firstMatch.isEnabled, "没有食材也能浏览当前候选")
         pot.tap()
         let candidate = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
         XCTAssertTrue(candidate.waitForExistence(timeout: 10), "未选食材时，点击锅打开真实目录")
@@ -272,9 +273,9 @@ final class CloudKitchenUITests: XCTestCase {
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
         app.selectCookingPresentation("云厨房")
 
-        let tomato = app.buttons["kitchen.scene.tomato"]
-        let cameraMarker = app.buttons["kitchen.scene.pot"]
-        let rotation = app.buttons["kitchen.rotation"]
+        let tomato = kitchenButton("kitchen.scene.tomato", in: app)
+        let cameraMarker = kitchenButton("kitchen.scene.pot", in: app)
+        let rotation = kitchenButton("kitchen.rotation", in: app)
         reveal(tomato, in: app)
         reveal(rotation, in: app)
         XCTAssertTrue(tomato.waitForExistence(timeout: 30))
@@ -367,8 +368,8 @@ final class CloudKitchenUITests: XCTestCase {
         let center = CGPoint(x: menu.frame.midX, y: menu.frame.midY)
         let target = CGRect(x: center.x - 22, y: center.y - 22, width: 44, height: 44)
         XCTAssertTrue(app.windows.firstMatch.frame.contains(target), "完整 44pt 命中区域必须留在窗口内", file: file, line: line)
-        let bars = app.navigationBars.allElementsBoundByIndex.filter { $0.isHittable && $0.frame.contains(center) }
-        XCTAssertTrue(bars.contains { $0.frame.contains(target) }, "完整 44pt 命中区域必须位于导航栏内", file: file, line: line)
+        let bar = app.navigationBars.matching(identifier: "找菜").firstMatch
+        XCTAssertTrue(bar.isHittable && bar.frame.contains(target), "完整 44pt 命中区域必须位于导航栏内", file: file, line: line)
         XCTAssertFalse(target.intersects(app.buttons["清空"].frame), "命中区域不能借用清空按钮的位置", file: file, line: line)
 
         for verticalOffset in [-21.0, 21.0] {
@@ -428,15 +429,37 @@ final class CloudKitchenUITests: XCTestCase {
     }
 
     @MainActor
+    private func chooserButton(_ label: String, in app: XCUIApplication) -> XCUIElement {
+        // Keep VoiceOver label assertions inside the active list. A whole-app
+        // firstMatch can stall even when its debug snapshot already shows the chip.
+        app.collectionViews.matching(identifier: "cook.chooser").firstMatch
+            .buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
+    }
+
+    @MainActor
+    private func kitchenContent(in app: XCUIApplication) -> XCUIElement {
+        app.collectionViews.matching(identifier: "kitchen.content").firstMatch
+    }
+
+    @MainActor
+    private func kitchenButton(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
+        kitchenContent(in: app).buttons.matching(identifier: identifier).firstMatch
+    }
+
+    @MainActor
     private func reveal(_ element: XCUIElement, in app: XCUIApplication, fullyVisible: Bool = false) {
         let window = app.windows.firstMatch
+        let bar = app.navigationBars.matching(identifier: "找菜").firstMatch
+        XCTAssertTrue(bar.waitForExistence(timeout: 10))
+        let menu = app.navigationBars.buttons.matching(identifier: "cook.presentation").firstMatch
+        let isKitchen = menu.value as? String == "云厨房" || menu.label.contains("云厨房")
+        let action: XCUIElement? = isKitchen
+            ? app.buttons.matching(identifier: "kitchen.cook").firstMatch
+            : window.horizontalSizeClass != .regular ? app.buttons.matching(identifier: "cook.showResults").firstMatch : nil
         for _ in 0..<20 {
-            let bar = app.navigationBars.allElementsBoundByIndex.first(where: { $0.isHittable }) ?? app.navigationBars.firstMatch
-            let top = bar.isHittable ? bar.frame.maxY : window.frame.minY
-            let kitchen = app.buttons["kitchen.cook"]
-            let results = app.buttons["cook.showResults"]
-            let bottom = kitchen.isHittable ? kitchen.frame.minY
-                : window.horizontalSizeClass != .regular && results.isHittable ? results.frame.minY : window.frame.maxY
+            let top = bar.frame.maxY
+            // Use the footer for the known presentation; do not search for an absent footer.
+            let bottom = action?.frame.minY ?? window.frame.maxY
             let frame = element.exists ? element.frame : CGRect.null
             let withinViewport = fullyVisible
                 ? frame.minY >= top && frame.maxY <= bottom
