@@ -248,7 +248,8 @@ final class CookUITests: XCTestCase {
         for name in ["土豆", "番茄", "鸡蛋"] {
             // 明确检查 VoiceOver label。iOS 26.5 的快捷 identifier 查询曾返回不存在，
             // 但同一失败现场的完整无障碍树和截图均包含该按钮。
-            let stuff = app.buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch
+            let stuff = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
+                .buttons.matching(NSPredicate(format: "label == %@", name)).firstMatch
             selectCookingIngredient(name)
             wait(stuff, "isSelected == true")
         }

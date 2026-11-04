@@ -8,10 +8,11 @@ final class CloudKitchenUITests: XCTestCase {
     func testLargestTextViewMenuKeepsControlsAndSelectionUsable() {
         XCUIDevice.shared.orientation = .portrait
         let app = launchMenuFixture(contentSize: .accessibilityExtraExtraExtraLarge)
-        let menu = app.buttons["cook.presentation"]
+        let menu = app.cookingToolbarButton("cook.presentation")
         capture(app, name: "largest-quick-initial")
         assertMenuControlFits(menu, in: app)
-        let potato = app.buttons.matching(NSPredicate(format: "label == %@", "土豆")).firstMatch
+        let potato = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
+            .buttons.matching(NSPredicate(format: "label == %@", "土豆")).firstMatch
         XCTAssertTrue(potato.isHittable, "最大字号下首屏仍应能选择第一种常用食材")
         potato.tap()
         waitUntil(potato, "isSelected == true")
@@ -65,12 +66,13 @@ final class CloudKitchenUITests: XCTestCase {
             throw XCTSkip("此用例检查 iPad 横屏双栏")
         }
         XCTAssertGreaterThan(window.frame.width, window.frame.height)
-        let menu = app.buttons["cook.presentation"]
+        let menu = app.cookingToolbarButton("cook.presentation")
         assertMenuControlFits(menu, in: app)
         let resultList = app.descendants(matching: .any).matching(identifier: "dietary.results").firstMatch
         XCTAssertTrue(resultList.waitForExistence(timeout: 10))
         XCTAssertTrue(resultList.isHittable)
-        let potato = app.buttons.matching(NSPredicate(format: "label == %@", "土豆")).firstMatch
+        let potato = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
+            .buttons.matching(NSPredicate(format: "label == %@", "土豆")).firstMatch
         XCTAssertTrue(potato.isHittable)
         potato.tap()
         waitUntil(potato, "isSelected == true")
@@ -114,10 +116,11 @@ final class CloudKitchenUITests: XCTestCase {
         terminateAppAfterTest(app)
         app.launch()
 
-        let menu = app.buttons["cook.presentation"]
+        let menu = app.cookingToolbarButton("cook.presentation")
         XCTAssertTrue(menu.waitForExistence(timeout: 20))
         XCTAssertTrue(menu.value as? String == "食材快选" || menu.label.contains("食材快选"))
-        let tomato = app.buttons.matching(NSPredicate(format: "label == %@", "番茄")).firstMatch
+        let tomato = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
+            .buttons.matching(NSPredicate(format: "label == %@", "番茄")).firstMatch
         XCTAssertTrue(tomato.isHittable, "默认视图应直接支持食材快选")
         tomato.tap()
         waitUntil(tomato, "isSelected == true")
@@ -157,7 +160,7 @@ final class CloudKitchenUITests: XCTestCase {
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         terminateAppAfterTest(app)
         app.launch()
-        let presentation = app.buttons["cook.presentation"]
+        let presentation = app.cookingToolbarButton("cook.presentation")
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
         app.selectCookingPresentation("云厨房")
         let tomato = kitchenButton("kitchen.scene.tomato", in: app)
@@ -186,6 +189,8 @@ final class CloudKitchenUITests: XCTestCase {
 
     @MainActor
     func testKitchenAndListShareSelectionAndPotOpensRealRecipes() {
+        // This journey switches both layouts and opens/returns from real details.
+        executionTimeAllowance = 600
         let app = XCUIApplication()
         app.launchArguments = XCUIApplication.standardCookingLaunchArguments
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
@@ -193,12 +198,13 @@ final class CloudKitchenUITests: XCTestCase {
         terminateAppAfterTest(app)
         app.launch()
 
-        let presentation = app.buttons["cook.presentation"]
+        let presentation = app.cookingToolbarButton("cook.presentation")
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
         app.selectCookingPresentation("食材快选")
         XCTAssertFalse(app.navigationBars.matching(identifier: "找菜").firstMatch
             .segmentedControls.matching(identifier: "cook.presentation").firstMatch.exists)
-        let tomato = app.buttons.matching(NSPredicate(format: "label == %@", "番茄")).firstMatch
+        let tomato = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
+            .buttons.matching(NSPredicate(format: "label == %@", "番茄")).firstMatch
         reveal(tomato, in: app)
         XCTAssertTrue(tomato.waitForExistence(timeout: 10))
         tomato.tap()
@@ -273,7 +279,7 @@ final class CloudKitchenUITests: XCTestCase {
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         terminateAppAfterTest(app)
         app.launch()
-        let presentation = app.buttons["cook.presentation"]
+        let presentation = app.cookingToolbarButton("cook.presentation")
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
         app.selectCookingPresentation("云厨房")
 
@@ -358,7 +364,7 @@ final class CloudKitchenUITests: XCTestCase {
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         terminateAppAfterTest(app)
         app.launch()
-        XCTAssertTrue(app.buttons["cook.presentation"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.cookingToolbarButton("cook.presentation").waitForExistence(timeout: 20))
         return app
     }
 
