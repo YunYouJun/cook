@@ -111,6 +111,7 @@ final class CloudKitchenUITests: XCTestCase {
         app.launchArguments = XCUIApplication.standardCookingLaunchArguments
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        terminateAppAfterTest(app)
         app.launch()
 
         let menu = app.buttons["cook.presentation"]
@@ -154,6 +155,7 @@ final class CloudKitchenUITests: XCTestCase {
         app.launchArguments = XCUIApplication.standardCookingLaunchArguments
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        terminateAppAfterTest(app)
         app.launch()
         let presentation = app.buttons["cook.presentation"]
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
@@ -188,6 +190,7 @@ final class CloudKitchenUITests: XCTestCase {
         app.launchArguments = XCUIApplication.standardCookingLaunchArguments
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        terminateAppAfterTest(app)
         app.launch()
 
         let presentation = app.buttons["cook.presentation"]
@@ -268,6 +271,7 @@ final class CloudKitchenUITests: XCTestCase {
         app.launchArguments = XCUIApplication.standardCookingLaunchArguments
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        terminateAppAfterTest(app)
         app.launch()
         let presentation = app.buttons["cook.presentation"]
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
@@ -291,7 +295,15 @@ final class CloudKitchenUITests: XCTestCase {
         let moved = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             hypot(cameraMarker.frame.midX - original.midX, cameraMarker.frame.midY - original.midY) > 3
         }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [moved], timeout: 5), .completed)
+        let movementResult = XCTWaiter.wait(for: [moved], timeout: 5)
+        if movementResult != .completed {
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "kitchen-rotation-accessibility"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            capture(app, name: "kitchen-rotation-not-observed")
+        }
+        XCTAssertEqual(movementResult, .completed)
         XCTAssertFalse(tomato.isSelected, "Dragging must not select an ingredient")
         tomato.tap()
         waitUntil(tomato, "isSelected == true")
@@ -344,6 +356,7 @@ final class CloudKitchenUITests: XCTestCase {
         app.launchArguments = arguments
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        terminateAppAfterTest(app)
         app.launch()
         XCTAssertTrue(app.buttons["cook.presentation"].waitForExistence(timeout: 20))
         return app
@@ -443,7 +456,12 @@ final class CloudKitchenUITests: XCTestCase {
 
     @MainActor
     private func kitchenButton(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
-        kitchenContent(in: app).buttons.matching(identifier: identifier).firstMatch
+        // Projected UIKit accessibility elements may move outside the List's
+        // snapshot subtree during camera updates. Their identifiers stay unique.
+        if identifier.hasPrefix("kitchen.scene.") {
+            return app.buttons.matching(identifier: identifier).firstMatch
+        }
+        return kitchenContent(in: app).buttons.matching(identifier: identifier).firstMatch
     }
 
     @MainActor

@@ -1,6 +1,32 @@
 import UIKit
 import XCTest
 
+extension XCTestCase {
+    @MainActor
+    func assertNativeRecipeContent(in app: XCUIApplication, article: Bool = false,
+                                   file: StaticString = #filePath, line: UInt = #line) {
+        let identifier = article ? "recipe.textContent" : "recipe.detail"
+        let content = app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+        XCTAssertTrue(content.waitForExistence(timeout: 10), file: file, line: line)
+        XCTAssertEqual(content.webViews.count, 0, file: file, line: line)
+    }
+
+    @MainActor
+    func terminateAppAfterTest(_ app: XCUIApplication) {
+        // Keep the owning proxy alive until cleanup, before the next case launches.
+        addTeardownBlock { [app] in
+            await MainActor.run {
+                switch app.state {
+                case .runningForeground, .runningBackground, .runningBackgroundSuspended:
+                    app.terminate()
+                default:
+                    break
+                }
+            }
+        }
+    }
+}
+
 extension XCUIElement {
     /// Use native state polling for boolean attributes; retain predicates for text and value checks.
     /// Compound states share one deadline and all failures retain the current UI hierarchy.
@@ -77,6 +103,24 @@ extension XCUIApplication {
          "-UIPreferredContentSizeCategoryName", UIContentSizeCategory.large.rawValue]
     }
 
+    @MainActor
+    func completeDietarySelection(closingFilters: Bool, returningTo control: XCUIElement,
+                                  file: StaticString = #filePath, line: UInt = #line) {
+        let done = navigationBars.matching(identifier: "饮食目标").firstMatch
+            .buttons.matching(identifier: "dietary.done").firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 10), file: file, line: line)
+        done.tap()
+        if closingFilters {
+            let filterDone = navigationBars.matching(identifier: "筛选").firstMatch
+                .buttons.matching(identifier: "filter.done").firstMatch
+            XCTAssertEqual(filterDone.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
+                           "目标弹层关闭后，筛选页应恢复可操作", file: file, line: line)
+            filterDone.tap()
+        }
+        XCTAssertEqual(control.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
+                       "弹层关闭后，其实际入口页面应恢复可操作", file: file, line: line)
+    }
+
     /// 菜单辅助字号使用“当前视图”副标题；以稳定标题前缀定位同一个原生选项。
     @MainActor
     func cookingPresentationOption(_ title: String) -> XCUIElement {
@@ -150,16 +194,20 @@ extension XCUIApplication {
             captureDecisionFailure()
         }
         XCTAssertEqual(namedResult, .completed, "应播报选中的菜，而不是停在挑选中", file: file, line: line)
+        // A recipe name may itself contain the spoken-summary separator.
+        let summaryParts = recipe.label.components(separatedBy: "，")
+        let possibleTitles = (1...summaryParts.count).map { summaryParts.prefix($0).joined(separator: "，") }
         open.tap()
         let detail = buttons.matching(identifier: "recipe.openKitchen").firstMatch
         let opened = detail.waitForExistence(timeout: 10)
         if !opened { captureDecisionFailure() }
         XCTAssertTrue(opened, "看做法应进入菜谱详情", file: file, line: line)
-        // The action is destroyed with its sheet. Query the presentation's small
-        // navigation namespace, rather than searching every underlying recipe button.
-        let dismissed = navigationBars.matching(identifier: decisionTitle).firstMatch.waitForNonExistence(timeout: 10)
+        // Require the selected recipe's navigation to become interactive instead
+        // of traversing every app descendant to prove the old sheet is absent.
+        let detailNavigation = navigationBars.matching(NSPredicate(format: "identifier IN %@", possibleTitles)).firstMatch
+        let dismissed = detailNavigation.waitForState("exists == true AND isHittable == true", timeout: 10) == .completed
         if !dismissed { captureDecisionFailure() }
-        XCTAssertTrue(dismissed, "打开做法后决定页应关闭", file: file, line: line)
+        XCTAssertTrue(dismissed, "打开做法后应进入可操作的选中菜谱详情", file: file, line: line)
     }
 }
 
