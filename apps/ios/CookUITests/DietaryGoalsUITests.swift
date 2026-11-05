@@ -89,6 +89,21 @@ final class DietaryGoalsUITests: XCTestCase {
     }
 
     @MainActor
+    private func revealAuditGoalOption(_ identifier: String, in app: XCUIApplication,
+                                       file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
+        let choices = app.collectionViews.matching(identifier: "dietary.choices").element
+        XCTAssertTrue(choices.waitForExistence(timeout: 10), file: file, line: line)
+        let option = choices.buttons.matching(identifier: identifier).element
+        for _ in 0..<8 {
+            if option.exists && option.isHittable { break }
+            choices.swipeUp()
+        }
+        XCTAssertEqual(option.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
+                       file: file, line: line)
+        return option
+    }
+
+    @MainActor
     private func select(_ goal: String, in app: XCUIApplication) {
         let openedFilters = openGoalPicker(in: app)
         let option = goalOption("dietary.goal.\(goal)", in: app)
@@ -525,15 +540,7 @@ final class DietaryGoalsUITests: XCTestCase {
     private func verifyNativeGoalFlow(contentSize: UIContentSizeCategory, auditTypes: [XCUIAccessibilityAuditType]) throws {
         let app = app(contentSize: contentSize)
         let openedFilters = openGoalPicker(in: app)
-        let option = goalOption("dietary.goal.less-added-sugar", in: app)
-        for _ in 0..<8 {
-            if option.exists && option.isHittable { break }
-            app.swipeUp()
-        }
-        // The sheet's List can relayout after its first hit-test snapshot.
-        // Synchronize the actual interaction instead of asserting a second
-        // instantaneous snapshot immediately after the scrolling check.
-        XCTAssertEqual(option.waitForState("exists == true AND isHittable == true", timeout: 10), .completed)
+        let option = revealAuditGoalOption("dietary.goal.less-added-sugar", in: app)
         option.tap()
         let auditScreen = XCTAttachment(screenshot: app.screenshot())
         auditScreen.name = "dietary-picker-before-audits"
@@ -553,7 +560,10 @@ final class DietaryGoalsUITests: XCTestCase {
             }
             print("Passed dietary accessibility audit: \(auditType.rawValue)")
         }
-        XCTAssertTrue(option.isSelected)
+        // Audits can reset the List's scroll position and rebuild its rows.
+        // Find the same goal again without changing its selection, then verify it.
+        let auditedOption = revealAuditGoalOption("dietary.goal.less-added-sugar", in: app)
+        XCTAssertTrue(auditedOption.isSelected)
         assertRememberControlAbsent(in: app)
         let picker = XCTAttachment(screenshot: app.screenshot())
         picker.name = "dietary-accessibility-picker"
@@ -595,17 +605,20 @@ final class DietaryGoalsUITests: XCTestCase {
         let navigation = app.navigationBars.matching(identifier: "饮食目标").element
         for container in [choices, navigation] {
             XCTAssertTrue(container.waitForExistence(timeout: 10), file: file, line: line)
-            XCTAssertFalse(container.buttons.matching(identifier: "dietary.remember").firstMatch.exists, file: file, line: line)
-            XCTAssertFalse(container.switches.matching(identifier: "dietary.remember").firstMatch.exists, file: file, line: line)
+            // A missing firstMatch can stall Xcode 27's injected snapshot traversal.
+            // Count both control types in the presented container instead.
+            XCTAssertEqual(container.buttons.matching(identifier: "dietary.remember").count, 0, file: file, line: line)
+            XCTAssertEqual(container.switches.matching(identifier: "dietary.remember").count, 0, file: file, line: line)
         }
     }
 
     @MainActor
     private func revealRecipe(_ identifier: String, in app: XCUIApplication, maximumSwipes: Int,
                               file: StaticString = #filePath, line: UInt = #line) -> XCUIElement? {
-        // Keep each row lookup inside the confirmed result list.
-        let results = app.collectionViews.matching(identifier: "dietary.results").firstMatch
-        let recipe = results.buttons.matching(identifier: identifier).firstMatch
+        // Both identifiers are unique. Full matching avoids the lazy snapshot
+        // traversal that CI stalled in after scrolling at maximum text size.
+        let results = app.collectionViews.matching(identifier: "dietary.results").element
+        let recipe = results.buttons.matching(identifier: identifier).element
         guard results.waitForExistence(timeout: 5) else {
             XCTFail("查找 \(identifier) 前未显示菜谱结果列表", file: file, line: line)
             return nil
