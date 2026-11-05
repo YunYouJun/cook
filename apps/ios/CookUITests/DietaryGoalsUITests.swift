@@ -85,7 +85,7 @@ final class DietaryGoalsUITests: XCTestCase {
     @MainActor
     private func goalOption(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
         app.collectionViews.matching(identifier: "dietary.choices").element
-            .buttons.matching(identifier: identifier).firstMatch
+            .buttons.matching(identifier: identifier).element
     }
 
     @MainActor
@@ -109,7 +109,7 @@ final class DietaryGoalsUITests: XCTestCase {
         let option = goalOption("dietary.goal.\(goal)", in: app)
         XCTAssertTrue(option.waitForExistence(timeout: 10))
         XCTAssertTrue(app.collectionViews.matching(identifier: "dietary.choices").element
-            .buttons.matching(identifier: "dietary.goal.weight-aware").firstMatch.exists)
+            .buttons.matching(identifier: "dietary.goal.weight-aware").element.exists)
         option.tap()
         XCTAssertTrue(option.isSelected)
         finishGoalSelection(in: app, closingFilters: openedFilters)
@@ -132,7 +132,7 @@ final class DietaryGoalsUITests: XCTestCase {
         filters.tap()
         // Require the presented sheet's own toolbar before snapshotting its List.
         let done = app.navigationBars.matching(identifier: "筛选").element
-            .buttons.matching(identifier: "filter.done").firstMatch
+            .buttons.matching(identifier: "filter.done").element
         XCTAssertEqual(done.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
                        "筛选弹层应完成呈现并可操作", file: file, line: line)
         let options = app.collectionViews.matching(identifier: "filter.options").element
@@ -143,7 +143,7 @@ final class DietaryGoalsUITests: XCTestCase {
     @MainActor
     private func waitForGoalPicker(in app: XCUIApplication) {
         let done = app.navigationBars.matching(identifier: "饮食目标").element
-            .buttons.matching(identifier: "dietary.done").firstMatch
+            .buttons.matching(identifier: "dietary.done").element
         XCTAssertEqual(done.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
                        "饮食目标弹层应完成呈现并可操作")
         // Xcode 27 can stall in its lazy first-match snapshot traversal after

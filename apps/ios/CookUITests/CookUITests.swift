@@ -108,7 +108,7 @@ extension XCUIApplication {
     func completeDietarySelection(closingFilters: Bool, returningTo control: XCUIElement,
                                   file: StaticString = #filePath, line: UInt = #line) {
         let goalNavigation = navigationBars.matching(identifier: "饮食目标").element
-        let done = goalNavigation.buttons.matching(identifier: "dietary.done").firstMatch
+        let done = goalNavigation.buttons.matching(identifier: "dietary.done").element
         XCTAssertTrue(done.waitForExistence(timeout: 10), file: file, line: line)
         done.tap()
         // The parent can exist while the child sheet still owns accessibility focus.
@@ -117,7 +117,7 @@ extension XCUIApplication {
                       "饮食目标弹层应先完成关闭", file: file, line: line)
         if closingFilters {
             let filterNavigation = navigationBars.matching(identifier: "筛选").element
-            let filterDone = filterNavigation.buttons.matching(identifier: "filter.done").firstMatch
+            let filterDone = filterNavigation.buttons.matching(identifier: "filter.done").element
             XCTAssertTrue(filterDone.waitForExistence(timeout: 10), file: file, line: line)
             // The real tap and observed dismissal validate readiness without an
             // extra hit-test snapshot during the sheet transition.

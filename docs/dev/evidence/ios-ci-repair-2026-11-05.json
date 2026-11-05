@@ -131,5 +131,34 @@
       "audits": "All five maximum-text and six standard-text categories passed on both devices. All selected-goal, reviewed recipe, source text and decision assertions execute. No audit, assertion or failure is skipped or retried.",
       "execution": "Reused the same shared simulators serially and restored both shutdown states."
     }
+  },
+  "uniqueGoalControlQueries": {
+    "baselineCommit": "12b9abbd8c5ee58e4ea23fe181c1edb56cd84986",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41975304751/attempts/2",
+    "job": 127103541612,
+    "passed": "Swift and the other five native groups passed. In iPad dietary, both isolated audits and seven functional cases passed.",
+    "failure": "testGoalBrowsingOpensReviewedTextAndPreservesGoalWhenDeciding exceeded its unchanged 300s execution allowance while still making UI progress. This is a test watchdog failure, not the 60-minute Actions step timeout.",
+    "observation": "The dietary.done wait began at 99.91s and its query resolved at 178.34s. The less-added-sugar wait began at 188.10s and resolved at 233.32s. Both debug attachments explicitly end their container-scoped query chain in First Match. The 5-second watchdog sample again contains XCTest _firstMatchingSnapshotForInput, XCTFilteringTransformerIterator and XCElementSnapshotDescendantsEnumerator on the live Cook main thread.",
+    "change": "Use ambiguity-checked element for unique goal options and for completion controls in the picker open/close helpers. Retain the real navigation/List containers, all original readiness/selection/dismissal/business assertions, and the original test/step limits.",
+    "artifact": {
+      "id": 13398308551,
+      "sizeBytes": 20762188,
+      "githubArchiveSha256": "d4d9cd6c627a504654c5e51b131f783b2f1bc6dfbde0dadf4810589b2310b582",
+      "verification": "Selected ZIP members verified by CRC32; archive SHA256 is GitHub metadata."
+    },
+    "localBaseline": "The unchanged browsing case was invoked with a 300s limit on the existing iPad. It failed earlier with Test crashed with signal kill at the first filter transition, before reaching the remote query stall; this different failure is not claimed as a deterministic reproduction of the remote watchdog.",
+    "validation": {
+      "infrastructureTests": 13,
+      "infrastructureFailures": 0,
+      "ipad": {
+        "runtime": "iOS 27.0",
+        "tests": 2,
+        "failures": 0,
+        "browsingSeconds": 94.435,
+        "entryAcrossLaunchesSeconds": 84.924,
+        "defaultExecutionAllowanceSeconds": 300
+      },
+      "acceptance": "Pre-publication local evidence. Acceptance still requires the full main-branch CI matrix on the successor source; local iPhone and accessibility follow-up checks are continuing."
+    }
   }
 }
