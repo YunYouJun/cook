@@ -88,6 +88,8 @@ node --test test/cookAiIntent.test.mjs test/aiIntentContract.test.mjs
 
 提交生成的 `contract.json` 后与客户端一起发布。Swift 的跨端测试会核对完整词典、版本和真实开放目标；新客户端数据与服务器不匹配时返回 `VERSION_MISMATCH`，不消耗模型配额。
 
+2026-11-02 的饮食数据 v2 开放「控制体重」后，契约同步提供 `weight-aware`。生成器保留已审核目标白名单，并要求每个开放目标至少 10 道通过记录。模型仅能将用户明确的「控制体重」翻译为份量和额外烹调油参考；减肥、减脂、低热量和疾病饮食仍列待确认，不生成营养数值或减重结论。客户端与后端须使用同一新版契约发布；本轮源码测试不代表生产云函数已更新。
+
 ## SDK 选择
 
 可以通过 SwiftPM 使用社区 [SwiftOpenAI](https://github.com/jamesrochabrun/SwiftOpenAI#deepseek) 或 [MacPaw/OpenAI](https://github.com/MacPaw/OpenAI)。二者支持 OpenAI 兼容服务，适合后续多模型或流式扩展。

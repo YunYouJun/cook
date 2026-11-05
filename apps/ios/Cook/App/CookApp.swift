@@ -18,7 +18,11 @@ struct CookApp: App {
     @State private var accounts: YunlefunAccountStore
     @State private var workbench: KitchenWorkbench
     @State private var ai: CookAISettings
+    #if DEBUG
+        @State private var videoFixtureLoaded = false
+    #endif
     private let container: ModelContainer
+    private let privateVideos: PrivateRecipeVideoStore
     /// 通知中心只弱引用代理，这里留着
     private let notificationDelegate: NotificationDelegate
 
@@ -48,8 +52,8 @@ struct CookApp: App {
                                                 managedService: ManagedCookAIService(endpoint: inMemory ? nil : ManagedCookAIService.configuredEndpoint)))
         #if DEBUG
             if uiTesting {
-                // Functional form tests exercise validation and draft retention.
-                // Avoid XCTest waiting indefinitely for keyboard/layout animation completion.
+                // Functional tests exercise controls, validation and draft retention.
+                // Avoid XCTest waiting indefinitely for keyboard/menu/layout animation completion.
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-disable-animations") {
                     UIView.setAnimationsEnabled(false)
                 }
@@ -57,9 +61,14 @@ struct CookApp: App {
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-presentation") {
                     UserDefaults.standard.set(CookPresentation.list.rawValue, forKey: "cook.presentation")
                 }
+                let environment = ProcessInfo.processInfo.environment
                 let dietaryDefaults = UserDefaults(suiteName: "cook.dietary.ui-tests")!
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-dietary") {
                     dietaryDefaults.removePersistentDomain(forName: "cook.dietary.ui-tests")
+                    if let rawGoal = environment["COOK_UI_TEST_SAVED_DIETARY_GOAL"],
+                       let goal = DietaryGoal(rawValue: rawGoal) {
+                        dietaryDefaults.set(goal.rawValue, forKey: CookSession.dietaryGoalKey)
+                    }
                 }
                 if !ProcessInfo.processInfo.arguments.contains("-ui-testing-show-dietary-introduction") {
                     dietaryDefaults.set(true, forKey: CookSession.dietaryIntroductionKey)
@@ -72,7 +81,6 @@ struct CookApp: App {
                 _workbench = State(initialValue: KitchenWorkbench(defaults: kitchenDefaults, notifications: .disabled))
                 // UI 测试隔离于用户数据库，统计请求也不会离开设备。
                 let defaults = UserDefaults(suiteName: "cook.ui-tests")!
-                let environment = ProcessInfo.processInfo.environment
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-consent") {
                     defaults.removePersistentDomain(forName: "cook.ui-tests")
                 }
@@ -98,6 +106,9 @@ struct CookApp: App {
             }
         #endif
         self.container = container
+        privateVideos = inMemory
+            ? PrivateRecipeVideoStore(localRoot: FileManager.default.temporaryDirectory.appendingPathComponent("cook-test-videos-\(ProcessInfo.processInfo.processIdentifier)"), deviceID: "00000000-0000-0000-0000-000000000001", cloudRoot: { nil })
+            : .shared
         // 点开通知会在启动完成前回调，代理要在这里就设好
         notificationDelegate = NotificationDelegate()
         UNUserNotificationCenter.current().delegate = notificationDelegate
@@ -115,8 +126,23 @@ struct CookApp: App {
                     .environment(workbench)
                     .environment(accounts)
                     .environment(ai)
+                    .environment(\.privateRecipeVideos, privateVideos)
                     .preferredColorScheme(testColorScheme)
                     .task {
+                        await privateVideos.removeAbandonedDrafts()
+                        #if DEBUG
+                            if !videoFixtureLoaded, ProcessInfo.processInfo.arguments.contains("-ui-testing"),
+                               let path = ProcessInfo.processInfo.environment["COOK_UI_TEST_VIDEO_SOURCE"] {
+                                videoFixtureLoaded = true
+                                do {
+                                    let draft = try await privateVideos.stage(URL(fileURLWithPath: path))
+                                    var recipe = PrivateRecipe(customId: "custom-ui-video", name: "视频测试蒸蛋", stuff: ["鸡蛋"], tools: [], createdAt: 1000, updatedAt: 1000)
+                                    recipe.video = draft.video
+                                    _ = try await PrivateRecipeVideoPersistence.save(recipe, replacing: nil, draft: draft, inCloud: false, in: container, files: privateVideos)
+                                    await privateVideos.discard(draft)
+                                } catch { assertionFailure("Video fixture failed: \(error)") }
+                            }
+                        #endif
                         await accounts.restore()
                         if ai.wantsManagedDeepSeek { await ai.refreshManagedCapability(accounts: accounts) }
                     }

@@ -79,18 +79,43 @@ public struct DietaryCatalog: Sendable {
     }
 
     public struct PortionOil: Decodable, Sendable {
+        public enum Unit: String, Sendable { case grams = "g", milliliters = "ml" }
+
         public let referenceServings: Int
-        public let batchOilGrams: OilRange
+        public let batchOil: OilRange
+        public let unit: Unit
         public let servingEvidence: [RecipeAmountAnnotations.Anchor]
         public let oilEvidence: [RecipeAmountAnnotations.Anchor]
 
-        public var perServingLower: Double { batchOilGrams.lower / Double(referenceServings) }
-        public var perServingUpper: Double { batchOilGrams.upper / Double(referenceServings) }
+        private enum CodingKeys: String, CodingKey {
+            case referenceServings, batchOilGrams, batchOilMilliliters, servingEvidence, oilEvidence
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            referenceServings = try container.decode(Int.self, forKey: .referenceServings)
+            guard container.contains(.batchOilGrams) != container.contains(.batchOilMilliliters) else {
+                throw DecodingError.dataCorruptedError(forKey: .batchOilGrams, in: container, debugDescription: "Exactly one source oil unit is required")
+            }
+            let grams = try container.decodeIfPresent(OilRange.self, forKey: .batchOilGrams)
+            let milliliters = try container.decodeIfPresent(OilRange.self, forKey: .batchOilMilliliters)
+            switch (grams, milliliters) {
+            case (let grams?, nil): batchOil = grams; unit = .grams
+            case (nil, let milliliters?): batchOil = milliliters; unit = .milliliters
+            default:
+                throw DecodingError.dataCorruptedError(forKey: .batchOilGrams, in: container, debugDescription: "Exactly one source oil unit is required")
+            }
+            servingEvidence = try container.decode([RecipeAmountAnnotations.Anchor].self, forKey: .servingEvidence)
+            oilEvidence = try container.decode([RecipeAmountAnnotations.Anchor].self, forKey: .oilEvidence)
+        }
+
+        public var perServingLower: Double { batchOil.lower / Double(referenceServings) }
+        public var perServingUpper: Double { batchOil.upper / Double(referenceServings) }
 
         public var label: String {
             let lower = perServingLower.formatted(.number.precision(.fractionLength(0...2)))
             let upper = perServingUpper.formatted(.number.precision(.fractionLength(0...2)))
-            return "每份添加油 \(lower == upper ? lower : "\(lower)–\(upper)") g"
+            return "每人添加油 \(lower == upper ? lower : "\(lower)–\(upper)") \(unit.rawValue)"
         }
     }
 
@@ -128,7 +153,7 @@ public struct DietaryCatalog: Sendable {
             }
         }
 
-        fileprivate func valid(for recipe: Recipe, text: RecipeText) -> Bool {
+        fileprivate func valid(for recipe: Recipe, text: RecipeText, schemaVersion: Int) -> Bool {
             guard recipe.id >= 0, recipeFingerprint == DietaryCatalog.fingerprint(recipe),
                   sourceLink == recipe.link, URL(string: sourceLink)?.scheme == "https",
                   sourceFingerprint == RecipeAmountAnnotations.fingerprint(text),
@@ -153,8 +178,9 @@ public struct DietaryCatalog: Sendable {
                 case (.weightAware, .pass):
                     guard assessment.reason == "portion-oil-reference", let oil = portionOil,
                           (1...20).contains(oil.referenceServings),
-                          oil.batchOilGrams.lower.isFinite, oil.batchOilGrams.upper.isFinite,
-                          oil.batchOilGrams.lower >= 0, oil.batchOilGrams.upper >= oil.batchOilGrams.lower,
+                          oil.batchOil.lower.isFinite, oil.batchOil.upper.isFinite,
+                          oil.batchOil.lower >= 0, oil.batchOil.upper >= oil.batchOil.lower,
+                          schemaVersion >= 2 || oil.unit == .grams,
                           !oil.servingEvidence.isEmpty, !oil.oilEvidence.isEmpty,
                           (oil.servingEvidence + oil.oilEvidence).allSatisfy({ $0.matches(text) }) else { return false }
                 default:
@@ -192,7 +218,7 @@ public struct DietaryCatalog: Sendable {
     /// Validate once against the immutable source snapshot, before deriving any candidates.
     public init(data: Data, recipes: [Recipe], amountsFingerprint: String, textForRecipe: (Int) -> RecipeText?) throws {
         let document = try JSONDecoder().decode(Document.self, from: data)
-        guard document.schemaVersion == 1, document.policyVersion == 1 else { throw DietaryCatalogError.unsupportedVersion }
+        guard [1, 2].contains(document.schemaVersion), document.policyVersion == document.schemaVersion else { throw DietaryCatalogError.unsupportedVersion }
         guard document.dataVersion.range(of: #"^[a-f0-9]{12}$"#, options: .regularExpression) != nil,
               Set(document.enabledGoals).count == document.enabledGoals.count,
               document.amountsFingerprint == amountsFingerprint else { throw DietaryCatalogError.invalidVersion }
@@ -202,7 +228,7 @@ public struct DietaryCatalog: Sendable {
         for (key, entry) in document.recipes {
             guard let id = Int(key), String(id) == key, let recipe = byID[id],
                   Set(recipe.stuff).count < Recommender.catchAllMinStuff,
-                  let text = textForRecipe(id), entry.valid(for: recipe, text: text) else { continue }
+                  let text = textForRecipe(id), entry.valid(for: recipe, text: text, schemaVersion: document.schemaVersion) else { continue }
             entries[id] = entry
             texts[id] = text
         }
@@ -235,7 +261,7 @@ public struct DietaryCatalog: Sendable {
             .sorted { a, b in
                 if a.missingStuff.count != b.missingStuff.count { return a.missingStuff.count < b.missingStuff.count }
                 if a.matchedStuff.count != b.matchedStuff.count { return a.matchedStuff.count > b.matchedStuff.count }
-                return precedes(a.recipe, b.recipe, goal: goal, aIndex: a.sourceIndex, bIndex: b.sourceIndex)
+                return precedes(a.recipe, b.recipe, aIndex: a.sourceIndex, bIndex: b.sourceIndex)
             }
     }
 
@@ -246,7 +272,7 @@ public struct DietaryCatalog: Sendable {
             (keyword.isEmpty || $0.name.contains(keyword)) && eligible($0, goal: goal, options: options, normalizer: recommender.normalizer)
         }
         return candidates.enumerated().sorted {
-            precedes($0.element, $1.element, goal: goal, aIndex: $0.offset, bIndex: $1.offset)
+            precedes($0.element, $1.element, aIndex: $0.offset, bIndex: $1.offset)
         }.map(\.element)
     }
 
@@ -258,11 +284,8 @@ public struct DietaryCatalog: Sendable {
         return entry.unresolvedIngredients.isEmpty && avoided.isDisjoint(with: normalizer.unique(entry.avoidIngredients))
     }
 
-    private func precedes(_ a: Recipe, _ b: Recipe, goal: DietaryGoal, aIndex: Int, bIndex: Int) -> Bool {
-        if goal == .weightAware, let first = entries[a.id]?.portionOil, let second = entries[b.id]?.portionOil {
-            if first.perServingUpper != second.perServingUpper { return first.perServingUpper < second.perServingUpper }
-            if first.perServingLower != second.perServingLower { return first.perServingLower < second.perServingLower }
-        }
+    private func precedes(_ a: Recipe, _ b: Recipe, aIndex: Int, bIndex: Int) -> Bool {
+        // Oil remains a source-unit reference, not a cross-unit nutrition ranking.
         let firstScore = a.score ?? Recommender.defaultScore, secondScore = b.score ?? Recommender.defaultScore
         return firstScore == secondScore ? aIndex < bIndex : firstScore > secondScore
     }

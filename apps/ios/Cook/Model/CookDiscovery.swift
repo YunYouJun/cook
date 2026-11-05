@@ -29,6 +29,7 @@ enum CookDiscoveryScene: String, CaseIterable, Identifiable {
     case easy
     case soup
     case home
+    case nextDayLunch = "next-day-lunch"
 
     var id: String { rawValue }
 
@@ -37,16 +38,18 @@ enum CookDiscoveryScene: String, CaseIterable, Identifiable {
         case .easy: return "省点心"
         case .soup: return "来点热乎的"
         case .home: return "换个家常口味"
+        case .nextDayLunch: return "次日便当"
         }
     }
 
-    var emoji: String { self == .home ? "🍚" : "🍲" }
+    var emoji: String { self == .nextDayLunch ? "🍱" : (self == .home ? "🍚" : "🍲") }
 
     var title: String {
         switch self {
         case .easy: return "下班了，想对自己好一点"
         case .soup: return "想端起一碗热乎的。"
         case .home: return "熟悉的饭桌，也想换道菜。"
+        case .nextDayLunch: return "提前备好，明天带饭。"
         }
     }
 
@@ -55,6 +58,7 @@ enum CookDiscoveryScene: String, CaseIterable, Identifiable {
         case .easy: return "包放下，饭好好吃。今天更想……"
         case .soup: return "锅里咕嘟咕嘟，桌上多了一只汤碗。今天，想从一碗汤开始。"
         case .home: return "米饭已经盛好，想找道有家常味、又不是昨天那一道的菜。"
+        case .nextDayLunch: return "先挑带饭的菜，再搭配主食和蔬菜。"
         }
     }
 
@@ -63,6 +67,7 @@ enum CookDiscoveryScene: String, CaseIterable, Identifiable {
         case .easy: return "先看看已标为「简单」的做法"
         case .soup: return "先看看标有「汤」的汤羹做法"
         case .home: return "先看看标有「家常菜」的做法"
+        case .nextDayLunch: return "份量和用油参考见图文做法。须快速冷却、冷藏运输和存放，次日彻底复热。"
         }
     }
 
@@ -71,6 +76,7 @@ enum CookDiscoveryScene: String, CaseIterable, Identifiable {
         case .easy: return CookDiscoveryFilters(easyOnly: true)
         case .soup: return CookDiscoveryFilters(methodGroup: "汤羹")
         case .home: return CookDiscoveryFilters(tag: "家常菜")
+        case .nextDayLunch: return CookDiscoveryFilters(tag: "次日便当")
         }
     }
 }

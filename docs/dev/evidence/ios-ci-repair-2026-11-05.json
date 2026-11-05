@@ -1,0 +1,256 @@
+{
+  "baselineCommit": "ed082ff821fb754998d4a4db1c4403d9f812d59f",
+  "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41963921760",
+  "supersededBillingRetry": {
+    "run": "https://github.com/YunYouJun/cook/actions/runs/41959106572/attempts/2",
+    "result": "Cancelled automatically by the successor Support-only main push; it is not the acceptance run."
+  },
+  "scope": "Dietary row/absence query helpers and the existing Debug UIKit animation flag for one static kitchen card layout test. No production behavior, deadlines, audit policy, or business assertions changed.",
+  "baselinePassed": {
+    "swift": "89 core tests with no failures; the live bridge skipped in that invocation passed in its separate 7-test Web/Swift/Web roundtrip. The 2-test personal catalog roundtrip also passed.",
+    "ipadMain": "215 application unit tests and 26 UI tests passed.",
+    "ipadDiscovery": "All 20 discovery UI tests passed."
+  },
+  "ipadDietary": {
+    "job": 127036871790,
+    "passed": "The standard accessibility journey and five of six functional journeys passed. The previously repaired empty-goal cancellation and kitchen goal browsing passed in 102.022s and 79.289s.",
+    "failures": [
+      {
+        "test": "testLargestTextCanChooseSavedGoalReadAndDecide",
+        "sourceLine": 554,
+        "observation": "All five maximum-text accessibility audits passed. After three result-list swipes, resolving dietary.recipe.333 stalled in the lazy query at 140s; the test failed with a snapshot query timeout at 303s.",
+        "fix": "Resolve the confirmed dietary.results collection and its unique recipe identifier with element; retain all scrolling, foreground, viewport and hittability checks."
+      },
+      {
+        "test": "testClearingGoalFromResultsKeepsPickerPresentedUntilDone",
+        "sourceLine": 530,
+        "observation": "The recording shows the goal picker still presented with 不限目标 selected and no remember control. Checking the absent dietary.remember button stalled in the lazy query, then failed at 256s.",
+        "fix": "Resolve the uniquely titled presented navigation bar with element. Retain checks for both button and switch absence in both presented containers using matching count == 0."
+      }
+    ],
+    "diagnostics": "Both live Cook main-thread samples contain XCTest _firstMatchingSnapshotForInput, XCTFilteringTransformerIterator and XCElementSnapshotDescendantsEnumerator. The subsequent clearing-case SIGABRT goes through XCTest captureIssuesWithContext/inScope and matchingSnapshotsInSnapshotTree. These injected query frames and the recordings support a query-traversal diagnosis rather than an inferred missing UI control.",
+    "artifact": {
+      "id": 13388257146,
+      "sizeBytes": 70217368,
+      "githubArchiveSha256": "4c3dc4838e7d78fef3360f7599bf153ccbda553d242b6829436490fb85b5cfc7",
+      "extraction": "Selected metadata, two recordings, two main-thread samples and one crash report only; downloaded ZIP members verified by CRC32. The SHA256 is GitHub archive metadata, not a locally downloaded full archive checksum."
+    }
+  },
+  "localBaseline": {
+    "device": "Existing iPad Pro 13-inch (M5), iOS 27.0",
+    "result": "Both unchanged failing cases passed locally in 71.467s and 119.282s. The CI-specific stall is not claimed to reproduce deterministically on this host."
+  },
+  "localValidation": {
+    "ipad": {
+      "runtime": "iOS 27.0",
+      "tests": 2,
+      "failures": 0,
+      "clearingGoalSeconds": 67.69,
+      "maximumTextSeconds": 120.495
+    },
+    "iphone": {
+      "runtime": "iOS 26.5",
+      "tests": 2,
+      "failures": 0,
+      "clearingGoalSeconds": 54.954,
+      "maximumTextSeconds": 150.285
+    },
+    "audits": "All five maximum-text audit categories passed on both devices with normal animations. The full scrolling, reviewed recipe, decision, and goal-sheet preservation assertions execute.",
+    "execution": "Reused existing iPad Pro 13-inch (M5) and iPhone 16 Pro, serial execution without cloning or erasing; original shutdown states restored."
+  },
+  "completeBaselineInventory": {
+    "status": "Superseded by merge 0854ec88862f14f4d8b41fe70e1dc6188057381b; all cancellation-time phone logs inspected.",
+    "swift": "passed",
+    "ipadMain": "passed, 215 unit tests and 26 UI tests",
+    "ipadDiscovery": "passed, 20 UI tests",
+    "ipadDietary": "Two real query-traversal failures described above; standard audit and other five functional cases passed.",
+    "iphoneDietary": "Both audits and the first four functional cases passed before cancellation; do not count the unfinished group as a full pass.",
+    "iphoneMain": "215 units and continuing UI cases passed before cancellation; do not count the unfinished group as a full pass.",
+    "iphoneDiscovery": "A real inspiration-card flow exceeded 300s after two missing UIKit animation completion notifications and an event-loop idle wait. Two subsequent cases failed acquiring the App background assertion before business checks; the largest-text menu and rotation cases then passed. Preserve these observations; they are not classified as successful tests or blanket-retried."
+  },
+  "integrationBaseline": "0854ec88862f14f4d8b41fe70e1dc6188057381b",
+  "phoneDiscovery": {
+    "job": 127036871886,
+    "failure": "testInspirationCardScrollsAboveFixedActions spent 60s twice waiting for UIKit animation-completion notifications and another 60s waiting for the event loop before its 300s watchdog. The old bound-toolbar predicate then failed after the watchdog had already fired.",
+    "integration": "Preserve the new main implementation that queries the replaced toolbar afresh. Apply the existing animation-disable flag only to this static card/footer layout journey, matching the established kitchen sharing and form functional tests. Keep actual menu selection, scene target, full card visibility and tappability assertions.",
+    "subsequentLaunchFailures": "Two following cases failed acquiring App background assertions before business checks; do not count them as passes or introduce blanket retry. Revalidate the sequence and full matrix on the integrated source.",
+    "artifact": {
+      "id": 13388994639,
+      "githubArchiveSha256": "e4f0436912487a90206119f42d9697ce8ed742306afc99155ad41746cf16a00d"
+    }
+  },
+  "integratedValidation": {
+    "sourceBaseline": "0854ec88862f14f4d8b41fe70e1dc6188057381b with both fixes applied",
+    "ipad": {
+      "runtime": "iOS 27.0",
+      "tests": 7,
+      "failures": 0,
+      "cases": {
+        "inspirationCard": 36.385,
+        "landscapeMenu": 61.155,
+        "sharedKitchenSelectionAndRecipes": 50.877,
+        "clearGoalWithPickerPresented": 72.516,
+        "maximumTextAuditsAndDecision": 121.162,
+        "maximumTextLunchAndWeightIntersection": 79.19,
+        "standardLunchAndWeightIntersection": 72.796
+      }
+    },
+    "infrastructure": {
+      "tests": 13,
+      "failures": 0,
+      "covers": "Complete branch/manual matrix, focused PR matrix, strict retry classification and aggregate gates"
+    },
+    "acceptance": "This evidence snapshot records local checks before publishing. Acceptance requires the complete main-branch CI matrix on the final source."
+  },
+  "postAuditVisibility": {
+    "baselineCommit": "4c2b6db70dd69950c5967561bf61e008556e536d",
+    "localIntegrationResult": {
+      "iphonePassed": 5,
+      "iphoneSkipped": 1,
+      "iphoneFailed": 1,
+      "skip": "Existing iPad-only landscape check",
+      "failure": "testLargestTextCanChooseSavedGoalReadAndDecide at line 556 after all five audits passed, 37.631s"
+    },
+    "recordedObservation": "Before auditing, the selected row was fully visible at y=230.7...729.0. After auditing the picker returned to the top. The recording still shows the same goal checked but partly below the viewport; reading the retained row query then reported no matching snapshot. Both standard and maximum lunch/weight intersection cases passed.",
+    "change": "Resolve the same unique goal identifier from the actual choices List before interaction and again after all audits. Keep bounded eight-swipe search and original native existence/hittability waiting. The post-audit restore does not tap or reselect a goal; retain isSelected and the entire reviewed-recipe/decision journey.",
+    "validation": {
+      "iphone": {
+        "runtime": "iOS 26.5",
+        "tests": 2,
+        "failures": 0,
+        "maximumSeconds": 161.799,
+        "standardSeconds": 100.514
+      },
+      "ipad": {
+        "runtime": "iOS 27.0",
+        "tests": 2,
+        "failures": 0,
+        "maximumSeconds": 127.234,
+        "standardSeconds": 114.602
+      },
+      "audits": "All five maximum-text and six standard-text categories passed on both devices. All selected-goal, reviewed recipe, source text and decision assertions execute. No audit, assertion or failure is skipped or retried.",
+      "execution": "Reused the same shared simulators serially and restored both shutdown states."
+    }
+  },
+  "uniqueGoalControlQueries": {
+    "baselineCommit": "12b9abbd8c5ee58e4ea23fe181c1edb56cd84986",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41975304751/attempts/2",
+    "job": 127103541612,
+    "passed": "Swift and the other five native groups passed. In iPad dietary, both isolated audits and seven functional cases passed.",
+    "failure": "testGoalBrowsingOpensReviewedTextAndPreservesGoalWhenDeciding exceeded its unchanged 300s execution allowance while still making UI progress. This is a test watchdog failure, not the 60-minute Actions step timeout.",
+    "observation": "The dietary.done wait began at 99.91s and its query resolved at 178.34s. The less-added-sugar wait began at 188.10s and resolved at 233.32s. Both debug attachments explicitly end their container-scoped query chain in First Match. The 5-second watchdog sample again contains XCTest _firstMatchingSnapshotForInput, XCTFilteringTransformerIterator and XCElementSnapshotDescendantsEnumerator on the live Cook main thread.",
+    "change": "Use ambiguity-checked element for unique goal options and for completion controls in the picker open/close helpers. Retain the real navigation/List containers, all original readiness/selection/dismissal/business assertions, and the original test/step limits.",
+    "artifact": {
+      "id": 13398308551,
+      "sizeBytes": 20762188,
+      "githubArchiveSha256": "d4d9cd6c627a504654c5e51b131f783b2f1bc6dfbde0dadf4810589b2310b582",
+      "verification": "Selected ZIP members verified by CRC32; archive SHA256 is GitHub metadata."
+    },
+    "localBaseline": "The unchanged browsing case was invoked with a 300s limit on the existing iPad. It failed earlier with Test crashed with signal kill at the first filter transition, before reaching the remote query stall; this different failure is not claimed as a deterministic reproduction of the remote watchdog.",
+    "validation": {
+      "infrastructureTests": 13,
+      "infrastructureFailures": 0,
+      "ipad": {
+        "runtime": "iOS 27.0",
+        "tests": 2,
+        "failures": 0,
+        "browsingSeconds": 94.435,
+        "entryAcrossLaunchesSeconds": 84.924,
+        "defaultExecutionAllowanceSeconds": 300
+      },
+      "acceptance": "Pre-publication local evidence. Acceptance still requires the full main-branch CI matrix on the successor source; local iPhone and accessibility follow-up checks are continuing."
+    }
+  },
+  "cameraProjectionRefresh": {
+    "baselineCommit": "9690b948aff8aa2407754417669a67e7ca6a17d7",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41993812862",
+    "job": 127132276778,
+    "device": "iPhone 18 Pro, iOS 27.2",
+    "result": "16 discovery cases passed, three existing iPad-only cases skipped, one rotation case failed at the original 5s reset-position assertion. The static inspiration-card fix passed in 80.746s.",
+    "observation": "Rotation, drag movement and both ingredient-selection toggles passed. After disabling rotation, the retained pot marker failed to resolve its First Match snapshot. Exported video frames before interaction and after reset show the fixed camera view restored; no production camera defect is inferred from the failed query alone.",
+    "change": "Resolve the globally unique pot marker with element afresh for every measurement. Read one frame for both axes, including the moved/reset predicates and disabled-drag assertions. Keep normal UIKit animations, original movement/reset tolerances, real taps/gestures, scene recreation and foreground restoration.",
+    "localBaseline": {
+      "device": "Existing iPhone Duo, iOS 27.1",
+      "passed": 1,
+      "seconds": 59.727,
+      "limitation": "The remote snapshot failure did not reproduce in this unchanged local invocation."
+    },
+    "localPatchCheck": {
+      "device": "Same existing iPhone Duo, iOS 27.1",
+      "passed": 1,
+      "seconds": 82.819
+    },
+    "artifact": {
+      "id": 13401298386,
+      "sizeBytes": 51709274,
+      "githubArchiveSha256": "a2025e5ddf064d22163c5148197f18edc644872779b2c5931b2bf02ca0c8131b",
+      "verification": "Selected ZIP members and the recording payload verified by CRC32; archive SHA256 is GitHub metadata."
+    },
+    "integratedIpad": {
+      "runtime": "iOS 27.0",
+      "passed": 1,
+      "seconds": 54.274,
+      "normalAnimations": true
+    }
+  },
+  "acceptanceScope": {
+    "userRequest": "怎么运行这么久 可以精简一下 CI？",
+    "current": "Default push/PR CI now requires the two-device core matrix plus the existing Swift and general jobs. Full UI coverage and both audit journeys remain available through manual full mode. This supersedes earlier pre-publication full-matrix acceptance notes in this historical report."
+  },
+  "dietaryProjectionAndScroll": {
+    "baselineCommit": "9690b948aff8aa2407754417669a67e7ca6a17d7",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41993812862",
+    "job": 127132276565,
+    "remoteObservation": "Both audit journeys and seven functional dietary cases passed. The maximum-text lunch case passed the 10-to-9 candidate-count assertions but exhausted five result-list swipes at 97.924s. Its exact recipe query existed after the last swipe but remained unhittable; the recording still showed earlier tall rows.",
+    "scrollChange": "Use the existing 25-swipe accessibility-journey bound only for the maximum-text lunch case; retain the five-swipe standard-size bound, exact recipe 333 target, viewport/foreground/list checks, hittability, source-oil-unit assertion and original execution allowances.",
+    "projectionEvidence": "Existing iPhone Duo/iOS 27.1 exposed completion controls and the results menu in Toolbar siblings outside NavigationBar. After scrolling maximum-size filters, the recorded toolbar subtree was empty. The first three-case batch passed rotation but failed both lunch cases before reaching recipe scrolling. Global matching then passed standard lunch, while maximum lunch and clearing failed at the remaining hidden-toolbar and scoped-results-menu queries.",
+    "projectionChange": "Resolve unique completion and results-menu controls through the existing global toolbar helper, while separately requiring the expected navigation title and actual dismissal. If a completion control is hidden, reveal it with at most eight downward swipes in its actual sheet List, then require the original control readiness. Preserve remember-control absence checks in the choices/navigation containers and include the active projected toolbar. No production UI changes or assertion retries.",
+    "duoAfterReveal": {
+      "runtime": "iOS 27.1",
+      "passed": 3,
+      "failed": 0,
+      "clearingSeconds": 56.477,
+      "maximumLunchSeconds": 92.871,
+      "standardLunchSeconds": 75.308,
+      "observation": "One downward filter-list swipe restored the maximum-text completion control."
+    },
+    "duoFinalToolbarAbsence": {
+      "passed": 1,
+      "failed": 0,
+      "clearingSeconds": 66.508
+    },
+    "artifact": {
+      "id": 13401169264,
+      "sizeBytes": 44691991,
+      "githubArchiveSha256": "598c9fd931efca0004979c97e38a53c330de392fb4b6f74782ba0ee860d4af96",
+      "verification": "Selected ZIP members and the failed-case recording verified by CRC32; archive SHA256 is GitHub metadata."
+    }
+  },
+  "streamlinedCi": {
+    "default": "Pushes and PRs: two core-regression jobs, one iPhone and one iPad, all 216 App units and five UI cases per device. The current camera-reset and maximum-text lunch failures remain in the default selectors.",
+    "manual": "workflow_dispatch input ios_coverage defaults to full: all three suites on both devices, all 56 UI methods including both system audit journeys. Explicit core selects the smaller matrix. Unknown or missing plans retain full coverage.",
+    "gates": "Stable ios gate requires every selected device job. Documentation-only handling, complete test compilation, failure propagation and strict isolated-audit retry classification remain.",
+    "limits": "Core build 15m/test 30m/job 45m; manual full build 15m/test 60m/job 90m. No new general failure retries.",
+    "orchestrationChecks": {
+      "passed": 22,
+      "failed": 0,
+      "covers": "Real Bash invocations, actual planner CLI outputs, malformed events, core/full selection, full per-device UI coverage exactly once, complete App-unit selection, and failure/cancellation gates"
+    },
+    "localIpadCore": {
+      "runtime": "iOS 27.0",
+      "appUnits": 216,
+      "uiTests": 5,
+      "failures": 0,
+      "unitSeconds": 12.467,
+      "uiSeconds": {
+        "rotation": 54.274,
+        "catalogCount": 21.211,
+        "avoidanceSearch": 88.773,
+        "clearingGoal": 69.967,
+        "maximumLunch": 96.935
+      }
+    },
+    "previousFullRun": "Cancelled at the user request to streamline CI after collecting both real iPhone failures. The unfinished iPad groups are not counted as passes.",
+    "acceptance": "This snapshot records pre-publication local checks. Remote acceptance uses the new default core workflow on the final published source; no complete manual-full pass is claimed."
+  }
+}

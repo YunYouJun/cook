@@ -77,6 +77,7 @@ export default defineConfig(withYunlefun({
           items: [
             { text: '快速开始', link: '/guide/getting-started' },
             { text: '一句话找菜', link: '/guide/sentence-input' },
+            { text: '第二天带饭', link: '/guide/next-day-lunch' },
             { text: '网页版域名与原有数据', link: '/guide/web-domain' },
             { text: '云食册 iOS 测试安装', link: '/guide/ios-beta#testflight' },
           ],

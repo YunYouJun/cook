@@ -189,23 +189,28 @@ final class CookDiscoveryUITests: XCTestCase {
         selectIngredient("土豆", in: app)
         selectIngredient("微波炉", in: app)
         chooseScene("home", in: app)
-        let empty = cookingContent(in: app).staticTexts.matching(identifier: "discovery.empty").firstMatch
+        // The fixture is in the ingredient list. Resolve its unique empty state
+        // directly, including when the inspiration section is below the fold.
+        let chooser = app.collectionViews.matching(identifier: "cook.chooser").element
+        let empty = chooser.staticTexts.matching(identifier: "discovery.empty").element
         reveal(empty, in: app)
         XCTAssertTrue(empty.waitForExistence(timeout: 10))
-        let context = cookingContent(in: app).staticTexts.matching(identifier: "discovery.context").firstMatch
-        XCTAssertTrue(context.label.contains("土豆"))
-        XCTAssertTrue(context.label.contains("微波炉"))
-        XCTAssertTrue(context.label.contains("推荐方式：全部推荐"))
+        let context = chooser.staticTexts.matching(identifier: "discovery.context").element.label
+        XCTAssertTrue(context.contains("土豆"))
+        XCTAssertTrue(context.contains("微波炉"))
+        XCTAssertTrue(context.contains("推荐方式：全部推荐"))
         capture(app, "find-recipes-empty-scene")
-        let reset = cookingContent(in: app).buttons.matching(identifier: "discovery.reset").firstMatch
+        let reset = chooser.buttons.matching(identifier: "discovery.reset").element
         reveal(reset, in: app)
         reset.tap()
         wait(empty, "exists == false")
-        XCTAssertFalse(cookingContent(in: app).buttons.matching(identifier: "cook.clearScene").firstMatch.exists)
-        reveal(recipeLinks(in: app).firstMatch, in: app, towardTop: true)
-        XCTAssertTrue(recipeLinks(in: app).firstMatch.exists)
-        XCTAssertTrue(context.label.contains("土豆"))
-        XCTAssertTrue(context.label.contains("微波炉"))
+        XCTAssertFalse(chooser.buttons.matching(identifier: "cook.clearScene").element.exists)
+        let recipe = chooser.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "discovery.recipe.")).firstMatch
+        reveal(recipe, in: app, towardTop: true)
+        XCTAssertTrue(recipe.exists)
+        let restoredContext = chooser.staticTexts.matching(identifier: "discovery.context").element.label
+        XCTAssertTrue(restoredContext.contains("土豆"))
+        XCTAssertTrue(restoredContext.contains("微波炉"))
         for name in ["土豆", "微波炉"] {
             let item = ingredientButton(name, in: app)
             // Potato is above the inspiration section; the tool is below it after returning to potato.
@@ -222,7 +227,7 @@ final class CookDiscoveryUITests: XCTestCase {
         let goal = filterButton("dietary.openPicker", in: app)
         reveal(goal, in: app, page: .filters)
         goal.tap()
-        let sugar = app.collectionViews.matching(identifier: "dietary.choices").firstMatch.buttons.matching(identifier: "dietary.goal.less-added-sugar").firstMatch
+        let sugar = app.collectionViews.matching(identifier: "dietary.choices").element.buttons.matching(identifier: "dietary.goal.less-added-sugar").firstMatch
         XCTAssertTrue(sugar.waitForExistence(timeout: 10))
         sugar.tap()
         app.completeDietarySelection(closingFilters: true,
@@ -285,9 +290,9 @@ final class CookDiscoveryUITests: XCTestCase {
         guard app.windows.firstMatch.horizontalSizeClass == .regular else {
             throw XCTSkip("此用例检查 iPad 双栏布局")
         }
-        let resultList = app.descendants(matching: .any).matching(identifier: "dietary.results").firstMatch
+        let resultList = app.collectionViews.matching(identifier: "dietary.results").element
         wait(resultList, "exists == true AND isHittable == true")
-        let catalogHeader = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "当前候选 · ")).firstMatch
+        let catalogHeader = resultList.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "当前候选 · ")).firstMatch
         wait(catalogHeader, "exists == true")
         XCTAssertGreaterThan(Int(catalogHeader.label.filter { $0.isASCII && $0.isNumber }) ?? 0, 3,
                              "右栏应直接展示完整结果，而不是三道灵感的入口")
@@ -305,9 +310,9 @@ final class CookDiscoveryUITests: XCTestCase {
 
         tomato.tap()
         wait(tomato, "isSelected == true")
-        let selection = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已选：番茄")).firstMatch
+        let selection = resultList.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已选：番茄")).firstMatch
         wait(selection, "exists == true")
-        let match = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
+        let match = resultList.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
         wait(match, "exists == true AND isHittable == true")
         XCTAssertTrue(tomato.isHittable, "结果更新后左栏仍应停在食材选择区")
         XCTAssertGreaterThan(match.frame.midX, tomato.frame.maxX, "结果应在食材旁实时更新")
@@ -410,9 +415,8 @@ final class CookDiscoveryUITests: XCTestCase {
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         terminateAppAfterTest(app)
         app.launch()
-        let presentation = app.cookingToolbarButton("cook.presentation")
-        XCTAssertTrue(presentation.waitForExistence(timeout: 20))
-        app.selectCookingPresentation("食材快选")
+        // The launch fixture resets presentation to the ingredient list.
+        XCTAssertTrue(app.collectionViews.matching(identifier: "cook.chooser").element.waitForExistence(timeout: 20))
         return app
     }
 
@@ -421,7 +425,7 @@ final class CookDiscoveryUITests: XCTestCase {
         let menu = app.cookingToolbarButton("cook.presentation")
         let value = menu.value as? String
         let kitchen = value == "云厨房" || (value != "食材快选" && menu.label.contains("云厨房"))
-        return app.collectionViews.matching(identifier: kitchen ? "kitchen.content" : "cook.chooser").firstMatch
+        return app.collectionViews.matching(identifier: kitchen ? "kitchen.content" : "cook.chooser").element
     }
 
     @MainActor
@@ -492,14 +496,17 @@ final class CookDiscoveryUITests: XCTestCase {
         let filters = app.cookingToolbarButton("cook.filters")
         wait(filters, "isHittable == true")
         filters.tap()
-        wait(app.navigationBars.matching(identifier: "筛选").firstMatch.buttons.matching(identifier: "filter.done").firstMatch, "isHittable == true")
+        wait(app.navigationBars.matching(identifier: "筛选").element.buttons.matching(identifier: "filter.done").element, "isHittable == true")
     }
 
     @MainActor
     private func closeFilters(in app: XCUIApplication) {
-        let done = app.navigationBars.matching(identifier: "筛选").firstMatch.buttons.matching(identifier: "filter.done").firstMatch
+        let sheetNavigation = app.navigationBars.matching(identifier: "筛选").element
+        let done = sheetNavigation.buttons.matching(identifier: "filter.done").element
         wait(done, "isHittable == true")
         done.tap()
+        // The underlying toolbar can exist while the sheet still owns its hit point.
+        XCTAssertTrue(sheetNavigation.waitForNonExistence(timeout: 10))
         wait(app.cookingToolbarButton("cook.filters"), "exists == true AND isHittable == true")
     }
 

@@ -343,6 +343,7 @@ struct CookView: View {
                 ) {
                     session.toggleStuff(item.name)
                 }
+                .accessibilityIdentifier("cook.ingredient.\(item.name)")
             }
             if isExpanded || hidden > 0 {
                 MoreChip(isExpanded: isExpanded, hidden: hidden) {

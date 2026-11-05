@@ -4,7 +4,7 @@ Support 是工单状态、用户沟通和送达回执的权威来源。GitHub �
 
 ## 执行链路
 
-`.github/workflows/support-sync.yml` 从 `main` 运行，生产凭据只由限定 `main` 的 `support-cook` 环境提供，在主分支提交、手动触发及每 15 分钟巡检时读取私密绑定。PR 无需合并即可关联；轮询只读取 PR 元数据，不执行 PR 源码或解释正文中的指令。合并时采用最终 merge/squash SHA，并通过 GitHub compare 核对它确实属于当前主分支。
+`.github/workflows/support-sync.yml` 从 `main` 运行，生产凭据只由限定 `main` 的 `support-cook` 环境提供，仅在维护者按需手动触发时读取私密绑定，不再随主分支提交或定时运行。PR 无需合并即可关联；同步只读取 PR 元数据，不执行 PR 源码或解释正文中的指令。合并时采用最终 merge/squash SHA，并通过 GitHub compare 核对它确实属于当前主分支。
 
 1. 将 commit、PR 和可选 Issue 写入工单的 `changeRefs` 与内部处理记录；不因此解决或关闭工单。
 2. 锁定同一主分支 SHA 对应的 `ci.yml` 最新 main push 运行及当前 attempt，要求其中全部 lint、typecheck、build、test（含所有矩阵任务）成功；必须同时通过依赖这四项的 `web-acceptance` 聚合任务，以证明整个矩阵均已结束；其他工作流的同名 job 和旧运行结果不能替代。
@@ -60,15 +60,15 @@ GitHub 中现有 `Production – cook` 部署记录来自 Vercel，不作为 Edg
 - `COOK_SUPPORT_LEDGER_KEY`：独立随机密钥，至少 32 字节；与签名私钥分离。
 - `EDGEONE_API_TOKEN`：有权只读核对这两个已有项目的 EdgeOne 凭据。
 
-首次手动执行保持 `apply: false`、`send_replies: false`、`allow_initialize: true`，查看计数和等待阶段。确认后进行第一次 `apply: true` 执行，仍保持 `allow_initialize: true`；已有历史后不再允许初始化。完成验收后，设置仓库变量 `COOK_SUPPORT_ENABLED=true` 启用主分支和周期巡检。
+首次手动执行保持 `apply: false`、`send_replies: false`、`allow_initialize: true`，查看计数和等待阶段。确认后进行第一次 `apply: true` 执行，仍保持 `allow_initialize: true`；已有历史后不再允许初始化。后续仍按需手动执行，每次通过 `apply`、`send_replies` 输入明确本次授权；不再使用 `COOK_SUPPORT_ENABLED` 或 `COOK_SUPPORT_AUTO_REPLY` 仓库变量。
 
-回复可由维护者在 Support 页面核对并发布。自动发送要求对应绑定的 `sendReply: true`，并满足以下运行授权之一：手动执行时明确选择 `send_replies: true`；主分支和定时巡检时设置仓库变量 `COOK_SUPPORT_AUTO_REPLY=true`。默认不开启，手动执行始终以本次输入为准。每次未知结果重试都会重新检查两层授权和回复策略；撤销授权或修改修复事实、文案、验收 profile 后保留原意图并停止发送。生成的草稿及验证记录必须仍与本次验收一致。
+回复可由维护者在 Support 页面核对并发布。自动发送要求对应绑定的 `sendReply: true`，并在本次手动执行时明确选择 `send_replies: true`。默认不开启，每次执行以本次输入为准。每次未知结果重试都会重新检查两层授权和回复策略；撤销授权或修改修复事实、文案、验收 profile 后保留原意图并停止发送。生成的草稿及验证记录必须仍与本次验收一致。
 
 ## 账本与重试
 
 每个操作在发送前固定完整请求、版本、幂等键和守卫条件。未知结果重放相同输入和键；版本冲突只有在用户消息、人工处理和状态均未变化时才允许有限重基。生产动作的未知操作不能在单纯 commit／PR 关联阶段重放，仍须先通过本轮生产门槛。
 
-账本使用独立密钥的 AES-256-GCM 加密。每个新命令执行前，先通过固定版本的官方 `@actions/artifact` 完成远端不可变检查点上传；收到 finalized ID 并核对摘要后才发送命令。runner 在命令成功后被终止，也能恢复原输入与幂等键。状态未变化的巡检不重复上传，仅每日刷新保留期。检查点名称只包含 run、attempt 和序号，不包含工单身份；只上传加密文件，保留 90 天。
+账本使用独立密钥的 AES-256-GCM 加密。每个新命令执行前，先通过固定版本的官方 `@actions/artifact` 完成远端不可变检查点上传；收到 finalized ID 并核对摘要后才发送命令。runner 在命令成功后被终止，也能恢复原输入与幂等键。状态未变化的运行不重复上传，实际运行时最多每日刷新一次保留期；停用期间不会自动续期。检查点名称只包含 run、attempt 和序号，不包含工单身份；只上传加密文件，保留 90 天。
 
 每次最多写入 9 个命令检查点，并为最终状态预留一个；批次耗尽时保存待执行意图，下一轮继续。同一 run 的早期 attempt 也属于恢复历史。下载使用官方工具包，核对来源为本仓库 `main` 的 `support-sync.yml`、摘要和单文件；事件仅允许 push、schedule、workflow_dispatch。失败运行的检查点仍可恢复。最新检查点损坏、过期、来源不符、下载失败或密钥不符均停止，不回退旧状态，不自动重置。工具包日志在隔离子进程内处理，禁止把明文状态放入 Actions cache、artifact、job summary 或日志。
 
@@ -80,10 +80,10 @@ GitHub 中现有 `Production – cook` 部署记录来自 Vercel，不作为 Edg
 node scripts/cook-support-sync.mjs --allow-initialize
 ```
 
-GitHub 运行使用 Node action 获取官方 artifact 运行时；浏览器只在需要新的生产验收时安装，已验收版本的送达巡检复用既有验收证明。CI 会用独立的合成加密数据执行真实 artifact 上传、下载与摘要验收，不访问 Support，不使用工单检查点命名空间。
+GitHub 运行使用 Node action 获取官方 artifact 运行时；浏览器只在需要新的生产验收时安装，已验收版本的送达核对复用既有验收证明。CI 会用独立的合成加密数据执行真实 artifact 上传、下载与摘要验收，不访问 Support，不使用工单检查点命名空间。
 
 环境变量使用 `COOK_SUPPORT_AGENT_CONFIG`、`COOK_SUPPORT_BINDINGS_FILE` 指向仓库外 0600 JSON，`COOK_SUPPORT_STATE_DIR` 指向 0700 私密目录；另设置加密密钥、只读 GitHub token、EdgeOne token 和绝对路径 `COOK_PLAYWRIGHT_MODULE`。只有显式 `--apply` 才执行工单命令。不要在命令或公开日志中写入凭据值。
 
 ## 停用与回退
 
-设置 `COOK_SUPPORT_AUTO_REPLY=false` 停止后续发送；设置 `COOK_SUPPORT_ENABLED=false` 停止自动巡检，保留账本、绑定和 Support 原始记录。回退发布按现有 EdgeOne Git 流程执行；自动化不会删除用户消息、伪造送达或回退人工状态。密钥轮换和账本恢复应在暂停巡检后核对，不能将恢复失败当作首次使用。
+保持手动输入 `send_replies: false` 即不发送回复。需要完全停用时，使用 `gh workflow disable support-sync.yml --repo YunYouJun/cook`；恢复前先确认 `main` 中的工作流只有 `workflow_dispatch` 触发器，再使用对应的 `gh workflow enable` 命令。清理 Actions 历史时保留所有账本 artifact 及其所属运行，避免丢失恢复来源；停用期间保留账本、绑定和 Support 原始记录。回退发布按现有 EdgeOne Git 流程执行；自动化不会删除用户消息、伪造送达或回退人工状态。密钥轮换和账本恢复应在暂停执行后核对，不能将恢复失败当作首次使用。

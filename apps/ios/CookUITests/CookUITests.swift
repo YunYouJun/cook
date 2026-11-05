@@ -66,9 +66,10 @@ extension XCUIElement {
                                  { element.wait(for: \.isEnabled, toEqual: true, timeout: remaining()) },
                                  matching: { element.exists && element.isEnabled })
         case "exists == true AND isHittable == true":
-            result = waitForBoth({ element.waitForExistence(timeout: remaining()) },
-                                 { element.wait(for: \.isHittable, toEqual: true, timeout: remaining()) },
-                                 matching: { element.exists && element.isHittable })
+            // A hittable element necessarily exists. Avoid two more accessibility
+            // snapshots once XCTest has found its hit point.
+            result = element.waitForExistence(timeout: remaining())
+                && element.wait(for: \.isHittable, toEqual: true, timeout: remaining()) ? .completed : .timedOut
         case "isEnabled == true AND isHittable == true":
             result = waitForBoth({ element.wait(for: \.isEnabled, toEqual: true, timeout: remaining()) },
                                  { element.wait(for: \.isHittable, toEqual: true, timeout: remaining()) },
@@ -106,16 +107,25 @@ extension XCUIApplication {
     @MainActor
     func completeDietarySelection(closingFilters: Bool, returningTo control: XCUIElement,
                                   file: StaticString = #filePath, line: UInt = #line) {
-        let done = navigationBars.matching(identifier: "饮食目标").firstMatch
-            .buttons.matching(identifier: "dietary.done").firstMatch
+        let goalNavigation = navigationBars.matching(identifier: "饮食目标").element
+        let done = revealSheetCompletion("dietary.done", in: "dietary.choices", file: file, line: line)
         XCTAssertTrue(done.waitForExistence(timeout: 10), file: file, line: line)
+        XCTAssertTrue(goalNavigation.exists, file: file, line: line)
         done.tap()
+        // The parent can exist while the child sheet still owns accessibility focus.
+        // Wait within the small navigation namespace before resolving its next action.
+        XCTAssertTrue(goalNavigation.waitForNonExistence(timeout: 10),
+                      "饮食目标弹层应先完成关闭", file: file, line: line)
         if closingFilters {
-            let filterDone = navigationBars.matching(identifier: "筛选").firstMatch
-                .buttons.matching(identifier: "filter.done").firstMatch
-            XCTAssertEqual(filterDone.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
-                           "目标弹层关闭后，筛选页应恢复可操作", file: file, line: line)
+            let filterNavigation = navigationBars.matching(identifier: "筛选").element
+            let filterDone = revealSheetCompletion("filter.done", in: "filter.options", file: file, line: line)
+            XCTAssertTrue(filterDone.waitForExistence(timeout: 10), file: file, line: line)
+            XCTAssertTrue(filterNavigation.exists, file: file, line: line)
+            // The real tap and observed dismissal validate readiness without an
+            // extra hit-test snapshot during the sheet transition.
             filterDone.tap()
+            XCTAssertTrue(filterNavigation.waitForNonExistence(timeout: 10),
+                          "完成按钮应关闭筛选弹层", file: file, line: line)
         }
         XCTAssertEqual(control.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
                        "弹层关闭后，其实际入口页面应恢复可操作", file: file, line: line)
@@ -123,8 +133,28 @@ extension XCUIApplication {
 
     @MainActor
     func cookingToolbarButton(_ identifier: String) -> XCUIElement {
-        navigationBars.matching(identifier: "找菜").firstMatch
-            .buttons.matching(identifier: identifier).firstMatch
+        // Resolve the unique control independently of the navigation hierarchy
+        // replaced by a layout switch. Full matching avoids the lazy lookup
+        // that CI failed to resolve even after the requested layout appeared.
+        buttons.matching(identifier: identifier).element
+    }
+
+    @MainActor
+    func revealSheetCompletion(_ identifier: String, in collectionIdentifier: String,
+                               file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
+        let button = cookingToolbarButton(identifier)
+        if button.exists && button.isHittable { return button }
+        let list = collectionViews.matching(identifier: collectionIdentifier).element
+        XCTAssertTrue(list.waitForExistence(timeout: 10), file: file, line: line)
+        // Scrolling can hide UIKit's projected toolbar. Reveal the real control
+        // through its sheet before tapping; keep selection and dismissal checks.
+        for _ in 0..<8 {
+            list.swipeDown(velocity: .slow)
+            if button.exists && button.isHittable { return button }
+        }
+        XCTAssertEqual(button.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
+                       file: file, line: line)
+        return button
     }
 
     /// 菜单辅助字号使用“当前视图”副标题；以稳定标题前缀定位同一个原生选项。
@@ -136,23 +166,42 @@ extension XCUIApplication {
     /// 通过实际菜单选择布局；工具栏在部分系统上只转发无障碍标签。
     @MainActor
     func selectCookingPresentation(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
-        let menu = cookingToolbarButton("cook.presentation")
+        let menus = navigationBars.buttons.matching(identifier: "cook.presentation")
+        let menu = menus.firstMatch
         XCTAssertTrue(menu.waitForExistence(timeout: 20), file: file, line: line)
         if menu.value as? String == name || menu.label.contains(name) { return }
         menu.tap()
         let option = cookingPresentationOption(name)
         XCTAssertTrue(option.waitForExistence(timeout: 10), file: file, line: line)
         option.tap()
-        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@ OR label CONTAINS %@", name, name), object: menu)
-        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed, file: file, line: line)
+        // Switching layouts replaces the toolbar. Match the current toolbar's
+        // accessible selection instead of polling attributes on the old button.
+        let selected = menus.matching(NSPredicate(format: "value == %@ OR label CONTAINS %@", name, name)).firstMatch
+        XCTAssertEqual(selected.waitForState("exists == true", timeout: 10), .completed,
+                       "切换后的工具栏应播报当前视图：\(name)", file: file, line: line)
+    }
+
+    /// Hittable can still describe a partly covered List row; keep its full frame above the inset.
+    @MainActor
+    func revealFilterOption(_ option: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        let list = collectionViews["filter.options"]
+        let summary = otherElements["filter.summary"]
+        XCTAssertTrue(list.waitForExistence(timeout: 10), file: file, line: line)
+        for _ in 0..<8 {
+            let bottom = summary.exists ? summary.frame.minY : list.frame.maxY
+            if option.exists && option.isHittable && option.frame.minY >= list.frame.minY
+                && option.frame.maxY <= bottom { return }
+            list.swipeUp(velocity: .slow)
+        }
+        XCTFail("筛选选项未完整露出：\(option.identifier)", file: file, line: line)
     }
 
     /// 决定页先把选中的菜停稳，再进入既有详情。
     @MainActor
     func confirmDecidedRecipe(file: StaticString = #filePath, line: UInt = #line) {
-        // The identifier is unique; stop at the match instead of checking the
-        // underlying iPad recipe list for duplicate buttons on every poll.
-        let open = buttons.matching(identifier: "cook.decide.open").firstMatch
+        // The action and spoken card each have a unique identifier. Resolve
+        // them completely instead of relying on stale first-match snapshots.
+        let open = buttons.matching(identifier: "cook.decide.open").element
         XCTAssertTrue(open.waitForExistence(timeout: 10), "决定页应出现", file: file, line: line)
         let decisionTitle = "今天吃什么"
         XCTAssertTrue(navigationBars.matching(identifier: decisionTitle).firstMatch.waitForExistence(timeout: 10),
@@ -171,7 +220,7 @@ extension XCUIApplication {
         }
         let readyResult = open.waitForState("isEnabled == true AND isHittable == true", timeout: 10)
         XCTAssertEqual(readyResult, .completed, "挑选停稳后才能打开做法", file: file, line: line)
-        let recipe = staticTexts.matching(identifier: "cook.decide.recipe").firstMatch
+        let recipe = staticTexts.matching(identifier: "cook.decide.recipe").element
         let named = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == true AND label != '' AND label != '正在挑选'"),
             object: recipe
@@ -185,16 +234,26 @@ extension XCUIApplication {
         let summaryParts = recipe.label.components(separatedBy: "，")
         let possibleTitles = (1...summaryParts.count).map { summaryParts.prefix($0).joined(separator: "，") }
         open.tap()
-        let detail = buttons.matching(identifier: "recipe.openKitchen").firstMatch
-        let opened = detail.waitForExistence(timeout: 10)
-        if !opened { captureDecisionFailure() }
-        XCTAssertTrue(opened, "看做法应进入菜谱详情", file: file, line: line)
         // Require the selected recipe's navigation to become interactive instead
         // of traversing every app descendant to prove the old sheet is absent.
         let detailNavigation = navigationBars.matching(NSPredicate(format: "identifier IN %@", possibleTitles)).firstMatch
-        let dismissed = detailNavigation.waitForState("exists == true AND isHittable == true", timeout: 10) == .completed
+        XCTAssertTrue(detailNavigation.waitForExistence(timeout: 10),
+                      "详情导航标题应对应选中的菜谱", file: file, line: line)
+        // A navigation bar is a container and may have no activation point.
+        // Its actual favorite action proves the selected detail is interactive.
+        let favorite = detailNavigation.buttons.matching(NSPredicate(format: "label IN %@", ["收藏", "取消收藏"])).firstMatch
+        let dismissed = favorite.waitForState("exists == true AND isHittable == true", timeout: 10) == .completed
         if !dismissed { captureDecisionFailure() }
         XCTAssertTrue(dismissed, "打开做法后应进入可操作的选中菜谱详情", file: file, line: line)
+        // On iPad the chooser and old detail can remain in the hierarchy while
+        // the decision sheet closes. Query the body only after its navigation
+        // is ready, and keep the workbench lookup inside the actual detail List.
+        let content = collectionViews.matching(identifier: "recipe.detail").element
+        XCTAssertTrue(content.waitForExistence(timeout: 10), file: file, line: line)
+        let detail = content.buttons.matching(identifier: "recipe.openKitchen").firstMatch
+        let opened = detail.waitForExistence(timeout: 10)
+        if !opened { captureDecisionFailure() }
+        XCTAssertTrue(opened, "看做法应进入菜谱详情", file: file, line: line)
     }
 }
 
@@ -659,6 +718,13 @@ final class CookUITests: XCTestCase {
         revealFilterOption(avoid, in: app)
         tap(avoid)
         let search = app.searchFields["搜索食材或别名"]
+        func enterQuery(_ query: String, file: StaticString = #filePath, line: UInt = #line) {
+            search.typeText(query)
+            // Search activation can replace the field identified by its prompt.
+            // Resolve the current field with the exact value the user entered.
+            let entered = app.searchFields.matching(NSPredicate(format: "value == %@", query)).element
+            XCTAssertTrue(entered.waitForExistence(timeout: 10), "搜索框应显示「\(query)」", file: file, line: line)
+        }
 
         for (index, entry) in [("西红柿", "番茄"), ("虾", "虾")].enumerated() {
             let (query, name) = entry
@@ -667,10 +733,7 @@ final class CookUITests: XCTestCase {
                 tap(search.buttons["清除文本"])
                 focusSearch(search, in: app)
             }
-            search.typeText(query)
-            let entered = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", query), object: search)
-            XCTAssertEqual(XCTWaiter.wait(for: [entered], timeout: 10), .completed)
-            XCTAssertEqual(search.value as? String, query)
+            enterQuery(query)
             let item = app.buttons["avoid.item.\(name)"]
             tap(item)
             wait(item, "isSelected == true")
@@ -679,10 +742,7 @@ final class CookUITests: XCTestCase {
         focusSearch(search, in: app)
         tap(search.buttons["清除文本"])
         focusSearch(search, in: app)
-        search.typeText("不存在的食材")
-        let entered = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "不存在的食材"), object: search)
-        XCTAssertEqual(XCTWaiter.wait(for: [entered], timeout: 10), .completed)
-        XCTAssertEqual(search.value as? String, "不存在的食材")
+        enterQuery("不存在的食材")
         wait(app.staticTexts["avoid.noSearchResults"], "exists == true")
         let tomato = app.buttons["avoid.remove.番茄"]
         let shrimp = app.buttons["avoid.remove.虾"]
