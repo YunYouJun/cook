@@ -189,23 +189,28 @@ final class CookDiscoveryUITests: XCTestCase {
         selectIngredient("土豆", in: app)
         selectIngredient("微波炉", in: app)
         chooseScene("home", in: app)
-        let empty = cookingContent(in: app).staticTexts.matching(identifier: "discovery.empty").firstMatch
+        // The fixture is in the ingredient list. Resolve its unique empty state
+        // directly, including when the inspiration section is below the fold.
+        let chooser = app.collectionViews.matching(identifier: "cook.chooser").element
+        let empty = chooser.staticTexts.matching(identifier: "discovery.empty").element
         reveal(empty, in: app)
         XCTAssertTrue(empty.waitForExistence(timeout: 10))
-        let context = cookingContent(in: app).staticTexts.matching(identifier: "discovery.context").firstMatch
-        XCTAssertTrue(context.label.contains("土豆"))
-        XCTAssertTrue(context.label.contains("微波炉"))
-        XCTAssertTrue(context.label.contains("推荐方式：全部推荐"))
+        let context = chooser.staticTexts.matching(identifier: "discovery.context").element.label
+        XCTAssertTrue(context.contains("土豆"))
+        XCTAssertTrue(context.contains("微波炉"))
+        XCTAssertTrue(context.contains("推荐方式：全部推荐"))
         capture(app, "find-recipes-empty-scene")
-        let reset = cookingContent(in: app).buttons.matching(identifier: "discovery.reset").firstMatch
+        let reset = chooser.buttons.matching(identifier: "discovery.reset").element
         reveal(reset, in: app)
         reset.tap()
         wait(empty, "exists == false")
-        XCTAssertFalse(cookingContent(in: app).buttons.matching(identifier: "cook.clearScene").firstMatch.exists)
-        reveal(recipeLinks(in: app).firstMatch, in: app, towardTop: true)
-        XCTAssertTrue(recipeLinks(in: app).firstMatch.exists)
-        XCTAssertTrue(context.label.contains("土豆"))
-        XCTAssertTrue(context.label.contains("微波炉"))
+        XCTAssertFalse(chooser.buttons.matching(identifier: "cook.clearScene").element.exists)
+        let recipe = chooser.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "discovery.recipe.")).firstMatch
+        reveal(recipe, in: app, towardTop: true)
+        XCTAssertTrue(recipe.exists)
+        let restoredContext = chooser.staticTexts.matching(identifier: "discovery.context").element.label
+        XCTAssertTrue(restoredContext.contains("土豆"))
+        XCTAssertTrue(restoredContext.contains("微波炉"))
         for name in ["土豆", "微波炉"] {
             let item = ingredientButton(name, in: app)
             // Potato is above the inspiration section; the tool is below it after returning to potato.
@@ -420,7 +425,7 @@ final class CookDiscoveryUITests: XCTestCase {
         let menu = app.cookingToolbarButton("cook.presentation")
         let value = menu.value as? String
         let kitchen = value == "云厨房" || (value != "食材快选" && menu.label.contains("云厨房"))
-        return app.collectionViews.matching(identifier: kitchen ? "kitchen.content" : "cook.chooser").firstMatch
+        return app.collectionViews.matching(identifier: kitchen ? "kitchen.content" : "cook.chooser").element
     }
 
     @MainActor
