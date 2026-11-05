@@ -101,5 +101,35 @@
       "covers": "Complete branch/manual matrix, focused PR matrix, strict retry classification and aggregate gates"
     },
     "acceptance": "This evidence snapshot records local checks before publishing. Acceptance requires the complete main-branch CI matrix on the final source."
+  },
+  "postAuditVisibility": {
+    "baselineCommit": "4c2b6db70dd69950c5967561bf61e008556e536d",
+    "localIntegrationResult": {
+      "iphonePassed": 5,
+      "iphoneSkipped": 1,
+      "iphoneFailed": 1,
+      "skip": "Existing iPad-only landscape check",
+      "failure": "testLargestTextCanChooseSavedGoalReadAndDecide at line 556 after all five audits passed, 37.631s"
+    },
+    "recordedObservation": "Before auditing, the selected row was fully visible at y=230.7...729.0. After auditing the picker returned to the top. The recording still shows the same goal checked but partly below the viewport; reading the retained row query then reported no matching snapshot. Both standard and maximum lunch/weight intersection cases passed.",
+    "change": "Resolve the same unique goal identifier from the actual choices List before interaction and again after all audits. Keep bounded eight-swipe search and original native existence/hittability waiting. The post-audit restore does not tap or reselect a goal; retain isSelected and the entire reviewed-recipe/decision journey.",
+    "validation": {
+      "iphone": {
+        "runtime": "iOS 26.5",
+        "tests": 2,
+        "failures": 0,
+        "maximumSeconds": 161.799,
+        "standardSeconds": 100.514
+      },
+      "ipad": {
+        "runtime": "iOS 27.0",
+        "tests": 2,
+        "failures": 0,
+        "maximumSeconds": 127.234,
+        "standardSeconds": 114.602
+      },
+      "audits": "All five maximum-text and six standard-text categories passed on both devices. All selected-goal, reviewed recipe, source text and decision assertions execute. No audit, assertion or failure is skipped or retried.",
+      "execution": "Reused the same shared simulators serially and restored both shutdown states."
+    }
   }
 }
