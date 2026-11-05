@@ -90,6 +90,19 @@ Web 保留 Nuxt + Ionic；原生 iOS 使用 SwiftUI，位于 [`apps/ios`](./apps
 
 ### Docker
 
+支持 Docker Compose 和域名反向代理。推荐从源码构建，确保包含当前路由修复：
+
+```bash
+git clone https://github.com/YunYouJun/cook.git
+cd cook
+docker compose up -d --build
+# http://localhost:8080
+```
+
+默认只监听本机，适合由宿主机 Nginx / Caddy 反代；需要通过服务器 IP 访问时，运行 `COOK_HOST=0.0.0.0 docker compose up -d --build`。Compose、HTTPS 反代示例、更新方式和构建参数见 [Docker 部署](https://cook.yunle.fun/dev/docker)。
+
+已发布镜像仍可直接运行（`latest` 随版本标签发布，可能落后于主分支）：
+
 ```bash
 # 从 Docker Hub 拉取最新的镜像
 docker pull yunyoujun/cook:latest
