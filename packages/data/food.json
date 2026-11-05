@@ -123,6 +123,116 @@
       "name": "青菜",
       "emoji": "🥬",
       "more": true
+    },
+    {
+      "name": "韭菜",
+      "emoji": "🥬",
+      "more": true
+    },
+    {
+      "name": "日本豆腐",
+      "emoji": "🍲",
+      "more": true
+    },
+    {
+      "name": "红椒",
+      "emoji": "🫑",
+      "more": true
+    },
+    {
+      "name": "菠萝",
+      "emoji": "🍍",
+      "more": true
+    },
+    {
+      "name": "蒜苔",
+      "emoji": "🌱",
+      "more": true
+    },
+    {
+      "name": "木耳",
+      "emoji": "🍄",
+      "more": true
+    },
+    {
+      "name": "酸菜",
+      "emoji": "🥬",
+      "more": true
+    },
+    {
+      "name": "腐竹",
+      "emoji": "🫘",
+      "more": true
+    },
+    {
+      "name": "梅菜",
+      "emoji": "🥬",
+      "more": true
+    },
+    {
+      "name": "茭白",
+      "emoji": "🥬",
+      "more": true
+    },
+    {
+      "name": "荷兰豆",
+      "emoji": "🫛",
+      "more": true
+    },
+    {
+      "name": "油麦菜",
+      "emoji": "🥬",
+      "more": true
+    },
+    {
+      "name": "香干",
+      "emoji": "🫘",
+      "more": true
+    },
+    {
+      "name": "千张",
+      "emoji": "🫘",
+      "more": true
+    },
+    {
+      "name": "山药",
+      "emoji": "🥔",
+      "more": true
+    },
+    {
+      "name": "南瓜",
+      "emoji": "🎃",
+      "more": true
+    },
+    {
+      "name": "板栗",
+      "emoji": "🌰",
+      "more": true
+    },
+    {
+      "name": "红枣",
+      "emoji": "🫘",
+      "more": true
+    },
+    {
+      "name": "黄花菜",
+      "emoji": "🌼",
+      "more": true
+    },
+    {
+      "name": "紫菜",
+      "emoji": "🌿",
+      "more": true
+    },
+    {
+      "name": "青豆",
+      "emoji": "🫛",
+      "more": true
+    },
+    {
+      "name": "酸笋",
+      "emoji": "🎍",
+      "more": true
     }
   ],
   "meat": [
@@ -178,6 +288,66 @@
       "name": "羊肉",
       "emoji": "🐑",
       "more": true
+    },
+    {
+      "name": "牛奶",
+      "emoji": "🥛",
+      "more": true
+    },
+    {
+      "name": "酸奶",
+      "emoji": "🥛",
+      "more": true
+    },
+    {
+      "name": "淡奶油",
+      "emoji": "🥛",
+      "more": true
+    },
+    {
+      "name": "黄油",
+      "emoji": "🧈",
+      "more": true
+    },
+    {
+      "name": "皮蛋",
+      "emoji": "🥚",
+      "more": true
+    },
+    {
+      "name": "血肠",
+      "emoji": "🌭",
+      "more": true
+    },
+    {
+      "name": "鲮鱼罐头",
+      "emoji": "🥫",
+      "more": true
+    },
+    {
+      "name": "咸肉",
+      "emoji": "🥓",
+      "more": true
+    },
+    {
+      "name": "火腿",
+      "emoji": "🥓",
+      "more": true
+    },
+    {
+      "name": "腊肉",
+      "emoji": "🥓",
+      "more": true
+    },
+    {
+      "name": "水浸金枪鱼罐头",
+      "emoji": "🥫",
+      "more": true
+    },
+    {
+      "name": "培根",
+      "emoji": "🥓",
+      "more": true
     }
   ],
   "staple": [
@@ -196,6 +366,56 @@
     {
       "name": "方便面",
       "emoji": "🍜"
+    },
+    {
+      "name": "粉丝",
+      "emoji": "🍜",
+      "more": true
+    },
+    {
+      "name": "粉条",
+      "emoji": "🍜",
+      "more": true
+    },
+    {
+      "name": "面粉",
+      "emoji": "🌾",
+      "more": true
+    },
+    {
+      "name": "山东煎饼",
+      "emoji": "🫓",
+      "more": true
+    },
+    {
+      "name": "河粉",
+      "emoji": "🍜",
+      "more": true
+    },
+    {
+      "name": "面筋",
+      "emoji": "🌾",
+      "more": true
+    },
+    {
+      "name": "米粉",
+      "emoji": "🍜",
+      "more": true
+    },
+    {
+      "name": "大米粉",
+      "emoji": "🌾",
+      "more": true
+    },
+    {
+      "name": "烧卖皮",
+      "emoji": "🥟",
+      "more": true
+    },
+    {
+      "name": "燕麦",
+      "emoji": "🌾",
+      "more": true
     }
   ],
   "tools": [
@@ -224,6 +444,24 @@
       "name": "一口大锅",
       "emoji": "",
       "icon": "i-mdi-pot-steam-outline"
+    },
+    {
+      "name": "电压力锅",
+      "emoji": "",
+      "icon": "i-mdi-pot-steam-outline",
+      "more": true
+    },
+    {
+      "name": "轻食机",
+      "emoji": "",
+      "icon": "i-mdi-toaster",
+      "more": true
+    },
+    {
+      "name": "料理机",
+      "emoji": "",
+      "icon": "i-mdi-blender",
+      "more": true
     }
   ]
 }

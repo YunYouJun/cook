@@ -25,6 +25,11 @@ export const recommendInputs: RecommendationOptions[] = [
   { stuff: ['鸡肉', '土豆'], pantry: ['油', '盐'], noSpicy: true },
   { stuff: ['鱼'], pantry: ['油', '盐', '葱', '姜'], difficulty: ['简单'] },
   { stuff: ['鸡蛋', '面食'], pantry: ['油', '盐'], tool: '一口大锅', mode: 'strict' },
+  { stuff: ['鸡蛋'], mode: 'survival' },
+  { stuff: ['韭菜', '鸡蛋'], mode: 'survival' },
+  { stuff: ['豆腐', '皮蛋'], mode: 'survival' },
+  { stuff: ['猪肉', '白菜', '粉条'], mode: 'survival' },
+  { stuff: ['水浸金枪鱼罐头', '面包'], tool: '轻食机', mode: 'survival' },
   { stuff: ['火龙果'] },
   { stuff: [] },
 ]

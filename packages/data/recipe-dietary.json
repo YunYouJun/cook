@@ -1760,10 +1760,10 @@
       }
     },
     "696": {
-      "recipeFingerprint": "1c49c59f01258cff",
+      "recipeFingerprint": "aecf1b36cb4e57f4",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/韭菜炒蛋/韭菜炒蛋.md",
       "sourceFingerprint": "10003acff7ec790b",
-      "reviewedAt": "2026-10-26",
+      "reviewedAt": "2026-11-04",
       "ingredients": [
         "韭菜",
         "鸡蛋",
@@ -3112,10 +3112,10 @@
       }
     },
     "756": {
-      "recipeFingerprint": "0500999d718521a8",
+      "recipeFingerprint": "c7b0b94a90d24cb8",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/蒜苔炒肉末.md",
       "sourceFingerprint": "365c788c54d2df67",
-      "reviewedAt": "2026-11-02",
+      "reviewedAt": "2026-11-04",
       "ingredients": [
         "五花肉薄片",
         "蒜苔",
@@ -3917,10 +3917,10 @@
       }
     },
     "798": {
-      "recipeFingerprint": "b7afcac32b434fd8",
+      "recipeFingerprint": "e802bc554c6314c9",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/山药南瓜炖鸡汤.md",
       "sourceFingerprint": "d041c4996a4beb09",
-      "reviewedAt": "2026-10-26",
+      "reviewedAt": "2026-11-04",
       "ingredients": [
         "鸡肉",
         "姜",
@@ -4193,10 +4193,10 @@
       }
     },
     "799": {
-      "recipeFingerprint": "47d376d3495d40f0",
+      "recipeFingerprint": "f56dd3268daa03f2",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/排骨山药玉米汤/排骨山药玉米汤.md",
       "sourceFingerprint": "10bf3a1c67762219",
-      "reviewedAt": "2026-11-02",
+      "reviewedAt": "2026-11-04",
       "ingredients": [
         "排骨",
         "山药",
@@ -4671,10 +4671,10 @@
       }
     },
     "805": {
-      "recipeFingerprint": "c96155034e3e205b",
+      "recipeFingerprint": "a754db938886fef5",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/紫菜蛋花汤.md",
       "sourceFingerprint": "16180dab39b335d8",
-      "reviewedAt": "2026-10-26",
+      "reviewedAt": "2026-11-04",
       "ingredients": [
         "鸡蛋",
         "紫菜",
@@ -4914,10 +4914,10 @@
       }
     },
     "809": {
-      "recipeFingerprint": "50b9f5ec3af4e2ef",
+      "recipeFingerprint": "2b9298e22cd4bbd3",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/黄瓜皮蛋汤.md",
       "sourceFingerprint": "0fd1dff72ba46a50",
-      "reviewedAt": "2026-10-26",
+      "reviewedAt": "2026-11-04",
       "ingredients": [
         "黄瓜",
         "皮蛋",
@@ -5536,10 +5536,10 @@
       }
     },
     "840": {
-      "recipeFingerprint": "af6ca28b0411e50e",
+      "recipeFingerprint": "d129070aef18fe80",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/韭菜盒子.md",
       "sourceFingerprint": "0700d2579e3d2d9e",
-      "reviewedAt": "2026-10-26",
+      "reviewedAt": "2026-11-04",
       "ingredients": [
         "韭菜",
         "虾仁",
@@ -6211,10 +6211,10 @@
       }
     },
     "851": {
-      "recipeFingerprint": "47941624b594630c",
+      "recipeFingerprint": "7c566d88b81040cd",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/燕麦鸡蛋饼.md",
       "sourceFingerprint": "85e8c4a07d79fb45",
-      "reviewedAt": "2026-10-26",
+      "reviewedAt": "2026-11-04",
       "ingredients": [
         "鸡蛋",
         "燕麦",
@@ -6749,10 +6749,10 @@
       }
     },
     "857": {
-      "recipeFingerprint": "a58834216604d13f",
+      "recipeFingerprint": "972a782c9ee91e80",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/鸡蛋三明治.md",
       "sourceFingerprint": "4ba66e00a7bd1b48",
-      "reviewedAt": "2026-10-26",
+      "reviewedAt": "2026-11-04",
       "ingredients": [
         "鸡蛋",
         "吐司",
@@ -7224,5 +7224,5 @@
       }
     }
   },
-  "dataVersion": "6672ece4497c"
+  "dataVersion": "ead74d1c15c9"
 }
