@@ -717,7 +717,8 @@ final class CookUITests: XCTestCase {
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
         tap(app.buttons["筛选"])
-        let avoid = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "忌口")).firstMatch
+        let avoid = app.collectionViews.matching(identifier: "filter.options").element
+            .buttons.matching(identifier: "preferences.avoid").element
         revealFilterOption(avoid, in: app)
         tap(avoid)
         let search = app.searchFields["搜索食材或别名"]

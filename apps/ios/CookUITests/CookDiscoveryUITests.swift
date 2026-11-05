@@ -496,13 +496,15 @@ final class CookDiscoveryUITests: XCTestCase {
         let filters = app.cookingToolbarButton("cook.filters")
         wait(filters, "isHittable == true")
         filters.tap()
-        wait(app.navigationBars.matching(identifier: "筛选").element.buttons.matching(identifier: "filter.done").element, "isHittable == true")
+        wait(app.cookingToolbarButton("filter.done"), "isHittable == true")
+        XCTAssertTrue(app.navigationBars.matching(identifier: "筛选").element.exists)
     }
 
     @MainActor
     private func closeFilters(in app: XCUIApplication) {
         let sheetNavigation = app.navigationBars.matching(identifier: "筛选").element
-        let done = sheetNavigation.buttons.matching(identifier: "filter.done").element
+        // UIKit can project the actionable button outside its navigation bar.
+        let done = app.cookingToolbarButton("filter.done")
         wait(done, "isHittable == true")
         done.tap()
         // The underlying toolbar can exist while the sheet still owns its hit point.
