@@ -4,15 +4,14 @@ import type { CookingStyle } from '~/composables/useCookingStyle'
 import type { RecipeItem } from '~/types'
 import { onIonViewDidEnter, onIonViewWillLeave } from '@ionic/vue'
 import { useCookingStyle } from '~/composables/useCookingStyle'
+import { cookDocumentHead, publicPages } from '~/constants'
 import { yunleHaptic } from '~/utils/yunleHost'
 
 definePageMeta({
   alias: ['/', '/home', '/tabs'],
 })
 
-useHead({
-  title: '食用手册',
-})
+useHead(cookDocumentHead(publicPages.home))
 
 const rStore = useRecipeStore()
 const nuxtApp = useNuxtApp()

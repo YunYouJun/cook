@@ -4,12 +4,15 @@ import type { DbRecipeItem } from '~/utils/db'
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useIndexedDB } from '~/composables/db'
 import { favoriteRecipeIds } from '~/composables/store/favorite'
+import { cookDocumentHead, publicPages } from '~/constants'
 import { db } from '~/utils/db'
 import { yunleHaptic } from '~/utils/yunleHost'
 
 definePageMeta({
   alias: ['/library'],
 })
+
+useHead(cookDocumentHead(publicPages.library))
 
 const keyword = ref('')
 const loading = ref(true)

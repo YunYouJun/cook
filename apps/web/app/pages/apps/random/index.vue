@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import { cookDocumentHead, publicPages } from '~/constants'
+
 definePageMeta({
   alias: ['/random'],
 })
 
-useHead({
-  title: '今天吃什么',
-})
+useHead(cookDocumentHead(publicPages.random))
 </script>
 
 <template>

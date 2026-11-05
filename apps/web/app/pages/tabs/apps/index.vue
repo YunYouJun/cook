@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import { cookDocumentHead, publicPages } from '~/constants'
+
 definePageMeta({
   alias: ['/apps'],
 })
 
-useHead({
-  title: '发现',
-})
+useHead(cookDocumentHead(publicPages.apps))
 </script>
 
 <template>

@@ -561,6 +561,7 @@ struct PreferenceRows: View {
         } label: {
             LabeledContent("忌口", value: summary(session.avoid, empty: "无"))
         }
+        .accessibilityIdentifier("preferences.avoid")
         Toggle("不吃辣", isOn: Binding(get: { session.noSpicy }, set: { session.setNoSpicy($0) }))
     }
 }

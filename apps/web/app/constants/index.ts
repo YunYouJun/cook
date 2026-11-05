@@ -1,5 +1,5 @@
 export const appName = '食用手册'
-export const appDescription = '好的，今天我们来做菜！'
+export * from './acknowledgements'
 
 /**
  * iOS App 在主屏幕上的名字，App Store 名称为「云食册 - 食用手册」
@@ -17,7 +17,7 @@ export const lastDbUpdated = '2026-10-26 21:55:53'
 
 export const icp = '苏ICP备17038157号'
 
-export * from './acknowledgements'
 export * from './links'
+export { appDescription, cookDocumentHead, publicPages } from './seo'
 
 export const ionDarkClass = 'ion-palette-dark'

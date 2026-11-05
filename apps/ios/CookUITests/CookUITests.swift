@@ -709,12 +709,16 @@ final class CookUITests: XCTestCase {
 
     @MainActor
     func testAvoidPickerSearchKeepsSelectionsAvailableForRemoval() {
+        // Search, removal, persistence, and clear-all form one long iPad journey.
+        // Keep every assertion within the same bounded budget as other long flows.
+        executionTimeAllowance = 600
         let app = XCUIApplication()
         app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
         tap(app.buttons["筛选"])
-        let avoid = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "忌口")).firstMatch
+        let avoid = app.collectionViews.matching(identifier: "filter.options").element
+            .buttons.matching(identifier: "preferences.avoid").element
         revealFilterOption(avoid, in: app)
         tap(avoid)
         let search = app.searchFields["搜索食材或别名"]

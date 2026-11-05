@@ -1,6 +1,7 @@
 import { getVitepressConfig } from '@yunyoujun/docs'
 import { defineConfig } from 'vitepress'
 import { withYunlefun, yunlefunMarkdown, zhThemeConfig } from 'vitepress-theme-yunlefun/config'
+import { serializeProductJsonLd } from '../theme/structured-data.ts'
 
 const vpConfig = getVitepressConfig({
   repo: 'https://github.com/YunYouJun/cook',
@@ -19,6 +20,25 @@ export default defineConfig(withYunlefun({
     const path = pageData.relativePath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '')
     pageData.frontmatter.head ??= []
     pageData.frontmatter.head.push(['link', { rel: 'canonical', href: `https://cook.yunle.fun/${path}` }])
+    if (pageData.relativePath !== 'index.md')
+      return
+    const description = typeof pageData.frontmatter.description === 'string' ? pageData.frontmatter.description : ''
+    const image = 'https://cook.yunle.fun/ios/light-2-cook-selected.webp'
+    const title = '云食册 · 食用手册｜有什么食材，就做什么菜'
+    pageData.frontmatter.head.push(
+      ['meta', { property: 'og:type', content: 'website' }],
+      ['meta', { property: 'og:locale', content: 'zh_CN' }],
+      ['meta', { property: 'og:site_name', content: '云食册' }],
+      ['meta', { property: 'og:title', content: title }],
+      ['meta', { property: 'og:description', content: description }],
+      ['meta', { property: 'og:url', content: 'https://cook.yunle.fun/' }],
+      ['meta', { property: 'og:image', content: image }],
+      ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+      ['meta', { name: 'twitter:title', content: title }],
+      ['meta', { name: 'twitter:description', content: description }],
+      ['meta', { name: 'twitter:image', content: image }],
+      ['script', { type: 'application/ld+json' }, serializeProductJsonLd()],
+    )
   },
   markdown: {
     ...vpConfig.markdown,

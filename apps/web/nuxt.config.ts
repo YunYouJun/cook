@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url'
 import { defineNuxtConfig } from 'nuxt/config'
 import { simpleGit } from 'simple-git'
 // import { pwa } from './app/config/pwa'
-import { appDescription, appStoreId } from './app/constants/index'
+import { appStoreId } from './app/constants/index'
+import { applyCookRouteSeo, cookDocumentHead } from './app/constants/seo'
 
 // for cloudflare
 // Object.assign(process.env, {
@@ -49,6 +50,8 @@ catch (e) {
  */
 const IONIC_COMPONENT_MODULE_RE = /[\\/]@ionic[\\/]core[\\/]components[\\/]ion-[\w-]+\.js$/
 
+const seoHead = cookDocumentHead()
+
 export default defineNuxtConfig({
   modules: [
     '@vueuse/nuxt',
@@ -76,16 +79,19 @@ export default defineNuxtConfig({
 
   app: {
     head: {
+      htmlAttrs: { lang: 'zh-CN' },
+      title: seoHead.title,
       // Mask replay text, including account details and user-created recipes.
       bodyAttrs: { 'data-clarity-mask': 'true' },
       viewport: 'width=device-width,initial-scale=1',
       link: [
+        ...seoHead.link,
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
       ],
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no, viewport-fit=cover' },
-        { name: 'description', content: appDescription },
+        ...seoHead.meta,
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
         { name: 'color-scheme', content: 'light dark' },
         // 与 iOS 模式的页面 / 导航栏背景一致
@@ -95,6 +101,7 @@ export default defineNuxtConfig({
         ...(appStoreId ? [{ name: 'apple-itunes-app', content: `app-id=${appStoreId}` }] : []),
       ],
       script: [
+        ...seoHead.script,
         // 系统开启「减弱动态效果」时关闭 Ionic 的转场动画；需要在 Ionic 初始化前写入 window.Ionic.config
         { innerHTML: 'try{if(matchMedia("(prefers-reduced-motion: reduce)").matches)window.Ionic={config:{animated:false}}}catch(e){}' },
       ],
@@ -187,6 +194,18 @@ export default defineNuxtConfig({
     ],
   },
 
+  // pwa,
+
+  hooks: {
+    'nitro:init': (nitro) => {
+      nitro.hooks.hook('prerender:generate', (route) => {
+        if (typeof route.contents !== 'string')
+          return
+        route.contents = applyCookRouteSeo(route.contents, route.route)
+      })
+    },
+  },
+
   eslint: {
     config: {
       standalone: false,
@@ -207,7 +226,4 @@ export default defineNuxtConfig({
       backButtonText: '返回',
     },
   },
-
-  // pwa,
-
 })
