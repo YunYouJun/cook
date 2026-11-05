@@ -32,7 +32,10 @@ jobs:
     permissions:
       contents: read
       actions: read
+      pull-requests: read
     outputs:
+      core_key: ${{ steps.pr_core.outputs.key }}
+      core_run: ${{ steps.pr_core.outputs.run_id }}
       skip_native: ${{ steps.changes.outputs.skip_native }}
       ios_suites: ${{ steps.changes.outputs.ios_suites }}
       ios_max_parallel: ${{ steps.changes.outputs.ios_max_parallel }}
@@ -47,11 +50,18 @@ jobs:
         run: node --test test/ciChanges.test.mjs
       - name: Test isolated iOS infrastructure recovery
         run: node --test test/iosTestInfrastructure.test.mjs
+      - run: node --test test/iosCoreReuse.test.mjs
       - name: Plan native CI coverage
         id: changes
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/ci-changes.mjs
+      - name: Find a verified PR run for this merge
+        if: github.event_name == 'push' && steps.changes.outputs.skip_native == 'false'
+        id: pr_core
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/find-ios-core-run.mjs
 
   lint:
     runs-on: ubuntu-latest
@@ -206,10 +216,48 @@ jobs:
         env:
           COOK_SWIFT_SCRATCH_PATH: apps/ios/CookCore/.build
 
+  # Only allocate a probe when both PR jobs provided matching evidence.
+  # The regular matrix remains the fallback for a failed or unavailable probe.
+  ios-core-reuse:
+    needs: changes
+    if: github.event_name == 'push' && needs.changes.result == 'success' && needs.changes.outputs.core_key != ''
+    runs-on: xcode-27
+    timeout-minutes: 10
+    continue-on-error: true
+    permissions:
+      contents: read
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    outputs:
+      verified: ${{ steps.compare.outputs.verified }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/ios-test-environment
+        id: environment
+      - name: Identify the current core environment
+        id: core_key
+        env:
+          IPHONE: ${{ steps.environment.outputs.iphone }}
+          IPAD: ${{ steps.environment.outputs.ipad }}
+        run: node scripts/ios-core-evidence.mjs
+      - name: Compare with both successful PR jobs
+        id: compare
+        env:
+          EXPECTED: ${{ needs.changes.outputs.core_key }}
+          ACTUAL: ${{ steps.core_key.outputs.key }}
+          SOURCE_RUN: ${{ needs.changes.outputs.core_run }}
+        run: |
+          if [[ -n "$ACTUAL" && "$ACTUAL" == "$EXPECTED" ]]; then
+            echo 'verified=true' >> "$GITHUB_OUTPUT"
+            echo "Reusing both iOS core checks from [PR CI run $SOURCE_RUN]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN)." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Toolchain evidence unavailable or different; running both core jobs.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   # 云食册 iOS App：XcodeGen 生成工程，在 iPhone 和 iPad 模拟器上编译并跑测试（窄屏和宽屏两种布局）
   ios-tests:
-    needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.skip_native != 'true') }}
+    needs: [changes, ios-core-reuse]
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.skip_native != 'true') && (needs.ios-core-reuse.result != 'success' || needs.ios-core-reuse.outputs.verified != 'true') }}
     runs-on: xcode-27
     timeout-minutes: ${{ matrix.suite == 'core-regression' && 45 || 90 }}
     strategy:
@@ -225,21 +273,8 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - name: Set node
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run convert
-      - run: brew install xcodegen
-      - run: xcodegen generate --spec apps/ios/project.yml
-      - run: xcodebuild -version
-      - name: Select compatible simulators
-        id: simulators
-        run: pnpm exec tsx scripts/select-ios-test-devices.ts >> "$GITHUB_OUTPUT"
+      - uses: ./.github/actions/ios-test-environment
+        id: environment
       - name: Build for testing
         timeout-minutes: 15
         run: |
@@ -250,9 +285,19 @@ jobs:
         timeout-minutes: ${{ matrix.suite == 'core-regression' && 30 || 60 }}
         id: ios_tests
         env:
-          DEVICE: ${{ steps.simulators.outputs[matrix.device] }}
+          DEVICE: ${{ steps.environment.outputs[matrix.device] }}
           IOS_SUITE: ${{ matrix.suite }}
         run: bash scripts/run-ios-ci-tests.sh
+      - name: Identify the tested PR core environment
+        if: github.event_name == 'pull_request' && matrix.suite == 'core-regression' && steps.ios_tests.outcome == 'success'
+        id: core_key
+        env:
+          IPHONE: ${{ steps.environment.outputs.iphone }}
+          IPAD: ${{ steps.environment.outputs.ipad }}
+        run: node scripts/ios-core-evidence.mjs
+      - name: 'Verified iOS core #${{ github.event.pull_request.number }} ${{ github.sha }} ${{ steps.core_key.outputs.key }}'
+        if: github.event_name == 'pull_request' && matrix.suite == 'core-regression' && steps.core_key.outputs.key != ''
+        run: echo 'Recorded the tested checkout and environment.'
       # 跑多个设备时 xcodebuild 的日志里只有失败的用例名，没有原因，从结果包里读出来
       - name: Show test failures
         timeout-minutes: 5
@@ -281,7 +326,7 @@ jobs:
 
   # Preserve the stable required-check name while requiring every native matrix cell.
   ios:
-    needs: [changes, ios-tests]
+    needs: [changes, ios-core-reuse, ios-tests]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     permissions: {}
@@ -290,9 +335,10 @@ jobs:
         env:
           CHANGES_RESULT: ${{ needs.changes.result }}
           SKIP_NATIVE: ${{ needs.changes.outputs.skip_native }}
+          REUSED_CORE: ${{ github.event_name == 'push' && needs.changes.outputs.core_key != '' && needs.ios-core-reuse.result == 'success' && needs.ios-core-reuse.outputs.verified == 'true' }}
           IOS_RESULT: ${{ needs.ios-tests.result }}
         run: |
-          if [[ "$CHANGES_RESULT" == success && "$SKIP_NATIVE" == true && "$IOS_RESULT" == skipped ]]; then
+          if [[ "$CHANGES_RESULT" == success && "$IOS_RESULT" == skipped && ("$SKIP_NATIVE" == true || "$REUSED_CORE" == true) ]]; then
             exit 0
           fi
           [[ "$IOS_RESULT" == success ]]
