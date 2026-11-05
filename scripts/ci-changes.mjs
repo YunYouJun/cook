@@ -25,7 +25,7 @@ function isDocumentation(path) {
     || (path.startsWith('docs/') && /\.(?:md|png|jpe?g|gif|webp|svg|ico)$/.test(path))
 }
 
-export function detectDocsOnly(eventName, event, cwd = process.cwd()) {
+export function detectNativeChanges(eventName, event, cwd = process.cwd()) {
   try {
     let base
     let head
@@ -56,14 +56,14 @@ export function detectDocsOnly(eventName, event, cwd = process.cwd()) {
     })
     const paths = diff.split('\0').filter(Boolean)
     return {
-      docsOnly: paths.length > 0 && paths.every(isDocumentation),
+      skipNative: paths.length > 0 && paths.every(path => isDocumentation(path) || path === '.github/workflows/support-sync.yml'),
       changedFiles: paths.length,
       comparison: `${base}${separator}${head}`,
     }
   }
   catch {
     // An unavailable base (including a force push/new branch) must never skip tests.
-    return { docsOnly: false, changedFiles: null, comparison: 'unavailable' }
+    return { skipNative: false, changedFiles: null, comparison: 'unavailable' }
   }
 }
 
@@ -75,10 +75,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   catch {
     event = {}
   }
-  const result = detectDocsOnly(process.env.GITHUB_EVENT_NAME, event)
+  const result = detectNativeChanges(process.env.GITHUB_EVENT_NAME, event)
   if (process.env.GITHUB_OUTPUT)
-    appendFileSync(process.env.GITHUB_OUTPUT, `docs_only=${result.docsOnly}\n`)
+    appendFileSync(process.env.GITHUB_OUTPUT, `skip_native=${result.skipNative}\n`)
   if (process.env.GITHUB_STEP_SUMMARY)
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Native CI: ${result.docsOnly ? 'skipped (documentation only)' : 'required'}. Changed paths: ${result.changedFiles ?? 'unknown'}. Comparison: ${result.comparison}.\n`)
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Native CI: ${result.skipNative ? 'skipped (only documentation or the Support sync workflow changed)' : 'required'}. Changed paths: ${result.changedFiles ?? 'unknown'}. Comparison: ${result.comparison}.\n`)
   console.log(JSON.stringify(result))
 }

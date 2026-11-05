@@ -23,7 +23,7 @@ jobs:
     permissions:
       contents: read
     outputs:
-      docs_only: ${{ steps.changes.outputs.docs_only }}
+      skip_native: ${{ steps.changes.outputs.skip_native }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -35,7 +35,7 @@ jobs:
         run: node --test test/ciChanges.test.mjs
       - name: Test isolated iOS infrastructure recovery
         run: node --test test/iosTestInfrastructure.test.mjs
-      - name: Detect documentation-only changes
+      - name: Check whether native tests are required
         id: changes
         run: node scripts/ci-changes.mjs
 
@@ -168,7 +168,7 @@ jobs:
   # Run shared CookCore fixtures on Linux with an explicitly installed toolchain.
   swift:
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.skip_native != 'true') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -195,7 +195,7 @@ jobs:
   # 云食册 iOS App：XcodeGen 生成工程，在 iPhone 和 iPad 模拟器上编译并跑测试（窄屏和宽屏两种布局）
   ios-tests:
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.skip_native != 'true') }}
     runs-on: xcode-27
     timeout-minutes: 90
     strategy:
@@ -272,13 +272,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions: {}
     steps:
-      - name: Require every iOS group or verified documentation-only changes
+      - name: Require every iOS group or a verified native skip
         env:
           CHANGES_RESULT: ${{ needs.changes.result }}
-          DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
+          SKIP_NATIVE: ${{ needs.changes.outputs.skip_native }}
           IOS_RESULT: ${{ needs.ios-tests.result }}
         run: |
-          if [[ "$CHANGES_RESULT" == success && "$DOCS_ONLY" == true && "$IOS_RESULT" == skipped ]]; then
+          if [[ "$CHANGES_RESULT" == success && "$SKIP_NATIVE" == true && "$IOS_RESULT" == skipped ]]; then
             exit 0
           fi
           [[ "$IOS_RESULT" == success ]]

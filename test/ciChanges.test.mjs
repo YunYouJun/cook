@@ -7,7 +7,7 @@ import process from 'node:process'
 // eslint-disable-next-line test/no-import-node-test -- This bootstrap check runs before installing Vitest or workspace dependencies.
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { detectDocsOnly } from '../scripts/ci-changes.mjs'
+import { detectNativeChanges } from '../scripts/ci-changes.mjs'
 
 function repository(run) {
   const cwd = mkdtempSync(join(tmpdir(), 'cook-ci-changes-'))
@@ -42,8 +42,8 @@ test('PR documentation edits use the fixed merge base, ignoring unrelated base c
     git('checkout', '--detach', base)
     write('apps/ios/Cook/App.swift', 'new main code')
     const newerBase = commit()
-    const result = detectDocsOnly('pull_request', { pull_request: { base: { sha: newerBase }, head: { sha: head } } }, cwd)
-    assert.equal(result.docsOnly, true)
+    const result = detectNativeChanges('pull_request', { pull_request: { base: { sha: newerBase }, head: { sha: head } } }, cwd)
+    assert.equal(result.skipNative, true)
     assert.equal(result.changedFiles, 1)
   })
 })
@@ -53,7 +53,7 @@ test('a multi-commit push includes earlier native code changes', () => {
     write('apps/ios/Cook/App.swift', 'changed')
     commit()
     write('docs/dev/new.md')
-    assert.equal(detectDocsOnly('push', { before: base, after: commit() }, cwd).docsOnly, false)
+    assert.equal(detectNativeChanges('push', { before: base, after: commit() }, cwd).skipNative, false)
   })
 })
 
@@ -63,14 +63,26 @@ test('documentation deletion, rename, images and unusual file names can skip nat
     renameSync(join(cwd, 'README.md'), join(cwd, 'CONTRIBUTING.md'))
     write('docs/dev/with spaces\nand newline.md')
     write('docs/public/example.png')
-    assert.equal(detectDocsOnly('push', { before: base, after: commit() }, cwd).docsOnly, true)
+    assert.equal(detectNativeChanges('push', { before: base, after: commit() }, cwd).skipNative, true)
+  })
+})
+
+test('the standalone Support workflow and its docs can skip native jobs, but mixed native changes cannot', () => {
+  repository(({ cwd, write, commit, base }) => {
+    write('.github/workflows/support-sync.yml')
+    write('docs/dev/support-delivery-automation.md')
+    const support = commit()
+    assert.equal(detectNativeChanges('push', { before: base, after: support }, cwd).skipNative, true)
+    write('packages/data/recipe.csv')
+    const head = commit()
+    assert.equal(detectNativeChanges('pull_request', { pull_request: { base: { sha: base }, head: { sha: head } } }, cwd).skipNative, false)
   })
 })
 
 test('moving source code into documentation still includes the removed source path', () => {
   repository(({ cwd, commit, base }) => {
     renameSync(join(cwd, 'apps/ios/Cook/App.swift'), join(cwd, 'docs/dev/moved.md'))
-    assert.equal(detectDocsOnly('push', { before: base, after: commit() }, cwd).docsOnly, false)
+    assert.equal(detectNativeChanges('push', { before: base, after: commit() }, cwd).skipNative, false)
   })
 })
 
@@ -79,7 +91,7 @@ test('bundled privacy text, mixed changes and build inputs always require native
     repository(({ cwd, write, commit, base }) => {
       write(path)
       write('docs/dev/note.md')
-      assert.equal(detectDocsOnly('push', { before: base, after: commit() }, cwd).docsOnly, false, path)
+      assert.equal(detectNativeChanges('push', { before: base, after: commit() }, cwd).skipNative, false, path)
     })
   }
 })
@@ -95,11 +107,11 @@ test('the workflow entry point writes job outputs and defaults to native on inva
     const env = { ...process.env, GITHUB_EVENT_NAME: 'push', GITHUB_EVENT_PATH: eventPath, GITHUB_OUTPUT: outputPath, GITHUB_STEP_SUMMARY: summaryPath }
     writeFileSync(eventPath, JSON.stringify({ before: base, after }))
     execFileSync(process.execPath, [entry], { cwd, env })
-    assert.equal(readFileSync(outputPath, 'utf8'), 'docs_only=true\n')
-    assert.match(readFileSync(summaryPath, 'utf8'), /skipped \(documentation only\)/)
+    assert.equal(readFileSync(outputPath, 'utf8'), 'skip_native=true\n')
+    assert.match(readFileSync(summaryPath, 'utf8'), /skipped \(only documentation or the Support sync workflow changed\)/)
     writeFileSync(eventPath, '{ invalid JSON')
     execFileSync(process.execPath, [entry], { cwd, env })
-    assert.equal(readFileSync(outputPath, 'utf8'), 'docs_only=true\ndocs_only=false\n')
+    assert.equal(readFileSync(outputPath, 'utf8'), 'skip_native=true\nskip_native=false\n')
   })
 })
 
@@ -113,7 +125,7 @@ test('empty diffs, missing objects, zero SHAs, malformed events and unsupported 
       ['push', null],
       ['workflow_dispatch', {}],
     ]) {
-      assert.equal(detectDocsOnly(name, event, cwd).docsOnly, false)
+      assert.equal(detectNativeChanges(name, event, cwd).skipNative, false)
     }
   })
 })
