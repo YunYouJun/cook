@@ -698,6 +698,13 @@ final class CookUITests: XCTestCase {
         revealFilterOption(avoid, in: app)
         tap(avoid)
         let search = app.searchFields["搜索食材或别名"]
+        func enterQuery(_ query: String, file: StaticString = #filePath, line: UInt = #line) {
+            search.typeText(query)
+            // Search activation can replace the field identified by its prompt.
+            // Resolve the current field with the exact value the user entered.
+            let entered = app.searchFields.matching(NSPredicate(format: "value == %@", query)).element
+            XCTAssertTrue(entered.waitForExistence(timeout: 10), "搜索框应显示「\(query)」", file: file, line: line)
+        }
 
         for (index, entry) in [("西红柿", "番茄"), ("虾", "虾")].enumerated() {
             let (query, name) = entry
@@ -706,10 +713,7 @@ final class CookUITests: XCTestCase {
                 tap(search.buttons["清除文本"])
                 focusSearch(search, in: app)
             }
-            search.typeText(query)
-            let entered = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", query), object: search)
-            XCTAssertEqual(XCTWaiter.wait(for: [entered], timeout: 10), .completed)
-            XCTAssertEqual(search.value as? String, query)
+            enterQuery(query)
             let item = app.buttons["avoid.item.\(name)"]
             tap(item)
             wait(item, "isSelected == true")
@@ -718,10 +722,7 @@ final class CookUITests: XCTestCase {
         focusSearch(search, in: app)
         tap(search.buttons["清除文本"])
         focusSearch(search, in: app)
-        search.typeText("不存在的食材")
-        let entered = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "不存在的食材"), object: search)
-        XCTAssertEqual(XCTWaiter.wait(for: [entered], timeout: 10), .completed)
-        XCTAssertEqual(search.value as? String, "不存在的食材")
+        enterQuery("不存在的食材")
         wait(app.staticTexts["avoid.noSearchResults"], "exists == true")
         let tomato = app.buttons["avoid.remove.番茄"]
         let shrimp = app.buttons["avoid.remove.虾"]
