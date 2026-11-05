@@ -72,12 +72,14 @@ final class DietaryGoalsUITests: XCTestCase {
     }
 
     @MainActor
-    private func app(contentSize: UIContentSizeCategory = .large, showsIntroduction: Bool = false) -> XCUIApplication {
+    private func app(contentSize: UIContentSizeCategory = .large, showsIntroduction: Bool = false,
+                     savedGoal: String? = nil) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-ui-testing-reset-dietary", "-ui-testing-reset-presentation",
                                "-UIPreferredContentSizeCategoryName", contentSize.rawValue]
         if showsIntroduction { app.launchArguments.append("-ui-testing-show-dietary-introduction") }
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launchEnvironment["COOK_UI_TEST_SAVED_DIETARY_GOAL"] = savedGoal
         terminateAppAfterTest(app)
         app.launch()
         // The launch fixture resets presentation to the ingredient list.
@@ -316,10 +318,12 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     func testGoalBrowsingOpensReviewedTextAndPreservesGoalWhenDeciding() {
-        let app = app(showsIntroduction: true)
-        select("less-added-sugar", in: app)
-        XCTAssertFalse(app.collectionViews.matching(identifier: "cook.chooser").firstMatch
-            .descendants(matching: .any).matching(identifier: "dietary.introduction").firstMatch.exists)
+        let app = app(showsIntroduction: true, savedGoal: "less-added-sugar")
+        let chooser = app.collectionViews.matching(identifier: "cook.chooser").element
+        let activeGoal = chooser.buttons.matching(identifier: "cook.clearGoal").element
+        XCTAssertTrue(activeGoal.waitForExistence(timeout: 10))
+        XCTAssertTrue(activeGoal.label.contains("减少添加糖"), activeGoal.label)
+        XCTAssertFalse(chooser.descendants(matching: .any).matching(identifier: "dietary.introduction").element.exists)
         showResults(app)
         guard let row = revealRecipe("dietary.recipe.333", in: app, maximumSwipes: 5) else { return }
         XCTAssertTrue(row.isHittable)

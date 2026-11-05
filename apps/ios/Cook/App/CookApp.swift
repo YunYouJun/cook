@@ -57,9 +57,14 @@ struct CookApp: App {
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-presentation") {
                     UserDefaults.standard.set(CookPresentation.list.rawValue, forKey: "cook.presentation")
                 }
+                let environment = ProcessInfo.processInfo.environment
                 let dietaryDefaults = UserDefaults(suiteName: "cook.dietary.ui-tests")!
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-dietary") {
                     dietaryDefaults.removePersistentDomain(forName: "cook.dietary.ui-tests")
+                    if let rawGoal = environment["COOK_UI_TEST_SAVED_DIETARY_GOAL"],
+                       let goal = DietaryGoal(rawValue: rawGoal) {
+                        dietaryDefaults.set(goal.rawValue, forKey: CookSession.dietaryGoalKey)
+                    }
                 }
                 if !ProcessInfo.processInfo.arguments.contains("-ui-testing-show-dietary-introduction") {
                     dietaryDefaults.set(true, forKey: CookSession.dietaryIntroductionKey)
@@ -72,7 +77,6 @@ struct CookApp: App {
                 _workbench = State(initialValue: KitchenWorkbench(defaults: kitchenDefaults, notifications: .disabled))
                 // UI 测试隔离于用户数据库，统计请求也不会离开设备。
                 let defaults = UserDefaults(suiteName: "cook.ui-tests")!
-                let environment = ProcessInfo.processInfo.environment
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-reset-consent") {
                     defaults.removePersistentDomain(forName: "cook.ui-tests")
                 }
