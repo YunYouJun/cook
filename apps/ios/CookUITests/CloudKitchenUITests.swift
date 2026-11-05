@@ -289,7 +289,10 @@ final class CloudKitchenUITests: XCTestCase {
         app.selectCookingPresentation("云厨房")
 
         let tomato = kitchenButton("kitchen.scene.tomato", in: app)
-        let cameraMarker = app.buttons.matching(identifier: "kitchen.scene.pot").element
+        // Camera updates replace projected accessibility snapshots.
+        func cameraMarkerFrame() -> CGRect {
+            app.buttons.matching(identifier: "kitchen.scene.pot").element.frame
+        }
         let rotation = kitchenButton("kitchen.rotation", in: app)
         reveal(tomato, in: app)
         reveal(rotation, in: app)
@@ -300,7 +303,7 @@ final class CloudKitchenUITests: XCTestCase {
         XCTAssertEqual(rotation.value as? String, "已开启")
         // The tomato is close to the orbit center and can stay almost fixed on
         // a wide screen. The off-center pot is a reliable camera-motion marker.
-        let original = cameraMarker.frame
+        let original = cameraMarkerFrame()
         guard !original.isEmpty, !original.isInfinite else {
             XCTFail("旋转前应能定位锅的投影：\(original)")
             return
@@ -308,7 +311,7 @@ final class CloudKitchenUITests: XCTestCase {
         var observed = original
         func distanceMatches(_ check: (CGFloat) -> Bool) -> Bool {
             // X and Y must come from the same projection and accessibility snapshot.
-            observed = cameraMarker.frame
+            observed = cameraMarkerFrame()
             return !observed.isEmpty && !observed.isInfinite
                 && check(hypot(observed.midX - original.midX, observed.midY - original.midY))
         }
@@ -349,10 +352,10 @@ final class CloudKitchenUITests: XCTestCase {
         XCTAssertEqual(rotation.value as? String, "已开启")
         rotation.tap()
         XCTAssertEqual(rotation.value as? String, "已关闭")
-        let reset = cameraMarker.frame
+        let reset = cameraMarkerFrame()
         let resetStart = tomato.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         resetStart.press(forDuration: 0.1, thenDragTo: resetStart.withOffset(CGVector(dx: 90, dy: 0)))
-        let afterDisabledDrag = cameraMarker.frame
+        let afterDisabledDrag = cameraMarkerFrame()
         XCTAssertEqual(afterDisabledDrag.midX, reset.midX, accuracy: 2)
         XCTAssertEqual(afterDisabledDrag.midY, reset.midY, accuracy: 2)
         tomato.tap()

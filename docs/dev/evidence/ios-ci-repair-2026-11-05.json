@@ -160,5 +160,97 @@
       },
       "acceptance": "Pre-publication local evidence. Acceptance still requires the full main-branch CI matrix on the successor source; local iPhone and accessibility follow-up checks are continuing."
     }
+  },
+  "cameraProjectionRefresh": {
+    "baselineCommit": "9690b948aff8aa2407754417669a67e7ca6a17d7",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41993812862",
+    "job": 127132276778,
+    "device": "iPhone 18 Pro, iOS 27.2",
+    "result": "16 discovery cases passed, three existing iPad-only cases skipped, one rotation case failed at the original 5s reset-position assertion. The static inspiration-card fix passed in 80.746s.",
+    "observation": "Rotation, drag movement and both ingredient-selection toggles passed. After disabling rotation, the retained pot marker failed to resolve its First Match snapshot. Exported video frames before interaction and after reset show the fixed camera view restored; no production camera defect is inferred from the failed query alone.",
+    "change": "Resolve the globally unique pot marker with element afresh for every measurement. Read one frame for both axes, including the moved/reset predicates and disabled-drag assertions. Keep normal UIKit animations, original movement/reset tolerances, real taps/gestures, scene recreation and foreground restoration.",
+    "localBaseline": {
+      "device": "Existing iPhone Duo, iOS 27.1",
+      "passed": 1,
+      "seconds": 59.727,
+      "limitation": "The remote snapshot failure did not reproduce in this unchanged local invocation."
+    },
+    "localPatchCheck": {
+      "device": "Same existing iPhone Duo, iOS 27.1",
+      "passed": 1,
+      "seconds": 82.819
+    },
+    "artifact": {
+      "id": 13401298386,
+      "sizeBytes": 51709274,
+      "githubArchiveSha256": "a2025e5ddf064d22163c5148197f18edc644872779b2c5931b2bf02ca0c8131b",
+      "verification": "Selected ZIP members and the recording payload verified by CRC32; archive SHA256 is GitHub metadata."
+    },
+    "integratedIpad": {
+      "runtime": "iOS 27.0",
+      "passed": 1,
+      "seconds": 54.274,
+      "normalAnimations": true
+    }
+  },
+  "acceptanceScope": {
+    "userRequest": "怎么运行这么久 可以精简一下 CI？",
+    "current": "Default push/PR CI now requires the two-device core matrix plus the existing Swift and general jobs. Full UI coverage and both audit journeys remain available through manual full mode. This supersedes earlier pre-publication full-matrix acceptance notes in this historical report."
+  },
+  "dietaryProjectionAndScroll": {
+    "baselineCommit": "9690b948aff8aa2407754417669a67e7ca6a17d7",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41993812862",
+    "job": 127132276565,
+    "remoteObservation": "Both audit journeys and seven functional dietary cases passed. The maximum-text lunch case passed the 10-to-9 candidate-count assertions but exhausted five result-list swipes at 97.924s. Its exact recipe query existed after the last swipe but remained unhittable; the recording still showed earlier tall rows.",
+    "scrollChange": "Use the existing 25-swipe accessibility-journey bound only for the maximum-text lunch case; retain the five-swipe standard-size bound, exact recipe 333 target, viewport/foreground/list checks, hittability, source-oil-unit assertion and original execution allowances.",
+    "projectionEvidence": "Existing iPhone Duo/iOS 27.1 exposed completion controls and the results menu in Toolbar siblings outside NavigationBar. After scrolling maximum-size filters, the recorded toolbar subtree was empty. The first three-case batch passed rotation but failed both lunch cases before reaching recipe scrolling. Global matching then passed standard lunch, while maximum lunch and clearing failed at the remaining hidden-toolbar and scoped-results-menu queries.",
+    "projectionChange": "Resolve unique completion and results-menu controls through the existing global toolbar helper, while separately requiring the expected navigation title and actual dismissal. If a completion control is hidden, reveal it with at most eight downward swipes in its actual sheet List, then require the original control readiness. Preserve remember-control absence checks in the choices/navigation containers and include the active projected toolbar. No production UI changes or assertion retries.",
+    "duoAfterReveal": {
+      "runtime": "iOS 27.1",
+      "passed": 3,
+      "failed": 0,
+      "clearingSeconds": 56.477,
+      "maximumLunchSeconds": 92.871,
+      "standardLunchSeconds": 75.308,
+      "observation": "One downward filter-list swipe restored the maximum-text completion control."
+    },
+    "duoFinalToolbarAbsence": {
+      "passed": 1,
+      "failed": 0,
+      "clearingSeconds": 66.508
+    },
+    "artifact": {
+      "id": 13401169264,
+      "sizeBytes": 44691991,
+      "githubArchiveSha256": "598c9fd931efca0004979c97e38a53c330de392fb4b6f74782ba0ee860d4af96",
+      "verification": "Selected ZIP members and the failed-case recording verified by CRC32; archive SHA256 is GitHub metadata."
+    }
+  },
+  "streamlinedCi": {
+    "default": "Pushes and PRs: two core-regression jobs, one iPhone and one iPad, all 216 App units and five UI cases per device. The current camera-reset and maximum-text lunch failures remain in the default selectors.",
+    "manual": "workflow_dispatch input ios_coverage defaults to full: all three suites on both devices, all 56 UI methods including both system audit journeys. Explicit core selects the smaller matrix. Unknown or missing plans retain full coverage.",
+    "gates": "Stable ios gate requires every selected device job. Documentation-only handling, complete test compilation, failure propagation and strict isolated-audit retry classification remain.",
+    "limits": "Core build 15m/test 30m/job 45m; manual full build 15m/test 60m/job 90m. No new general failure retries.",
+    "orchestrationChecks": {
+      "passed": 22,
+      "failed": 0,
+      "covers": "Real Bash invocations, actual planner CLI outputs, malformed events, core/full selection, full per-device UI coverage exactly once, complete App-unit selection, and failure/cancellation gates"
+    },
+    "localIpadCore": {
+      "runtime": "iOS 27.0",
+      "appUnits": 216,
+      "uiTests": 5,
+      "failures": 0,
+      "unitSeconds": 12.467,
+      "uiSeconds": {
+        "rotation": 54.274,
+        "catalogCount": 21.211,
+        "avoidanceSearch": 88.773,
+        "clearingGoal": 69.967,
+        "maximumLunch": 96.935
+      }
+    },
+    "previousFullRun": "Cancelled at the user request to streamline CI after collecting both real iPhone failures. The unfinished iPad groups are not counted as passes.",
+    "acceptance": "This snapshot records pre-publication local checks. Remote acceptance uses the new default core workflow on the final published source; no complete manual-full pass is claimed."
   }
 }

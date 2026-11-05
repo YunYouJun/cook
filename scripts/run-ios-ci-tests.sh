@@ -51,21 +51,16 @@ run_tests() {
   fi
 }
 case "$IOS_SUITE" in
-  pr-regression)
-    # All App units plus ten UI gates on each device. Keep both lunch text sizes
-    # and the recent failure regression; repeated long journeys run in the full matrix.
-    run_tests "$DEVICE" pr-regression \
+  core-regression)
+    # Compile every test and run all App units plus five representative UI flows.
+    # Full journeys and system audits remain in the manually selected full matrix.
+    run_tests "$DEVICE" core-regression \
       -only-testing:CookTests \
-      -only-testing:CookUITests/DietaryGoalsUITests/testNextDayLunchAndWeightGoalIntersectAndShowSourceOilUnits \
       -only-testing:CookUITests/DietaryGoalsUITests/testNextDayLunchAndWeightGoalAtAccessibilitySize \
-      -only-testing:CookUITests/DietaryGoalsUITests/testGoalEntryStaysInFiltersAcrossLaunchesAndSelectionRemainsVisible \
-      -only-testing:CookUITests/DietaryGoalsUITests/testEmptyGoalCanBeCancelledWithoutLosingSelectedIngredients \
       -only-testing:CookUITests/DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone \
       -only-testing:CookUITests/CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval \
-      -only-testing:CookUITests/CookUITests/testPantryShelfRemembersChoicesAndRestoresDefaults \
       -only-testing:CookUITests/CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients \
-      -only-testing:CookUITests/CloudKitchenUITests/testKitchenAndListShareSelectionAndPotOpensRealRecipes \
-      -only-testing:CookUITests/RandomRecipeUITests/testLargestTextRandomSharesDietaryGoalAndPreservesEmptyResults
+      -only-testing:CookUITests/CloudKitchenUITests/testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled
     ;;
   regression-main)
     # Everything else, including all App unit tests and newly added UI suites.

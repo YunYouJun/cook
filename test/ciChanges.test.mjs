@@ -107,11 +107,14 @@ test('the workflow entry point writes job outputs and defaults to native on inva
     const env = { ...process.env, GITHUB_EVENT_NAME: 'pull_request', GITHUB_EVENT_PATH: eventPath, GITHUB_OUTPUT: outputPath, GITHUB_STEP_SUMMARY: summaryPath }
     writeFileSync(eventPath, JSON.stringify({ pull_request: { base: { sha: base }, head: { sha: after } } }))
     execFileSync(process.execPath, [entry], { cwd, env })
-    assert.equal(readFileSync(outputPath, 'utf8'), 'skip_native=true\n')
+    const corePlan = 'ios_suites=["core-regression"]\nios_max_parallel=2\n'
+    assert.equal(readFileSync(outputPath, 'utf8'), `skip_native=true\n${corePlan}`)
     assert.match(readFileSync(summaryPath, 'utf8'), /skipped \(only documentation or the Support sync workflow changed\)/)
-    writeFileSync(eventPath, '{ invalid JSON')
-    execFileSync(process.execPath, [entry], { cwd, env })
-    assert.equal(readFileSync(outputPath, 'utf8'), 'skip_native=true\nskip_native=false\n')
+    for (const invalidEvent of ['{ invalid JSON', 'null']) {
+      writeFileSync(eventPath, invalidEvent)
+      execFileSync(process.execPath, [entry], { cwd, env })
+    }
+    assert.equal(readFileSync(outputPath, 'utf8'), `skip_native=true\n${corePlan}${`skip_native=false\n${corePlan}`.repeat(2)}`)
   })
 })
 
