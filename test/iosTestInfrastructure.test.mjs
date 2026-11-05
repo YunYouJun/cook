@@ -299,8 +299,12 @@ test('the stable ios gate rejects failed, cancelled and unexpectedly skipped mat
   const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
   const gate = workflow.slice(workflow.indexOf('\n  ios:\n'))
   const command = gate.split('        run: |\n')[1].split('\n').map(line => line.slice(10)).join('\n')
-  for (const [changes, skipNative, ios, success] of [
+  for (const [changes, skipNative, ios, success, reused = 'false'] of [
     ['success', 'false', 'success', true],
+    ['success', 'false', 'skipped', true, 'true'],
+    ['failure', 'false', 'skipped', false, 'true'],
+    ['success', 'false', 'failure', false, 'true'],
+    ['success', 'false', 'cancelled', false, 'true'],
     ['success', 'true', 'skipped', true],
     ['success', 'false', 'failure', false],
     ['success', 'false', 'cancelled', false],
@@ -309,7 +313,7 @@ test('the stable ios gate rejects failed, cancelled and unexpectedly skipped mat
     ['success', 'true', 'cancelled', false],
   ]) {
     const result = spawnSync('bash', ['-e', '-c', command], {
-      env: { ...process.env, CHANGES_RESULT: changes, SKIP_NATIVE: skipNative, IOS_RESULT: ios },
+      env: { ...process.env, CHANGES_RESULT: changes, SKIP_NATIVE: skipNative, REUSED_CORE: reused, IOS_RESULT: ios },
     })
     assert.equal(result.status === 0, success, `${changes}/${skipNative}/${ios}`)
   }
