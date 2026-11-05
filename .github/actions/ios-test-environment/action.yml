@@ -1,0 +1,28 @@
+name: Prepare iOS test environment
+description: Install the pinned workspace tools, generate the project and select compatible simulators
+outputs:
+  iphone:
+    description: Selected iPhone UDID
+    value: ${{ steps.simulators.outputs.iphone }}
+  ipad:
+    description: Selected iPad UDID
+    value: ${{ steps.simulators.outputs.ipad }}
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+    - shell: bash
+      run: |
+        pnpm install --frozen-lockfile
+        pnpm run convert
+        brew install xcodegen
+        xcodegen generate --spec apps/ios/project.yml
+        xcodebuild -version
+    - name: Select compatible simulators
+      id: simulators
+      shell: bash
+      run: pnpm exec tsx scripts/select-ios-test-devices.ts >> "$GITHUB_OUTPUT"

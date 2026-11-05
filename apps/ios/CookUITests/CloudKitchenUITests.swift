@@ -7,11 +7,14 @@ final class CloudKitchenUITests: XCTestCase {
     @MainActor
     func testLargestTextViewMenuKeepsControlsAndSelectionUsable() {
         XCUIDevice.shared.orientation = .portrait
-        let app = launchMenuFixture(contentSize: .accessibilityExtraExtraExtraLarge)
-        let menu = app.buttons["cook.presentation"]
+        // This case checks native menu geometry and selection. UIKit's menu
+        // animation completion callback can stall XCTest on slow CI hosts.
+        let app = launchMenuFixture(contentSize: .accessibilityExtraExtraExtraLarge,
+                                   disablesUIKitAnimations: true)
+        let menu = app.cookingToolbarButton("cook.presentation")
         capture(app, name: "largest-quick-initial")
         assertMenuControlFits(menu, in: app)
-        let potato = app.buttons.matching(NSPredicate(format: "label == %@", "土豆")).firstMatch
+        let potato = chooserButton("土豆", in: app)
         XCTAssertTrue(potato.isHittable, "最大字号下首屏仍应能选择第一种常用食材")
         potato.tap()
         waitUntil(potato, "isSelected == true")
@@ -65,12 +68,12 @@ final class CloudKitchenUITests: XCTestCase {
             throw XCTSkip("此用例检查 iPad 横屏双栏")
         }
         XCTAssertGreaterThan(window.frame.width, window.frame.height)
-        let menu = app.buttons["cook.presentation"]
+        let menu = app.cookingToolbarButton("cook.presentation")
         assertMenuControlFits(menu, in: app)
-        let resultList = app.descendants(matching: .any).matching(identifier: "dietary.results").firstMatch
+        let resultList = app.collectionViews.matching(identifier: "dietary.results").element
         XCTAssertTrue(resultList.waitForExistence(timeout: 10))
         XCTAssertTrue(resultList.isHittable)
-        let potato = app.buttons.matching(NSPredicate(format: "label == %@", "土豆")).firstMatch
+        let potato = chooserButton("土豆", in: app)
         XCTAssertTrue(potato.isHittable)
         potato.tap()
         waitUntil(potato, "isSelected == true")
@@ -95,9 +98,9 @@ final class CloudKitchenUITests: XCTestCase {
         XCTAssertTrue(potato.isHittable)
         XCTAssertTrue(potato.isSelected)
         XCTAssertTrue(resultList.waitForExistence(timeout: 10))
-        let selection = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已选：土豆")).firstMatch
+        let selection = resultList.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已选：土豆")).firstMatch
         XCTAssertTrue(selection.waitForExistence(timeout: 10))
-        let match = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
+        let match = resultList.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
         XCTAssertTrue(match.waitForExistence(timeout: 10))
         XCTAssertTrue(match.isHittable)
         XCTAssertGreaterThan(match.frame.midX, potato.frame.maxX,
@@ -111,12 +114,13 @@ final class CloudKitchenUITests: XCTestCase {
         app.launchArguments = XCUIApplication.standardCookingLaunchArguments
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        terminateAppAfterTest(app)
         app.launch()
 
-        let menu = app.buttons["cook.presentation"]
+        let menu = app.cookingToolbarButton("cook.presentation")
         XCTAssertTrue(menu.waitForExistence(timeout: 20))
         XCTAssertTrue(menu.value as? String == "食材快选" || menu.label.contains("食材快选"))
-        let tomato = app.buttons.matching(NSPredicate(format: "label == %@", "番茄")).firstMatch
+        let tomato = chooserButton("番茄", in: app)
         XCTAssertTrue(tomato.isHittable, "默认视图应直接支持食材快选")
         tomato.tap()
         waitUntil(tomato, "isSelected == true")
@@ -151,11 +155,14 @@ final class CloudKitchenUITests: XCTestCase {
     @MainActor
     func testInspirationCardScrollsAboveFixedActions() {
         let app = XCUIApplication()
-        app.launchArguments = XCUIApplication.standardCookingLaunchArguments
+        // This checks static card/footer layout. Missing UIKit menu animation
+        // notifications consumed the CI case before it could inspect the card.
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-disable-animations"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        terminateAppAfterTest(app)
         app.launch()
-        let presentation = app.buttons["cook.presentation"]
+        let presentation = app.cookingToolbarButton("cook.presentation")
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
         app.selectCookingPresentation("云厨房")
         let tomato = kitchenButton("kitchen.scene.tomato", in: app)
@@ -184,18 +191,23 @@ final class CloudKitchenUITests: XCTestCase {
 
     @MainActor
     func testKitchenAndListShareSelectionAndPotOpensRealRecipes() {
+        // This journey switches both layouts and opens/returns from real details.
+        executionTimeAllowance = 600
         let app = XCUIApplication()
-        app.launchArguments = XCUIApplication.standardCookingLaunchArguments
+        // This flow checks shared selection and real recipes. Dedicated menu,
+        // edge-hit and rotation cases keep normal animations enabled.
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-disable-animations"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        terminateAppAfterTest(app)
         app.launch()
 
-        let presentation = app.buttons["cook.presentation"]
+        let presentation = app.cookingToolbarButton("cook.presentation")
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
         app.selectCookingPresentation("食材快选")
         XCTAssertFalse(app.navigationBars.matching(identifier: "找菜").firstMatch
             .segmentedControls.matching(identifier: "cook.presentation").firstMatch.exists)
-        let tomato = app.buttons.matching(NSPredicate(format: "label == %@", "番茄")).firstMatch
+        let tomato = chooserButton("番茄", in: app)
         reveal(tomato, in: app)
         XCTAssertTrue(tomato.waitForExistence(timeout: 10))
         tomato.tap()
@@ -264,17 +276,23 @@ final class CloudKitchenUITests: XCTestCase {
 
     @MainActor
     func testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled() {
+        // Includes scene replacement, camera gestures and foreground restoration.
+        executionTimeAllowance = 600
         let app = XCUIApplication()
         app.launchArguments = XCUIApplication.standardCookingLaunchArguments
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        terminateAppAfterTest(app)
         app.launch()
-        let presentation = app.buttons["cook.presentation"]
+        let presentation = app.cookingToolbarButton("cook.presentation")
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
         app.selectCookingPresentation("云厨房")
 
         let tomato = kitchenButton("kitchen.scene.tomato", in: app)
-        let cameraMarker = kitchenButton("kitchen.scene.pot", in: app)
+        // Camera updates replace projected accessibility snapshots.
+        func cameraMarkerFrame() -> CGRect {
+            app.buttons.matching(identifier: "kitchen.scene.pot").element.frame
+        }
         let rotation = kitchenButton("kitchen.rotation", in: app)
         reveal(tomato, in: app)
         reveal(rotation, in: app)
@@ -285,13 +303,32 @@ final class CloudKitchenUITests: XCTestCase {
         XCTAssertEqual(rotation.value as? String, "已开启")
         // The tomato is close to the orbit center and can stay almost fixed on
         // a wide screen. The off-center pot is a reliable camera-motion marker.
-        let original = cameraMarker.frame
+        let original = cameraMarkerFrame()
+        guard !original.isEmpty, !original.isInfinite else {
+            XCTFail("旋转前应能定位锅的投影：\(original)")
+            return
+        }
+        var observed = original
+        func distanceMatches(_ check: (CGFloat) -> Bool) -> Bool {
+            // X and Y must come from the same projection and accessibility snapshot.
+            observed = cameraMarkerFrame()
+            return !observed.isEmpty && !observed.isInfinite
+                && check(hypot(observed.midX - original.midX, observed.midY - original.midY))
+        }
         let start = tomato.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 90, dy: -20)))
         let moved = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            hypot(cameraMarker.frame.midX - original.midX, cameraMarker.frame.midY - original.midY) > 3
+            distanceMatches { $0 > 3 }
         }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [moved], timeout: 5), .completed)
+        let movementResult = XCTWaiter.wait(for: [moved], timeout: 10)
+        if movementResult != .completed {
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "kitchen-rotation-accessibility"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            capture(app, name: "kitchen-rotation-not-observed")
+        }
+        XCTAssertEqual(movementResult, .completed, "锅的起始投影 \(original)，当前投影 \(observed)")
         XCTAssertFalse(tomato.isSelected, "Dragging must not select an ingredient")
         tomato.tap()
         waitUntil(tomato, "isSelected == true")
@@ -301,9 +338,10 @@ final class CloudKitchenUITests: XCTestCase {
         rotation.tap()
         XCTAssertEqual(rotation.value as? String, "已关闭")
         let restored = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            hypot(cameraMarker.frame.midX - original.midX, cameraMarker.frame.midY - original.midY) < 2
+            distanceMatches { $0 < 2 }
         }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 5), .completed)
+        XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 10), .completed,
+                       "关闭旋转后锅应回到起始投影 \(original)，最后投影 \(observed)")
         rotation.tap()
 
         // Recreating the scene uses a fresh clone and keeps the interaction preference.
@@ -314,11 +352,12 @@ final class CloudKitchenUITests: XCTestCase {
         XCTAssertEqual(rotation.value as? String, "已开启")
         rotation.tap()
         XCTAssertEqual(rotation.value as? String, "已关闭")
-        let reset = cameraMarker.frame
+        let reset = cameraMarkerFrame()
         let resetStart = tomato.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         resetStart.press(forDuration: 0.1, thenDragTo: resetStart.withOffset(CGVector(dx: 90, dy: 0)))
-        XCTAssertEqual(cameraMarker.frame.midX, reset.midX, accuracy: 2)
-        XCTAssertEqual(cameraMarker.frame.midY, reset.midY, accuracy: 2)
+        let afterDisabledDrag = cameraMarkerFrame()
+        XCTAssertEqual(afterDisabledDrag.midX, reset.midX, accuracy: 2)
+        XCTAssertEqual(afterDisabledDrag.midY, reset.midY, accuracy: 2)
         tomato.tap()
         waitUntil(tomato, "isSelected == true")
         XCUIDevice.shared.press(.home)
@@ -335,17 +374,20 @@ final class CloudKitchenUITests: XCTestCase {
     }
 
     @MainActor
-    private func launchMenuFixture(contentSize: UIContentSizeCategory = .large) -> XCUIApplication {
+    private func launchMenuFixture(contentSize: UIContentSizeCategory = .large,
+                                   disablesUIKitAnimations: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         var arguments = XCUIApplication.standardCookingLaunchArguments
         if let index = arguments.firstIndex(of: "-UIPreferredContentSizeCategoryName") {
             arguments[index + 1] = contentSize.rawValue
         }
+        if disablesUIKitAnimations { arguments.append("-ui-testing-disable-animations") }
         app.launchArguments = arguments
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        terminateAppAfterTest(app)
         app.launch()
-        XCTAssertTrue(app.buttons["cook.presentation"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.cookingToolbarButton("cook.presentation").waitForExistence(timeout: 20))
         return app
     }
 
@@ -429,13 +471,26 @@ final class CloudKitchenUITests: XCTestCase {
     }
 
     @MainActor
+    private func chooserButton(_ label: String, in app: XCUIApplication) -> XCUIElement {
+        // Keep VoiceOver label assertions inside the active list. A whole-app
+        // firstMatch can stall even when its debug snapshot already shows the chip.
+        app.collectionViews.matching(identifier: "cook.chooser").firstMatch
+            .buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
+    }
+
+    @MainActor
     private func kitchenContent(in app: XCUIApplication) -> XCUIElement {
         app.collectionViews.matching(identifier: "kitchen.content").firstMatch
     }
 
     @MainActor
     private func kitchenButton(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
-        kitchenContent(in: app).buttons.matching(identifier: identifier).firstMatch
+        // Projected UIKit accessibility elements may move outside the List's
+        // snapshot subtree during camera updates. Their identifiers stay unique.
+        if identifier.hasPrefix("kitchen.scene.") {
+            return app.buttons.matching(identifier: identifier).firstMatch
+        }
+        return kitchenContent(in: app).buttons.matching(identifier: identifier).firstMatch
     }
 
     @MainActor

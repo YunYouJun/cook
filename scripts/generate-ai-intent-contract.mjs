@@ -22,12 +22,17 @@ export async function buildAIIntentContract(dataDirectory = path.join(root, 'pac
     throw new Error('Recipe data is stale; regenerate it before building the AI contract')
   const dietary = await read('recipe-dietary.json')
   const amounts = await readFile(path.join(dataDirectory, 'recipe-amounts.json'))
-  if (dietary.schemaVersion !== 1 || dietary.policyVersion !== 1 || dietary.amountsFingerprint !== createHash('sha256').update(amounts).digest('hex'))
+  if (![1, 2].includes(dietary.schemaVersion) || dietary.policyVersion !== dietary.schemaVersion || dietary.amountsFingerprint !== createHash('sha256').update(amounts).digest('hex'))
     throw new Error('Dietary annotations are stale or incompatible')
   const normalize = values => [...new Set(values.flatMap(value => value.split(/[,，、;；\r\n]/)).map(value => value.trim()).map(value => aliases[value] ?? value).filter(Boolean))]
-  const offeredGoals = ['less-added-sugar', 'balanced-pairing']
+  // Weight awareness is limited to reviewed portion and source-unit cooking oil references.
+  const offeredGoals = ['weight-aware', 'less-added-sugar', 'balanced-pairing']
   if (!Array.isArray(dietary.enabledGoals) || dietary.enabledGoals.some(goal => !offeredGoals.includes(goal)))
     throw new Error('A new dietary goal requires an explicit AI policy review')
+  for (const goal of dietary.enabledGoals) {
+    if (Object.values(dietary.recipes).filter(entry => entry.assessments?.[goal]?.status === 'pass').length < 10)
+      throw new Error('A dietary goal requires at least ten reviewed recipes')
+  }
   return {
     schemaVersion: 1,
     policyVersion: 1,

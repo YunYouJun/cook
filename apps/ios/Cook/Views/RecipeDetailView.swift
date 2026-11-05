@@ -157,6 +157,7 @@ struct RecipeDetailView: View {
                 .accessibilityIdentifier("recipe.feedback")
             }
         }
+        .accessibilityIdentifier("recipe.detail")
         .fullScreenCover(item: $kitchenRecipe) { recipe in
             KitchenWorkbenchView(recipe: recipe, dietaryGoal: dietaryReview == nil ? nil : route.dietaryGoal)
         }

@@ -218,6 +218,7 @@ function modelPrompt(contract) {
     'query has required stuff, unknown, avoid, noSpicy, difficulty, methodGroups and optional/null tool. unknown must be [].',
     'Use canonical public vocabulary only. Preserve allergies, negations, tools, methods and difficulty. Never generate recipes, recipe IDs, actions, nutrition quantities or invented cooking times.',
     'At most one available goal. Unsupported health requests, medical diets, acne, pregnancy, keto, glucose control, ambiguous and negated goals belong in unresolved, never another goal. Multiple goals require confirmation: goal=null.',
+    'weight-aware is only reviewed portion and added cooking oil references. Use it for an explicit 控制体重 request, never infer it from 减肥, 减脂, 低热量 or a medical condition; keep those requests unresolved. It does not certify low calories, low fat, or weight loss.',
     'Do not equate reduced added sugar with sugar-free, low total sugar, or blood glucose control. unresolved contains at most 20 unique Chinese strings of at most 500 characters; each query array contains at most 100 unique values.',
     `PUBLIC CONTRACT: ${JSON.stringify(contract)}`,
     `EXAMPLE JSON OUTPUT FOR AN EMPTY REQUEST (return this shape, not the vocabulary definition): ${JSON.stringify(example)}`,

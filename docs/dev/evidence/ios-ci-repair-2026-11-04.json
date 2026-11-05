@@ -544,6 +544,247 @@
       "passedTests": 2,
       "failedTests": 0,
       "skippedTests": 0
+    },
+    {
+      "name": "bounded-ui-handoff-ipad",
+      "device": "iPad Pro 13 M5, iOS 27.0",
+      "result": "Passed",
+      "totalTestCount": 7,
+      "passedTests": 7,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "name": "bounded-ui-handoff-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "result": "Passed",
+      "totalTestCount": 4,
+      "passedTests": 4,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    {
+      "result": "Failed",
+      "totalTestCount": 9,
+      "passedTests": 7,
+      "failedTests": 2,
+      "skippedTests": 0,
+      "name": "bounded-discovery-pages-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [
+        {
+          "test": "CookDiscoveryUITests/testDefaultThreeRecipesShuffleAndDecideWithFourTabs()",
+          "message": "Experimental TabBar container lookup failed: iPadOS 27 adaptive top tabs do not expose this node."
+        },
+        {
+          "test": "RandomRecipeUITests/testLibraryDiceImmediatelySuggestsAndRerollsWithoutChangingScope()",
+          "message": "Same experimental TabBar container lookup failed before business interactions."
+        }
+      ],
+      "variant": "The unsupported TabBar helper was removed; the original Random-button absence assertion is retained. The other seven new scoped-query scenarios passed."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 4,
+      "passedTests": 4,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "bounded-discovery-pages-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": [],
+      "variant": "Additional scoped discovery, native-detail and shared dietary-dismissal checks."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "bounded-adaptive-tabs-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "variant": "Rebuilt final source after removing the unsupported TabBar experiment. Both discovery and library dice scenarios passed with the original Random-button absence assertions."
+    },
+    {
+      "result": "Failed",
+      "totalTestCount": 2,
+      "passedTests": 1,
+      "failedTests": 1,
+      "skippedTests": 0,
+      "name": "menu-identity-baseline",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [
+        {
+          "test": "CookPresentationToggleTests/testUnrelatedRefreshKeepsExistingMenuAndActions()",
+          "message": "The menu and action identity assertions both failed before the configuration guard."
+        }
+      ],
+      "variant": "Expected-failure baseline; the menu state/subtitle transition test passed."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 8,
+      "passedTests": 8,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "stable-menu-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "variant": "Two new menu identity/state unit tests and the full six-case CloudKitchen UI class before the compatibility toolbar wrapper change."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 4,
+      "passedTests": 4,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "shared-menu-toolbar-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": [],
+      "variant": "Final shared toolbar item: two identity/state unit tests plus full maximum-text menu and standard presentation-switching UI scenarios. Both upper/lower edge touches passed in quick-list and kitchen modes."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 8,
+      "passedTests": 8,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "shared-menu-toolbar-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "variant": "Final source: both new menu unit tests plus all six CloudKitchen UI tests, including landscape, maximum text, camera rotation and standard menu switching."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 6,
+      "passedTests": 6,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "bounded-dietary-navigation-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "variant": "All six regular dietary journeys with bounded navigation/choice/result queries and unchanged 300-second default; compiled before the two explicit 600-second journey allowances were added."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 6,
+      "passedTests": 6,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "bounded-dietary-navigation-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": [],
+      "variant": "All six regular dietary journeys with bounded navigation/choice/result queries and unchanged 300-second default; compiled before the two explicit 600-second journey allowances were added."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "dietary-final-budget-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "variant": "Rebuilt final source with explicit per-journey allowances; empty-goal cancellation completed in 65.711 seconds. Individual assertions and the original workflow actions are unchanged."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 11,
+      "passedTests": 11,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "discovery-bound-queries-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "variant": "Complete CookDiscovery class with bounded ingredient/menu/filter/favorite queries. The previously failing empty-scene journey completed in 58.370 seconds."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 15,
+      "passedTests": 12,
+      "failedTests": 0,
+      "skippedTests": 3,
+      "name": "discovery-bound-queries-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": [],
+      "variant": "Full discovery class plus four affected CloudKitchen cases; three existing iPad-only guards skipped on iPhone."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 4,
+      "passedTests": 4,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "cloud-chooser-scope-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "variant": "All four CloudKitchen journeys with initial chooser label queries changed to explicit list/toolbar scopes."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "dietary-presented-sheet-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "variant": "The previously failing browsing journey with explicit native sheet navigation/List readiness guards; completed in 89.910 seconds."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "dietary-presented-sheet-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": [],
+      "variant": "Goal browsing and the standalone-results goal-clear workflow with explicit filter/goal-sheet navigation and List readiness guards."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "cooking-label-scope-ipad",
+      "device": "iPad Pro 13-inch (M5), iPadOS 27.0",
+      "failures": [],
+      "variant": "Full main cooking-flow integration case with exact ingredient VoiceOver-label queries scoped to the chooser; 52.866 seconds."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "cooking-label-scope-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": [],
+      "variant": "Full main cooking-flow case with unchanged exact VoiceOver label and selection checks; 55.450 seconds."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 1,
+      "passedTests": 1,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "dietary-footer-ready-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": [],
+      "variant": "Maximum-text audit and full reviewed-goal/decision workflow, including the fixed footer readiness/geometry guard; all five selected accessibility categories passed and the case finished in 145.136 seconds."
+    },
+    {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "name": "dietary-footer-states-compat",
+      "device": "iPhone 16 Pro, iOS 26.5",
+      "failures": [],
+      "variant": "Rebuilt final source. Standalone-results goal clearing and empty-goal cancellation passed with the visible enabled/disabled footer checks and native sheet readiness guards."
     }
   ],
   "orchestration": {
@@ -770,6 +1011,276 @@
       "observed": "The screenshot showed the Find Recipes page, active filters control and selected beef; the collection existed at (0,0,402,874) but reported no container hit point. Two old-iOS scrolling helpers stopped before their actual target checks.",
       "change": "Require an active page control and a visible list frame, retain full target visibility and target hittability, scope chooser targets to the chooser, and use its known navigation bar and actual footer.",
       "supersededLocalRun": "Stopped active-scope-full-ipad after all six CloudKitchen tests passed, to rebuild the changed dietary scrolling helper. This interrupted bundle is not a full-suite success."
+    }
+  },
+  "tenthFollowUp": {
+    "baselineCommit": "1e6bb4a1d59d0dfac1a56f125a51bc38b76c48ba",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41799631301",
+    "introAbsenceScope": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41799631301/job/126472126331",
+      "observed": "The iPad dietary group passed. On iPhone another global missing-element query, dietary.introduction, timed out in the entry-placement case before any picker interaction.",
+      "change": "Audit all dietary absence checks: scope introduction and direct-entry absence to the chooser, legacy controls to the goal choice list and its toolbar, and nutrition labels to the actual recipe article. All previously required absence assertions remain.",
+      "artifact": {
+        "id": 13309116745,
+        "sha256": "298a8ed1a02233bbb310c237f84de664459c4f399d24422a02ab5b131375cfc7"
+      }
+    },
+    "projectedCameraMarker": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41799631301/job/126472126160",
+      "observed": "The rotation recording at 71 seconds still shows the pot, while the new List-scoped projected-pot query resolves no matching element after the pan.",
+      "inference": "UIKit virtual projected accessibility elements can change their snapshot ancestry during camera updates; the added List scope was too restrictive for those virtual elements.",
+      "change": "Use globally unique first-match identifiers for projected scene buttons, retain bounded List queries for native controls and the zero-WebView check, keep all >3px movement, <2px reset/disabled movement, selection and persistence assertions, and capture the full hierarchy if camera movement fails.",
+      "artifact": {
+        "id": 13309321476,
+        "sha256": "1bfb6769cd4e422f4ef24cf7e28292ea088b456caced2560b662b40ddff58de0"
+      }
+    },
+    "appLifecycle": {
+      "observed": "A later discovery case failed while terminating the previous SUT instance at launch.",
+      "change": "Keep each discovery app proxy alive through an async teardown block and terminate known running instances before the next case. Do not ignore termination failures or retry cases.",
+      "apiReference": "https://developer.apple.com/documentation/xctest/xctestcase/addasyncteardownblock%3A?language=objc"
+    },
+    "decisionNavigation": "Replace the remaining global missing-decision-bar lookup with an interactive selected-recipe navigation-title check. Spoken-summary prefixes retain complete names that contain the summary separator; the real recipe detail action must also exist.",
+    "completeRunResult": "Swift and four native groups passed; iPad discovery and iPhone dietary failed. Overall CI was not green.",
+    "remainingAbsenceChecks": "Bound obsolete discovery controls to the active content and toolbar, empty states to the active content, and zero-WebView checks to identified recipe detail/article content. Reuse the verified parent-control dietary dismissal helper across discovery and random flows.",
+    "discardedTabExperiment": "A TabBar-only absence helper passed on iPhone but failed on iPadOS 27 adaptive top tabs. Reverted it and retained the original typed Random-button absence assertions; rebuilt final source and both affected iPad scenarios passed.",
+    "orchestrationValidation": "Final node --test test/iosTestInfrastructure.test.mjs passed 10/10; all 54 UI methods remain assigned exactly once per device, without adding UI assertion retries."
+  },
+  "eleventhFollowUp": {
+    "baselineCommit": "43bc2a1dbcd336a7dd079de5ec16a15f8713b674",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41814421728",
+    "job": "https://github.com/YunYouJun/cook/actions/runs/41814421728/job/126521633310",
+    "observed": "Both dietary groups passed. Nineteen of twenty iPad discovery scenarios passed, including rotation and reviewed-recipe navigation. The largest-text menu scenario failed looking for its quick-list option immediately after two edge-touch open/current-selection/close checks. Recording and failure hierarchy show the Find Recipes page with no presented menu.",
+    "inference": "CookPresentationToggle.updateUIView recreated the UIButton menu and icon on every SwiftUI update, even without a selection or accessibility-subtitle change. Replacing presentation objects during unrelated updates can interfere with the native menu lifecycle.",
+    "change": "Keep the existing native menu and actions for unchanged selection/subtitle configuration. Rebuild the menu and icon when that configuration changes; action callbacks still read the coordinator’s current binding. Preserve every UI menu, 44pt edge-hit, selected-state and largest-text assertion.",
+    "regressionProof": "Two focused unit tests cover menu/action identity across unrelated refreshes and selected-state/subtitle changes. Before the guard, the identity case failed both identity assertions while the state-transition case passed. With the guard, both passed.",
+    "baselineDiagnostics": "The expected-failure unit run finished its assertions; its owned simctl diagnostic collector was terminated after collection stalled. xcodebuild finalized with status 65. No running tests were interrupted.",
+    "artifact": {
+      "id": 13315768360,
+      "sha256": "0827f6942007e7ec23e0bc194db7da5bbfac0a90de9b898ba01d2acbda62a2fd"
+    },
+    "compatibilityHitArea": {
+      "observed": "On iOS 26.5 the custom UIButton reported a 44pt frame but its SwiftUI toolbar parents were only 36pt high. The first upper-edge tap failed before any menu selection. A fixed 44pt frame alone did not change the clipped parent. Removing the shared capsule for the quick-list toolbar made both edge taps pass; the corresponding kitchen toolbar then exposed the same clipping.",
+      "change": "Use one CookPresentationToolbarItem for both presentations. Give the custom item its own 44pt glass capsule on iOS 26+, outside the system shared toolbar capsule; keep the UIKit native menu and standard older-system path.",
+      "reference": "https://developer.apple.com/documentation/swiftui/toolbarcontent/sharedbackgroundvisibility(_:)",
+      "preFixFrames": {
+        "parent": [
+          338,
+          66,
+          44,
+          36
+        ],
+        "button": [
+          338,
+          62,
+          44,
+          44
+        ]
+      },
+      "experiments": [
+        "stable-menu-compat: 3/4 passed; largest-text first quick-list edge tap failed",
+        "stable-menu-frame-compat: 3/4 passed; explicit frame alone kept the 36pt parent and failed the same edge tap",
+        "stable-menu-toolbar-compat: 3/4 passed; both quick-list edges passed, then the unchanged kitchen parent failed its first edge tap"
+      ]
+    },
+    "completeRunResult": "Swift and five of six native groups passed. Only the iPad discovery group failed, with 19/20 scenarios passing and the maximum-text menu lookup failing. Both main groups completed successfully.",
+    "finalLocalValidation": "The shared native toolbar and cached menu passed 8/8 on iPadOS 27 and 4/4 on iOS 26.5. Existing UI assertions, edge taps and gesture checks were retained."
+  },
+  "twelfthFollowUp": {
+    "baselineCommit": "4609ff733570194ffc610a53a5d2eca267149cfa",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41822726515",
+    "completedGroups": "Swift and all five other native groups passed, including all twenty iPad discovery cases and both complete main groups with the new menu tests.",
+    "firstAttempt": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41822726515/job/126549876407",
+      "observed": "Both iPad accessibility audit cases passed. Before any regular dietary case started, CookUITests-Runner exited while bootstrapping at XCTWaiter(StallHandling) handleStalledWait. The result bundle contained only the synthetic runner failure for this invocation.",
+      "recovery": "One failed-group rerun was requested after all other groups completed; successful jobs were retained. No UI assertion was retried automatically.",
+      "artifact": {
+        "id": 13319192534,
+        "sha256": "66561164590d5f8cd01851ae436dbf206adecb7db7f7a93b8d18e48786681a39"
+      }
+    },
+    "secondAttempt": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41822726515/job/126582849233",
+      "observed": "The runner started successfully. Both audits and five regular cases passed. The empty-goal cancellation case crossed its 300-second allowance while continuing through its original interactions; it reached teardown at 360 seconds without a reported assertion failure. This timeout was treated as a real failure and was not rerun unchanged.",
+      "trace": "The first global cook.filters tap began at 31.98s, resolved its button at 59.85s and synthesized at 68.07s. Goal selection and parent-control checks took over 200 seconds before the ingredient was selected. The later reveal helper queried identical window/list frames repeatedly.",
+      "artifact": {
+        "id": 13327932597,
+        "sha256": "1974aa194f4519fc58315dc10df3c87909821f1e2dd81ec46c4304c2a03fd3d8"
+      }
+    },
+    "change": "Resolve Find Recipes toolbar buttons inside the known navigation bar, goal options inside their choices list and recipe rows inside their result list. Reuse one window frame per reveal call and one chooser frame per iteration while recalculating the actual viewport after scrolling. Apply existing App teardown to dietary fixtures. Preserve all goal, ingredient, native selection, full-visibility and dismissal assertions; keep 300 seconds for other regular cases and use an explicit 600-second ceiling for the two multi-page/relaunch journeys. The empty-goal trace reached its last checks at 360 seconds; the saved-goal journey took 263.821 seconds and contains multiple App relaunches. Every individual assertion still retains its existing wait deadline, and timeouts remain failures.",
+    "orchestrationValidation": "node --test test/iosTestInfrastructure.test.mjs passed 10/10; all 54 UI methods remain assigned exactly once per device. No assertion or case retry was added."
+  },
+  "thirteenthFollowUp": {
+    "baselineCommit": "43dfff555d8780d576d5801a91238fe3f682ee31",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41842253589",
+    "job": "https://github.com/YunYouJun/cook/actions/runs/41842253589/job/126616860441",
+    "observed": "All six CloudKitchen cases and the other thirteen iPad discovery/random cases passed. Empty-scene cancellation failed while resolving its first ingredient before any ingredient tap. Its global label-matching button query performed two internal XCTest retries before snapshot evaluation failed at 247.90 seconds.",
+    "change": "Bound ingredient labels, inspiration controls and context to the active cooking List; scene and goal-entry buttons to filter.options; menu/filter toolbar controls to the Find Recipes navigation bar; detail favorite queries to navigation bars. Cache the window frame and each iteration’s existence result, and use the known navigation bar for Find Recipes/filter scrolling. Apply the same initial chooser ingredient and toolbar bounds in CloudKitchen. Keep projected virtual scene identifiers globally unique as required by their changing snapshot ancestry. All existing navigation, selection, full-visibility, camera and preserved-filter assertions remain.",
+    "artifact": {
+      "id": 13334645371,
+      "sha256": "e4a99e0de160fd4359f2188befc43ae111c6f21652efc164e06b3785a4377996"
+    },
+    "localSetup": "An initial local class run was interrupted to correct the favorite-toolbar locator before continuing. It is not counted as a passing class run.",
+    "dietaryPresentation": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41842253589/job/126616860491",
+      "observed": "Both accessibility audits, empty-goal cancellation and goal persistence passed. The browsing journey lost its snapshot connection while querying dietary.openPicker inside filter.options immediately after reopening the filter sheet from the returned Find Recipes page. The recording shows the filter sheet visibly presented and retained until cleanup; the evidence does not establish a normal App crash.",
+      "change": "Require the presented filter navigation to exist and be hittable, then require its List before looking for the goal row. Share this presentation guard between opening the picker and verifying the current value. Apply the corresponding navigation/List readiness checks to goal sheets opened from filters and results. This adds state assertions without retries or relaxed per-operation deadlines.",
+      "artifact": {
+        "id": 13336805293,
+        "sha256": "60ebf40da94f04a00ee353e6dfe884b6498123c0883509f0e67b20c731a8870c"
+      },
+      "inspection": "Downloaded only the result metadata and the failing recording using verified ZIP member checksums after the full archive transfer stalled. Reclaim this partial extraction after final validation."
+    },
+    "relatedLabelAssertion": "Apply the same known chooser scope to the main cooking-flow VoiceOver label query; keep exact spoken-name matching and native selection assertions. No ingredient-label predicate remains global in these cooking flows.",
+    "orchestrationValidation": "Final script replay passed 10/10. UI method names and group assignments are unchanged; no UI case or assertion retry was added.",
+    "phoneCompletion": {
+      "discoveryJob": "https://github.com/YunYouJun/cook/actions/runs/41842253589/job/126616860234",
+      "dietaryJob": "https://github.com/YunYouJun/cook/actions/runs/41842253589/job/126616860473",
+      "cloudJourney": "The shared-selection/real-recipes journey reached its final back navigation at 299.88 seconds, then crossed the 300-second allowance while still progressing. It now has an explicit 600-second ceiling, with all workflow assertions retained.",
+      "footerSnapshot": "The maximum-text audit completed its accessibility categories, then failed while reading the global cook.showResults frame during scrolling. Require the fixed footer to exist and, when enabled, become hittable, validate its visible geometry, and read its fixed frame once per reveal call. Empty-result states retain the visible-but-disabled footer and their disabled-state assertion.",
+      "goalSnapshot": "The standalone-results goal-clear case failed while looking for its none option immediately after opening the goal sheet. The shared goal-sheet navigation/List readiness guard covers this path as well.",
+      "artifacts": [
+        {
+          "id": 13337348082,
+          "sha256": "df631498061474fa9a416e4da881046b3b078b914c85a1edeaaa8228eec2ae39"
+        },
+        {
+          "id": 13337084235,
+          "sha256": "bf26029e6459a8623d38f477852dddb6ce46623a348421497f152ee9a4e6c326"
+        }
+      ]
+    },
+    "finalLocalValidation": "Complete discovery class passed 11/11 on iPad. Discovery plus affected CloudKitchen cases passed 12 with three pre-existing iPad-only skips on iPhone. Four changed CloudKitchen chooser journeys passed on iPad. Main cooking-flow label cases passed on both devices. Reopened-sheet cases passed on both devices; the largest-text iPhone audit and final enabled/disabled-footer journeys passed. Final orchestration replay passed 10/10."
+  },
+  "fourteenthFollowUp": {
+    "baselineCommit": "75f59120d4db07c989aa1ef2d44cba086881f90e",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41862066845",
+    "toolbar": {
+      "jobs": [
+        126686518936,
+        126686519039,
+        126686519254
+      ],
+      "observed": "Three layout-switch cases timed out querying cook.presentation beneath the navigation bar named 找菜. Both downloaded CI recordings show that the menu selection actually succeeded and the kitchen appeared; the failed element debug descriptions contain only the unresolved title-scoped query chain.",
+      "change": "Keep the unique button ID lookup bounded to navigationBars.buttons, without requiring the bar title to survive replacement of the NavigationSplitView with the kitchen NavigationStack. All menu value, real scene and preserved-selection checks remain."
+    },
+    "detail": {
+      "job": 126686519254,
+      "observed": "The maximum-text discovery case reached the correct recipe detail but XCTest failed to determine the hittability of its NavigationBar because the container had no activation point.",
+      "change": "Require the selected recipe navigation title, then wait for the actual favorite button in that bar to be hittable. Retain the selected-recipe and native-content assertions."
+    },
+    "goal": {
+      "job": 126686518936,
+      "observed": "The maximum-text goal row was hittable in the scrolling check, then the immediately following instantaneous hittability assertion failed after internal snapshot retries, without another swipe or tap.",
+      "change": "Use the shared native existence/hittability wait at the interaction boundary with a ten-second deadline. Keep all accessibility audit categories and downstream reviewed-recipe/decision checks; no test-case retry is added."
+    },
+    "artifacts": [
+      {
+        "id": 13344310853,
+        "sha256": "b6f3e759b177581d6c265665f8e8282e497258a59e4fb79c5021b15d3cdc8dc7"
+      },
+      {
+        "id": 13342832917,
+        "sha256": "73352ed7842b8323679fa7913e8d7ba56586a147397ddb069fa00f987d53ec54"
+      },
+      {
+        "id": 13342293855,
+        "sha256": "e1a66d0c20d55c8576b7541bc8376a64909009ac951f0050b70efc4a85e78d28"
+      }
+    ],
+    "inspection": "Inspected checksum-verified ZIP metadata and both failing layout-switch recordings. Partial extracted bundles and exported media are task-owned intermediates to reclaim after final validation.",
+    "localValidation": {
+      "ipad": "Complete CloudKitchen class plus maximum-text discovery journey passed 7/7; the detail-only intermediate run also passed.",
+      "iphone": "Five affected iPhone journeys passed 5/5 on iOS 26.5: cloud inspiration, maximum-text menu, maximum-text discovery detail, cloud goal preservation, and the complete maximum-text goal audit/review/decision journey. All five requested accessibility audit categories passed."
+    },
+    "remoteValidation": "Swift and all six general checks passed. The iPhone regression-main and iPad dietary groups passed. The iPad regression-main group was still running when these fixes were prepared."
+  },
+  "fifteenthFollowUp": {
+    "baselineCommit": "4c7dc4980c174186315469ca75e8c21a282402b3",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41874012353",
+    "job": "https://github.com/YunYouJun/cook/actions/runs/41874012353/job/126731817855",
+    "observed": "All six CloudKitchen cases passed. Discovery and random completed 19/20 overall. The repeated iPad detail-replacement journey opened two inspiration recipes, then timed out resolving the global recipe.openKitchen button after confirming its first random decision. The query performed internal snapshot retries and exhausted the 300-second test allowance before the selected recipe navigation readiness check could run.",
+    "diagnosticLimit": "The retained runner spindump shows XCTest collecting diagnostics for the failed existence query. It does not establish an App crash or identify a blocked App frame; no failing recording or console log was available in this result. Do not infer an App crash from this evidence.",
+    "change": "First require the selected recipe navigation and its actual favorite button to become interactive. Then require recipe.detail and resolve recipe.openKitchen only inside that native List. Keep the workbench-presence assertion, selected-title assertion, interactive-detail assertion and original per-operation/test time limits. No test-case retry is added.",
+    "artifact": {
+      "id": 13351730287,
+      "sha256": "39d26a706fd75686a2fedf12e90b2ca34945d5057ac39de1b41e7647aca40552"
+    },
+    "inspection": "Downloaded only checksum-verified metadata and the runner diagnostic payload. Reclaim task-owned partial extractions after final validation.",
+    "navigationOrderValidation": {
+      "ipad": "Repeated detail replacement and maximum-text discovery passed 2/2 (64.469s and 88.801s).",
+      "iphone": "Cloud inspiration, maximum-text discovery and the full maximum-text dietary audit/review/decision journey passed 3/3 before the unique-list query change."
+    },
+    "nestedGoalList": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41874012353/job/126731817879",
+      "observed": "Both independent accessibility audit journeys and five regular dietary cases passed. Empty-goal cancellation failed on its final reopened goal sheet while resolving dietary.choices. The toolbar had already been confirmed hittable. The recording shows the goal sheet visibly presented over the filter sheet and beef recipe results until cleanup.",
+      "stackEvidence": "The retained App spindump identifies the live Cook process and shows its main thread in XCTElementQuery._firstMatchingSnapshotForInput, XCTFilteringTransformerIterator.nextMatch, XCTElementSnapshotDescendantsEnumerator.nextObject and XCElementSnapshot.children. No Cook business frame blocks the sampled thread; the traversal belongs to injected XCTest automation.",
+      "change": "Use element for the uniquely identified dietary.choices container, checking ambiguity through complete query resolution instead of the lazy firstMatch path seen in the sample. Apply the same unique-container resolution to the decided recipe.detail List. Retain child matching and all selection/navigation/audit assertions. Remote CI must validate this framework-specific workaround.",
+      "apiReference": "https://developer.apple.com/documentation/xcuiautomation/xcuielementquery/element",
+      "artifact": {
+        "id": 13351213841,
+        "sha256": "e96f39d4c497d83d2df2fb04dbc76c43ed4788c967179f65417a927e439dbafb"
+      },
+      "inspection": "Checksum-verified metadata, the App spindump and the failing recording were inspected. The duplicate exported recording was reclaimed; its retained xcresult source payload can regenerate it."
+    },
+    "uniqueListValidation": {
+      "ipad": "Three executed cases passed: repeated detail replacement (76.896s), empty-goal cancellation/reopened picker (91.256s), and the full maximum-text dietary audit/review/decision journey (129.197s). The separately selected discovery dietary-goal/decided-detail journey also passed (71.305s), for 4/4 total.",
+      "iphone": "Four affected cases passed on iOS 26.5: discovery dietary goal (69.410s), maximum-text discovery (83.006s), empty-goal cancellation (78.040s), and the full maximum-text dietary audit/review/decision journey (151.144s). All five requested accessibility audit categories passed on both devices.",
+      "coverage": "The unique-list change preserves existing test method names, group assignments, per-operation timeouts and case allowances. No assertion or test-case retry was added."
+    },
+    "phoneCompletion": {
+      "job": "https://github.com/YunYouJun/cook/actions/runs/41874012353/job/126731817968",
+      "observed": "Both failure summaries identify the 300-second case ceiling. The maximum-text menu geometry journey spent two separate 60-second waits without a UIKit animation-complete notification, then hit its case limit during ingredient scrolling at 298 seconds. Its later current-marker assertion ran after the watchdog fired; the final reported label includes 当前视图. The rotation journey was still progressing at 299 seconds, completed its final state assertions and capture around 300 seconds, then raced watchdog cleanup while terminating the App.",
+      "menuChange": "Reuse the existing Debug UI-testing animation flag only for the maximum-text menu functional fixture. It still opens the actual native menu with real 44pt edge touches, reads current-selection text, switches layouts and verifies preserved ingredients.",
+      "rotationChange": "Give the camera rotation, layout replacement and foreground-restoration journey an explicit 600-second ceiling. It keeps normal UIKit/SceneKit behavior, gesture/motion/selection assertions and original per-operation deadlines. Termination errors remain test failures.",
+      "artifact": {
+        "id": 13355351027,
+        "sha256": "314058efcb2c8e77d66e47416c2e5e59dd4fed5f3e82a37c40fd30d158676c80"
+      },
+      "localValidation": {
+        "ipad": "Maximum-text native menu geometry/selection and normal-animation camera rotation/restoration passed 2/2 (54.044s and 53.169s).",
+        "iphone": "The same two cases passed 2/2 on iOS 26.5 (60.329s and 48.099s). Real native menus, 44pt edge touches, current markers, preserved selection, camera movement/reset and foreground restoration assertions all execute."
+      }
+    }
+  },
+  "sixteenthFollowUp": {
+    "baselineCommit": "75622ff201b45b330ff3cb2176356eb83c4f440d",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41898057360",
+    "ipadDiscovery": "The complete iPad discovery group passed 20/20, including repeated recipe replacement. The previous lazy goal-list lookup did not recur in the audited goal flows.",
+    "phoneDiscovery": {
+      "job": 126813061851,
+      "observed": "Rotation failed waiting for the toolbar mode after choosing 食材快选; the recording shows the quick chooser actually displayed, while the failed navigation-bars-scoped button description contains only a query chain. Default discovery failed its named-decision predicate; the retained full AX tree contains a StaticText with cook.decide.recipe and a valid recipe summary, alongside an enabled 看做法 action.",
+      "change": "Resolve globally unique cooking toolbar controls and the decision action/card with element, removing reliance on the replaced navigation ancestor and lazy first-match snapshots. All mode-value, spoken-name and detail-content assertions remain.",
+      "artifact": {
+        "id": 13359757082,
+        "sha256": "02bb40f37ee6751f0b012dc2181f0ada4b036c2760983a4787b631f45b5fb91e"
+      }
+    },
+    "ipadDietary": {
+      "job": 126813061848,
+      "observed": "Both audit journeys passed. Empty-goal cancellation now reached clearing the goal, then timed out resolving the scoped cancel button disappearance at DietaryGoalsUITests.swift:385. This is the existing waitForNonExistence assertion, before subsequent goal-value/result checks.",
+      "change": "Retain the disappearance check and use complete unique resolution for both its chooser parent and the cancel control. Scope selected-ingredient summaries and candidate rows to their actual results List, also covering the corresponding iPad live-results checks.",
+      "artifact": {
+        "id": 13360231487,
+        "sha256": "2ff38c5e754d1883cdc8c4b56e99226cdd06458a561f0304c92f3d10d2655f64"
+      }
+    },
+    "phoneDietary": {
+      "job": 126813061911,
+      "observed": "Both audit journeys and all other cases passed. The kitchen/goal preservation journey completed its result and filter assertions and entered teardown at 297 seconds; normal scene cleanup crossed the 300-second case allowance.",
+      "change": "Give this measured complete filter/layout/results journey a 600-second ceiling, preserving every original operation deadline, assertion and cleanup failure.",
+      "artifact": {
+        "id": 13360290378,
+        "sha256": "9ba1745a67c8246e773574b20023239554698a674a7240680cf8db571cf7399e"
+      }
+    },
+    "finalInventory": "Swift and both main regression groups passed. iPad discovery passed 20/20. Only the three documented dietary/discovery groups failed; the aggregate gate correctly failed.",
+    "localValidation": {
+      "ipad": "All seven affected distinct cases have passing records on iOS 27.0. The landscape menu, largest-text menu, rotation and live ingredient results passed in 66.421s, 50.612s, 68.449s and 26.369s. The three sleep-affected cases were run again after recovery: default discovery, kitchen goal browsing and empty-goal cancellation passed 3/3 in 160.217s, 94.512s and 99.534s.",
+      "interruptedAttempt": "The first combined seven-case batch is not counted as an accepted full run. Power logs confirm repeated Low Power Sleep beginning at 04:36 local time, overlapping inflated 5861s/5083s durations and a later event-synthesis failure. Those affected cases were explicitly revalidated after recovery rather than changing assertions in response to host suspension.",
+      "iphone": "Five targeted cases passed 5/5 on iOS 26.5: largest-text menu 62.881s, rotation 63.833s, default discovery 64.927s, kitchen goal browsing 90.216s, empty-goal cancellation 108.575s. Every original business assertion executes.",
+      "execution": "Existing shared simulators only; serial XCTest execution, no cloning or erasing. Both task simulators restored to their original shutdown state."
     }
   }
 }

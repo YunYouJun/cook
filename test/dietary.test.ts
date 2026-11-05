@@ -15,8 +15,9 @@ const validate = (input: DietaryData, sources = texts) => validateDietaryData(in
 describe('reviewed dietary source data', () => {
   it('validates every annotation against the current source and opens only supported goals', () => {
     expect(validate(data)).toEqual([])
-    expect(data.enabledGoals).toEqual(['less-added-sugar', 'balanced-pairing'])
-    expect(Object.keys(data.recipes)).toHaveLength(32)
+    expect(data.enabledGoals).toEqual(['weight-aware', 'less-added-sugar', 'balanced-pairing'])
+    expect(Object.keys(data.recipes)).toHaveLength(36)
+    expect(Object.values(data.recipes).filter(entry => entry.assessments['weight-aware'].status === 'pass')).toHaveLength(10)
     expect(Object.values(data.recipes).filter(entry => entry.assessments['less-added-sugar'].status === 'pass')).toHaveLength(12)
     expect(data.recipes['849'].assessments['less-added-sugar'].status).toBe('fail')
     expect(data.recipes['789'].assessments['less-added-sugar'].status).toBe('unknown')
@@ -48,11 +49,46 @@ describe('reviewed dietary source data', () => {
 
   it('does not open a goal or a catalog below the release threshold', () => {
     const changed = structuredClone(data)
-    changed.enabledGoals.push('weight-aware')
-    expect(validate(changed)).toContain('weight-aware: 开放目标至少需要 10 道通过记录，当前 2')
-    for (const id of Object.keys(changed.recipes).slice(0, 3))
+    changed.recipes['333'].assessments['weight-aware'] = { ...changed.recipes['333'].assessments['weight-aware'], status: 'unknown', reason: 'unverified-portion-oil' }
+    expect(validate(changed)).toContain('weight-aware: 开放目标至少需要 10 道通过记录，当前 9')
+    for (const id of Object.keys(changed.recipes).slice(0, 7))
       delete changed.recipes[id]
     expect(validate(changed)).toContain('开放目标合计至少需要 30 道独立菜谱，当前 29')
+  })
+
+  it('preserves source volume and both oil additions without inventing a mass conversion', () => {
+    const lunches = JSON.parse(fs.readFileSync('specs/dietary-goals/next-day-lunch.json', 'utf8')).recipes
+    for (const id of ['333', '630', '677', '701', '736', '756', '799', '814']) {
+      const audited = lunches[id]
+      const entry = data.recipes[id]
+      expect(entry.sourceFingerprint, id).toBe(audited.sourceFingerprint)
+      expect(entry.portionOil!.referenceServings, id).toBe(audited.referenceServings)
+      expect(entry.portionOil!.batchOilMilliliters, id).toEqual({ lower: audited.addedOil.lower, upper: audited.addedOil.upper })
+      expect(entry.portionOil!.batchOilGrams, id).toBeUndefined()
+    }
+    const zucchini = data.recipes['333'].portionOil!
+    expect(zucchini.referenceServings).toBe(2)
+    expect(zucchini.batchOilMilliliters).toEqual({ lower: 10, upper: 20 })
+    expect(zucchini.batchOilGrams).toBeUndefined()
+    expect(zucchini.oilEvidence.filter(anchor => anchor.block === 10).map(anchor => anchor.item)).toEqual([3, 5])
+    const spinach = data.recipes['630'].portionOil!
+    expect(spinach.batchOilMilliliters).toEqual({ lower: 15, upper: 15 })
+    expect(spinach.oilEvidence.some(anchor => anchor.text.includes('10ml 油'))).toBe(true)
+    expect(spinach.oilEvidence.some(anchor => anchor.text.includes('5ml 油'))).toBe(true)
+    expect(data.recipes['800'].portionOil!.batchOilGrams).toEqual({ lower: 0, upper: 0 })
+  })
+
+  it('rejects mixed units, missing ranges and volume disguised as the legacy policy', () => {
+    const mixed = structuredClone(data)
+    mixed.recipes['333'].portionOil!.batchOilGrams = { lower: 10, upper: 20 }
+    expect(validate(mixed)).toContain('333: 份量、添加油数值或证据无效')
+    delete mixed.recipes['333'].portionOil!.batchOilGrams
+    delete mixed.recipes['333'].portionOil!.batchOilMilliliters
+    expect(validate(mixed)).toContain('333: 份量、添加油数值或证据无效')
+    const legacy = structuredClone(data)
+    legacy.schemaVersion = 1
+    legacy.policyVersion = 1
+    expect(validate(legacy)).toContain('333: 份量、添加油数值或证据无效')
   })
 
   it('versions annotation-only changes and ignores display scores in source binding', () => {

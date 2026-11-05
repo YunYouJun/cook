@@ -155,6 +155,7 @@ struct DietaryGoalSelectionSheet: View {
             }
             // Rebuild cached list row heights when Dynamic Type changes on older iOS versions.
             .id(dynamicTypeSize)
+            .accessibilityIdentifier("dietary.choices")
             .navigationTitle("饮食目标")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -235,7 +236,7 @@ struct DietaryReviewSummary: View {
                 Text(entry.reason(for: goal))
                     .accessibilityIdentifier("dietary.reviewReason")
                 if goal == .weightAware, let oil = entry.portionOil {
-                    Text("按原文 \(oil.referenceServings) 份计算；添加油不等于总脂肪或吸收油量。")
+                    Text("按原文 \(oil.referenceServings) 人配方均分，保留原文单位；额外烹调油不含成品调料中的脂肪，也不等于实际吸收油量。")
                         .font(.footnote)
                         .foregroundStyle(Color.primary)
                 }
