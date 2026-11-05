@@ -63,6 +63,11 @@ targets:
         # 预留给原生微信入口；只在 SDK、账号绑定与审核均就绪后开启。
         CookWeChatLoginEnabled: $(COOK_WECHAT_LOGIN_ENABLED)
         LSApplicationQueriesSchemes: [bilibili]
+        NSUbiquitousContainers:
+          iCloud.fun.yunle.cook:
+            NSUbiquitousContainerIsDocumentScopePublic: true
+            NSUbiquitousContainerName: 云食册
+            NSUbiquitousContainerSupportedFolderLevels: ANY
         # 大图里的分享按钮可以把配图存到相册
         NSPhotoLibraryAddUsageDescription: 把菜谱配图存到相册。
         UIApplicationSceneManifest:
@@ -89,7 +94,8 @@ targets:
           - webcredentials:cook.yunyoujun.cn
           - applinks:cook.yunyoujun.cn
         com.apple.developer.icloud-container-identifiers: [iCloud.fun.yunle.cook]
-        com.apple.developer.icloud-services: [CloudKit]
+        com.apple.developer.icloud-services: [CloudKit, CloudDocuments]
+        com.apple.developer.ubiquity-container-identifiers: [iCloud.fun.yunle.cook]
     settings:
       base:
         PRODUCT_NAME: Cook
@@ -116,6 +122,9 @@ targets:
     platform: iOS
     sources:
       - path: CookUITests
+      - path: CookTests/Fixtures/private-recipe-video.mp4
+        type: file
+        buildPhase: resources
     dependencies:
       - target: Cook
     settings:

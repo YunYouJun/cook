@@ -13,12 +13,12 @@ final class PrivateRecipeRecord {
 
     init(_ recipe: PrivateRecipe) throws {
         customId = recipe.customId
-        payload = try PrivateRecipeFile(recipes: [recipe], exportedAt: recipe.updatedAt).export()
+        payload = try PrivateRecipeNativeFile.export(recipes: [recipe], exportedAt: recipe.updatedAt)
         updatedAt = Date(timeIntervalSince1970: Double(recipe.updatedAt) / 1000)
     }
 
     func recipe() throws -> PrivateRecipe {
-        let recipes = try PrivateRecipeFile.parse(payload).recipes
+        let recipes = try PrivateRecipeNativeFile.parse(payload)
         guard recipes.count == 1, let recipe = recipes.first, recipe.customId == customId else {
             throw PrivateRecipeFileError.invalid
         }
@@ -111,7 +111,7 @@ enum PrivateRecipePersistence {
         _ = try recipe.validated()
         guard current != nil || snapshot.recipes.count < PrivateRecipeFile.recipeLimit else { throw PrivateRecipeFileError.tooMany }
         if let currentRecord = records.filter({ $0.customId == recipe.customId }).max(by: { $0.updatedAt < $1.updatedAt }) {
-            currentRecord.payload = try PrivateRecipeFile(recipes: [recipe], exportedAt: recipe.updatedAt).export()
+            currentRecord.payload = try PrivateRecipeNativeFile.export(recipes: [recipe], exportedAt: recipe.updatedAt)
             currentRecord.updatedAt = Date(timeIntervalSince1970: Double(recipe.updatedAt) / 1000)
         } else {
             context.insert(try PrivateRecipeRecord(recipe))

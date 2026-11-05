@@ -18,7 +18,11 @@ struct CookApp: App {
     @State private var accounts: YunlefunAccountStore
     @State private var workbench: KitchenWorkbench
     @State private var ai: CookAISettings
+    #if DEBUG
+        @State private var videoFixtureLoaded = false
+    #endif
     private let container: ModelContainer
+    private let privateVideos: PrivateRecipeVideoStore
     /// 通知中心只弱引用代理，这里留着
     private let notificationDelegate: NotificationDelegate
 
@@ -102,6 +106,9 @@ struct CookApp: App {
             }
         #endif
         self.container = container
+        privateVideos = inMemory
+            ? PrivateRecipeVideoStore(localRoot: FileManager.default.temporaryDirectory.appendingPathComponent("cook-test-videos-\(ProcessInfo.processInfo.processIdentifier)"), deviceID: "00000000-0000-0000-0000-000000000001", cloudRoot: { nil })
+            : .shared
         // 点开通知会在启动完成前回调，代理要在这里就设好
         notificationDelegate = NotificationDelegate()
         UNUserNotificationCenter.current().delegate = notificationDelegate
@@ -119,8 +126,23 @@ struct CookApp: App {
                     .environment(workbench)
                     .environment(accounts)
                     .environment(ai)
+                    .environment(\.privateRecipeVideos, privateVideos)
                     .preferredColorScheme(testColorScheme)
                     .task {
+                        await privateVideos.removeAbandonedDrafts()
+                        #if DEBUG
+                            if !videoFixtureLoaded, ProcessInfo.processInfo.arguments.contains("-ui-testing"),
+                               let path = ProcessInfo.processInfo.environment["COOK_UI_TEST_VIDEO_SOURCE"] {
+                                videoFixtureLoaded = true
+                                do {
+                                    let draft = try await privateVideos.stage(URL(fileURLWithPath: path))
+                                    var recipe = PrivateRecipe(customId: "custom-ui-video", name: "视频测试蒸蛋", stuff: ["鸡蛋"], tools: [], createdAt: 1000, updatedAt: 1000)
+                                    recipe.video = draft.video
+                                    _ = try await PrivateRecipeVideoPersistence.save(recipe, replacing: nil, draft: draft, inCloud: false, in: container, files: privateVideos)
+                                    await privateVideos.discard(draft)
+                                } catch { assertionFailure("Video fixture failed: \(error)") }
+                            }
+                        #endif
                         await accounts.restore()
                         if ai.wantsManagedDeepSeek { await ai.refreshManagedCapability(accounts: accounts) }
                     }
