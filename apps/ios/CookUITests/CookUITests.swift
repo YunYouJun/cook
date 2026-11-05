@@ -66,9 +66,10 @@ extension XCUIElement {
                                  { element.wait(for: \.isEnabled, toEqual: true, timeout: remaining()) },
                                  matching: { element.exists && element.isEnabled })
         case "exists == true AND isHittable == true":
-            result = waitForBoth({ element.waitForExistence(timeout: remaining()) },
-                                 { element.wait(for: \.isHittable, toEqual: true, timeout: remaining()) },
-                                 matching: { element.exists && element.isHittable })
+            // A hittable element necessarily exists. Avoid two more accessibility
+            // snapshots once XCTest has found its hit point.
+            result = element.waitForExistence(timeout: remaining())
+                && element.wait(for: \.isHittable, toEqual: true, timeout: remaining()) ? .completed : .timedOut
         case "isEnabled == true AND isHittable == true":
             result = waitForBoth({ element.wait(for: \.isEnabled, toEqual: true, timeout: remaining()) },
                                  { element.wait(for: \.isHittable, toEqual: true, timeout: remaining()) },
@@ -106,7 +107,7 @@ extension XCUIApplication {
     @MainActor
     func completeDietarySelection(closingFilters: Bool, returningTo control: XCUIElement,
                                   file: StaticString = #filePath, line: UInt = #line) {
-        let goalNavigation = navigationBars.matching(identifier: "饮食目标").firstMatch
+        let goalNavigation = navigationBars.matching(identifier: "饮食目标").element
         let done = goalNavigation.buttons.matching(identifier: "dietary.done").firstMatch
         XCTAssertTrue(done.waitForExistence(timeout: 10), file: file, line: line)
         done.tap()
@@ -115,7 +116,7 @@ extension XCUIApplication {
         XCTAssertTrue(goalNavigation.waitForNonExistence(timeout: 10),
                       "饮食目标弹层应先完成关闭", file: file, line: line)
         if closingFilters {
-            let filterNavigation = navigationBars.matching(identifier: "筛选").firstMatch
+            let filterNavigation = navigationBars.matching(identifier: "筛选").element
             let filterDone = filterNavigation.buttons.matching(identifier: "filter.done").firstMatch
             XCTAssertTrue(filterDone.waitForExistence(timeout: 10), file: file, line: line)
             // The real tap and observed dismissal validate readiness without an
