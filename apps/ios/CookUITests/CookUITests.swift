@@ -123,10 +123,10 @@ extension XCUIApplication {
 
     @MainActor
     func cookingToolbarButton(_ identifier: String) -> XCUIElement {
-        // Replacing the iPad split view with the kitchen NavigationStack can
-        // leave the new bar without its title in AX. The control ID is unique
-        // across the small toolbar namespace and survives that transition.
-        navigationBars.buttons.matching(identifier: identifier).firstMatch
+        // Resolve the unique control independently of the navigation hierarchy
+        // replaced by a layout switch. Full matching avoids the lazy lookup
+        // that CI failed to resolve even after the requested layout appeared.
+        buttons.matching(identifier: identifier).element
     }
 
     /// 菜单辅助字号使用“当前视图”副标题；以稳定标题前缀定位同一个原生选项。
@@ -152,9 +152,9 @@ extension XCUIApplication {
     /// 决定页先把选中的菜停稳，再进入既有详情。
     @MainActor
     func confirmDecidedRecipe(file: StaticString = #filePath, line: UInt = #line) {
-        // The identifier is unique; stop at the match instead of checking the
-        // underlying iPad recipe list for duplicate buttons on every poll.
-        let open = buttons.matching(identifier: "cook.decide.open").firstMatch
+        // The action and spoken card each have a unique identifier. Resolve
+        // them completely instead of relying on stale first-match snapshots.
+        let open = buttons.matching(identifier: "cook.decide.open").element
         XCTAssertTrue(open.waitForExistence(timeout: 10), "决定页应出现", file: file, line: line)
         let decisionTitle = "今天吃什么"
         XCTAssertTrue(navigationBars.matching(identifier: decisionTitle).firstMatch.waitForExistence(timeout: 10),
@@ -173,7 +173,7 @@ extension XCUIApplication {
         }
         let readyResult = open.waitForState("isEnabled == true AND isHittable == true", timeout: 10)
         XCTAssertEqual(readyResult, .completed, "挑选停稳后才能打开做法", file: file, line: line)
-        let recipe = staticTexts.matching(identifier: "cook.decide.recipe").firstMatch
+        let recipe = staticTexts.matching(identifier: "cook.decide.recipe").element
         let named = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == true AND label != '' AND label != '正在挑选'"),
             object: recipe

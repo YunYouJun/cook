@@ -285,9 +285,9 @@ final class CookDiscoveryUITests: XCTestCase {
         guard app.windows.firstMatch.horizontalSizeClass == .regular else {
             throw XCTSkip("此用例检查 iPad 双栏布局")
         }
-        let resultList = app.descendants(matching: .any).matching(identifier: "dietary.results").firstMatch
+        let resultList = app.collectionViews.matching(identifier: "dietary.results").element
         wait(resultList, "exists == true AND isHittable == true")
-        let catalogHeader = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "当前候选 · ")).firstMatch
+        let catalogHeader = resultList.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "当前候选 · ")).firstMatch
         wait(catalogHeader, "exists == true")
         XCTAssertGreaterThan(Int(catalogHeader.label.filter { $0.isASCII && $0.isNumber }) ?? 0, 3,
                              "右栏应直接展示完整结果，而不是三道灵感的入口")
@@ -305,9 +305,9 @@ final class CookDiscoveryUITests: XCTestCase {
 
         tomato.tap()
         wait(tomato, "isSelected == true")
-        let selection = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已选：番茄")).firstMatch
+        let selection = resultList.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已选：番茄")).firstMatch
         wait(selection, "exists == true")
-        let match = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
+        let match = resultList.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
         wait(match, "exists == true AND isHittable == true")
         XCTAssertTrue(tomato.isHittable, "结果更新后左栏仍应停在食材选择区")
         XCTAssertGreaterThan(match.frame.midX, tomato.frame.maxX, "结果应在食材旁实时更新")

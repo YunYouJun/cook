@@ -377,8 +377,10 @@ final class DietaryGoalsUITests: XCTestCase {
             XCTAssertFalse(action.isEnabled, "目标与食材没有匹配时不应打开空结果页")
         }
         // 无候选时 iPhone 的结果入口禁用，仍能在找菜页直接取消目标。
-        let cancel = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
-            .buttons.matching(identifier: "cook.clearGoal").firstMatch
+        // Preserve the disappearance check without a lazy first-match search
+        // for a button that has already been removed from the chooser.
+        let cancel = app.collectionViews.matching(identifier: "cook.chooser").element
+            .buttons.matching(identifier: "cook.clearGoal").element
         revealCookingControl(cancel, in: app, towardTop: true)
         XCTAssertTrue(cancel.waitForExistence(timeout: 10))
         cancel.tap()
@@ -387,7 +389,8 @@ final class DietaryGoalsUITests: XCTestCase {
         revealCookingControl(beef, in: app)
         XCTAssertTrue(beef.isSelected)
         showResults(app)
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已选：牛肉")).firstMatch.exists)
+        XCTAssertTrue(app.collectionViews.matching(identifier: "dietary.results").element
+            .staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已选：牛肉")).firstMatch.exists)
         let openedFilters: Bool
         if app.windows.firstMatch.horizontalSizeClass == .regular {
             openedFilters = openGoalPicker(in: app)
@@ -421,6 +424,9 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     func testCloudKitchenKeepsGoalAndCanBrowseWithoutIngredients() {
+        // The complete filter/layout/results journey reached teardown at 297s
+        // on CI, leaving insufficient time for normal scene cleanup.
+        executionTimeAllowance = 600
         let app = app()
         select("less-added-sugar", in: app)
         app.selectCookingPresentation("云厨房")
