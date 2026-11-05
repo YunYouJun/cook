@@ -1,10 +1,7 @@
 name: Support delivery synchronization
 
 on:
-  push:
-    branches: [main]
-  schedule:
-    - cron: '*/15 * * * *'
+  # Run on demand; idle polling creates redundant runs and failure notifications.
   workflow_dispatch:
     inputs:
       apply:
@@ -31,7 +28,7 @@ concurrency:
 
 jobs:
   synchronize:
-    if: github.repository == 'YunYouJun/cook' && github.ref == 'refs/heads/main' && (vars.COOK_SUPPORT_ENABLED == 'true' || github.event_name == 'workflow_dispatch')
+    if: github.repository == 'YunYouJun/cook' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Configure this environment to allow main only before installing its four private secrets.
@@ -55,9 +52,9 @@ jobs:
           COOK_SUPPORT_AGENT_JSON: ${{ secrets.COOK_SUPPORT_AGENT_JSON }}
           COOK_SUPPORT_BINDINGS_JSON: ${{ secrets.COOK_SUPPORT_BINDINGS_JSON }}
           COOK_SUPPORT_LEDGER_KEY: ${{ secrets.COOK_SUPPORT_LEDGER_KEY }}
-          APPLY: ${{ github.event_name != 'workflow_dispatch' || inputs.apply }}
-          SEND_REPLIES: ${{ github.event_name == 'workflow_dispatch' && inputs.send_replies || github.event_name != 'workflow_dispatch' && vars.COOK_SUPPORT_AUTO_REPLY == 'true' }}
-          ALLOW_INITIALIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_initialize }}
+          APPLY: ${{ inputs.apply }}
+          SEND_REPLIES: ${{ inputs.send_replies }}
+          ALLOW_INITIALIZE: ${{ inputs.allow_initialize }}
         with:
           script: |
             const { spawnSync } = require('node:child_process')
