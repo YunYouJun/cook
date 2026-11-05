@@ -22,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
     outputs:
       skip_native: ${{ steps.changes.outputs.skip_native }}
     steps:
@@ -37,6 +38,8 @@ jobs:
         run: node --test test/iosTestInfrastructure.test.mjs
       - name: Check whether native tests are required
         id: changes
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: node scripts/ci-changes.mjs
 
   lint:

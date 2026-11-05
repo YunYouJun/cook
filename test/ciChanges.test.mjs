@@ -104,14 +104,51 @@ test('the workflow entry point writes job outputs and defaults to native on inva
     const outputPath = join(cwd, 'output.txt')
     const summaryPath = join(cwd, 'summary.md')
     const entry = fileURLToPath(new URL('../scripts/ci-changes.mjs', import.meta.url))
-    const env = { ...process.env, GITHUB_EVENT_NAME: 'push', GITHUB_EVENT_PATH: eventPath, GITHUB_OUTPUT: outputPath, GITHUB_STEP_SUMMARY: summaryPath }
-    writeFileSync(eventPath, JSON.stringify({ before: base, after }))
+    const env = { ...process.env, GITHUB_EVENT_NAME: 'pull_request', GITHUB_EVENT_PATH: eventPath, GITHUB_OUTPUT: outputPath, GITHUB_STEP_SUMMARY: summaryPath }
+    writeFileSync(eventPath, JSON.stringify({ pull_request: { base: { sha: base }, head: { sha: after } } }))
     execFileSync(process.execPath, [entry], { cwd, env })
     assert.equal(readFileSync(outputPath, 'utf8'), 'skip_native=true\n')
     assert.match(readFileSync(summaryPath, 'utf8'), /skipped \(only documentation or the Support sync workflow changed\)/)
     writeFileSync(eventPath, '{ invalid JSON')
     execFileSync(process.execPath, [entry], { cwd, env })
     assert.equal(readFileSync(outputPath, 'utf8'), 'skip_native=true\nskip_native=false\n')
+  })
+})
+
+test('a support-only push carries coverage only from a green push at the exact previous branch head', () => {
+  repository(({ cwd, write, commit, base }) => {
+    write('.github/workflows/support-sync.yml')
+    const after = commit()
+    const eventPath = join(cwd, 'event.json')
+    writeFileSync(eventPath, JSON.stringify({ before: base, after, ref: 'refs/heads/main' }))
+    const bin = join(cwd, 'bin')
+    mkdirSync(bin)
+    writeFileSync(join(bin, 'gh'), `#!/usr/bin/env node
+if (process.env.FAKE_GH_OUTPUT === 'error') process.exit(1)
+process.stdout.write(process.env.FAKE_GH_OUTPUT)
+`, { mode: 0o755 })
+    const entry = fileURLToPath(new URL('../scripts/ci-changes.mjs', import.meta.url))
+    const passed = { head_sha: base, head_branch: 'main', event: 'push', conclusion: 'success' }
+    for (const [response, expected] of [
+      [{ workflow_runs: [passed] }, true],
+      [{ workflow_runs: [] }, false],
+      ...[{ conclusion: 'cancelled' }, { conclusion: 'failure' }, { conclusion: null }, { head_sha: after }, { head_branch: 'dev' }, { event: 'pull_request' }]
+        .map(change => [{ workflow_runs: [{ ...passed, ...change }] }, false]),
+      ['error', false],
+    ]) {
+      const env = {
+        ...process.env,
+        PATH: `${bin}:${process.env.PATH}`,
+        GITHUB_REPOSITORY: 'example/cook',
+        GITHUB_OUTPUT: join(cwd, 'push-output.txt'),
+        GITHUB_STEP_SUMMARY: join(cwd, 'push-summary.md'),
+        GITHUB_EVENT_NAME: 'push',
+        GITHUB_EVENT_PATH: eventPath,
+        FAKE_GH_OUTPUT: response === 'error' ? response : JSON.stringify(response),
+      }
+      const result = JSON.parse(execFileSync(process.execPath, [entry], { cwd, env, encoding: 'utf8' }))
+      assert.equal(result.skipNative, expected)
+    }
   })
 })
 

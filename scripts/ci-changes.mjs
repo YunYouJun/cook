@@ -67,6 +67,40 @@ export function detectNativeChanges(eventName, event, cwd = process.cwd()) {
   }
 }
 
+function previousPushPassed(event) {
+  const repo = process.env.GITHUB_REPOSITORY
+  if (!repo || typeof event.ref !== 'string' || !event.ref.startsWith('refs/heads/'))
+    return false
+
+  const branch = event.ref.slice('refs/heads/'.length)
+  try {
+    // A docs or Support push can cancel the only run that covers the previous
+    // native change. Carry its coverage forward only from a successful push.
+    const output = execFileSync('gh', [
+      'api',
+      `repos/${repo}/actions/workflows/ci.yml/runs`,
+      '-X',
+      'GET',
+      '-f',
+      'event=push',
+      '-f',
+      `branch=${branch}`,
+      '-f',
+      `head_sha=${event.before}`,
+      '-f',
+      'status=success',
+      '-f',
+      'per_page=1',
+    ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 10000 })
+    return JSON.parse(output).workflow_runs.some(run =>
+      run.head_sha === event.before && run.head_branch === branch
+      && run.event === 'push' && run.conclusion === 'success')
+  }
+  catch {
+    return false
+  }
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   let event
   try {
@@ -76,9 +110,15 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     event = {}
   }
   const result = detectNativeChanges(process.env.GITHUB_EVENT_NAME, event)
+  if (result.skipNative && process.env.GITHUB_EVENT_NAME === 'push') {
+    result.previousPushPassed = previousPushPassed(event)
+    result.skipNative = result.previousPushPassed
+  }
   if (process.env.GITHUB_OUTPUT)
     appendFileSync(process.env.GITHUB_OUTPUT, `skip_native=${result.skipNative}\n`)
-  if (process.env.GITHUB_STEP_SUMMARY)
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Native CI: ${result.skipNative ? 'skipped (only documentation or the Support sync workflow changed)' : 'required'}. Changed paths: ${result.changedFiles ?? 'unknown'}. Comparison: ${result.comparison}.\n`)
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    const reason = result.previousPushPassed === false ? ' Previous push did not have a verified successful CI run.' : ''
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Native CI: ${result.skipNative ? 'skipped (only documentation or the Support sync workflow changed)' : 'required'}.${reason} Changed paths: ${result.changedFiles ?? 'unknown'}. Comparison: ${result.comparison}.\n`)
+  }
   console.log(JSON.stringify(result))
 }
