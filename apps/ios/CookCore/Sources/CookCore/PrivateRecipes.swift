@@ -15,7 +15,13 @@ public struct PrivateRecipe: Codable, Equatable, Identifiable, Sendable {
     public var createdAt: Int64
     public var updatedAt: Int64
     public var copiedFrom: String?
+    /// Native attachment metadata is stored separately from the portable v1 recipe fields.
+    public var video: PrivateRecipeVideo? = nil
     public var id: String { customId }
+
+    enum CodingKeys: String, CodingKey {
+        case customId, name, stuff, tools, bv, link, note, tags, methods, difficulty, createdAt, updatedAt, copiedFrom
+    }
 
     public init(customId: String, name: String, stuff: [String], tools: [String], bv: String? = nil, link: String? = nil, note: String? = nil, createdAt: Int64, updatedAt: Int64) {
         self.customId = customId
@@ -35,14 +41,17 @@ public struct PrivateRecipe: Codable, Equatable, Identifiable, Sendable {
         return URL(string: link)
     }
 
-    public func hasSameContent(as other: PrivateRecipe) -> Bool {
+    /// Portable v1 imports cannot remove an existing video association.
+    public func hasSameContent(as other: PrivateRecipe, ignoringMissingVideo: Bool = false) -> Bool {
         name == other.name && stuff == other.stuff && tools == other.tools
             && (bv ?? "") == (other.bv ?? "") && (link ?? "") == (other.link ?? "")
             && (note ?? "") == (other.note ?? "") && (tags ?? []) == (other.tags ?? [])
             && (methods ?? []) == (other.methods ?? []) && (difficulty ?? "") == (other.difficulty ?? "")
+            && (video == other.video || (ignoringMissingVideo && other.video == nil))
     }
 
     public func validated() throws -> PrivateRecipe {
+        if let video { _ = try video.validated() }
         guard PrivateRecipeFile.validID(customId), !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               name.utf16.count <= 30, !stuff.isEmpty, Self.validList(stuff), Self.validList(tools),
               createdAt >= 0, updatedAt >= createdAt, updatedAt <= 9_007_199_254_740_991,
@@ -145,8 +154,8 @@ public struct PrivateRecipeImport: Sendable {
         currentCount = current.count
         for recipe in incoming {
             let previous = current.first { $0.customId == recipe.customId }
-            let copied = current.contains { $0.copiedFrom == recipe.customId && $0.hasSameContent(as: recipe) }
-            if copied || previous?.hasSameContent(as: recipe) == true {
+            let copied = current.contains { $0.copiedFrom == recipe.customId && $0.hasSameContent(as: recipe, ignoringMissingVideo: true) }
+            if copied || previous?.hasSameContent(as: recipe, ignoringMissingVideo: true) == true {
                 duplicates.append(recipe)
             } else if previous != nil || deletedIDs.contains(recipe.customId) {
                 conflicts.append(recipe)

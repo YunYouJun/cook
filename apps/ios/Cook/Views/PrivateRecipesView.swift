@@ -22,7 +22,7 @@ struct PrivateRecipesView: View {
             case let .success(data):
                 Section("我的菜谱 · \(data.recipes.count)") {
                     ForEach(data.recipes.filter { query.isEmpty || $0.name.contains(query) || $0.stuff.contains(where: { $0.contains(query) }) }) { recipe in
-                        if let source = recipe.sourceURL {
+                        if let source = recipe.sourceURL, recipe.video == nil {
                             HStack {
                                 Link(destination: source) { recipeLabel(recipe) }
                                     .buttonStyle(.borderless)
@@ -46,7 +46,10 @@ struct PrivateRecipesView: View {
             }
             Section {
                 DisclosureGroup("备份与迁移") {
-                    Button("导出私人菜谱", systemImage: "square.and.arrow.up", action: export)
+                    Button("导出私人菜谱（文字与链接）", systemImage: "square.and.arrow.up") { export(withVideos: false) }
+                    Button("导出视频关联备份（iOS）", systemImage: "video.badge.checkmark") { export(withVideos: true) }
+                    Text("文字备份不含视频。关联备份可恢复同一 iCloud 中的视频关联，也不含视频文件；本机视频请在详情中另行导出，跨设备后重新关联。")
+                        .font(.caption).foregroundStyle(.secondary)
                     Button("从文件导入", systemImage: "folder") { importing = true }
                     PasteButton(payloadType: String.self) { strings in
                         Task { @MainActor in read(strings.joined()) }
@@ -82,6 +85,9 @@ struct PrivateRecipesView: View {
         .fileExporter(isPresented: $showingExporter, document: exporting, contentType: .json, defaultFilename: "cook-custom-recipes") { result in
             if case let .failure(error) = result { message = error.localizedDescription }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .privateVideoCleanupFailed)) { _ in
+            message = "菜谱变更已保存，但旧视频副本未能清理。iCloud 副本可在“文件”中的云食册目录清理；本机副本可能继续保留。"
+        }
         .alert("私人菜谱", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
             Button("好", role: .cancel) {}
         } message: { Text(message ?? "") }
@@ -95,14 +101,14 @@ struct PrivateRecipesView: View {
     }
 
     private func read(_ text: String) {
-        do { incoming = RecipeImportItem(recipes: try PrivateRecipeFile.parse(text).recipes) }
+        do { incoming = RecipeImportItem(recipes: try PrivateRecipeNativeFile.parse(text)) }
         catch { message = error.localizedDescription }
     }
 
-    private func export() {
+    private func export(withVideos: Bool) {
         do {
             let snapshot = try PrivateRecipePersistence.snapshot(in: context)
-            exporting = PrivateRecipeDocument(text: try PrivateRecipeFile(recipes: snapshot.recipes).export())
+            exporting = PrivateRecipeDocument(text: try (withVideos ? PrivateRecipeNativeFile.export(recipes: snapshot.recipes, backup: true) : PrivateRecipeFile(recipes: snapshot.recipes).export()))
             showingExporter = true
         } catch { message = error.localizedDescription }
     }
@@ -205,6 +211,8 @@ private struct PrivateRecipeDetailView: View {
     @State private var editor: RecipeEditorItem?
     @State private var deleting = false
     @State private var error: String?
+    @State private var removing = false
+    @Environment(\.privateRecipeVideos) private var files
 
     private var recipe: PrivateRecipe? { (try? PrivateRecipeSnapshot(records))?.recipes.first { $0.customId == customId } }
 
@@ -212,6 +220,7 @@ private struct PrivateRecipeDetailView: View {
         Group {
             if let recipe {
                 List {
+                    if let video = recipe.video { Section("做法视频") { PrivateRecipeVideoView(video: video).id(video.id) } }
                     Section("食材") { Text(recipe.stuff.joined(separator: "、")) }
                     Section("厨具") { Text(recipe.tools.isEmpty ? "未记录" : recipe.tools.joined(separator: "、")) }
                     if let url = recipe.sourceURL { Section("来源") { Link(destination: url) { Label(recipe.bv ?? recipe.link ?? "打开来源", systemImage: "arrow.up.right.square") } } }
@@ -221,11 +230,22 @@ private struct PrivateRecipeDetailView: View {
                         Button("删除菜谱", role: .destructive) { deleting = true }
                     }
                 }
+                .disabled(removing)
                 .navigationTitle(recipe.name)
                 .confirmationDialog("删除这道私人菜谱？", isPresented: $deleting, titleVisibility: .visible) {
                     Button("删除", role: .destructive) {
-                        do { try PrivateRecipePersistence.remove(recipe, in: context.container); dismiss() }
-                        catch { self.error = error.localizedDescription }
+                        removing = true
+                        Task {
+                            do {
+                                try PrivateRecipePersistence.remove(recipe, in: context.container)
+                                if let video = recipe.video {
+                                    do { try await PrivateRecipeVideoPersistence.removeIfUnreferenced(video, in: context.container, files: files) }
+                                    catch { NotificationCenter.default.post(name: .privateVideoCleanupFailed, object: nil) }
+                                }
+                                dismiss()
+                            } catch { self.error = error.localizedDescription }
+                            removing = false
+                        }
                     }
                 } message: { Text("删除会通过 iCloud 同步到你的其他 Apple 设备。导出的备份文件不受影响。") }
             } else { ContentUnavailableView("菜谱暂不可用", systemImage: "doc", description: Text("可能已在其他设备删除，或数据暂时无法读取。")) }
@@ -274,6 +294,13 @@ private struct PrivateRecipeEditor: View {
     @State private var source: String
     @State private var note: String
     @State private var error: String?
+    @State private var video: PrivateRecipeVideo?
+    @State private var draft: PrivateVideoDraft?
+    @State private var inCloud = false
+    @State private var selectingVideo = false
+    @State private var busy = false
+    @State private var operation: Task<Void, Never>?
+    @Environment(\.privateRecipeVideos) private var files
 
     init(original: PrivateRecipe?) {
         self.original = original
@@ -282,6 +309,8 @@ private struct PrivateRecipeEditor: View {
         _tools = State(initialValue: PrivateRecipeEditorList(preserving: original?.tools))
         _source = State(initialValue: original?.bv.flatMap { $0.isEmpty ? nil : $0 } ?? original?.link ?? "")
         _note = State(initialValue: original?.note ?? "")
+        _video = State(initialValue: original?.video)
+        _inCloud = State(initialValue: original?.video?.location == .iCloud)
     }
 
     var body: some View {
@@ -307,14 +336,60 @@ private struct PrivateRecipeEditor: View {
                 Section("来源（可选）") {
                     TextField("BV 号或 http(s) 网页地址", text: $source).textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
                 }
+                Section {
+                    if let video {
+                        Label(video.originalName, systemImage: "video")
+                        Text(ByteCountFormatter.string(fromByteCount: video.byteCount, countStyle: .file)).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Button(video == nil ? "关联视频" : "替换视频", systemImage: "folder") { selectingVideo = true }
+                    if video != nil {
+                        Toggle("存入 iCloud Drive", isOn: $inCloud)
+                            .disabled(draft == nil && video?.location == .iCloud)
+                        Button("移除视频", role: .destructive) {
+                            if let draft { Task { await files.discard(draft) } }
+                            draft = nil
+                            video = nil
+                        }
+                    }
+                    if busy { ProgressView("正在处理视频…") }
+                } header: { Text("做法视频（可选）") } footer: {
+                    Text("MP4、MOV 或 M4V，最多 500 MB。保存时复制到云食册目录，原文件保留。开启后使用你自己的 iCloud Drive 空间；关闭时仅保存在这台设备。移除或删除菜谱会清理云食册管理的无引用副本。")
+                }
                 Section("做法与备注（可选）") { TextField("写下自己的做法", text: $note, axis: .vertical).lineLimit(6...16) }
                 if let error { Text(error).foregroundStyle(.red) }
             }
+            .disabled(busy)
             .navigationTitle(original == nil ? "新建菜谱" : "编辑菜谱")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("保存", action: save) }
+                ToolbarItem(placement: .cancellationAction) { Button("取消") { operation?.cancel(); dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("保存", action: save).disabled(busy) }
+            }
+            .interactiveDismissDisabled(busy)
+            .task { if original?.video == nil { inCloud = await files.cloudAvailable() } }
+            .fileImporter(isPresented: $selectingVideo, allowedContentTypes: [.mpeg4Movie, .quickTimeMovie, UTType(filenameExtension: "m4v")!]) { result in
+                switch result {
+                case let .success(url):
+                    busy = true
+                    operation = Task {
+                        do {
+                            let next = try await files.stage(url)
+                            if Task.isCancelled { await files.discard(next); busy = false; return }
+                            if let draft { await files.discard(draft) }
+                            draft = next
+                            video = next.video
+                            error = nil
+                        } catch is CancellationError { }
+                        catch { self.error = error.localizedDescription }
+                        busy = false
+                    }
+                case let .failure(error):
+                    if (error as NSError).code != NSUserCancelledError { self.error = error.localizedDescription }
+                }
+            }
+            .onDisappear {
+                operation?.cancel()
+                if let draft { Task { await files.discard(draft) } }
             }
         }
     }
@@ -339,8 +414,26 @@ private struct PrivateRecipeEditor: View {
                     else { throw PrivateRecipeFileError.invalid }
                 }
             }
-            try PrivateRecipePersistence.save(recipe, replacing: original, in: context.container)
-            dismiss()
+            recipe.video = video
+            _ = try recipe.validated()
+            busy = true
+            operation = Task {
+                do {
+                    var pending = draft
+                    if pending == nil, let video, video.location == .local, inCloud {
+                        pending = try await files.stageExisting(video)
+                        draft = pending
+                    }
+                    let cleaned = try await PrivateRecipeVideoPersistence.save(recipe, replacing: original, draft: pending, inCloud: inCloud, in: context.container, files: files)
+                    if !cleaned { NotificationCenter.default.post(name: .privateVideoCleanupFailed, object: nil) }
+                } catch {
+                    if !(error is CancellationError) { self.error = error.localizedDescription }
+                    busy = false
+                    return
+                }
+                busy = false
+                dismiss()
+            }
         } catch { self.error = error.localizedDescription }
     }
 }
@@ -373,6 +466,7 @@ private struct PrivateRecipeImportView: View {
                                     Text(recipe.tools.joined(separator: "、")).font(.caption)
                                     Text(recipe.bv ?? recipe.link ?? "无来源链接").font(.caption)
                                     Text(recipe.note ?? "无备注").font(.caption)
+                                    if let video = recipe.video { Text("视频：" + video.originalName).font(.caption) }
                                 }
                             }
                         } footer: { Text("关闭时跳过冲突；打开时保留两份。重复导入相同副本不会再次新增。") }
