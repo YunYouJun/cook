@@ -56,4 +56,4 @@ iCloud Drive 的文件与 CloudKit 的关联元数据分别同步；关联先到
 
 “导出私人菜谱（文字与链接）”继续生成可供 Web 导入的 v1；“导出视频关联备份（iOS）”生成 `{ app: "cook", kind: "custom-recipes", version: 2, exportedAt, recipes, videos }`。`recipes` 使用 v1 字段，`videos` 为菜谱 ID 到附件描述的映射，禁止路径拼接、不明字段和无对应菜谱的引用。v2 只含元数据，不含视频字节，原生导入同时支持 v1/v2，Web 会明确拒绝未知版本。恢复到同一 Apple 账号可定位原 iCloud 文件；文件被删/移走需重新关联。本机文件跨设备须通过“导出视频文件”或原文件单独迁移并重新关联。导入不覆盖已有不同关联，按现有冲突预览另存副本。
 
-发布时需在签名权限中包含 `CloudKit`、`CloudDocuments` 和 `com.apple.developer.ubiquity-container-identifiers`，并为 App ID 启用 iCloud Documents。模拟器的注入目录测试不代表生产 iCloud 已验收；正式签名包及真实账号的文件上传、下载、多设备播放仍需按发布候选另行核验。计划和本轮结果见 [视频附件实施与验证](../../specs/private-recipe-videos/README.md)。
+发布时需在签名权限中包含 `CloudKit`、`CloudDocuments` 和 `com.apple.developer.ubiquity-container-identifiers`，并为 App ID 启用 iCloud Documents。模拟器的注入目录测试不代表生产 iCloud 已验收；正式签名包及真实账号的文件上传、下载、多设备播放仍需按发布候选另行核验。计划和本轮结果见 [视频附件实施与验证](https://github.com/YunYouJun/cook/blob/main/specs/private-recipe-videos/README.md)。

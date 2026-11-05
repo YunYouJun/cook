@@ -41,11 +41,10 @@ final class PrivateRecipeVideoUITests: XCTestCase {
         pickerShot.name = "private-video-system-picker"
         pickerShot.lifetime = .keepAlways
         add(pickerShot)
-        print(app.navigationBars.debugDescription)
-        let dismissButtons = app.buttons.matching(NSPredicate(format: "label IN %@", ["取消", "Cancel", "关闭", "Close"]))
-        let pickerBar = app.navigationBars["FullDocumentManagerViewControllerNavigationBar"]
-        let phoneCancel = pickerBar.buttons.matching(NSPredicate(format: "label IN %@", ["取消", "Cancel"])).firstMatch
-        let pickerCancel = phoneCancel.exists ? phoneCancel : dismissButtons.firstMatch
+        let cancelLabels = NSPredicate(format: "label IN %@", ["取消", "Cancel", "关闭", "Close"])
+        let sidebarCancel = app.navigationBars["DOCSidebarView"].buttons.matching(cancelLabels).firstMatch
+        let phoneCancel = app.navigationBars["FullDocumentManagerViewControllerNavigationBar"].buttons.matching(cancelLabels).firstMatch
+        let pickerCancel = sidebarCancel.exists ? sidebarCancel : phoneCancel
         XCTAssertTrue(pickerCancel.waitForExistence(timeout: 10))
         // iOS 27's glass proxy overlays this UIButton in the accessibility tree. Target the
         // observed navigation button's center, rather than the editor's underlying Cancel.
