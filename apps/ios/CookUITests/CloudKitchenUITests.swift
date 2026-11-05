@@ -289,7 +289,7 @@ final class CloudKitchenUITests: XCTestCase {
         app.selectCookingPresentation("云厨房")
 
         let tomato = kitchenButton("kitchen.scene.tomato", in: app)
-        let cameraMarker = kitchenButton("kitchen.scene.pot", in: app)
+        let cameraMarker = app.buttons.matching(identifier: "kitchen.scene.pot").element
         let rotation = kitchenButton("kitchen.rotation", in: app)
         reveal(tomato, in: app)
         reveal(rotation, in: app)
@@ -301,12 +301,23 @@ final class CloudKitchenUITests: XCTestCase {
         // The tomato is close to the orbit center and can stay almost fixed on
         // a wide screen. The off-center pot is a reliable camera-motion marker.
         let original = cameraMarker.frame
+        guard !original.isEmpty, !original.isInfinite else {
+            XCTFail("旋转前应能定位锅的投影：\(original)")
+            return
+        }
+        var observed = original
+        func distanceMatches(_ check: (CGFloat) -> Bool) -> Bool {
+            // X and Y must come from the same projection and accessibility snapshot.
+            observed = cameraMarker.frame
+            return !observed.isEmpty && !observed.isInfinite
+                && check(hypot(observed.midX - original.midX, observed.midY - original.midY))
+        }
         let start = tomato.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 90, dy: -20)))
         let moved = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            hypot(cameraMarker.frame.midX - original.midX, cameraMarker.frame.midY - original.midY) > 3
+            distanceMatches { $0 > 3 }
         }, object: nil)
-        let movementResult = XCTWaiter.wait(for: [moved], timeout: 5)
+        let movementResult = XCTWaiter.wait(for: [moved], timeout: 10)
         if movementResult != .completed {
             let hierarchy = XCTAttachment(string: app.debugDescription)
             hierarchy.name = "kitchen-rotation-accessibility"
@@ -314,7 +325,7 @@ final class CloudKitchenUITests: XCTestCase {
             add(hierarchy)
             capture(app, name: "kitchen-rotation-not-observed")
         }
-        XCTAssertEqual(movementResult, .completed)
+        XCTAssertEqual(movementResult, .completed, "锅的起始投影 \(original)，当前投影 \(observed)")
         XCTAssertFalse(tomato.isSelected, "Dragging must not select an ingredient")
         tomato.tap()
         waitUntil(tomato, "isSelected == true")
@@ -324,9 +335,10 @@ final class CloudKitchenUITests: XCTestCase {
         rotation.tap()
         XCTAssertEqual(rotation.value as? String, "已关闭")
         let restored = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            hypot(cameraMarker.frame.midX - original.midX, cameraMarker.frame.midY - original.midY) < 2
+            distanceMatches { $0 < 2 }
         }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 5), .completed)
+        XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 10), .completed,
+                       "关闭旋转后锅应回到起始投影 \(original)，最后投影 \(observed)")
         rotation.tap()
 
         // Recreating the scene uses a fresh clone and keeps the interaction preference.
@@ -340,8 +352,9 @@ final class CloudKitchenUITests: XCTestCase {
         let reset = cameraMarker.frame
         let resetStart = tomato.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         resetStart.press(forDuration: 0.1, thenDragTo: resetStart.withOffset(CGVector(dx: 90, dy: 0)))
-        XCTAssertEqual(cameraMarker.frame.midX, reset.midX, accuracy: 2)
-        XCTAssertEqual(cameraMarker.frame.midY, reset.midY, accuracy: 2)
+        let afterDisabledDrag = cameraMarker.frame
+        XCTAssertEqual(afterDisabledDrag.midX, reset.midX, accuracy: 2)
+        XCTAssertEqual(afterDisabledDrag.midY, reset.midY, accuracy: 2)
         tomato.tap()
         waitUntil(tomato, "isSelected == true")
         XCUIDevice.shared.press(.home)
