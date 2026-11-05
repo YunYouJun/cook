@@ -35,7 +35,10 @@ final class DietaryGoalsUITests: XCTestCase {
         assertFilterCount("9", in: app)
         closeFilterOptions(in: app)
         showResults(app)
-        guard let recipe = revealRecipe("dietary.recipe.333", in: app, maximumSwipes: 5) else { return }
+        // Maximum-size rows span several screens. Use the same bounded search
+        // as the accessibility journey, while keeping the exact recipe target.
+        let maximumSwipes = contentSize.isAccessibilityCategory ? 25 : 5
+        guard let recipe = revealRecipe("dietary.recipe.333", in: app, maximumSwipes: maximumSwipes) else { return }
         recipe.tap()
         let reviewed = app.buttons["dietary.openReviewedRecipe"]
         XCTAssertTrue(reviewed.waitForExistence(timeout: 10))
@@ -62,8 +65,9 @@ final class DietaryGoalsUITests: XCTestCase {
     private func closeFilterOptions(in app: XCUIApplication,
                                     file: StaticString = #filePath, line: UInt = #line) {
         let navigation = app.navigationBars.matching(identifier: "筛选").element
-        let done = navigation.buttons.matching(identifier: "filter.done").firstMatch
+        let done = app.revealSheetCompletion("filter.done", in: "filter.options", file: file, line: line)
         XCTAssertTrue(done.waitForExistence(timeout: 10), file: file, line: line)
+        XCTAssertTrue(navigation.exists, file: file, line: line)
         done.tap()
         XCTAssertTrue(navigation.waitForNonExistence(timeout: 10), file: file, line: line)
     }
@@ -130,11 +134,12 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertEqual(filters.waitForState("exists == true AND isHittable == true", timeout: 15), .completed,
                        file: file, line: line)
         filters.tap()
-        // Require the presented sheet's own toolbar before snapshotting its List.
-        let done = app.navigationBars.matching(identifier: "筛选").element
-            .buttons.matching(identifier: "filter.done").element
+        // UIKit can project the unique completion control outside its navigation
+        // bar. Check the actual control and the presented sheet separately.
+        let done = app.cookingToolbarButton("filter.done")
         XCTAssertEqual(done.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
                        "筛选弹层应完成呈现并可操作", file: file, line: line)
+        XCTAssertTrue(app.navigationBars.matching(identifier: "筛选").element.exists, file: file, line: line)
         let options = app.collectionViews.matching(identifier: "filter.options").element
         XCTAssertTrue(options.waitForExistence(timeout: 10), file: file, line: line)
         return options
@@ -142,10 +147,10 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     private func waitForGoalPicker(in app: XCUIApplication) {
-        let done = app.navigationBars.matching(identifier: "饮食目标").element
-            .buttons.matching(identifier: "dietary.done").element
+        let done = app.cookingToolbarButton("dietary.done")
         XCTAssertEqual(done.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
                        "饮食目标弹层应完成呈现并可操作")
+        XCTAssertTrue(app.navigationBars.matching(identifier: "饮食目标").element.exists)
         // Xcode 27 can stall in its lazy first-match snapshot traversal after
         // reopening this nested sheet. Resolve the uniquely identified List
         // with ambiguity checking before querying any of its options.
@@ -164,13 +169,13 @@ final class DietaryGoalsUITests: XCTestCase {
     private func finishGoalSelection(in app: XCUIApplication, closingFilters: Bool = false) {
         let activeControl = closingFilters
             ? app.cookingToolbarButton("cook.filters")
-            : app.navigationBars.buttons.matching(identifier: "results.options").firstMatch
+            : app.cookingToolbarButton("results.options")
         app.completeDietarySelection(closingFilters: closingFilters, returningTo: activeControl)
     }
 
     @MainActor
     private func openResultsGoalPicker(in app: XCUIApplication) {
-        let options = app.navigationBars.buttons.matching(identifier: "results.options").firstMatch
+        let options = app.cookingToolbarButton("results.options")
         XCTAssertTrue(options.waitForExistence(timeout: 10))
         options.tap()
         let goal = app.buttons["results.dietaryGoal"]
@@ -202,7 +207,7 @@ final class DietaryGoalsUITests: XCTestCase {
                                  file: StaticString = #filePath, line: UInt = #line) {
         // The control belongs to the navigation bar, not the potentially large
         // recipe list that appears after removing the dietary goal.
-        let resultsOptions = app.navigationBars.buttons.matching(identifier: "results.options").firstMatch
+        let resultsOptions = app.cookingToolbarButton("results.options")
         if standaloneResults {
             XCTAssertEqual(resultsOptions.waitForState("exists == true AND isHittable == true", timeout: 10), .completed, file: file, line: line)
             let expectedLabel = "更多选项，饮食目标：\(value)"
@@ -222,7 +227,7 @@ final class DietaryGoalsUITests: XCTestCase {
             .buttons.matching(identifier: "dietary.openPicker").element
         XCTAssertTrue(picker.waitForExistence(timeout: 10), file: file, line: line)
         XCTAssertEqual(picker.value as? String, value, file: file, line: line)
-        let done = app.navigationBars.matching(identifier: "筛选").element.buttons.matching(identifier: "filter.done").firstMatch
+        let done = app.revealSheetCompletion("filter.done", in: "filter.options", file: file, line: line)
         done.tap()
         XCTAssertEqual(filters.waitForState("exists == true AND isHittable == true", timeout: 10), .completed, file: file, line: line)
     }
@@ -495,7 +500,7 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(none.waitForExistence(timeout: 10))
         none.tap()
         XCTAssertTrue(none.isSelected)
-        let done = app.navigationBars.matching(identifier: "饮食目标").element.buttons.matching(identifier: "dietary.done").firstMatch
+        let done = app.cookingToolbarButton("dietary.done")
         XCTAssertTrue(done.waitForExistence(timeout: 5))
         assertRememberControlAbsent(in: app)
         done.tap()
@@ -600,10 +605,14 @@ final class DietaryGoalsUITests: XCTestCase {
     @MainActor
     private func assertRememberControlAbsent(in app: XCUIApplication,
                                             file: StaticString = #filePath, line: UInt = #line) {
-        // The policy covers the choice list and its toolbar, not unrelated app tabs.
+        // Include the active projected toolbar when UIKit places it outside
+        // both the navigation bar and the choices List.
         let choices = app.collectionViews.matching(identifier: "dietary.choices").element
         let navigation = app.navigationBars.matching(identifier: "饮食目标").element
-        for container in [choices, navigation] {
+        let toolbars = app.toolbars.allElementsBoundByIndex.filter {
+            $0.buttons.matching(identifier: "dietary.done").count > 0
+        }
+        for container in [choices, navigation] + toolbars {
             XCTAssertTrue(container.waitForExistence(timeout: 10), file: file, line: line)
             // A missing firstMatch can stall Xcode 27's injected snapshot traversal.
             // Count both control types in the presented container instead.

@@ -108,8 +108,9 @@ extension XCUIApplication {
     func completeDietarySelection(closingFilters: Bool, returningTo control: XCUIElement,
                                   file: StaticString = #filePath, line: UInt = #line) {
         let goalNavigation = navigationBars.matching(identifier: "饮食目标").element
-        let done = goalNavigation.buttons.matching(identifier: "dietary.done").element
+        let done = revealSheetCompletion("dietary.done", in: "dietary.choices", file: file, line: line)
         XCTAssertTrue(done.waitForExistence(timeout: 10), file: file, line: line)
+        XCTAssertTrue(goalNavigation.exists, file: file, line: line)
         done.tap()
         // The parent can exist while the child sheet still owns accessibility focus.
         // Wait within the small navigation namespace before resolving its next action.
@@ -117,8 +118,9 @@ extension XCUIApplication {
                       "饮食目标弹层应先完成关闭", file: file, line: line)
         if closingFilters {
             let filterNavigation = navigationBars.matching(identifier: "筛选").element
-            let filterDone = filterNavigation.buttons.matching(identifier: "filter.done").element
+            let filterDone = revealSheetCompletion("filter.done", in: "filter.options", file: file, line: line)
             XCTAssertTrue(filterDone.waitForExistence(timeout: 10), file: file, line: line)
+            XCTAssertTrue(filterNavigation.exists, file: file, line: line)
             // The real tap and observed dismissal validate readiness without an
             // extra hit-test snapshot during the sheet transition.
             filterDone.tap()
@@ -135,6 +137,24 @@ extension XCUIApplication {
         // replaced by a layout switch. Full matching avoids the lazy lookup
         // that CI failed to resolve even after the requested layout appeared.
         buttons.matching(identifier: identifier).element
+    }
+
+    @MainActor
+    func revealSheetCompletion(_ identifier: String, in collectionIdentifier: String,
+                               file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
+        let button = cookingToolbarButton(identifier)
+        if button.exists && button.isHittable { return button }
+        let list = collectionViews.matching(identifier: collectionIdentifier).element
+        XCTAssertTrue(list.waitForExistence(timeout: 10), file: file, line: line)
+        // Scrolling can hide UIKit's projected toolbar. Reveal the real control
+        // through its sheet before tapping; keep selection and dismissal checks.
+        for _ in 0..<8 {
+            list.swipeDown(velocity: .slow)
+            if button.exists && button.isHittable { return button }
+        }
+        XCTAssertEqual(button.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
+                       file: file, line: line)
+        return button
     }
 
     /// 菜单辅助字号使用“当前视图”副标题；以稳定标题前缀定位同一个原生选项。
