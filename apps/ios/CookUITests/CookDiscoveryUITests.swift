@@ -410,9 +410,8 @@ final class CookDiscoveryUITests: XCTestCase {
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         terminateAppAfterTest(app)
         app.launch()
-        let presentation = app.cookingToolbarButton("cook.presentation")
-        XCTAssertTrue(presentation.waitForExistence(timeout: 20))
-        app.selectCookingPresentation("食材快选")
+        // The launch fixture resets presentation to the ingredient list.
+        XCTAssertTrue(app.collectionViews.matching(identifier: "cook.chooser").element.waitForExistence(timeout: 20))
         return app
     }
 
@@ -492,14 +491,17 @@ final class CookDiscoveryUITests: XCTestCase {
         let filters = app.cookingToolbarButton("cook.filters")
         wait(filters, "isHittable == true")
         filters.tap()
-        wait(app.navigationBars.matching(identifier: "筛选").firstMatch.buttons.matching(identifier: "filter.done").firstMatch, "isHittable == true")
+        wait(app.navigationBars.matching(identifier: "筛选").element.buttons.matching(identifier: "filter.done").element, "isHittable == true")
     }
 
     @MainActor
     private func closeFilters(in app: XCUIApplication) {
-        let done = app.navigationBars.matching(identifier: "筛选").firstMatch.buttons.matching(identifier: "filter.done").firstMatch
+        let sheetNavigation = app.navigationBars.matching(identifier: "筛选").element
+        let done = sheetNavigation.buttons.matching(identifier: "filter.done").element
         wait(done, "isHittable == true")
         done.tap()
+        // The underlying toolbar can exist while the sheet still owns its hit point.
+        XCTAssertTrue(sheetNavigation.waitForNonExistence(timeout: 10))
         wait(app.cookingToolbarButton("cook.filters"), "exists == true AND isHittable == true")
     }
 
