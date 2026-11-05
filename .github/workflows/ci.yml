@@ -12,6 +12,14 @@ on:
       - dev
 
   workflow_dispatch:
+    inputs:
+      ios_coverage:
+        description: iOS 测试范围：full 完整回归与审计，core 核心回归
+        type: choice
+        default: full
+        options:
+          - full
+          - core
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -24,6 +32,8 @@ jobs:
       contents: read
     outputs:
       docs_only: ${{ steps.changes.outputs.docs_only }}
+      ios_suites: ${{ steps.changes.outputs.ios_suites }}
+      ios_max_parallel: ${{ steps.changes.outputs.ios_max_parallel }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -35,7 +45,7 @@ jobs:
         run: node --test test/ciChanges.test.mjs
       - name: Test isolated iOS infrastructure recovery
         run: node --test test/iosTestInfrastructure.test.mjs
-      - name: Detect documentation-only changes
+      - name: Plan native CI coverage
         id: changes
         run: node scripts/ci-changes.mjs
 
@@ -197,15 +207,15 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true') }}
     runs-on: xcode-27
-    timeout-minutes: 90
+    timeout-minutes: ${{ matrix.suite == 'core-regression' && 45 || 90 }}
     strategy:
       fail-fast: false
-      # Leave capacity for the two PR jobs while a full branch matrix runs.
-      max-parallel: ${{ github.event_name == 'pull_request' && 2 || 3 }}
+      max-parallel: ${{ fromJSON(needs.changes.outputs.ios_max_parallel || '3') }}
       matrix:
         device: [iphone, ipad]
-        # PRs keep two focused device jobs; pushes and manual runs retain full coverage.
-        suite: ${{ fromJSON(github.event_name == 'pull_request' && '["pr-regression"]' || '["regression-main", "regression-discovery", "dietary"]') }}
+        # Pushes and PRs use core coverage; manual runs default to the full matrix.
+        # A missing plan must retain full coverage rather than skip native checks.
+        suite: ${{ fromJSON(needs.changes.outputs.ios_suites || '["regression-main", "regression-discovery", "dietary"]') }}
     env:
       # Match native UI validation with a pinned compiler and XCTest toolchain.
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
@@ -233,7 +243,7 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/cook-derived-data" CODE_SIGNING_ALLOWED=NO
       - name: Build and test
-        timeout-minutes: ${{ github.event_name == 'pull_request' && 35 || 60 }}
+        timeout-minutes: ${{ matrix.suite == 'core-regression' && 30 || 60 }}
         id: ios_tests
         env:
           DEVICE: ${{ steps.simulators.outputs[matrix.device] }}

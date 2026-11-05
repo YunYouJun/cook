@@ -9,6 +9,7 @@ import process from 'node:process'
 import { test } from 'node:test'
 import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
+import { planIosTests } from '../scripts/ci-changes.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const fixtures = JSON.parse(readFileSync(new URL('./fixtures/ios-infrastructure-failures.json', import.meta.url), 'utf8'))
@@ -109,7 +110,7 @@ test('a slow Actions log consumer cannot block xcodebuild or hide its failure', 
       PATH: `${bin}:${process.env.PATH}`,
       RUNNER_TEMP: temporary,
       DEVICE: 'phone',
-      IOS_SUITE: 'pr-regression',
+      IOS_SUITE: 'core-regression',
       COOK_XCODE_COMPLETED: completed,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -129,7 +130,7 @@ test('a slow Actions log consumer cannot block xcodebuild or hide its failure', 
     child.stdout.on('data', chunk => chunks.push(chunk))
     assert.equal(await closed, 1, 'the original test failure must fail the job')
     assert.ok(Buffer.concat(chunks).toString().endsWith(failure), 'the full failure log must reach Actions afterward')
-    assert.ok(readFileSync(join(temporary, 'xcresult/phone-pr-regression.log'), 'utf8').endsWith(failure))
+    assert.ok(readFileSync(join(temporary, 'xcresult/phone-core-regression.log'), 'utf8').endsWith(failure))
   }
   finally {
     child.stdout.resume()
@@ -228,18 +229,68 @@ test('business assertions, real audit findings, skipped tests and mixed failures
   }
 })
 
+test('pushes and PRs use core coverage while manual and unknown requests retain full coverage', () => {
+  const core = { suites: ['core-regression'], maxParallel: 2 }
+  const full = { suites: ['regression-main', 'regression-discovery', 'dietary'], maxParallel: 3 }
+  for (const event of ['push', 'pull_request']) {
+    assert.deepEqual(planIosTests(event), core)
+    assert.deepEqual(planIosTests(event, 'full'), core)
+  }
+  assert.deepEqual(planIosTests('workflow_dispatch', 'core'), core)
+  for (const coverage of [undefined, '', 'full', 'unknown'])
+    assert.deepEqual(planIosTests('workflow_dispatch', coverage), full)
+  assert.deepEqual(planIosTests('unknown', 'core'), full)
+})
+
+test('the real change-detection command publishes the selected native matrix', () => {
+  const temporary = mkdtempSync(join(tmpdir(), 'cook-ios-ci-plan-'))
+  try {
+    for (const coverage of ['full', 'core']) {
+      const eventPath = join(temporary, `${coverage}.json`)
+      const outputPath = join(temporary, `${coverage}.output`)
+      writeFileSync(eventPath, JSON.stringify({ inputs: { ios_coverage: coverage } }))
+      const result = spawnSync(process.execPath, ['scripts/ci-changes.mjs'], {
+        cwd: root,
+        encoding: 'utf8',
+        timeout: 5000,
+        env: {
+          ...process.env,
+          GITHUB_EVENT_NAME: 'workflow_dispatch',
+          GITHUB_EVENT_PATH: eventPath,
+          GITHUB_OUTPUT: outputPath,
+          GITHUB_STEP_SUMMARY: join(temporary, `${coverage}.summary`),
+        },
+      })
+      assert.equal(result.status, 0, result.stderr)
+      const output = Object.fromEntries(readFileSync(outputPath, 'utf8').trim().split('\n').map((line) => {
+        const separator = line.indexOf('=')
+        return [line.slice(0, separator), line.slice(separator + 1)]
+      }))
+      const plan = planIosTests('workflow_dispatch', coverage)
+      assert.equal(output.docs_only, 'false', 'an explicit manual run must execute native tests')
+      assert.deepEqual(JSON.parse(output.ios_suites), plan.suites)
+      assert.equal(Number(output.ios_max_parallel), plan.maxParallel)
+    }
+  }
+  finally {
+    rmSync(temporary, { recursive: true, force: true })
+  }
+})
+
 test('native CI bounds build and test time and runs device groups independently', () => {
   const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
   assert.match(workflow, /device: \[iphone, ipad\]/)
-  const suites = workflow.match(/suite: \$\{\{ fromJSON\(github.event_name == 'pull_request' && '([^']+)' \|\| '([^']+)'\) \}\}/)
-  assert.ok(suites, 'PRs use the focused matrix; push and manual runs use the full matrix')
-  assert.deepEqual(JSON.parse(suites[1]), ['pr-regression'])
-  assert.deepEqual(JSON.parse(suites[2]), ['regression-main', 'regression-discovery', 'dietary'])
+  const suites = workflow.match(/suite: \$\{\{ fromJSON\(needs.changes.outputs.ios_suites \|\| '([^']+)'\) \}\}/)
+  assert.ok(suites, 'the matrix uses the tested coverage plan with a full-coverage fallback')
+  assert.deepEqual(JSON.parse(suites[1]), ['regression-main', 'regression-discovery', 'dietary'])
   const nativeJob = workflow.slice(workflow.indexOf('\n  ios-tests:\n'), workflow.indexOf('\n  ios:\n'))
-  assert.match(nativeJob, /max-parallel: \$\{\{ github.event_name == 'pull_request' && 2 \|\| 3 \}\}/)
+  assert.match(nativeJob, /max-parallel: \$\{\{ fromJSON\(needs.changes.outputs.ios_max_parallel \|\| '3'\) \}\}/)
   assert.match(workflow, /\n {2}workflow_dispatch:/)
   assert.match(workflow, /name: Build for testing\n\s+timeout-minutes: 15/)
-  assert.match(workflow, /name: Build and test\n\s+timeout-minutes: \$\{\{ github.event_name == 'pull_request' && 35 \|\| 60 \}\}/)
+  assert.match(workflow, /name: Build and test\n\s+timeout-minutes: \$\{\{ matrix.suite == 'core-regression' && 30 \|\| 60 \}\}/)
+  assert.match(nativeJob, /timeout-minutes: \$\{\{ matrix.suite == 'core-regression' && 45 \|\| 90 \}\}/)
+  assert.match(workflow, /ios_suites: \$\{\{ steps.changes.outputs.ios_suites \}\}/)
+  assert.match(workflow, /ios_coverage:[\s\S]*?default: full/)
   assert.match(workflow, /cancel-in-progress: true/)
 })
 
@@ -287,24 +338,25 @@ test('every UI method is assigned exactly once per device, including both isolat
   })
 })
 
-test('PR regression retains all App units and ten critical UI flows while long journeys stay in the full matrix', () => {
+test('core regression retains all App units and five UI flows including the current failure regressions', () => {
   replay({}, ({ result, calls, output }) => {
     assert.equal(result.status, 0, result.stderr)
-    assert.deepEqual(calls.map(call => call.name), ['phone-pr-regression', 'pad-pr-regression'])
+    assert.deepEqual(calls.map(call => call.name), ['phone-core-regression', 'pad-core-regression'])
     const required = [
       'CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval',
-      'CookUITests/testPantryShelfRemembersChoicesAndRestoresDefaults',
       'CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients',
-      'CloudKitchenUITests/testKitchenAndListShareSelectionAndPotOpensRealRecipes',
-      'RandomRecipeUITests/testLargestTextRandomSharesDietaryGoalAndPreservesEmptyResults',
-      'DietaryGoalsUITests/testNextDayLunchAndWeightGoalIntersectAndShowSourceOilUnits',
+      'CloudKitchenUITests/testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled',
       'DietaryGoalsUITests/testNextDayLunchAndWeightGoalAtAccessibilitySize',
-      'DietaryGoalsUITests/testGoalEntryStaysInFiltersAcrossLaunchesAndSelectionRemainsVisible',
-      'DietaryGoalsUITests/testEmptyGoalCanBeCancelledWithoutLosingSelectedIngredients',
       'DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone',
     ].map(test => `CookUITests/${test}`)
     const fullOnly = [
       'CookUITests/testCookFlowByAccessibilityLabels',
+      'CookUITests/testPantryShelfRemembersChoicesAndRestoresDefaults',
+      'CloudKitchenUITests/testKitchenAndListShareSelectionAndPotOpensRealRecipes',
+      'RandomRecipeUITests/testLargestTextRandomSharesDietaryGoalAndPreservesEmptyResults',
+      'DietaryGoalsUITests/testNextDayLunchAndWeightGoalIntersectAndShowSourceOilUnits',
+      'DietaryGoalsUITests/testGoalEntryStaysInFiltersAcrossLaunchesAndSelectionRemainsVisible',
+      'DietaryGoalsUITests/testEmptyGoalCanBeCancelledWithoutLosingSelectedIngredients',
       'DietaryGoalsUITests/testGoalSelectionIsSavedAndUpdatedInFiltersAcrossLaunches',
       'DietaryGoalsUITests/testGoalBrowsingOpensReviewedTextAndPreservesGoalWhenDeciding',
       'DietaryGoalsUITests/testCloudKitchenKeepsGoalAndCanBrowseWithoutIngredients',
@@ -320,8 +372,8 @@ test('PR regression retains all App units and ten critical UI flows while long j
       assert.ok(!skip.some(selector => selector.startsWith('CookTests')), 'App unit tests must not be excluded')
       for (const test of required) assert.ok(selected(test), `${test} must run on both devices`)
       for (const test of fullOnly)
-        assert.ok(!selected(test), `${test} runs in the full matrix, without repeating on PRs`)
-      assert.equal(only.filter(selector => selector.startsWith('CookUITests/')).length, 10)
+        assert.ok(!selected(test), `${test} remains in the manual full matrix`)
+      assert.equal(only.filter(selector => selector.startsWith('CookUITests/')).length, 5)
       for (const selector of only.filter(selector => selector.startsWith('CookUITests/'))) {
         const [, suite, method] = selector.split('/')
         const source = readFileSync(join(root, 'apps/ios/CookUITests', `${suite}.swift`), 'utf8')
@@ -330,13 +382,13 @@ test('PR regression retains all App units and ten critical UI flows while long j
       }
     }
     assert.equal(output, '')
-  }, ['pr-regression'])
+  }, ['core-regression'])
 })
 
-test('a PR assertion failure is not retried or hidden by the other device', () => {
-  replay({ 'pad-pr-regression': [fixtures.keyboardAssertion] }, ({ result, calls, output }) => {
+test('a core assertion failure is not retried or hidden by the other device', () => {
+  replay({ 'pad-core-regression': [fixtures.keyboardAssertion] }, ({ result, calls, output }) => {
     assert.equal(result.status, 1)
     assert.equal(calls.length, 2)
     assert.equal(output, '')
-  }, ['pr-regression'])
+  }, ['core-regression'])
 })

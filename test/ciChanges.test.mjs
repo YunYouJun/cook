@@ -95,11 +95,14 @@ test('the workflow entry point writes job outputs and defaults to native on inva
     const env = { ...process.env, GITHUB_EVENT_NAME: 'push', GITHUB_EVENT_PATH: eventPath, GITHUB_OUTPUT: outputPath, GITHUB_STEP_SUMMARY: summaryPath }
     writeFileSync(eventPath, JSON.stringify({ before: base, after }))
     execFileSync(process.execPath, [entry], { cwd, env })
-    assert.equal(readFileSync(outputPath, 'utf8'), 'docs_only=true\n')
+    const corePlan = 'ios_suites=["core-regression"]\nios_max_parallel=2\n'
+    assert.equal(readFileSync(outputPath, 'utf8'), `docs_only=true\n${corePlan}`)
     assert.match(readFileSync(summaryPath, 'utf8'), /skipped \(documentation only\)/)
-    writeFileSync(eventPath, '{ invalid JSON')
-    execFileSync(process.execPath, [entry], { cwd, env })
-    assert.equal(readFileSync(outputPath, 'utf8'), 'docs_only=true\ndocs_only=false\n')
+    for (const invalidEvent of ['{ invalid JSON', 'null']) {
+      writeFileSync(eventPath, invalidEvent)
+      execFileSync(process.execPath, [entry], { cwd, env })
+    }
+    assert.equal(readFileSync(outputPath, 'utf8'), `docs_only=true\n${corePlan}${`docs_only=false\n${corePlan}`.repeat(2)}`)
   })
 })
 

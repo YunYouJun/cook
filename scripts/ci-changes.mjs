@@ -25,6 +25,15 @@ function isDocumentation(path) {
     || (path.startsWith('docs/') && /\.(?:md|png|jpe?g|gif|webp|svg|ico)$/.test(path))
 }
 
+export function planIosTests(eventName, coverage) {
+  const core = eventName === 'push' || eventName === 'pull_request'
+    || (eventName === 'workflow_dispatch' && coverage === 'core')
+  return {
+    suites: core ? ['core-regression'] : ['regression-main', 'regression-discovery', 'dietary'],
+    maxParallel: core ? 2 : 3,
+  }
+}
+
 export function detectDocsOnly(eventName, event, cwd = process.cwd()) {
   try {
     let base
@@ -76,9 +85,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     event = {}
   }
   const result = detectDocsOnly(process.env.GITHUB_EVENT_NAME, event)
-  if (process.env.GITHUB_OUTPUT)
-    appendFileSync(process.env.GITHUB_OUTPUT, `docs_only=${result.docsOnly}\n`)
+  const ios = planIosTests(process.env.GITHUB_EVENT_NAME, event?.inputs?.ios_coverage)
+  if (process.env.GITHUB_OUTPUT) {
+    appendFileSync(process.env.GITHUB_OUTPUT, `docs_only=${result.docsOnly}\nios_suites=${JSON.stringify(ios.suites)}\nios_max_parallel=${ios.maxParallel}\n`)
+  }
   if (process.env.GITHUB_STEP_SUMMARY)
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Native CI: ${result.docsOnly ? 'skipped (documentation only)' : 'required'}. Changed paths: ${result.changedFiles ?? 'unknown'}. Comparison: ${result.comparison}.\n`)
-  console.log(JSON.stringify(result))
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Native CI: ${result.docsOnly ? 'skipped (documentation only)' : ios.suites.join(', ')}. Changed paths: ${result.changedFiles ?? 'unknown'}. Comparison: ${result.comparison}.\n`)
+  console.log(JSON.stringify({ ...result, ios }))
 }
