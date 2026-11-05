@@ -127,17 +127,19 @@ function toolchain() {
     'xcrun swiftc --version': 'Apple Swift 6.3',
     'xcrun --sdk iphonesimulator --show-sdk-build-version': '24A435',
     'xcodegen --version': '2.45.0',
+    'which xcodegen': '/tools/xcodegen',
     'pnpm --version': '11.21.0',
   }
   const pins = { revision: '5ce0ad7' }
+  const binaries = { xcodegen: 'installed binary contents' }
   const fingerprint = () => currentKey(env, (...args) => {
     const cmd = args.join(' ')
     if (cmd === 'xcrun simctl list -j')
       return JSON.stringify(inventory)
     assert(Object.hasOwn(versions, cmd), cmd)
     return versions[cmd]
-  }, () => Buffer.from(JSON.stringify(pins)))
-  return { env, versions, inventory, pins, fingerprint }
+  }, path => Buffer.from(path === '/tools/xcodegen' ? binaries.xcodegen : JSON.stringify(pins)))
+  return { env, versions, inventory, pins, binaries, fingerprint }
 }
 
 test('source tree, executing workflow, tools, runner and both simulated devices are part of the fingerprint', () => {
@@ -154,6 +156,7 @@ test('source tree, executing workflow, tools, runner and both simulated devices 
     ({ versions }) => { versions['sw_vers -buildVersion'] += '.1' },
     ({ env }) => { env.ImageVersion += '.1' },
     ({ pins }) => { pins.revision += '1' },
+    ({ binaries }) => { binaries.xcodegen += '1' },
     ({ inventory }) => { inventory.runtimes[0].buildversion += 'a' },
     ({ inventory }) => { Object.values(inventory.devices)[0][1].deviceTypeIdentifier += '-M5' },
   ]) {

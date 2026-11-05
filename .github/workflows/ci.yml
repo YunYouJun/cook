@@ -231,7 +231,7 @@ jobs:
     outputs:
       verified: ${{ steps.compare.outputs.verified }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/ios-test-environment
         id: environment
       - name: Identify the current core environment
@@ -272,7 +272,7 @@ jobs:
       # Match native UI validation with a pinned compiler and XCTest toolchain.
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/ios-test-environment
         id: environment
       - name: Build for testing

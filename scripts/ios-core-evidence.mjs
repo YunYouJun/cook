@@ -45,8 +45,8 @@ export function currentKey(env = process.env, run = command, read = readFileSync
     throw new Error('Unexpected workflow')
   const inventory = JSON.parse(run('xcrun', 'simctl', 'list', '-j'))
   const workflow = run('git', 'rev-parse', `${required(env.GITHUB_WORKFLOW_SHA, 'workflow SHA')}:.github/workflows/ci.yml`)
-  // Include the actual resolved Swift dependencies in addition to the source
-  // tree (which includes all scripts, local actions, lockfiles and build inputs).
+  // Device selection runs xcodebuild -showdestinations, which resolves Swift
+  // dependencies even on the fresh push runner that never builds the app.
   const resolved = read('apps/ios/Cook.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved')
   return evidenceKey({
     schema: 1,
@@ -57,7 +57,7 @@ export function currentKey(env = process.env, run = command, read = readFileSync
     xcode: run('xcodebuild', '-version'),
     swift: run('xcrun', 'swiftc', '--version'),
     sdk: run('xcrun', '--sdk', 'iphonesimulator', '--show-sdk-build-version'),
-    xcodegen: run('xcodegen', '--version'),
+    xcodegen: [run('xcodegen', '--version'), createHash('sha256').update(read(run('which', 'xcodegen'))).digest('hex')],
     node: process.version,
     pnpm: run('pnpm', '--version'),
     packages: createHash('sha256').update(resolved).digest('hex'),

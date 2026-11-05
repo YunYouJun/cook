@@ -6,7 +6,7 @@ PR 和向 `main` / `dev` 的推送默认执行 `core-regression`，iPhone、iPad
 
 合并后，push 可复用两台设备已经通过的 PR 核心测试。仅接受同仓库、同目标分支、与 push 提交对应的已合并 PR。GitHub 必须记录两组实际构建和测试均成功，且来自同一次 CI 运行和尝试。核验使用两端真正测试的合并 checkout：其父提交必须是当前 push 的前一提交和 PR head，Git 树必须等于合并后的树。仓库代码和本地工作流、脚本、配置、锁文件均在比较范围内。
 
-匹配后分配一台 `xcode-27` runner，使用与测试相同的准备步骤，比对执行的 CI 工作流、runner 镜像、macOS 构建、架构、Xcode、Swift、模拟器 SDK、XcodeGen、Node、pnpm、实际 SwiftPM 解析文件以及两台模拟器的机型和运行时构建。命中时在核验任务摘要给出来源运行，省去两台设备的构建和测试；合并别的提交、设备检查被跳过、版本变化、查询失败、旧 PR 没有记录等情况均执行正常矩阵。Web 和 Linux Swift 检查独立运行。手动运行（包括 full）不读取 PR 复用记录。
+匹配后分配一台 `xcode-27` runner，使用与测试相同的准备步骤，比对执行的 CI 工作流、runner 镜像、macOS 构建、架构、Xcode、Swift、模拟器 SDK、XcodeGen 版本和可执行文件摘要、Node、pnpm、实际 SwiftPM 解析文件以及两台模拟器的机型和运行时构建。macOS 准备步骤的外部 actions 固定到具体提交。命中时在核验任务摘要给出来源运行，省去两台设备的构建和测试；合并别的提交、设备检查被跳过、版本变化、查询失败、旧 PR 没有记录等情况均执行正常矩阵。Web 和 Linux Swift 检查独立运行。手动运行（包括 full）不读取 PR 复用记录。
 
 完整回归改为手动执行：在 Actions 的 **CI → Run workflow** 中将 `ios_coverage` 选为 `full`（默认值），或运行 `gh workflow run ci.yml --ref main -f ios_coverage=full`。选择 `core` 则只重跑核心组。完整模式继续在每端执行全部 56 项 UI 测试（含两项系统无障碍审计），分为以下三组，共六个任务；没有删除用例或审计类别。手动 full 与日常 core 分开排队，后续核心推送不会取消正在运行的完整审计。
 
