@@ -155,7 +155,9 @@ final class CloudKitchenUITests: XCTestCase {
     @MainActor
     func testInspirationCardScrollsAboveFixedActions() {
         let app = XCUIApplication()
-        app.launchArguments = XCUIApplication.standardCookingLaunchArguments
+        // This checks static card/footer layout. Missing UIKit menu animation
+        // notifications consumed the CI case before it could inspect the card.
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-disable-animations"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         terminateAppAfterTest(app)

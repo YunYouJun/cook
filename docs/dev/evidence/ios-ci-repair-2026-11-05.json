@@ -5,7 +5,7 @@
     "run": "https://github.com/YunYouJun/cook/actions/runs/41959106572/attempts/2",
     "result": "Cancelled automatically by the successor Support-only main push; it is not the acceptance run."
   },
-  "scope": "Two remaining lazy-query helpers in DietaryGoalsUITests; no production behavior, deadlines, audit policy, or business assertions changed.",
+  "scope": "Dietary row/absence query helpers and the existing Debug UIKit animation flag for one static kitchen card layout test. No production behavior, deadlines, audit policy, or business assertions changed.",
   "baselinePassed": {
     "swift": "89 core tests with no failures; the live bridge skipped in that invocation passed in its separate 7-test Web/Swift/Web roundtrip. The 2-test personal catalog roundtrip also passed.",
     "ipadMain": "215 application unit tests and 26 UI tests passed.",
@@ -67,5 +67,39 @@
     "iphoneDietary": "Both audits and the first four functional cases passed before cancellation; do not count the unfinished group as a full pass.",
     "iphoneMain": "215 units and continuing UI cases passed before cancellation; do not count the unfinished group as a full pass.",
     "iphoneDiscovery": "A real inspiration-card flow exceeded 300s after two missing UIKit animation completion notifications and an event-loop idle wait. Two subsequent cases failed acquiring the App background assertion before business checks; the largest-text menu and rotation cases then passed. Preserve these observations; they are not classified as successful tests or blanket-retried."
+  },
+  "integrationBaseline": "0854ec88862f14f4d8b41fe70e1dc6188057381b",
+  "phoneDiscovery": {
+    "job": 127036871886,
+    "failure": "testInspirationCardScrollsAboveFixedActions spent 60s twice waiting for UIKit animation-completion notifications and another 60s waiting for the event loop before its 300s watchdog. The old bound-toolbar predicate then failed after the watchdog had already fired.",
+    "integration": "Preserve the new main implementation that queries the replaced toolbar afresh. Apply the existing animation-disable flag only to this static card/footer layout journey, matching the established kitchen sharing and form functional tests. Keep actual menu selection, scene target, full card visibility and tappability assertions.",
+    "subsequentLaunchFailures": "Two following cases failed acquiring App background assertions before business checks; do not count them as passes or introduce blanket retry. Revalidate the sequence and full matrix on the integrated source.",
+    "artifact": {
+      "id": 13388994639,
+      "githubArchiveSha256": "e4f0436912487a90206119f42d9697ce8ed742306afc99155ad41746cf16a00d"
+    }
+  },
+  "integratedValidation": {
+    "sourceBaseline": "0854ec88862f14f4d8b41fe70e1dc6188057381b with both fixes applied",
+    "ipad": {
+      "runtime": "iOS 27.0",
+      "tests": 7,
+      "failures": 0,
+      "cases": {
+        "inspirationCard": 36.385,
+        "landscapeMenu": 61.155,
+        "sharedKitchenSelectionAndRecipes": 50.877,
+        "clearGoalWithPickerPresented": 72.516,
+        "maximumTextAuditsAndDecision": 121.162,
+        "maximumTextLunchAndWeightIntersection": 79.19,
+        "standardLunchAndWeightIntersection": 72.796
+      }
+    },
+    "infrastructure": {
+      "tests": 13,
+      "failures": 0,
+      "covers": "Complete branch/manual matrix, focused PR matrix, strict retry classification and aggregate gates"
+    },
+    "acceptance": "This evidence snapshot records local checks before publishing. Acceptance requires the complete main-branch CI matrix on the final source."
   }
 }
