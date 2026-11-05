@@ -32,10 +32,13 @@ final class DietaryGoalsUITests: XCTestCase {
 
         select("weight-aware", in: app)
         _ = openFilterOptions(in: app)
-        assertFilterCount("9", in: app)
+        let intersectionCount = 9
+        assertFilterCount(String(intersectionCount), in: app)
         closeFilterOptions(in: app)
         showResults(app)
-        guard let recipe = revealRecipe("dietary.recipe.333", in: app, maximumSwipes: 5) else { return }
+        // At maximum text size a single recipe can fill the viewport. Allow
+        // one swipe per confirmed result and stop as soon as the row is hittable.
+        guard let recipe = revealRecipe("dietary.recipe.333", in: app, maximumSwipes: intersectionCount) else { return }
         recipe.tap()
         let reviewed = app.buttons["dietary.openReviewedRecipe"]
         XCTAssertTrue(reviewed.waitForExistence(timeout: 10))
