@@ -8,14 +8,39 @@ import { CATCH_ALL_MIN_STUFF, createRecipeRecommender, hasAvoidedStuff, matchesT
 // Use tracked CSV so this regression test does not depend on generated JSON files.
 const recipes = parseRecipeCsv(readFileSync(resolve(process.cwd(), 'packages/data/recipe.csv'), 'utf8'))
 const cases = [
-  { stuff: ['番茄', '鸡蛋'], counts: [57, 101, 63], first: '微波炉版番茄鸡蛋汤', partial: '番茄鸡蛋', missing: ['米'] },
-  { stuff: ['土豆'], counts: [31, 35, 26], first: '烤箱版M记同款薯条', partial: '电饭煲版焖鸡腿土豆', missing: ['鸡肉'] },
-  { stuff: ['腊肠', '米'], counts: [7, 39, 30], first: '电饭煲版广式腊肠煲饭', partial: '电饭煲版胡萝卜腊肠饭', missing: ['胡萝卜'] },
-  { stuff: ['鸡肉', '洋葱', '菌菇'], counts: [83, 49, 29], first: '电饭煲版烧鸡', partial: '电饭煲版南瓜鸡腿焖饭', missing: ['米'] },
-  { stuff: ['牛肉', '番茄', '米'], counts: [21, 70, 62], first: '电饭煲版番茄牛腩焖饭', partial: '电饭煲版番茄炖排骨', missing: ['猪肉'] },
+  { stuff: ['番茄', '鸡蛋'], counts: [53, 99, 58], first: '微波炉版番茄鸡蛋汤', partial: '番茄鸡蛋', missing: ['米'] },
+  { stuff: ['土豆'], counts: [31, 34, 25], first: '烤箱版M记同款薯条', partial: '电饭煲版焖鸡腿土豆', missing: ['鸡肉'] },
+  { stuff: ['腊肠', '米'], counts: [6, 35, 32], first: '电饭煲版广式腊肠煲饭', partial: '电饭煲版胡萝卜腊肠饭', missing: ['胡萝卜'] },
+  { stuff: ['鸡肉', '洋葱', '菌菇'], counts: [81, 44, 30], first: '电饭煲版烧鸡', partial: '电饭煲版南瓜鸡腿焖饭', missing: ['米'] },
+  { stuff: ['牛肉', '番茄', '米'], counts: [21, 65, 63], first: '电饭煲版番茄牛腩焖饭', partial: '电饭煲版番茄炖排骨', missing: ['猪肉'] },
 ]
 
 describe('local recipe dataset acceptance', () => {
+  it.each([
+    { id: 696, incomplete: ['鸡蛋'], complete: ['鸡蛋', '韭菜'] },
+    { id: 682, incomplete: ['豆腐'], complete: ['豆腐', '皮蛋'] },
+    { id: 745, incomplete: ['羊肉'], complete: ['羊肉', '面食', '青椒'] },
+    { id: 737, incomplete: ['猪肉', '白菜', '土豆'], complete: ['猪肉', '白菜', '粉条'] },
+    { id: 738, incomplete: ['鸡肉', '洋葱', '鸡蛋'], complete: ['鸡肉', '鸡蛋', '面粉'] },
+    { id: 832, incomplete: ['茄子', '鸡蛋', '腊肠', '大米粉', '面粉'], complete: ['茄子', '鸡蛋', '腊肉', '大米粉', '面粉'] },
+  ])('$id: requires the documented ingredients and rejects incorrect substitutions', ({ id, incomplete, complete }) => {
+    const results = (stuff: string[]) => recommendRecipes(recipes, { stuff, mode: 'survival', pantry: [] })
+    expect(results(incomplete).some(match => match.recipe.id === id)).toBe(false)
+    expect(results(complete).find(match => match.recipe.id === id)?.missingStuff).toEqual([])
+  })
+
+  it.each([
+    { id: 723, stuff: ['猪肉', '血肠', '酸菜'], tool: '电压力锅' },
+    { id: 775, stuff: ['鸡肉', '番茄', '洋葱', '酸奶', '黄油', '淡奶油'], tool: '料理机' },
+    { id: 812, stuff: ['青菜', '米', '咸肉'], tool: '电饭煲' },
+    { id: 820, stuff: ['米', '玉米', '火腿'], tool: '电饭煲' },
+    { id: 855, stuff: ['水浸金枪鱼罐头', '面包'], tool: '轻食机' },
+  ])('$id: filters by the documented appliance', ({ id, stuff, tool }) => {
+    const results = (selected: string) => recommendRecipes(recipes, { stuff, tool: selected, mode: 'survival', pantry: [] })
+    expect(results('一口大锅').some(match => match.recipe.id === id)).toBe(false)
+    expect(results(tool).find(match => match.recipe.id === id)?.missingStuff).toEqual([])
+  })
+
   it('reuses the prepared catalog across all modes and filters without stale selections', () => {
     const recommend = createRecipeRecommender(recipes)
     for (const { stuff } of cases) {

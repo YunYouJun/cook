@@ -317,6 +317,89 @@
           "炒菜"
         ]
       }
+    },
+    {
+      "input": "韭菜、鸡蛋、皮蛋、豆腐",
+      "output": {
+        "stuff": [
+          "韭菜",
+          "鸡蛋",
+          "皮蛋",
+          "豆腐"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "粉条、土豆、腊肉、腊肠、大米粉、米粉",
+      "output": {
+        "stuff": [
+          "粉条",
+          "土豆",
+          "腊肉",
+          "腊肠",
+          "大米粉",
+          "米粉"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "玉子豆腐、凤梨、蒜薹、黄花",
+      "output": {
+        "stuff": [
+          "日本豆腐",
+          "菠萝",
+          "蒜苔",
+          "黄花菜"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "有牛奶和燕麦，用轻食机",
+      "output": {
+        "stuff": [
+          "牛奶",
+          "燕麦"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": "轻食机",
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
+    },
+    {
+      "input": "用料理机，有酸奶和淡奶油",
+      "output": {
+        "stuff": [
+          "酸奶",
+          "淡奶油"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": "料理机",
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
     }
   ]
 }
