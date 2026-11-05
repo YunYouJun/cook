@@ -34,7 +34,7 @@ export function planIosTests(eventName, coverage) {
   }
 }
 
-export function detectDocsOnly(eventName, event, cwd = process.cwd()) {
+export function detectNativeChanges(eventName, event, cwd = process.cwd()) {
   try {
     let base
     let head
@@ -65,14 +65,48 @@ export function detectDocsOnly(eventName, event, cwd = process.cwd()) {
     })
     const paths = diff.split('\0').filter(Boolean)
     return {
-      docsOnly: paths.length > 0 && paths.every(isDocumentation),
+      skipNative: paths.length > 0 && paths.every(path => isDocumentation(path) || path === '.github/workflows/support-sync.yml'),
       changedFiles: paths.length,
       comparison: `${base}${separator}${head}`,
     }
   }
   catch {
     // An unavailable base (including a force push/new branch) must never skip tests.
-    return { docsOnly: false, changedFiles: null, comparison: 'unavailable' }
+    return { skipNative: false, changedFiles: null, comparison: 'unavailable' }
+  }
+}
+
+function previousPushPassed(event) {
+  const repo = process.env.GITHUB_REPOSITORY
+  if (!repo || typeof event.ref !== 'string' || !event.ref.startsWith('refs/heads/'))
+    return false
+
+  const branch = event.ref.slice('refs/heads/'.length)
+  try {
+    // A docs or Support push can cancel the only run that covers the previous
+    // native change. Carry its coverage forward only from a successful push.
+    const output = execFileSync('gh', [
+      'api',
+      `repos/${repo}/actions/workflows/ci.yml/runs`,
+      '-X',
+      'GET',
+      '-f',
+      'event=push',
+      '-f',
+      `branch=${branch}`,
+      '-f',
+      `head_sha=${event.before}`,
+      '-f',
+      'status=success',
+      '-f',
+      'per_page=1',
+    ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 10000 })
+    return JSON.parse(output).workflow_runs.some(run =>
+      run.head_sha === event.before && run.head_branch === branch
+      && run.event === 'push' && run.conclusion === 'success')
+  }
+  catch {
+    return false
   }
 }
 
@@ -84,12 +118,17 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   catch {
     event = {}
   }
-  const result = detectDocsOnly(process.env.GITHUB_EVENT_NAME, event)
-  const ios = planIosTests(process.env.GITHUB_EVENT_NAME, event?.inputs?.ios_coverage)
-  if (process.env.GITHUB_OUTPUT) {
-    appendFileSync(process.env.GITHUB_OUTPUT, `docs_only=${result.docsOnly}\nios_suites=${JSON.stringify(ios.suites)}\nios_max_parallel=${ios.maxParallel}\n`)
+  const result = detectNativeChanges(process.env.GITHUB_EVENT_NAME, event)
+  if (result.skipNative && process.env.GITHUB_EVENT_NAME === 'push') {
+    result.previousPushPassed = previousPushPassed(event)
+    result.skipNative = result.previousPushPassed
   }
-  if (process.env.GITHUB_STEP_SUMMARY)
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Native CI: ${result.docsOnly ? 'skipped (documentation only)' : ios.suites.join(', ')}. Changed paths: ${result.changedFiles ?? 'unknown'}. Comparison: ${result.comparison}.\n`)
+  const ios = planIosTests(process.env.GITHUB_EVENT_NAME, event?.inputs?.ios_coverage)
+  if (process.env.GITHUB_OUTPUT)
+    appendFileSync(process.env.GITHUB_OUTPUT, `skip_native=${result.skipNative}\nios_suites=${JSON.stringify(ios.suites)}\nios_max_parallel=${ios.maxParallel}\n`)
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    const reason = result.previousPushPassed === false ? ' Previous push did not have a verified successful CI run.' : ''
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Native CI: ${result.skipNative ? 'skipped (only documentation or the Support sync workflow changed)' : ios.suites.join(', ')}.${reason} Changed paths: ${result.changedFiles ?? 'unknown'}. Comparison: ${result.comparison}.\n`)
+  }
   console.log(JSON.stringify({ ...result, ios }))
 }

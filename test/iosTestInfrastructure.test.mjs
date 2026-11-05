@@ -267,7 +267,7 @@ test('the real change-detection command publishes the selected native matrix', (
         return [line.slice(0, separator), line.slice(separator + 1)]
       }))
       const plan = planIosTests('workflow_dispatch', coverage)
-      assert.equal(output.docs_only, 'false', 'an explicit manual run must execute native tests')
+      assert.equal(output.skip_native, 'false', 'an explicit manual run must execute native tests')
       assert.deepEqual(JSON.parse(output.ios_suites), plan.suites)
       assert.equal(Number(output.ios_max_parallel), plan.maxParallel)
     }
@@ -291,6 +291,7 @@ test('native CI bounds build and test time and runs device groups independently'
   assert.match(nativeJob, /timeout-minutes: \$\{\{ matrix.suite == 'core-regression' && 45 \|\| 90 \}\}/)
   assert.match(workflow, /ios_suites: \$\{\{ steps.changes.outputs.ios_suites \}\}/)
   assert.match(workflow, /ios_coverage:[\s\S]*?default: full/)
+  assert.match(workflow, /group: ci-.*github\.event_name == 'workflow_dispatch' && inputs\.ios_coverage != 'core' && 'full' \|\| 'core'/)
   assert.match(workflow, /cancel-in-progress: true/)
 })
 
@@ -298,7 +299,7 @@ test('the stable ios gate rejects failed, cancelled and unexpectedly skipped mat
   const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
   const gate = workflow.slice(workflow.indexOf('\n  ios:\n'))
   const command = gate.split('        run: |\n')[1].split('\n').map(line => line.slice(10)).join('\n')
-  for (const [changes, docs, ios, success] of [
+  for (const [changes, skipNative, ios, success] of [
     ['success', 'false', 'success', true],
     ['success', 'true', 'skipped', true],
     ['success', 'false', 'failure', false],
@@ -308,9 +309,9 @@ test('the stable ios gate rejects failed, cancelled and unexpectedly skipped mat
     ['success', 'true', 'cancelled', false],
   ]) {
     const result = spawnSync('bash', ['-e', '-c', command], {
-      env: { ...process.env, CHANGES_RESULT: changes, DOCS_ONLY: docs, IOS_RESULT: ios },
+      env: { ...process.env, CHANGES_RESULT: changes, SKIP_NATIVE: skipNative, IOS_RESULT: ios },
     })
-    assert.equal(result.status === 0, success, `${changes}/${docs}/${ios}`)
+    assert.equal(result.status === 0, success, `${changes}/${skipNative}/${ios}`)
   }
 })
 
