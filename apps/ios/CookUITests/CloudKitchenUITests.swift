@@ -70,7 +70,7 @@ final class CloudKitchenUITests: XCTestCase {
         XCTAssertGreaterThan(window.frame.width, window.frame.height)
         let menu = app.cookingToolbarButton("cook.presentation")
         assertMenuControlFits(menu, in: app)
-        let resultList = app.descendants(matching: .any).matching(identifier: "dietary.results").firstMatch
+        let resultList = app.collectionViews.matching(identifier: "dietary.results").element
         XCTAssertTrue(resultList.waitForExistence(timeout: 10))
         XCTAssertTrue(resultList.isHittable)
         let potato = chooserButton("土豆", in: app)
@@ -98,9 +98,9 @@ final class CloudKitchenUITests: XCTestCase {
         XCTAssertTrue(potato.isHittable)
         XCTAssertTrue(potato.isSelected)
         XCTAssertTrue(resultList.waitForExistence(timeout: 10))
-        let selection = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已选：土豆")).firstMatch
+        let selection = resultList.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已选：土豆")).firstMatch
         XCTAssertTrue(selection.waitForExistence(timeout: 10))
-        let match = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
+        let match = resultList.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
         XCTAssertTrue(match.waitForExistence(timeout: 10))
         XCTAssertTrue(match.isHittable)
         XCTAssertGreaterThan(match.frame.midX, potato.frame.maxX,

@@ -1243,5 +1243,44 @@
         "iphone": "The same two cases passed 2/2 on iOS 26.5 (60.329s and 48.099s). Real native menus, 44pt edge touches, current markers, preserved selection, camera movement/reset and foreground restoration assertions all execute."
       }
     }
+  },
+  "sixteenthFollowUp": {
+    "baselineCommit": "75622ff201b45b330ff3cb2176356eb83c4f440d",
+    "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41898057360",
+    "ipadDiscovery": "The complete iPad discovery group passed 20/20, including repeated recipe replacement. The previous lazy goal-list lookup did not recur in the audited goal flows.",
+    "phoneDiscovery": {
+      "job": 126813061851,
+      "observed": "Rotation failed waiting for the toolbar mode after choosing 食材快选; the recording shows the quick chooser actually displayed, while the failed navigation-bars-scoped button description contains only a query chain. Default discovery failed its named-decision predicate; the retained full AX tree contains a StaticText with cook.decide.recipe and a valid recipe summary, alongside an enabled 看做法 action.",
+      "change": "Resolve globally unique cooking toolbar controls and the decision action/card with element, removing reliance on the replaced navigation ancestor and lazy first-match snapshots. All mode-value, spoken-name and detail-content assertions remain.",
+      "artifact": {
+        "id": 13359757082,
+        "sha256": "02bb40f37ee6751f0b012dc2181f0ada4b036c2760983a4787b631f45b5fb91e"
+      }
+    },
+    "ipadDietary": {
+      "job": 126813061848,
+      "observed": "Both audit journeys passed. Empty-goal cancellation now reached clearing the goal, then timed out resolving the scoped cancel button disappearance at DietaryGoalsUITests.swift:385. This is the existing waitForNonExistence assertion, before subsequent goal-value/result checks.",
+      "change": "Retain the disappearance check and use complete unique resolution for both its chooser parent and the cancel control. Scope selected-ingredient summaries and candidate rows to their actual results List, also covering the corresponding iPad live-results checks.",
+      "artifact": {
+        "id": 13360231487,
+        "sha256": "2ff38c5e754d1883cdc8c4b56e99226cdd06458a561f0304c92f3d10d2655f64"
+      }
+    },
+    "phoneDietary": {
+      "job": 126813061911,
+      "observed": "Both audit journeys and all other cases passed. The kitchen/goal preservation journey completed its result and filter assertions and entered teardown at 297 seconds; normal scene cleanup crossed the 300-second case allowance.",
+      "change": "Give this measured complete filter/layout/results journey a 600-second ceiling, preserving every original operation deadline, assertion and cleanup failure.",
+      "artifact": {
+        "id": 13360290378,
+        "sha256": "9ba1745a67c8246e773574b20023239554698a674a7240680cf8db571cf7399e"
+      }
+    },
+    "finalInventory": "Swift and both main regression groups passed. iPad discovery passed 20/20. Only the three documented dietary/discovery groups failed; the aggregate gate correctly failed.",
+    "localValidation": {
+      "ipad": "All seven affected distinct cases have passing records on iOS 27.0. The landscape menu, largest-text menu, rotation and live ingredient results passed in 66.421s, 50.612s, 68.449s and 26.369s. The three sleep-affected cases were run again after recovery: default discovery, kitchen goal browsing and empty-goal cancellation passed 3/3 in 160.217s, 94.512s and 99.534s.",
+      "interruptedAttempt": "The first combined seven-case batch is not counted as an accepted full run. Power logs confirm repeated Low Power Sleep beginning at 04:36 local time, overlapping inflated 5861s/5083s durations and a later event-synthesis failure. Those affected cases were explicitly revalidated after recovery rather than changing assertions in response to host suspension.",
+      "iphone": "Five targeted cases passed 5/5 on iOS 26.5: largest-text menu 62.881s, rotation 63.833s, default discovery 64.927s, kitchen goal browsing 90.216s, empty-goal cancellation 108.575s. Every original business assertion executes.",
+      "execution": "Existing shared simulators only; serial XCTest execution, no cloning or erasing. Both task simulators restored to their original shutdown state."
+    }
   }
 }
