@@ -70,8 +70,14 @@ final class RandomRecipeUITests: XCTestCase {
         wait(picker, "isHittable == true")
         picker.tap()
         let goal = app.buttons["dietary.goal.less-added-sugar"]
+        // The newly enabled weight goal adds a row above this option at large text sizes.
+        for _ in 0..<6 {
+            if goal.exists && goal.isHittable { break }
+            app.swipeUp()
+        }
         wait(goal, "isHittable == true")
         goal.tap()
+        wait(goal, "isSelected == true")
         app.completeDietarySelection(closingFilters: true,
             returningTo: app.buttons.matching(identifier: "cook.decide.filters").firstMatch)
         wait(app.staticTexts["cook.decide.context"], "label CONTAINS '减少添加糖'")

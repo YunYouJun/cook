@@ -1,17 +1,18 @@
 {
-  "schemaVersion": 1,
-  "policyVersion": 1,
+  "schemaVersion": 2,
+  "policyVersion": 2,
   "amountsFingerprint": "5eacea8726d04b968f561cb3a75af5a014e8225975d87f126f2ece063f968859",
   "enabledGoals": [
+    "weight-aware",
     "less-added-sugar",
     "balanced-pairing"
   ],
   "recipes": {
     "333": {
-      "recipeFingerprint": "e5a3180531a0c7d8",
+      "recipeFingerprint": "6b9287ee273db992",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/西葫芦炒鸡蛋/西葫芦炒鸡蛋.md",
       "sourceFingerprint": "175f351179e37fc4",
-      "reviewedAt": "2026-10-26",
+      "reviewedAt": "2026-11-02",
       "ingredients": [
         "西葫芦",
         "鸡蛋",
@@ -125,36 +126,60 @@
           ]
         },
         "weight-aware": {
-          "status": "unknown",
-          "reason": "unverified-portion-oil",
+          "status": "pass",
+          "reason": "portion-oil-reference",
           "evidence": [
             {
-              "block": 5,
-              "item": 0,
-              "text": "西葫芦"
+              "block": 7,
+              "text": "按照 2 人的份量："
             },
             {
-              "block": 5,
-              "item": 1,
-              "text": "鸡蛋"
-            },
-            {
-              "block": 5,
-              "item": 2,
-              "text": "西红柿（可选）"
-            },
-            {
-              "block": 5,
+              "block": 8,
               "item": 3,
-              "text": "食用盐"
+              "text": "食用油 10-20ml"
             },
             {
-              "block": 5,
-              "item": 4,
-              "text": "食用油"
+              "block": 10,
+              "item": 3,
+              "text": "热锅，锅内放入 5ml - 10ml 食用油"
+            },
+            {
+              "block": 10,
+              "item": 5,
+              "text": "锅内放入 5ml - 10ml 食用油，倒入西红柿，炒至变软"
             }
           ]
         }
+      },
+      "portionOil": {
+        "referenceServings": 2,
+        "batchOilMilliliters": {
+          "lower": 10,
+          "upper": 20
+        },
+        "servingEvidence": [
+          {
+            "block": 7,
+            "text": "按照 2 人的份量："
+          }
+        ],
+        "oilEvidence": [
+          {
+            "block": 8,
+            "item": 3,
+            "text": "食用油 10-20ml"
+          },
+          {
+            "block": 10,
+            "item": 3,
+            "text": "热锅，锅内放入 5ml - 10ml 食用油"
+          },
+          {
+            "block": 10,
+            "item": 5,
+            "text": "锅内放入 5ml - 10ml 食用油，倒入西红柿，炒至变软"
+          }
+        ]
       }
     },
     "489": {
@@ -622,10 +647,10 @@
       }
     },
     "630": {
-      "recipeFingerprint": "43b2991347412559",
+      "recipeFingerprint": "90693296eebfb343",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/菠菜炒鸡蛋/菠菜炒鸡蛋.md",
       "sourceFingerprint": "c498a7cc00444be1",
-      "reviewedAt": "2026-10-26",
+      "reviewedAt": "2026-11-02",
       "ingredients": [
         "菠菜",
         "鸡蛋",
@@ -739,36 +764,60 @@
           ]
         },
         "weight-aware": {
-          "status": "unknown",
-          "reason": "unverified-portion-oil",
+          "status": "pass",
+          "reason": "portion-oil-reference",
           "evidence": [
             {
-              "block": 5,
-              "item": 0,
-              "text": "菠菜"
+              "block": 7,
+              "text": "按照 1 人的份量："
             },
             {
-              "block": 5,
-              "item": 1,
-              "text": "鸡蛋"
-            },
-            {
-              "block": 5,
+              "block": 8,
               "item": 2,
-              "text": "食用油"
-            },
-            {
-              "block": 5,
-              "item": 3,
-              "text": "食用盐"
+              "text": "食用油 15ml"
             },
             {
               "block": 10,
-              "item": 6,
-              "text": "加入 5g 盐、100ml 饮用水，大火 翻炒 10 秒"
+              "item": 2,
+              "text": "热锅，加入 10ml 油"
+            },
+            {
+              "block": 10,
+              "item": 5,
+              "text": "重新开火，倒入 5ml 油，油热后，放入菠菜，大火 翻炒 15 秒后，倒入鸡蛋块，翻炒均匀"
             }
           ]
         }
+      },
+      "portionOil": {
+        "referenceServings": 1,
+        "batchOilMilliliters": {
+          "lower": 15,
+          "upper": 15
+        },
+        "servingEvidence": [
+          {
+            "block": 7,
+            "text": "按照 1 人的份量："
+          }
+        ],
+        "oilEvidence": [
+          {
+            "block": 8,
+            "item": 2,
+            "text": "食用油 15ml"
+          },
+          {
+            "block": 10,
+            "item": 2,
+            "text": "热锅，加入 10ml 油"
+          },
+          {
+            "block": 10,
+            "item": 5,
+            "text": "重新开火，倒入 5ml 油，油热后，放入菠菜，大火 翻炒 15 秒后，倒入鸡蛋块，翻炒均匀"
+          }
+        ]
       }
     },
     "670": {
@@ -1169,10 +1218,10 @@
       }
     },
     "677": {
-      "recipeFingerprint": "316601060b418ff8",
+      "recipeFingerprint": "9090debaed56018a",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/清炒花菜.md",
       "sourceFingerprint": "3f8831cc66d70e3b",
-      "reviewedAt": "2026-10-26",
+      "reviewedAt": "2026-11-02",
       "ingredients": [
         "花菜",
         "大蒜",
@@ -1286,23 +1335,12 @@
           ]
         },
         "weight-aware": {
-          "status": "unknown",
-          "reason": "unverified-portion-oil",
+          "status": "pass",
+          "reason": "portion-oil-reference",
           "evidence": [
             {
-              "block": 4,
-              "item": 0,
-              "text": "花菜"
-            },
-            {
-              "block": 4,
-              "item": 1,
-              "text": "大蒜"
-            },
-            {
-              "block": 4,
-              "item": 2,
-              "text": "盐"
+              "block": 6,
+              "text": "每次制作前需要确定计划做几份。一份正好够 2 个人食用（作为配菜）。"
             },
             {
               "block": 8,
@@ -1310,12 +1348,37 @@
               "text": "食用油 15 ml"
             },
             {
-              "block": 8,
-              "item": 4,
-              "text": "饮用水 50 ml （用于炒制过程）"
+              "block": 10,
+              "item": 5,
+              "text": "热锅，加入 15 ml 食用油，大火烧热。"
             }
           ]
         }
+      },
+      "portionOil": {
+        "referenceServings": 2,
+        "batchOilMilliliters": {
+          "lower": 15,
+          "upper": 15
+        },
+        "servingEvidence": [
+          {
+            "block": 6,
+            "text": "每次制作前需要确定计划做几份。一份正好够 2 个人食用（作为配菜）。"
+          }
+        ],
+        "oilEvidence": [
+          {
+            "block": 8,
+            "item": 3,
+            "text": "食用油 15 ml"
+          },
+          {
+            "block": 10,
+            "item": 5,
+            "text": "热锅，加入 15 ml 食用油，大火烧热。"
+          }
+        ]
       }
     },
     "689": {
@@ -1825,10 +1888,10 @@
       }
     },
     "701": {
-      "recipeFingerprint": "c7f492750e797d22",
+      "recipeFingerprint": "6775672ca6ea1048",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/冬瓜桑拿鸡.md",
       "sourceFingerprint": "23a597b3522a9ba3",
-      "reviewedAt": "2026-10-26",
+      "reviewedAt": "2026-11-02",
       "ingredients": [
         "鸡肉",
         "姜丝",
@@ -2015,56 +2078,50 @@
           ]
         },
         "weight-aware": {
-          "status": "unknown",
-          "reason": "unverified-portion-oil",
+          "status": "pass",
+          "reason": "portion-oil-reference",
           "evidence": [
             {
-              "block": 4,
-              "item": 0,
-              "text": "鸡肉"
+              "block": 6,
+              "text": "每份（一份恰好够 2 人食用）："
             },
             {
-              "block": 4,
-              "item": 1,
-              "text": "姜丝"
-            },
-            {
-              "block": 4,
-              "item": 2,
-              "text": "生抽"
-            },
-            {
-              "block": 4,
-              "item": 3,
-              "text": "蚝油"
-            },
-            {
-              "block": 4,
-              "item": 4,
-              "text": "盐"
-            },
-            {
-              "block": 4,
-              "item": 5,
-              "text": "食用油"
-            },
-            {
-              "block": 4,
-              "item": 6,
-              "text": "冬瓜"
-            },
-            {
-              "block": 4,
+              "block": 7,
               "item": 7,
-              "text": "虫草花"
+              "text": "食用油 10 ml"
             },
             {
               "block": 9,
-              "item": 4,
-              "text": "水烧开后放入蒸锅，上汽后蒸 15 分钟，出锅即可"
+              "item": 0,
+              "text": "鸡切块，加姜丝、生抽、蚝油、盐、食用油，揉搓均匀后腌制 20 分钟"
             }
           ]
         }
+      },
+      "portionOil": {
+        "referenceServings": 2,
+        "batchOilMilliliters": {
+          "lower": 10,
+          "upper": 10
+        },
+        "servingEvidence": [
+          {
+            "block": 6,
+            "text": "每份（一份恰好够 2 人食用）："
+          }
+        ],
+        "oilEvidence": [
+          {
+            "block": 7,
+            "item": 7,
+            "text": "食用油 10 ml"
+          },
+          {
+            "block": 9,
+            "item": 0,
+            "text": "鸡切块，加姜丝、生抽、蚝油、盐、食用油，揉搓均匀后腌制 20 分钟"
+          }
+        ]
       }
     },
     "702": {
@@ -2637,6 +2694,225 @@
         }
       }
     },
+    "736": {
+      "recipeFingerprint": "e4031f5a149bc4c3",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/瘦肉土豆片/瘦肉土豆片.md",
+      "sourceFingerprint": "f538135d94a736e4",
+      "reviewedAt": "2026-11-02",
+      "ingredients": [
+        "纯瘦肉",
+        "土豆",
+        "蒜苗",
+        "生粉",
+        "玉米淀粉",
+        "其他淀粉",
+        "生抽",
+        "老抽",
+        "食用盐",
+        "食用油"
+      ],
+      "avoidIngredients": [
+        "纯瘦肉",
+        "土豆",
+        "蒜苗",
+        "生粉",
+        "玉米淀粉",
+        "其他淀粉",
+        "生抽",
+        "老抽",
+        "食用盐",
+        "食用油",
+        "猪肉",
+        "瘦肉",
+        "肉",
+        "淀粉",
+        "玉米",
+        "盐",
+        "食盐",
+        "油"
+      ],
+      "unresolvedIngredients": [
+        "纯瘦肉",
+        "其他淀粉",
+        "生抽",
+        "老抽"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 5,
+          "item": 0,
+          "text": "纯瘦肉"
+        },
+        {
+          "block": 5,
+          "item": 1,
+          "text": "土豆"
+        },
+        {
+          "block": 5,
+          "item": 2,
+          "text": "蒜苗"
+        },
+        {
+          "block": 5,
+          "item": 3,
+          "text": "生粉（玉米淀粉或其他淀粉）"
+        },
+        {
+          "block": 5,
+          "item": 4,
+          "text": "生抽"
+        },
+        {
+          "block": 5,
+          "item": 5,
+          "text": "老抽"
+        },
+        {
+          "block": 5,
+          "item": 6,
+          "text": "食用盐"
+        },
+        {
+          "block": 10,
+          "item": 4,
+          "text": "热锅，锅内放入 10ml - 15ml 食用油。等待 10 秒让油温升高"
+        }
+      ],
+      "foodGroups": [
+        "staple",
+        "protein"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "纯瘦肉"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "土豆"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "蒜苗"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "生粉（玉米淀粉或其他淀粉）"
+            },
+            {
+              "block": 5,
+              "item": 4,
+              "text": "生抽"
+            },
+            {
+              "block": 5,
+              "item": 5,
+              "text": "老抽"
+            },
+            {
+              "block": 5,
+              "item": 6,
+              "text": "食用盐"
+            },
+            {
+              "block": 10,
+              "item": 4,
+              "text": "热锅，锅内放入 10ml - 15ml 食用油。等待 10 秒让油温升高"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "纯瘦肉"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "土豆"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "蒜苗"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "生粉（玉米淀粉或其他淀粉）"
+            },
+            {
+              "block": 5,
+              "item": 4,
+              "text": "生抽"
+            },
+            {
+              "block": 5,
+              "item": 5,
+              "text": "老抽"
+            },
+            {
+              "block": 5,
+              "item": 6,
+              "text": "食用盐"
+            },
+            {
+              "block": 10,
+              "item": 4,
+              "text": "热锅，锅内放入 10ml - 15ml 食用油。等待 10 秒让油温升高"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "pass",
+          "reason": "portion-oil-reference",
+          "evidence": [
+            {
+              "block": 7,
+              "text": "1 人食用版本"
+            },
+            {
+              "block": 10,
+              "item": 4,
+              "text": "热锅，锅内放入 10ml - 15ml 食用油。等待 10 秒让油温升高"
+            }
+          ]
+        }
+      },
+      "portionOil": {
+        "referenceServings": 1,
+        "batchOilMilliliters": {
+          "lower": 10,
+          "upper": 15
+        },
+        "servingEvidence": [
+          {
+            "block": 7,
+            "text": "1 人食用版本"
+          }
+        ],
+        "oilEvidence": [
+          {
+            "block": 10,
+            "item": 4,
+            "text": "热锅，锅内放入 10ml - 15ml 食用油。等待 10 秒让油温升高"
+          }
+        ]
+      }
+    },
     "748": {
       "recipeFingerprint": "29cf91cfdfdb516e",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/肉饼炖蛋.md",
@@ -2833,6 +3109,194 @@
             }
           ]
         }
+      }
+    },
+    "756": {
+      "recipeFingerprint": "0500999d718521a8",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/蒜苔炒肉末.md",
+      "sourceFingerprint": "365c788c54d2df67",
+      "reviewedAt": "2026-11-02",
+      "ingredients": [
+        "五花肉薄片",
+        "蒜苔",
+        "食用盐",
+        "生抽",
+        "食用油",
+        "蒜瓣"
+      ],
+      "avoidIngredients": [
+        "五花肉薄片",
+        "蒜苔",
+        "食用盐",
+        "生抽",
+        "食用油",
+        "蒜瓣",
+        "五花肉",
+        "猪肉",
+        "蒜",
+        "大蒜",
+        "蒜头",
+        "盐",
+        "食盐",
+        "油"
+      ],
+      "unresolvedIngredients": [
+        "生抽"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "五花肉薄片"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "蒜苔"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "食用盐"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "生抽"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "食用油"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "蒜瓣"
+        }
+      ],
+      "foodGroups": [
+        "protein",
+        "vegetables"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "五花肉薄片"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "蒜苔"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "食用盐"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "蒜瓣"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "五花肉薄片"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "蒜苔"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "食用盐"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "生抽"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "食用油"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "蒜瓣"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "pass",
+          "reason": "portion-oil-reference",
+          "evidence": [
+            {
+              "block": 6,
+              "text": "1 人食用版本"
+            },
+            {
+              "block": 7,
+              "item": 2,
+              "text": "食用油 10ml"
+            },
+            {
+              "block": 9,
+              "item": 3,
+              "text": "热锅，锅内放入 10ml 食用油。等待 10 秒让油温升高"
+            }
+          ]
+        }
+      },
+      "portionOil": {
+        "referenceServings": 1,
+        "batchOilMilliliters": {
+          "lower": 10,
+          "upper": 10
+        },
+        "servingEvidence": [
+          {
+            "block": 6,
+            "text": "1 人食用版本"
+          }
+        ],
+        "oilEvidence": [
+          {
+            "block": 7,
+            "item": 2,
+            "text": "食用油 10ml"
+          },
+          {
+            "block": 9,
+            "item": 3,
+            "text": "热锅，锅内放入 10ml 食用油。等待 10 秒让油温升高"
+          }
+        ]
       }
     },
     "777": {
@@ -3728,8 +4192,261 @@
         ]
       }
     },
+    "799": {
+      "recipeFingerprint": "47d376d3495d40f0",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/排骨山药玉米汤/排骨山药玉米汤.md",
+      "sourceFingerprint": "10bf3a1c67762219",
+      "reviewedAt": "2026-11-02",
+      "ingredients": [
+        "排骨",
+        "山药",
+        "胡萝卜",
+        "玉米",
+        "生姜",
+        "小葱",
+        "料酒",
+        "食盐",
+        "食用油"
+      ],
+      "avoidIngredients": [
+        "排骨",
+        "山药",
+        "胡萝卜",
+        "玉米",
+        "生姜",
+        "小葱",
+        "料酒",
+        "食盐",
+        "食用油",
+        "猪肉",
+        "骨头",
+        "姜",
+        "葱",
+        "盐",
+        "油"
+      ],
+      "unresolvedIngredients": [
+        "料酒"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 4,
+          "item": 0,
+          "text": "排骨（推荐精排）"
+        },
+        {
+          "block": 4,
+          "item": 1,
+          "text": "山药（推荐铁棍山药）"
+        },
+        {
+          "block": 4,
+          "item": 2,
+          "text": "胡萝卜"
+        },
+        {
+          "block": 4,
+          "item": 3,
+          "text": "玉米（推荐甜玉米或糯玉米）"
+        },
+        {
+          "block": 4,
+          "item": 4,
+          "text": "生姜"
+        },
+        {
+          "block": 4,
+          "item": 5,
+          "text": "小葱"
+        },
+        {
+          "block": 4,
+          "item": 6,
+          "text": "料酒"
+        },
+        {
+          "block": 4,
+          "item": 7,
+          "text": "食盐"
+        },
+        {
+          "block": 4,
+          "item": 8,
+          "text": "砂锅或深汤锅"
+        },
+        {
+          "block": 8,
+          "item": 7,
+          "text": "食用油 10ml"
+        }
+      ],
+      "foodGroups": [
+        "staple",
+        "protein",
+        "vegetables"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "排骨（推荐精排）"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "山药（推荐铁棍山药）"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "胡萝卜"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "玉米（推荐甜玉米或糯玉米）"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "生姜"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "小葱"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "料酒"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "食盐"
+            },
+            {
+              "block": 4,
+              "item": 8,
+              "text": "砂锅或深汤锅"
+            },
+            {
+              "block": 8,
+              "item": 7,
+              "text": "食用油 10ml"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 4,
+              "item": 0,
+              "text": "排骨（推荐精排）"
+            },
+            {
+              "block": 4,
+              "item": 1,
+              "text": "山药（推荐铁棍山药）"
+            },
+            {
+              "block": 4,
+              "item": 2,
+              "text": "胡萝卜"
+            },
+            {
+              "block": 4,
+              "item": 3,
+              "text": "玉米（推荐甜玉米或糯玉米）"
+            },
+            {
+              "block": 4,
+              "item": 4,
+              "text": "生姜"
+            },
+            {
+              "block": 4,
+              "item": 5,
+              "text": "小葱"
+            },
+            {
+              "block": 4,
+              "item": 6,
+              "text": "料酒"
+            },
+            {
+              "block": 4,
+              "item": 7,
+              "text": "食盐"
+            },
+            {
+              "block": 4,
+              "item": 8,
+              "text": "砂锅或深汤锅"
+            },
+            {
+              "block": 8,
+              "item": 7,
+              "text": "食用油 10ml"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "pass",
+          "reason": "portion-oil-reference",
+          "evidence": [
+            {
+              "block": 6,
+              "text": "每次制作前需要确定计划做几份。一份正好够 2 人喝。"
+            },
+            {
+              "block": 8,
+              "item": 7,
+              "text": "食用油 10ml"
+            },
+            {
+              "block": 10,
+              "item": 2,
+              "text": "**翻炒排骨**：\n• 热锅，倒入 10ml 食用油，等待 10 秒让油温升高。\n• 放入剩余大约 10g 姜片爆香。\n• 放入全部准备好的排骨，保持中火翻炒大约 1 分钟，至排骨表面微焦。"
+            }
+          ]
+        }
+      },
+      "portionOil": {
+        "referenceServings": 2,
+        "batchOilMilliliters": {
+          "lower": 10,
+          "upper": 10
+        },
+        "servingEvidence": [
+          {
+            "block": 6,
+            "text": "每次制作前需要确定计划做几份。一份正好够 2 人喝。"
+          }
+        ],
+        "oilEvidence": [
+          {
+            "block": 8,
+            "item": 7,
+            "text": "食用油 10ml"
+          },
+          {
+            "block": 10,
+            "item": 2,
+            "text": "**翻炒排骨**：\n• 热锅，倒入 10ml 食用油，等待 10 秒让油温升高。\n• 放入剩余大约 10g 姜片爆香。\n• 放入全部准备好的排骨，保持中火翻炒大约 1 分钟，至排骨表面微焦。"
+          }
+        ]
+      }
+    },
     "800": {
-      "recipeFingerprint": "a53181f27fc72371",
+      "recipeFingerprint": "ba503ceee0c9534b",
       "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/排骨苦瓜汤/排骨苦瓜汤.md",
       "sourceFingerprint": "35d355e07cd5614c",
       "reviewedAt": "2026-10-26",
@@ -4443,6 +5160,179 @@
             }
           ]
         }
+      }
+    },
+    "814": {
+      "recipeFingerprint": "37684dc518592d71",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/意式肉酱面/意式肉酱面.md",
+      "sourceFingerprint": "3579400fa71c719c",
+      "reviewedAt": "2026-11-02",
+      "ingredients": [
+        "意大利面",
+        "意大利面酱",
+        "肉沫",
+        "白洋葱",
+        "紫洋葱",
+        "食用油"
+      ],
+      "avoidIngredients": [
+        "意大利面",
+        "意大利面酱",
+        "肉沫",
+        "白洋葱",
+        "紫洋葱",
+        "食用油",
+        "面食",
+        "肉末",
+        "猪肉",
+        "洋葱",
+        "油"
+      ],
+      "unresolvedIngredients": [
+        "意大利面",
+        "意大利面酱",
+        "肉沫"
+      ],
+      "ingredientEvidence": [
+        {
+          "block": 5,
+          "item": 0,
+          "text": "意大利面"
+        },
+        {
+          "block": 5,
+          "item": 1,
+          "text": "意大利面酱"
+        },
+        {
+          "block": 5,
+          "item": 2,
+          "text": "肉沫"
+        },
+        {
+          "block": 5,
+          "item": 3,
+          "text": "白洋葱（紫洋葱也可以）"
+        },
+        {
+          "block": 9,
+          "item": 4,
+          "text": "食用油 10-15ml"
+        }
+      ],
+      "foodGroups": [
+        "staple",
+        "protein",
+        "vegetables"
+      ],
+      "assessments": {
+        "less-added-sugar": {
+          "status": "unknown",
+          "reason": "unverified-seasoning",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "意大利面"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "意大利面酱"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "肉沫"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "白洋葱（紫洋葱也可以）"
+            },
+            {
+              "block": 9,
+              "item": 4,
+              "text": "食用油 10-15ml"
+            }
+          ]
+        },
+        "balanced-pairing": {
+          "status": "pass",
+          "reason": "food-group-pairing",
+          "evidence": [
+            {
+              "block": 5,
+              "item": 0,
+              "text": "意大利面"
+            },
+            {
+              "block": 5,
+              "item": 1,
+              "text": "意大利面酱"
+            },
+            {
+              "block": 5,
+              "item": 2,
+              "text": "肉沫"
+            },
+            {
+              "block": 5,
+              "item": 3,
+              "text": "白洋葱（紫洋葱也可以）"
+            },
+            {
+              "block": 9,
+              "item": 4,
+              "text": "食用油 10-15ml"
+            }
+          ]
+        },
+        "weight-aware": {
+          "status": "pass",
+          "reason": "portion-oil-reference",
+          "evidence": [
+            {
+              "block": 7,
+              "text": "每次制作前需要确定计划做几份。一份正好够 2 个人吃。"
+            },
+            {
+              "block": 9,
+              "item": 4,
+              "text": "食用油 10-15ml"
+            },
+            {
+              "block": 11,
+              "item": 3,
+              "text": "空锅中倒油，中火下入洋葱碎"
+            }
+          ]
+        }
+      },
+      "portionOil": {
+        "referenceServings": 2,
+        "batchOilMilliliters": {
+          "lower": 10,
+          "upper": 15
+        },
+        "servingEvidence": [
+          {
+            "block": 7,
+            "text": "每次制作前需要确定计划做几份。一份正好够 2 个人吃。"
+          }
+        ],
+        "oilEvidence": [
+          {
+            "block": 9,
+            "item": 4,
+            "text": "食用油 10-15ml"
+          },
+          {
+            "block": 11,
+            "item": 3,
+            "text": "空锅中倒油，中火下入洋葱碎"
+          }
+        ]
       }
     },
     "829": {
@@ -6334,5 +7224,5 @@
       }
     }
   },
-  "dataVersion": "d933a7d65a25"
+  "dataVersion": "6672ece4497c"
 }

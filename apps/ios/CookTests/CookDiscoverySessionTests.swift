@@ -20,6 +20,37 @@ final class CookDiscoverySessionTests: XCTestCase {
         return RecipeStore(data: data, catalog: PersonalCatalogStore(url: nil))
     }
 
+    func testNextDayLunchUsesOnePoolForGoalIngredientsCountsAndExclusions() throws {
+        let store = try RecipeStore.loadBundled(inMemory: true)
+        let session = CookSession(defaultPantry: store.data.pantry.defaults, context: container.mainContext)
+        session.selectDiscoveryScene(.nextDayLunch)
+        XCTAssertEqual(session.matchCount(in: store), 10)
+        XCTAssertEqual(session.candidates(in: store).count, 10)
+        XCTAssertTrue(session.candidates(in: store).allSatisfy { $0.tags.contains("次日便当") })
+
+        session.selectDietaryGoal(.weightAware)
+        let expected: Set<Int> = [333, 630, 677, 701, 736, 756, 799, 800, 814]
+        XCTAssertEqual(Set(session.candidates(in: store).map(\.id)), expected)
+        XCTAssertEqual(session.matchCount(in: store), 9)
+        XCTAssertEqual(session.activeFilterCount, 2)
+        XCTAssertTrue(CookDiscovery.sample(session.candidates(in: store)).allSatisfy { expected.contains($0.id) })
+
+        session.addStuff("鸡肉")
+        XCTAssertEqual(session.candidates(in: store).map(\.id), [701])
+        XCTAssertEqual(session.matches(in: store).map(\.recipe.id), [701])
+        XCTAssertEqual(session.candidateSnapshot(in: store).matchesByID[701]?.recipe.id, 701)
+        session.toggleAvoid("鸡肉")
+        XCTAssertTrue(session.candidates(in: store).isEmpty)
+        XCTAssertEqual(session.matchCount(in: store), 0)
+
+        session.clearFilters()
+        XCTAssertNil(session.discoveryScene)
+        XCTAssertNil(session.dietaryGoal)
+        XCTAssertEqual(session.selectedStuff, ["鸡肉"])
+        XCTAssertEqual(session.avoid, ["鸡肉"])
+        XCTAssertNil(CookSession(defaultPantry: [], context: container.mainContext).discoveryScene)
+    }
+
     func testSceneIntersectsSharedConditionsInMatchesSnapshotAndCounts() throws {
         let store = try store()
         let session = CookSession(defaultPantry: [], context: container.mainContext)

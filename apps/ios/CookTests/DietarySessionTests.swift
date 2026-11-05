@@ -191,7 +191,7 @@ final class DietarySessionTests: XCTestCase {
         XCTAssertNil(store.dietaryUnavailableMessage)
         XCTAssertEqual(store.dietaryGoals, [.balancedPairing])
         session.selectDietaryGoal(.balancedPairing)
-        XCTAssertEqual(session.candidates(in: store).count, 32)
+        XCTAssertEqual(session.candidates(in: store).count, 36)
         XCTAssertNil(store.dietaryUnavailableMessage(for: session.dietaryGoal))
     }
 }

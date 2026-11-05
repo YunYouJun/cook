@@ -11,6 +11,8 @@ on:
       - main
       - dev
 
+  workflow_dispatch:
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -198,9 +200,12 @@ jobs:
     timeout-minutes: 90
     strategy:
       fail-fast: false
+      # Leave capacity for the two PR jobs while a full branch matrix runs.
+      max-parallel: ${{ github.event_name == 'pull_request' && 2 || 3 }}
       matrix:
         device: [iphone, ipad]
-        suite: [regression-main, regression-discovery, dietary]
+        # PRs keep two focused device jobs; pushes and manual runs retain full coverage.
+        suite: ${{ fromJSON(github.event_name == 'pull_request' && '["pr-regression"]' || '["regression-main", "regression-discovery", "dietary"]') }}
     env:
       # Match native UI validation with a pinned compiler and XCTest toolchain.
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
@@ -228,7 +233,7 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/cook-derived-data" CODE_SIGNING_ALLOWED=NO
       - name: Build and test
-        timeout-minutes: 60
+        timeout-minutes: ${{ github.event_name == 'pull_request' && 35 || 60 }}
         id: ios_tests
         env:
           DEVICE: ${{ steps.simulators.outputs[matrix.device] }}

@@ -14,8 +14,7 @@ final class CloudKitchenUITests: XCTestCase {
         let menu = app.cookingToolbarButton("cook.presentation")
         capture(app, name: "largest-quick-initial")
         assertMenuControlFits(menu, in: app)
-        let potato = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
-            .buttons.matching(NSPredicate(format: "label == %@", "土豆")).firstMatch
+        let potato = chooserButton("土豆", in: app)
         XCTAssertTrue(potato.isHittable, "最大字号下首屏仍应能选择第一种常用食材")
         potato.tap()
         waitUntil(potato, "isSelected == true")
@@ -74,8 +73,7 @@ final class CloudKitchenUITests: XCTestCase {
         let resultList = app.collectionViews.matching(identifier: "dietary.results").element
         XCTAssertTrue(resultList.waitForExistence(timeout: 10))
         XCTAssertTrue(resultList.isHittable)
-        let potato = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
-            .buttons.matching(NSPredicate(format: "label == %@", "土豆")).firstMatch
+        let potato = chooserButton("土豆", in: app)
         XCTAssertTrue(potato.isHittable)
         potato.tap()
         waitUntil(potato, "isSelected == true")
@@ -122,8 +120,7 @@ final class CloudKitchenUITests: XCTestCase {
         let menu = app.cookingToolbarButton("cook.presentation")
         XCTAssertTrue(menu.waitForExistence(timeout: 20))
         XCTAssertTrue(menu.value as? String == "食材快选" || menu.label.contains("食材快选"))
-        let tomato = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
-            .buttons.matching(NSPredicate(format: "label == %@", "番茄")).firstMatch
+        let tomato = chooserButton("番茄", in: app)
         XCTAssertTrue(tomato.isHittable, "默认视图应直接支持食材快选")
         tomato.tap()
         waitUntil(tomato, "isSelected == true")
@@ -195,7 +192,9 @@ final class CloudKitchenUITests: XCTestCase {
         // This journey switches both layouts and opens/returns from real details.
         executionTimeAllowance = 600
         let app = XCUIApplication()
-        app.launchArguments = XCUIApplication.standardCookingLaunchArguments
+        // This flow checks shared selection and real recipes. Dedicated menu,
+        // edge-hit and rotation cases keep normal animations enabled.
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-disable-animations"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         terminateAppAfterTest(app)
@@ -206,8 +205,7 @@ final class CloudKitchenUITests: XCTestCase {
         app.selectCookingPresentation("食材快选")
         XCTAssertFalse(app.navigationBars.matching(identifier: "找菜").firstMatch
             .segmentedControls.matching(identifier: "cook.presentation").firstMatch.exists)
-        let tomato = app.collectionViews.matching(identifier: "cook.chooser").firstMatch
-            .buttons.matching(NSPredicate(format: "label == %@", "番茄")).firstMatch
+        let tomato = chooserButton("番茄", in: app)
         reveal(tomato, in: app)
         XCTAssertTrue(tomato.waitForExistence(timeout: 10))
         tomato.tap()
@@ -452,6 +450,14 @@ final class CloudKitchenUITests: XCTestCase {
         XCTAssertTrue(option.isHittable, file: file, line: line)
         XCTAssertTrue(app.windows.firstMatch.frame.contains(option.frame), "菜单选项应完整留在窗口内", file: file, line: line)
         // 系统菜单的 AX 行高随平台变化；通过真实选取验证，不把它当作入口按钮的命中范围。
+    }
+
+    @MainActor
+    private func chooserButton(_ label: String, in app: XCUIApplication) -> XCUIElement {
+        // Keep VoiceOver label assertions inside the active list. A whole-app
+        // firstMatch can stall even when its debug snapshot already shows the chip.
+        app.collectionViews.matching(identifier: "cook.chooser").firstMatch
+            .buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
     }
 
     @MainActor

@@ -1,0 +1,510 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-11-02",
+  "source": {
+    "name": "HowToCook",
+    "url": "https://github.com/Anduin2017/HowToCook",
+    "license": "Unlicense",
+    "commit": "0e106eea348c734fe1586f781202994439cf98a5"
+  },
+  "tag": "次日便当",
+  "scope": "需按带饭指南冷却、持续冷藏运输及存放、次日彻底复热；为原方份量和额外烹调油参考，不作低热量、低GI或减重认证。",
+  "storageGuide": "/guide/next-day-lunch",
+  "recipes": {
+    "237": {
+      "name": "蒜蓉西兰花",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/蒜蓉西兰花.md",
+      "sourceFingerprint": "0e9c1eca8d9ff0a4",
+      "referenceServings": 2,
+      "mealRole": "配菜",
+      "servingEvidence": [
+        {
+          "block": 6,
+          "text": "每次制作前需要确定计划做几份。一份正好够 2 个人吃。"
+        }
+      ],
+      "mainIngredientEvidence": [
+        {
+          "block": 8,
+          "item": 0,
+          "text": "西兰花 约 200 g （约 1/2 中等大小的西兰花）"
+        }
+      ],
+      "addedOil": {
+        "lower": 10,
+        "upper": 10,
+        "unit": "ml",
+        "evidence": [
+          {
+            "block": 10,
+            "item": 5,
+            "text": "热锅，加入 10 ml 食用油。油温升高后，放入 大蒜末，小火煸炒出香味。"
+          }
+        ],
+        "note": "西兰花按计算栏约 200g 称量；备料栏的个数不参与换算。"
+      },
+      "packingNote": "与主食、鸡肉或豆腐搭配，蒜蓉汁单独分装。"
+    },
+    "333": {
+      "name": "西葫芦炒蛋",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/西葫芦炒鸡蛋/西葫芦炒鸡蛋.md",
+      "sourceFingerprint": "175f351179e37fc4",
+      "referenceServings": 2,
+      "mealRole": "配菜",
+      "servingEvidence": [
+        {
+          "block": 7,
+          "text": "按照 2 人的份量："
+        }
+      ],
+      "mainIngredientEvidence": [
+        {
+          "block": 8,
+          "item": 0,
+          "text": "西葫芦 500g"
+        },
+        {
+          "block": 8,
+          "item": 1,
+          "text": "西红柿 100g"
+        },
+        {
+          "block": 8,
+          "item": 2,
+          "text": "鸡蛋 3 个"
+        }
+      ],
+      "addedOil": {
+        "lower": 10,
+        "upper": 20,
+        "unit": "ml",
+        "evidence": [
+          {
+            "block": 8,
+            "item": 3,
+            "text": "食用油 10-20ml"
+          },
+          {
+            "block": 10,
+            "item": 3,
+            "text": "热锅，锅内放入 5ml - 10ml 食用油"
+          },
+          {
+            "block": 10,
+            "item": 5,
+            "text": "锅内放入 5ml - 10ml 食用油，倒入西红柿，炒至变软"
+          }
+        ],
+        "note": "两次各 5–10ml 的食用油合计 10–20ml；番茄仍按原文作为可选项。"
+      },
+      "packingNote": "鸡蛋炒至完全凝固；与主食搭配，避免汤汁浸泡米饭。"
+    },
+    "630": {
+      "name": "菠菜炒鸡蛋",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/菠菜炒鸡蛋/菠菜炒鸡蛋.md",
+      "sourceFingerprint": "c498a7cc00444be1",
+      "referenceServings": 1,
+      "mealRole": "配菜",
+      "servingEvidence": [
+        {
+          "block": 7,
+          "text": "按照 1 人的份量："
+        }
+      ],
+      "mainIngredientEvidence": [
+        {
+          "block": 8,
+          "item": 0,
+          "text": "菠菜 350g"
+        },
+        {
+          "block": 8,
+          "item": 1,
+          "text": "鸡蛋 2 个"
+        }
+      ],
+      "addedOil": {
+        "lower": 15,
+        "upper": 15,
+        "unit": "ml",
+        "evidence": [
+          {
+            "block": 8,
+            "item": 2,
+            "text": "食用油 15ml"
+          },
+          {
+            "block": 10,
+            "item": 2,
+            "text": "热锅，加入 10ml 油"
+          },
+          {
+            "block": 10,
+            "item": 5,
+            "text": "重新开火，倒入 5ml 油，油热后，放入菠菜，大火 翻炒 15 秒后，倒入鸡蛋块，翻炒均匀"
+          }
+        ],
+        "note": "炒蛋 10ml 加炒菠菜 5ml，合计 15ml。"
+      },
+      "packingNote": "菠菜焯水后按原方炒熟；沥去多余汤水后与主食分装。"
+    },
+    "677": {
+      "name": "清炒花菜",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/清炒花菜.md",
+      "sourceFingerprint": "3f8831cc66d70e3b",
+      "referenceServings": 2,
+      "mealRole": "配菜",
+      "servingEvidence": [
+        {
+          "block": 6,
+          "text": "每次制作前需要确定计划做几份。一份正好够 2 个人食用（作为配菜）。"
+        }
+      ],
+      "mainIngredientEvidence": [
+        {
+          "block": 8,
+          "item": 0,
+          "text": "花菜 约 300 g （约 1/2 中等大小的花菜）"
+        }
+      ],
+      "addedOil": {
+        "lower": 15,
+        "upper": 15,
+        "unit": "ml",
+        "evidence": [
+          {
+            "block": 8,
+            "item": 3,
+            "text": "食用油 15 ml"
+          },
+          {
+            "block": 10,
+            "item": 5,
+            "text": "热锅，加入 15 ml 食用油，大火烧热。"
+          }
+        ],
+        "note": "原文明确为两人配菜，不把这一锅当作两份完整午餐。"
+      },
+      "packingNote": "与主食和蛋白质来源搭配；复热后口感会比现做软。"
+    },
+    "701": {
+      "name": "冬瓜桑拿鸡",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/冬瓜桑拿鸡.md",
+      "sourceFingerprint": "23a597b3522a9ba3",
+      "referenceServings": 2,
+      "mealRole": "荤菜",
+      "servingEvidence": [
+        {
+          "block": 6,
+          "text": "每份（一份恰好够 2 人食用）："
+        }
+      ],
+      "mainIngredientEvidence": [
+        {
+          "block": 7,
+          "item": 0,
+          "text": "鸡肉 400 g（切块）"
+        },
+        {
+          "block": 7,
+          "item": 1,
+          "text": "冬瓜 300 g（切薄片）"
+        },
+        {
+          "block": 7,
+          "item": 2,
+          "text": "虫草花 30 g（提前冲洗泡软）"
+        }
+      ],
+      "addedOil": {
+        "lower": 10,
+        "upper": 10,
+        "unit": "ml",
+        "evidence": [
+          {
+            "block": 7,
+            "item": 7,
+            "text": "食用油 10 ml"
+          },
+          {
+            "block": 9,
+            "item": 0,
+            "text": "鸡切块，加姜丝、生抽、蚝油、盐、食用油，揉搓均匀后腌制 20 分钟"
+          }
+        ],
+        "note": "食用油全部用于腌鸡；后续铺盘和蒸制不另加油。"
+      },
+      "packingNote": "鸡肉完全蒸熟后分装；保留汤汁，复热时均匀翻动鸡块。"
+    },
+    "736": {
+      "name": "瘦肉土豆片",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/瘦肉土豆片/瘦肉土豆片.md",
+      "sourceFingerprint": "f538135d94a736e4",
+      "referenceServings": 1,
+      "mealRole": "荤菜",
+      "servingEvidence": [
+        {
+          "block": 7,
+          "text": "1 人食用版本"
+        }
+      ],
+      "mainIngredientEvidence": [
+        {
+          "block": 8,
+          "item": 0,
+          "text": "纯瘦肉 200g"
+        },
+        {
+          "block": 8,
+          "item": 1,
+          "text": "土豆 200g"
+        }
+      ],
+      "addedOil": {
+        "lower": 10,
+        "upper": 15,
+        "unit": "ml",
+        "evidence": [
+          {
+            "block": 10,
+            "item": 4,
+            "text": "热锅，锅内放入 10ml - 15ml 食用油。等待 10 秒让油温升高"
+          }
+        ],
+        "note": "油量来自操作段，备料计算栏未列油；完整操作仅此一次加油。"
+      },
+      "packingNote": "肉片炒熟；土豆已提供一部分淀粉类食物，搭配蔬菜。"
+    },
+    "756": {
+      "name": "蒜苔炒肉末",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/蒜苔炒肉末.md",
+      "sourceFingerprint": "365c788c54d2df67",
+      "referenceServings": 1,
+      "mealRole": "荤菜",
+      "servingEvidence": [
+        {
+          "block": 6,
+          "text": "1 人食用版本"
+        }
+      ],
+      "mainIngredientEvidence": [
+        {
+          "block": 7,
+          "item": 0,
+          "text": "蒜苔 1 扎（每扎蒜苔约 190g）"
+        },
+        {
+          "block": 7,
+          "item": 1,
+          "text": "五花肉薄片 4 片（约 20g）"
+        }
+      ],
+      "addedOil": {
+        "lower": 10,
+        "upper": 10,
+        "unit": "ml",
+        "evidence": [
+          {
+            "block": 7,
+            "item": 2,
+            "text": "食用油 10ml"
+          },
+          {
+            "block": 9,
+            "item": 3,
+            "text": "热锅，锅内放入 10ml 食用油。等待 10 秒让油温升高"
+          }
+        ],
+        "note": "原文采用五花肉薄片；10ml 指另加的食用油，不含肉本身的脂肪。"
+      },
+      "packingNote": "肉丝与蒜苔完全炒熟后分装；搭配主食和另一种蔬菜。"
+    },
+    "799": {
+      "name": "排骨山药玉米汤",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/排骨山药玉米汤/排骨山药玉米汤.md",
+      "sourceFingerprint": "10bf3a1c67762219",
+      "referenceServings": 2,
+      "mealRole": "汤菜",
+      "servingEvidence": [
+        {
+          "block": 6,
+          "text": "每次制作前需要确定计划做几份。一份正好够 2 人喝。"
+        }
+      ],
+      "mainIngredientEvidence": [
+        {
+          "block": 8,
+          "item": 0,
+          "text": "排骨 500g"
+        },
+        {
+          "block": 8,
+          "item": 1,
+          "text": "山药 1 根（大约 300g）"
+        },
+        {
+          "block": 8,
+          "item": 2,
+          "text": "胡萝卜 1 根（大约 150g）"
+        },
+        {
+          "block": 8,
+          "item": 3,
+          "text": "玉米 1 根（大约 250g）"
+        }
+      ],
+      "addedOil": {
+        "lower": 10,
+        "upper": 10,
+        "unit": "ml",
+        "evidence": [
+          {
+            "block": 8,
+            "item": 7,
+            "text": "食用油 10ml"
+          },
+          {
+            "block": 10,
+            "item": 2,
+            "text": "**翻炒排骨**：\n• 热锅，倒入 10ml 食用油，等待 10 秒让油温升高。\n• 放入剩余大约 10g 姜片爆香。\n• 放入全部准备好的排骨，保持中火翻炒大约 1 分钟，至排骨表面微焦。"
+          }
+        ],
+        "note": "翻炒排骨用 10ml 油；汤内肉和骨头本身的脂肪不计为添加油。"
+      },
+      "packingNote": "用防漏容器分装，汤和固形物一起彻底复热；搭配其他菜。"
+    },
+    "800": {
+      "name": "排骨苦瓜汤",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/排骨苦瓜汤/排骨苦瓜汤.md",
+      "sourceFingerprint": "35d355e07cd5614c",
+      "referenceServings": 4,
+      "mealRole": "汤菜",
+      "servingEvidence": [
+        {
+          "block": 9,
+          "text": "每次制作前需要确定计划做几份。一份正好够 4 个人吃。每份："
+        }
+      ],
+      "mainIngredientEvidence": [
+        {
+          "block": 10,
+          "item": 0,
+          "text": "排骨 250g 到 500g"
+        },
+        {
+          "block": 10,
+          "item": 1,
+          "text": "苦瓜 100g 到 200g"
+        },
+        {
+          "block": 10,
+          "item": 2,
+          "text": "虾皮 5g 到 15g"
+        }
+      ],
+      "addedOil": {
+        "lower": 0,
+        "upper": 0,
+        "unit": "g",
+        "evidence": [
+          {
+            "block": 10,
+            "item": 0,
+            "text": "排骨 250g 到 500g"
+          },
+          {
+            "block": 10,
+            "item": 1,
+            "text": "苦瓜 100g 到 200g"
+          },
+          {
+            "block": 10,
+            "item": 2,
+            "text": "虾皮 5g 到 15g"
+          },
+          {
+            "block": 10,
+            "item": 3,
+            "text": "生姜 5~10g（可选，用于焯水时去腥）"
+          },
+          {
+            "block": 12,
+            "item": 0,
+            "text": "排骨洗净，切到约 4cm ±2cm * 3 ± 2cm 的小块（如没有剁排骨的工具，可以求助摊主）"
+          },
+          {
+            "block": 12,
+            "item": 1,
+            "text": "炒锅倒入冷水 700ml 和排骨一起加热至煮沸，关火捞出排骨"
+          },
+          {
+            "block": 12,
+            "item": 2,
+            "text": "苦瓜中间切为两半，清除干净内部的种子和苦瓜瓤，切为 0.5 ± 0.3 cm 的苦瓜条，洗净\n使用汤锅进行烹饪\n• 汤锅倒入水 1100ml 和排骨，大火\n• 等待水沸腾后将苦瓜和虾皮下锅转小火，放等待 120~240 分钟（在 120 分钟之后可以捞出一块肉进行品尝，若肉可以较为轻松的从骨头上分离即可关火）\n• 出锅时加盐和白胡椒，推荐量为每 250ml 0.3 到 0.6g 盐，0.1 到 0.5g 白胡椒\n使用电压力锅进行烹饪\n• 倒入 1000ml 水和排骨，虾皮和苦瓜\n• 选择炖汤功能，进行烹饪（一般为加压烹饪 45 分钟）\n• 出锅，和汤锅一样进行加盐和胡椒"
+          },
+          {
+            "block": 14,
+            "item": 0,
+            "text": "可以使用其他带有鲜味的食材代替虾皮，如瑶柱"
+          }
+        ],
+        "note": "已核对全部原料、汤锅和电压力锅两条步骤及可选项，均未额外添加油；不表示零脂肪。"
+      },
+      "packingNote": "按原文四人配方分装，不把汤单独当作完整午餐；使用防漏容器。"
+    },
+    "814": {
+      "name": "意式肉酱面",
+      "sourceLink": "https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/意式肉酱面/意式肉酱面.md",
+      "sourceFingerprint": "3579400fa71c719c",
+      "referenceServings": 2,
+      "mealRole": "主食组合",
+      "servingEvidence": [
+        {
+          "block": 7,
+          "text": "每次制作前需要确定计划做几份。一份正好够 2 个人吃。"
+        }
+      ],
+      "mainIngredientEvidence": [
+        {
+          "block": 9,
+          "item": 0,
+          "text": "意大利面 180 克（可以根据食量上下浮动）"
+        },
+        {
+          "block": 9,
+          "item": 1,
+          "text": "肉沫 80 克（可以根据食量上下浮动）"
+        },
+        {
+          "block": 9,
+          "item": 2,
+          "text": "洋葱大半个 （大约 150 克，通常是肉的两倍重）"
+        },
+        {
+          "block": 9,
+          "item": 3,
+          "text": "意大利面酱 300 克（可以看情况上下浮动）"
+        }
+      ],
+      "addedOil": {
+        "lower": 10,
+        "upper": 15,
+        "unit": "ml",
+        "evidence": [
+          {
+            "block": 9,
+            "item": 4,
+            "text": "食用油 10-15ml"
+          },
+          {
+            "block": 11,
+            "item": 3,
+            "text": "空锅中倒油，中火下入洋葱碎"
+          }
+        ],
+        "note": "10–15ml 是额外加入的烹调油；肉末和成品意面酱内脂肪不在此数内。"
+      },
+      "packingNote": "面条和肉酱可分装；复热时翻拌，使中心均匀热透，并搭配蔬菜。"
+    }
+  }
+}
