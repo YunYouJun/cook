@@ -595,17 +595,20 @@ final class DietaryGoalsUITests: XCTestCase {
         let navigation = app.navigationBars.matching(identifier: "饮食目标").element
         for container in [choices, navigation] {
             XCTAssertTrue(container.waitForExistence(timeout: 10), file: file, line: line)
-            XCTAssertFalse(container.buttons.matching(identifier: "dietary.remember").firstMatch.exists, file: file, line: line)
-            XCTAssertFalse(container.switches.matching(identifier: "dietary.remember").firstMatch.exists, file: file, line: line)
+            // A missing firstMatch can stall Xcode 27's injected snapshot traversal.
+            // Count both control types in the presented container instead.
+            XCTAssertEqual(container.buttons.matching(identifier: "dietary.remember").count, 0, file: file, line: line)
+            XCTAssertEqual(container.switches.matching(identifier: "dietary.remember").count, 0, file: file, line: line)
         }
     }
 
     @MainActor
     private func revealRecipe(_ identifier: String, in app: XCUIApplication, maximumSwipes: Int,
                               file: StaticString = #filePath, line: UInt = #line) -> XCUIElement? {
-        // Keep each row lookup inside the confirmed result list.
-        let results = app.collectionViews.matching(identifier: "dietary.results").firstMatch
-        let recipe = results.buttons.matching(identifier: identifier).firstMatch
+        // Both identifiers are unique. Full matching avoids the lazy snapshot
+        // traversal that CI stalled in after scrolling at maximum text size.
+        let results = app.collectionViews.matching(identifier: "dietary.results").element
+        let recipe = results.buttons.matching(identifier: identifier).element
         guard results.waitForExistence(timeout: 5) else {
             XCTFail("查找 \(identifier) 前未显示菜谱结果列表", file: file, line: line)
             return nil

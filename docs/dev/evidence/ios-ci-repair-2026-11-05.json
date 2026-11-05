@@ -1,0 +1,71 @@
+{
+  "baselineCommit": "ed082ff821fb754998d4a4db1c4403d9f812d59f",
+  "workflowRun": "https://github.com/YunYouJun/cook/actions/runs/41963921760",
+  "supersededBillingRetry": {
+    "run": "https://github.com/YunYouJun/cook/actions/runs/41959106572/attempts/2",
+    "result": "Cancelled automatically by the successor Support-only main push; it is not the acceptance run."
+  },
+  "scope": "Two remaining lazy-query helpers in DietaryGoalsUITests; no production behavior, deadlines, audit policy, or business assertions changed.",
+  "baselinePassed": {
+    "swift": "89 core tests with no failures; the live bridge skipped in that invocation passed in its separate 7-test Web/Swift/Web roundtrip. The 2-test personal catalog roundtrip also passed.",
+    "ipadMain": "215 application unit tests and 26 UI tests passed.",
+    "ipadDiscovery": "All 20 discovery UI tests passed."
+  },
+  "ipadDietary": {
+    "job": 127036871790,
+    "passed": "The standard accessibility journey and five of six functional journeys passed. The previously repaired empty-goal cancellation and kitchen goal browsing passed in 102.022s and 79.289s.",
+    "failures": [
+      {
+        "test": "testLargestTextCanChooseSavedGoalReadAndDecide",
+        "sourceLine": 554,
+        "observation": "All five maximum-text accessibility audits passed. After three result-list swipes, resolving dietary.recipe.333 stalled in the lazy query at 140s; the test failed with a snapshot query timeout at 303s.",
+        "fix": "Resolve the confirmed dietary.results collection and its unique recipe identifier with element; retain all scrolling, foreground, viewport and hittability checks."
+      },
+      {
+        "test": "testClearingGoalFromResultsKeepsPickerPresentedUntilDone",
+        "sourceLine": 530,
+        "observation": "The recording shows the goal picker still presented with 不限目标 selected and no remember control. Checking the absent dietary.remember button stalled in the lazy query, then failed at 256s.",
+        "fix": "Resolve the uniquely titled presented navigation bar with element. Retain checks for both button and switch absence in both presented containers using matching count == 0."
+      }
+    ],
+    "diagnostics": "Both live Cook main-thread samples contain XCTest _firstMatchingSnapshotForInput, XCTFilteringTransformerIterator and XCElementSnapshotDescendantsEnumerator. The subsequent clearing-case SIGABRT goes through XCTest captureIssuesWithContext/inScope and matchingSnapshotsInSnapshotTree. These injected query frames and the recordings support a query-traversal diagnosis rather than an inferred missing UI control.",
+    "artifact": {
+      "id": 13388257146,
+      "sizeBytes": 70217368,
+      "githubArchiveSha256": "4c3dc4838e7d78fef3360f7599bf153ccbda553d242b6829436490fb85b5cfc7",
+      "extraction": "Selected metadata, two recordings, two main-thread samples and one crash report only; downloaded ZIP members verified by CRC32. The SHA256 is GitHub archive metadata, not a locally downloaded full archive checksum."
+    }
+  },
+  "localBaseline": {
+    "device": "Existing iPad Pro 13-inch (M5), iOS 27.0",
+    "result": "Both unchanged failing cases passed locally in 71.467s and 119.282s. The CI-specific stall is not claimed to reproduce deterministically on this host."
+  },
+  "localValidation": {
+    "ipad": {
+      "runtime": "iOS 27.0",
+      "tests": 2,
+      "failures": 0,
+      "clearingGoalSeconds": 67.69,
+      "maximumTextSeconds": 120.495
+    },
+    "iphone": {
+      "runtime": "iOS 26.5",
+      "tests": 2,
+      "failures": 0,
+      "clearingGoalSeconds": 54.954,
+      "maximumTextSeconds": 150.285
+    },
+    "audits": "All five maximum-text audit categories passed on both devices with normal animations. The full scrolling, reviewed recipe, decision, and goal-sheet preservation assertions execute.",
+    "execution": "Reused existing iPad Pro 13-inch (M5) and iPhone 16 Pro, serial execution without cloning or erasing; original shutdown states restored."
+  },
+  "completeBaselineInventory": {
+    "status": "Superseded by merge 0854ec88862f14f4d8b41fe70e1dc6188057381b; all cancellation-time phone logs inspected.",
+    "swift": "passed",
+    "ipadMain": "passed, 215 unit tests and 26 UI tests",
+    "ipadDiscovery": "passed, 20 UI tests",
+    "ipadDietary": "Two real query-traversal failures described above; standard audit and other five functional cases passed.",
+    "iphoneDietary": "Both audits and the first four functional cases passed before cancellation; do not count the unfinished group as a full pass.",
+    "iphoneMain": "215 units and continuing UI cases passed before cancellation; do not count the unfinished group as a full pass.",
+    "iphoneDiscovery": "A real inspiration-card flow exceeded 300s after two missing UIKit animation completion notifications and an event-loop idle wait. Two subsequent cases failed acquiring the App background assertion before business checks; the largest-text menu and rotation cases then passed. Preserve these observations; they are not classified as successful tests or blanket-retried."
+  }
+}
