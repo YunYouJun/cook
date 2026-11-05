@@ -709,6 +709,9 @@ final class CookUITests: XCTestCase {
 
     @MainActor
     func testAvoidPickerSearchKeepsSelectionsAvailableForRemoval() {
+        // Search, removal, persistence, and clear-all form one long iPad journey.
+        // Keep every assertion within the same bounded budget as other long flows.
+        executionTimeAllowance = 600
         let app = XCUIApplication()
         app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
