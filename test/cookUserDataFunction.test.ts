@@ -15,7 +15,7 @@ interface FunctionModule {
 const require = createRequire(import.meta.url)
 const fn = require('../cloudfunctions/cook-user-data/index.js') as FunctionModule
 
-function createApp(userInfo: Record<string, unknown> | (() => never)) {
+function createApp(userInfo: Record<string, unknown> | (() => never), expiry = Date.now() + 86_400_000) {
   const docs = new Map<string, Record<string, unknown>>()
   const doc = vi.fn((id: string) => ({
     get: async () => ({ data: docs.has(id) ? [{ _id: id, _openid: 'x', ...docs.get(id) }] : [] }),
@@ -24,13 +24,23 @@ function createApp(userInfo: Record<string, unknown> | (() => never)) {
       return { updated: 1 }
     },
   }))
-  const collection = vi.fn(() => ({ doc }))
+  const collection = vi.fn((name: string) => name === 'user_memberships'
+    ? {
+        doc: () => ({ get: async () => ({ data: [{ expireAt: expiry }] }) }),
+      }
+    : { doc })
+  let previous = Promise.resolve()
+  const runTransaction = vi.fn((run: (transaction: unknown) => Promise<unknown>) => {
+    const result = previous.then(() => run({ collection }))
+    previous = result.then(() => {}, () => {})
+    return result.then(result => ({ result }))
+  })
   const app = {
     auth: () => ({ getUserInfo: typeof userInfo === 'function' ? userInfo : () => userInfo }),
-    database: () => ({ collection }),
+    database: () => ({ collection, runTransaction }),
   }
   fn._internal.setAppForTest(app)
-  return { collection, doc, docs }
+  return { collection, doc, docs, runTransaction }
 }
 
 const document = {
@@ -57,6 +67,12 @@ describe('cook-user-data function', () => {
       throw new Error('no context')
     })
     await expect(fn.main({ action: 'get' })).resolves.toEqual({ ok: false, code: 'LOGIN_REQUIRED' })
+  })
+
+  it('rejects a changed SDK session before any account or data lookup', async () => {
+    const { collection } = createApp({ uid: 'u2' })
+    await expect(fn.main({ action: 'sync', ownerDigest: '0'.repeat(64), document })).resolves.toEqual({ ok: false, code: 'SESSION_CHANGED' })
+    expect(collection).not.toHaveBeenCalled()
   })
 
   it('always uses the caller uid as the document id', async () => {
@@ -106,6 +122,44 @@ describe('cook-user-data function', () => {
 
   it('drops unknown top-level fields', () => {
     expect(fn._internal.readDocument({ ...document, _id: 'victim', admin: true })).toEqual({ ...document })
+  })
+
+  it('merges stale snapshots from old and new clients instead of replacing accepted changes', async () => {
+    const { docs } = createApp({ uid: 'u1' })
+    const first = { ...document, favorites: [{ id: 1, time: Date.now() }] }
+    const second = { ...document, favorites: [{ id: 2, time: Date.now() + 1 }] }
+    await fn.main({ action: 'sync', document: first })
+    await fn.main({ action: 'set', document: second })
+    expect(docs.get('u1')?.favorites).toEqual([...first.favorites, ...second.favorites])
+    await expect(fn.main({ action: 'capabilities' })).resolves.toEqual({ ok: true, protocolVersion: 2 })
+  })
+
+  it('rejects expired membership for all legacy and new actions without touching user data', async () => {
+    const { doc } = createApp({ uid: 'u1' }, Date.now() - 1)
+    for (const action of ['get', 'set', 'sync', 'capabilities'])
+      await expect(fn.main({ action, document, membership: { isActive: true } })).resolves.toEqual({ ok: false, code: 'MEMBERSHIP_REQUIRED' })
+    expect(doc).not.toHaveBeenCalled()
+  })
+
+  it('does not overwrite an unsupported existing version', async () => {
+    const { docs } = createApp({ uid: 'u1' })
+    docs.set('u1', { version: 99, favorites: [{ id: 7, time: 1 }] })
+    await expect(fn.main({ action: 'sync', document })).resolves.toEqual({ ok: false, code: 'INVALID_REMOTE' })
+    expect(docs.get('u1')?.version).toBe(99)
+  })
+
+  it('serializes concurrent snapshots and does not resurrect a cancelled favorite', async () => {
+    const { docs, runTransaction } = createApp({ uid: 'u1' })
+    const now = Date.now()
+    await Promise.all([
+      fn.main({ action: 'sync', document: { ...document, favorites: [{ id: 1, time: now }] } }),
+      fn.main({ action: 'set', document: { ...document, favorites: [{ id: 2, time: now + 1 }] } }),
+    ])
+    expect(runTransaction).toHaveBeenCalledTimes(2)
+    expect(docs.get('u1')?.favorites).toEqual([{ id: 1, time: now }, { id: 2, time: now + 1 }])
+    await fn.main({ action: 'sync', document: { ...document, favorites: [], favoriteRemovals: [{ id: 1, time: now + 2 }] } })
+    await fn.main({ action: 'set', document: { ...document, favorites: [{ id: 1, time: now }] } })
+    expect(docs.get('u1')?.favorites).toEqual([{ id: 2, time: now + 1 }])
   })
 
   it('rejects unknown actions and hides internal errors', async () => {

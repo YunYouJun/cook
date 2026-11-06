@@ -2,7 +2,7 @@ import type { UserData } from '../apps/web/app/utils/userData'
 import type { UserDataDocument, UserDataLocal, UserDataRemote } from '../apps/web/app/utils/userDataSync'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createEmptyUserData } from '../apps/web/app/utils/userData'
-import { createUserDataSyncScheduler, syncUserData, UserDataSyncError } from '../apps/web/app/utils/userDataSync'
+import { activateUserDataAccount, createUserDataSyncScheduler, syncUserData, UserDataSyncError } from '../apps/web/app/utils/userDataSync'
 
 const NOW = 1_800_000_000_000
 
@@ -35,6 +35,33 @@ function createRemote(initial: Record<string, unknown> = {}) {
 }
 
 describe('syncUserData', () => {
+  it('ignores a result from a previous account before touching local data', async () => {
+    const { local, state } = createLocal({ favorites: [{ id: 1, time: NOW }] }, 'u1')
+    let current = true
+    const remote: UserDataRemote = {
+      read: async () => {
+        current = false
+        return { version: 1, favorites: [{ id: 2, time: NOW }] }
+      },
+      write: vi.fn(),
+    }
+    await expect(syncUserData('u1', local, remote, NOW, () => current)).rejects.toMatchObject({ code: 'cancelled' })
+    expect(state.data.favorites).toEqual([{ id: 1, time: NOW }])
+    expect(remote.write).not.toHaveBeenCalled()
+  })
+
+  it('preserves edits made while the atomic write is in flight', async () => {
+    const { local, state } = createLocal({ favorites: [{ id: 1, time: NOW }] }, 'u1')
+    const remote: UserDataRemote = {
+      read: async () => null,
+      write: async (_uid, document) => {
+        local.write({ ...state.data, favorites: [...state.data.favorites, { id: 2, time: NOW + 1 }] })
+        return { ...document, favorites: [...document.favorites, { id: 3, time: NOW + 2 }] }
+      },
+    }
+    await syncUserData('u1', local, remote, NOW)
+    expect(state.data.favorites.map(item => item.id)).toEqual([1, 2, 3])
+  })
   it('merges local data into a new cloud document on first sync', async () => {
     const { local, state } = createLocal({ favorites: [{ id: 1, time: NOW - 1 }] })
     const { docs, remote } = createRemote()
@@ -101,6 +128,37 @@ describe('syncUserData', () => {
     expect(error).toBeInstanceOf(UserDataSyncError)
     expect(error.code).toBe('remote_failed')
     expect(state.data.favorites).toEqual([{ id: 1, time: NOW - 1 }])
+  })
+})
+
+describe('local account selection', () => {
+  it('preserves guest and account libraries across logout and account changes', () => {
+    const { local, state } = createLocal({ favorites: [{ id: 1, time: NOW }] })
+    const values = new Map<string, string>()
+    const cache = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => { values.set(key, value) },
+    }
+    activateUserDataAccount('a', local, cache)
+    expect(state.data.favorites).toEqual([])
+    local.write({ ...state.data, favorites: [{ id: 2, time: NOW }] })
+    activateUserDataAccount('b', local, cache)
+    expect(state.data.favorites).toEqual([])
+    activateUserDataAccount('a', local, cache)
+    expect(state.data.favorites.map(item => item.id)).toEqual([2])
+    activateUserDataAccount('', local, cache)
+    expect(state.data.favorites.map(item => item.id)).toEqual([1])
+  })
+
+  it('preserves the active library when cache persistence fails', () => {
+    const { local, state } = createLocal({ favorites: [{ id: 1, time: NOW }] }, 'a')
+    const cache = {
+      getItem: () => null,
+      setItem: () => { throw new Error('disk full') },
+    }
+    expect(() => activateUserDataAccount('b', local, cache)).toThrow('disk full')
+    expect(state.lastUid).toBe('a')
+    expect(state.data.favorites.map(item => item.id)).toEqual([1])
   })
 })
 

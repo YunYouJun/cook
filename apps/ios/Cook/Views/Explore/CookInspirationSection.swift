@@ -8,6 +8,7 @@ struct CookInspirationSection: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
     @Environment(FavoriteActions.self) private var favoriteActions
+    @Environment(\.accountUserData) private var accountData
     @Environment(AppRouter.self) private var router
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
@@ -31,7 +32,7 @@ struct CookInspirationSection: View {
         let pool = candidates.recipes
         let recipesByID = Dictionary(pool.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let batch = batchIDs.compactMap { recipesByID[$0] }
-        let favoriteIDs = Set(favorites.map(\.recipeId))
+        let favoriteIDs = Set(accountData?.usesAccountLibrary == true ? accountData!.favoriteIDs : favorites.map(\.recipeId))
         let canShuffle = Set(pool.map { $0.name.trimmingCharacters(in: .whitespacesAndNewlines) }).count > batch.count
 
         Section {

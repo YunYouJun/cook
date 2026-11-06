@@ -5,6 +5,7 @@ import { recipeHistories } from '~/composables/store/history'
 import { localUserData } from '~/composables/store/userData'
 import { userDataMeta } from '~/composables/store/userDataMeta'
 import {
+  activateUserDataAccount,
   createUserDataSyncScheduler,
   syncUserData,
   UserDataSyncError,
@@ -40,7 +41,8 @@ export function useUserDataSync() {
 
     const auth = useYunlefunAuth()
     const uid = computed(() => auth.isAuthenticated.value ? auth.account.value?.uid ?? '' : '')
-    const remote = createCloudbaseUserDataRemote(auth.callFunction)
+    let sessionGeneration = 0
+    let scopeReady = true
 
     // Local writes made by a sync round must not schedule another round.
     let applyingRemote = false
@@ -60,15 +62,30 @@ export function useUserDataSync() {
     const activeScheduler = createUserDataSyncScheduler({
       run: async () => {
         const current = uid.value
+        const generation = sessionGeneration
+        const isCurrent = () => uid.value === current && sessionGeneration === generation
         if (!current)
           return
+        if (!scopeReady) {
+          applyingRemote = true
+          try {
+            activateUserDataAccount(current, local, window.localStorage)
+            scopeReady = true
+          }
+          finally { applyingRemote = false }
+        }
         state.value = { ...state.value, errorMessage: '', status: 'syncing' }
-        await syncUserData(current, local, remote)
+        const remote = createCloudbaseUserDataRemote((name, data) => {
+          if (!isCurrent())
+            throw new UserDataSyncError('cancelled')
+          return auth.callFunction(name, data)
+        })
+        await syncUserData(current, local, remote, Date.now(), isCurrent)
         if (uid.value === current)
           state.value = { errorMessage: '', lastSyncedAt: Date.now(), status: 'synced' }
       },
       onError: (error) => {
-        if (!uid.value)
+        if (!uid.value || (error instanceof UserDataSyncError && error.code === 'cancelled'))
           return
         state.value = {
           ...state.value,
@@ -76,18 +93,34 @@ export function useUserDataSync() {
           status: 'error',
         }
       },
-      shouldRetry: error => !(error instanceof UserDataSyncError && error.code === 'invalid_remote'),
+      shouldRetry: error => !(error instanceof UserDataSyncError && error.code !== 'remote_failed'),
     })
     scheduler = activeScheduler
 
     watch(uid, (current) => {
+      sessionGeneration += 1
+      activeScheduler.stop()
+      scopeReady = false
+      try {
+        applyingRemote = true
+        activateUserDataAccount(current, local, window.localStorage)
+        scopeReady = true
+      }
+      catch {
+        state.value = { errorMessage: '账号记录切换失败，原数据已保留，请导出备份后重试', lastSyncedAt: 0, status: 'error' }
+        return
+      }
+      finally {
+        applyingRemote = false
+      }
+      state.value = { errorMessage: '', lastSyncedAt: 0, status: 'idle' }
       if (current) {
         activeScheduler.request()
         return
       }
       activeScheduler.stop()
       state.value = { errorMessage: '', lastSyncedAt: 0, status: 'idle' }
-    }, { immediate: true })
+    }, { immediate: true, flush: 'sync' })
 
     watch(
       () => [
@@ -98,7 +131,7 @@ export function useUserDataSync() {
         userDataMeta.value.historyClearedAt,
       ],
       () => {
-        if (!applyingRemote && uid.value)
+        if (!applyingRemote && uid.value && scopeReady)
           activeScheduler.request(LOCAL_CHANGE_DELAY)
       },
       { deep: true, flush: 'sync' },

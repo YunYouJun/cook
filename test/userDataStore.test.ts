@@ -1,5 +1,6 @@
 import type { RecipeItem } from '../apps/web/app/types'
 import type { DbRecipeItem } from '../apps/web/app/utils/db'
+import { createHash, webcrypto } from 'node:crypto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createCloudbaseUserDataRemote, USER_DATA_FUNCTION } from '../apps/web/app/adapters/userData'
 import { favoriteEntries, setFavoriteEntries, toggleFavorite } from '../apps/web/app/composables/store/favorite'
@@ -8,17 +9,22 @@ import { exportLocalUserData, importLocalUserData, localUserData } from '../apps
 import { userDataMeta } from '../apps/web/app/composables/store/userDataMeta'
 
 const NOW = 1_800_000_000_000
+const ownerDigest = createHash('sha256').update('u1').digest('hex')
 
 function recipe(name: string, id?: number): DbRecipeItem {
   return { id, name, stuff: [], tools: [] }
 }
 
 beforeEach(() => {
+  vi.stubGlobal('crypto', webcrypto)
   vi.useFakeTimers({ now: NOW })
   setFavoriteEntries([])
   recipeHistories.value = []
   userDataMeta.value = { favoriteRemovals: [], historyRemovals: [], historyClearedAt: 0, lastUid: '' }
-  return () => vi.useRealTimers()
+  return () => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  }
 })
 
 describe('favorite tombstones', () => {
@@ -111,28 +117,29 @@ describe('createCloudbaseUserDataRemote', () => {
   }
 
   it('reads through the cook-user-data function without naming a uid', async () => {
-    const callFunction = vi.fn(async () => ({ ok: true, document: { favorites: [] } }))
+    const callFunction = vi.fn(async () => ({ ok: true, protocolVersion: 2, document: { favorites: [] } }))
     const remote = createCloudbaseUserDataRemote(callFunction)
 
     await expect(remote.read('u1')).resolves.toEqual({ favorites: [] })
-    expect(callFunction).toHaveBeenCalledWith(USER_DATA_FUNCTION, { action: 'get' })
+    expect(callFunction).toHaveBeenCalledWith(USER_DATA_FUNCTION, { action: 'get', ownerDigest })
+    expect(callFunction).toHaveBeenCalledWith(USER_DATA_FUNCTION, { action: 'capabilities', ownerDigest })
   })
 
   it('returns null when the account has no document', async () => {
-    const remote = createCloudbaseUserDataRemote(async () => ({ ok: true, document: null }))
+    const remote = createCloudbaseUserDataRemote(async () => ({ ok: true, protocolVersion: 2, document: null }))
     await expect(remote.read('u1')).resolves.toBeNull()
   })
 
-  it('writes the whole document', async () => {
-    const callFunction = vi.fn(async () => ({ ok: true, updatedAt: NOW }))
-    await createCloudbaseUserDataRemote(callFunction).write('u1', document)
-    expect(callFunction).toHaveBeenCalledWith(USER_DATA_FUNCTION, { action: 'set', document })
+  it('returns the atomically accepted document without naming a uid', async () => {
+    const callFunction = vi.fn(async () => ({ ok: true, updatedAt: NOW, document, protocolVersion: 2 }))
+    await expect(createCloudbaseUserDataRemote(callFunction).write('u1', document)).resolves.toEqual(document)
+    expect(callFunction).toHaveBeenCalledWith(USER_DATA_FUNCTION, { action: 'sync', ownerDigest, document })
   })
 
   it('surfaces function failures', async () => {
     const remote = createCloudbaseUserDataRemote(async () => ({ ok: false, code: 'LOGIN_REQUIRED' }))
-    await expect(remote.read('u1')).rejects.toThrow('LOGIN_REQUIRED')
-    await expect(remote.write('u1', document)).rejects.toThrow('LOGIN_REQUIRED')
+    await expect(remote.read('u1')).rejects.toMatchObject({ code: 'login_required' })
+    await expect(remote.write('u1', document)).rejects.toMatchObject({ code: 'login_required' })
     await expect(createCloudbaseUserDataRemote(async () => null).read('u1')).rejects.toThrow('unknown')
   })
 })

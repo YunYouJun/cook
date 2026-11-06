@@ -9,6 +9,7 @@ struct RecipeDetailView: View {
     @Environment(CookSession.self) private var session
     @Environment(FeedbackClient.self) private var feedback
     @Environment(FavoriteActions.self) private var favoriteActions
+    @Environment(\.accountUserData) private var accountData
     @Environment(\.modelContext) private var context
     @Environment(\.openURL) private var openURL
     @State private var feedbackRecipe: Recipe?
@@ -26,7 +27,8 @@ struct RecipeDetailView: View {
     }
 
     private var isFavorite: Bool {
-        favorites.contains { $0.recipeId == recipe.id }
+        if let accountData, accountData.usesAccountLibrary { return accountData.favoriteIDs.contains(recipe.id) }
+        return favorites.contains { $0.recipeId == recipe.id }
     }
 
     private struct IngredientGroup {
@@ -187,7 +189,8 @@ struct RecipeDetailView: View {
         }
         // iPad 分栏里换一道菜时视图不会重建，按菜谱 id 记浏览
         .task(id: recipe.id) {
-            context.recordVisit(recipe.id)
+            if let accountData, accountData.usesAccountLibrary { accountData.recordVisit(recipe) }
+            else { context.recordVisit(recipe.id) }
             // 从推荐结果点进来时，匿名记录这组食材下点开了第几个，用来评估排序
             if route.dietaryGoal == nil, let rank = route.rank {
                 feedback.signalOpen(stuff: session.selectedStuff, tool: session.tool, mode: session.mode, recipeId: recipe.id, rank: rank)

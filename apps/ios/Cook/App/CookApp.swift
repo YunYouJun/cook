@@ -18,6 +18,7 @@ struct CookApp: App {
     @State private var accounts: YunlefunAccountStore
     @State private var workbench: KitchenWorkbench
     @State private var ai: CookAISettings
+    @State private var userData: AccountUserDataStore
     #if DEBUG
         @State private var videoFixtureLoaded = false
     #endif
@@ -44,8 +45,29 @@ struct CookApp: App {
         let defaultPantry = (try? result.get())?.data.pantry.defaults ?? []
         _loadResult = State(initialValue: result)
         _session = State(initialValue: CookSession(defaultPantry: defaultPantry, context: container.mainContext, dietaryDefaults: inMemory ? nil : .standard))
-        _favoriteActions = State(initialValue: FavoriteActions(context: container.mainContext))
-        _accounts = State(initialValue: YunlefunAccountStore(vault: inMemory ? MemoryYunlefunAccountVault() : KeychainYunlefunAccountVault()))
+        let accounts = YunlefunAccountStore(vault: inMemory ? MemoryYunlefunAccountVault() : KeychainYunlefunAccountVault())
+        _accounts = State(initialValue: accounts)
+        let disabledSyncTransport: UserDataSyncService.Transport = { _ in throw URLError(.notConnectedToInternet) }
+        var syncTransport: UserDataSyncService.Transport? = inMemory ? disabledSyncTransport : nil
+        var syncCredential: () async throws -> YunlefunCredential = { try await accounts.credentialForRequest() }
+        #if DEBUG
+            if uiTesting, ProcessInfo.processInfo.arguments.contains("-ui-testing-account-sync") {
+                let fixture = UserDataSyncFixture()
+                syncTransport = { try await fixture.respond($0) }
+                syncCredential = { YunlefunCredential(accessToken: "public-ui-fixture", refreshToken: "unused", subject: "ui-fixture-member",
+                                                     expiresAt: Date().addingTimeInterval(3600), deviceID: "fixture") }
+                if let recipe = (try? result.get())?.recipes.first {
+                    try? container.mainContext.setFavorite(recipe.id, isFavorite: true)
+                    container.mainContext.recordVisit(recipe.id)
+                }
+            }
+        #endif
+        let userData = AccountUserDataStore(cache: inMemory ? MemoryAccountUserDataCache() : AccountUserDataCache(),
+                                           service: UserDataSyncService(transport: syncTransport), credential: syncCredential)
+        _userData = State(initialValue: userData)
+        let actions = FavoriteActions(context: container.mainContext)
+        actions.accountData = userData
+        _favoriteActions = State(initialValue: actions)
         _workbench = State(initialValue: KitchenWorkbench(defaults: inMemory ? nil : .standard, notifications: inMemory ? .disabled : .live))
         _ai = State(initialValue: CookAISettings(defaults: inMemory ? nil : .standard,
                                                 vault: inMemory ? MemoryCookAIKeyVault() : KeychainCookAIKeyVault(),
@@ -96,13 +118,15 @@ struct CookApp: App {
                 if environment["COOK_UI_TEST_DECLINE_CONSENT"] == "1" { client.setSignalConsent(false) }
                 _feedback = State(initialValue: client)
                 var failuresRemaining = Int(environment["COOK_UI_TEST_FAVORITE_FAILURES"] ?? "0") ?? 0
-                _favoriteActions = State(initialValue: FavoriteActions(context: container.mainContext) { context in
+                let testActions = FavoriteActions(context: container.mainContext) { context in
                     if failuresRemaining > 0 {
                         failuresRemaining -= 1
                         throw CocoaError(.fileWriteOutOfSpace)
                     }
                     try context.save()
-                })
+                }
+                testActions.accountData = userData
+                _favoriteActions = State(initialValue: testActions)
             }
         #endif
         self.container = container
@@ -126,6 +150,7 @@ struct CookApp: App {
                     .environment(workbench)
                     .environment(accounts)
                     .environment(ai)
+                    .environment(\.accountUserData, userData)
                     .environment(\.privateRecipeVideos, privateVideos)
                     .preferredColorScheme(testColorScheme)
                     .task {
@@ -147,10 +172,21 @@ struct CookApp: App {
                         if ai.wantsManagedDeepSeek { await ai.refreshManagedCapability(accounts: accounts) }
                     }
                     .onChange(of: accounts.sessionRevision) { ai.invalidateManagedCapability(accounts: accounts) }
+                    .onChange(of: accounts.dataAccountID, initial: true) { _, uid in
+                        favoriteActions.failure = nil
+                        #if DEBUG
+                            if ProcessInfo.processInfo.arguments.contains("-ui-testing"), ProcessInfo.processInfo.arguments.contains("-ui-testing-account-sync") {
+                                userData.activate("ui-fixture-member")
+                            } else { userData.activate(uid) }
+                        #else
+                            userData.activate(uid)
+                        #endif
+                    }
                     .onChange(of: scenePhase) { _, phase in
                         if phase == .active {
                             ai.expireManagedCapabilityIfNeeded()
                             Task { await accounts.refreshIfNeeded() }
+                            userData.requestSync()
                         }
                     }
 

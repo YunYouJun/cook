@@ -1,4 +1,5 @@
 import CoreTransferable
+import CookCore
 import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
@@ -6,6 +7,7 @@ import UniformTypeIdentifiers
 /// 云乐坊身份与 iCloud 数据同步分开管理，文件导入只增加收藏和历史。
 struct DataSyncSettingsView: View {
     @Environment(RecipeStore.self) private var store
+    @Environment(\.accountUserData) private var accountData
     @Environment(\.modelContext) private var context
     @Query private var allFavorites: [Favorite]
     @Query private var allVisits: [HistoryEntry]
@@ -36,6 +38,14 @@ struct DataSyncSettingsView: View {
 
     var body: some View {
         List {
+            if let accountData {
+                AccountSyncSettingsSection(data: accountData) {
+                    var value = try UserDataDocument.decode(Data(appleExport.utf8))
+                    value.favoriteRemovals = []
+                    value.historyRemovals = []
+                    try accountData.importDocument(value)
+                }
+            }
             Section {
                 Label("使用系统 iCloud 账户", systemImage: "icloud")
             } header: {
@@ -45,7 +55,7 @@ struct DataSyncSettingsView: View {
             }
             Section {
                 ShareLink(
-                    item: WebExportFile(text: WebUserData.export(favorites: allFavorites, visits: allVisits, recipesById: store.recipesById)),
+                    item: WebExportFile(text: accountData?.usesAccountLibrary == true ? accountData!.exportText() : appleExport),
                     preview: SharePreview("云食册的收藏和浏览记录")
                 ) {
                     Label("导出给网页版", systemImage: "square.and.arrow.up")
@@ -114,11 +124,28 @@ struct DataSyncSettingsView: View {
             return
         }
         do {
+            if let accountData, accountData.usesAccountLibrary {
+                var additions = UserDataDocument()
+                additions.favorites = data.favorites.map { .init(id: $0.recipeId, time: $0.time.timeIntervalSince1970 * 1000) }
+                additions.histories = data.visits.compactMap { visit in
+                    guard let id = store.recipeIdByName[visit.name], let recipe = store.recipesById[id] else { return nil }
+                    return .init(recipe: .init(recipe: recipe), time: visit.time.timeIntervalSince1970 * 1000)
+                }
+                let before = accountData.snapshot.document
+                try accountData.importDocument(additions)
+                let after = accountData.snapshot.document
+                importResult = .done(favorites: max(0, after.favorites.count - before.favorites.count), visits: max(0, after.histories.count - before.histories.count))
+                return
+            }
             let added = try context.importWebData(data, recipeIdByName: store.recipeIdByName, validIds: Set(store.recipesById.keys))
             importResult = .done(favorites: added.favorites, visits: added.visits)
         } catch {
             importResult = .saveFailed
         }
+    }
+
+    private var appleExport: String {
+        WebUserData.export(favorites: allFavorites, visits: allVisits, recipesById: store.recipesById)
     }
 }
 

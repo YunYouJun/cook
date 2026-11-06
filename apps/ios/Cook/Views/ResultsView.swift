@@ -8,6 +8,7 @@ struct ResultsView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
     @Environment(FavoriteActions.self) private var favoriteActions
+    @Environment(\.accountUserData) private var accountData
     @State private var showingDietaryGoals = false
     @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }) private var favorites: [Favorite]
     /// 宽屏的左栏已有搜索和筛选，右栏专注实时结果。
@@ -66,7 +67,7 @@ struct ResultsView: View {
 
     @ViewBuilder
     private var resultLists: some View {
-        let favoriteIds = Set(favorites.map(\.recipeId))
+        let favoriteIds = Set(accountData?.usesAccountLibrary == true ? accountData!.favoriteIDs : favorites.map(\.recipeId))
         if session.selectedStuff.isEmpty {
             candidateList(favoriteIds: favoriteIds)
         } else {
