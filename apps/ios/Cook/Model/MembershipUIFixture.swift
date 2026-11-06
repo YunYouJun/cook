@@ -33,7 +33,8 @@ import Observation
         }
         let realStoreKit = arguments.contains("-ui-testing-membership-storekit")
         let catalog: [String: MembershipProductKind] = realStoreKit
-            ? ["fun.yunle.cook.local.nonrenewing": .nonRenewing] : MembershipPlan.catalog
+            ? ["fun.yunle.cook.local.nonrenewing": .nonRenewing,
+               "fun.yunle.cook.local.autorenewing": .autoRenewable] : MembershipPlan.catalog
         let fixture = MembershipUIFixture(defaults: defaults, ids: Set(catalog.keys), environment: ProcessInfo.processInfo.environment)
         let commerce: MembershipCommerce = realStoreKit
             ? NativeMembershipStoreKit(catalog: catalog) : MembershipFixtureCommerce(defaults: defaults)
@@ -60,7 +61,8 @@ import Observation
     }
     func settle(_ transaction: MembershipTransaction, for identity: MembershipPurchaseIdentity) async throws -> MembershipSettlementReceipt {
         guard confirms else { throw URLError(.notConnectedToInternet) }
-        guard transaction.environment == .xcode, identity == self.identity, transaction.accountToken == identity.accountToken else {
+        guard transaction.environment == .xcode, !transaction.revoked,
+              identity == self.identity, transaction.accountToken == identity.accountToken else {
             throw MembershipPurchaseFailure.accountChanged
         }
         let key = "settled." + transaction.id

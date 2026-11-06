@@ -22,6 +22,7 @@ struct MembershipView: View {
                                     Text("有效会员").font(.headline).accessibilityIdentifier("membership.active")
                                     Text("有效期至 \(expiry.formatted(date: .abbreviated, time: .omitted))")
                                         .foregroundStyle(.secondary)
+                                        .accessibilityIdentifier("membership.expiry")
                                 } else {
                                     Text("尚未开通会员或会员已到期").accessibilityIdentifier("membership.inactive")
                                 }

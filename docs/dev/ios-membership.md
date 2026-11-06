@@ -88,3 +88,13 @@ asc subscriptions list --app 6824589542
 阶段报告位于 `~/Library/Developer/ReleaseArtifacts/Cook/20261106-membership-ui/` 和 `20261107-membership-accessibility*/`；成功、失败及修正后结果按目录分开保留。未创建买断／订阅商品，未变更生产会员或支付服务。
 
 后续 iPadOS 27 审计指出购买按钮的合并标签不可读。按钮现明确提供商品名为朗读名称、本地化价格为值及购买方式提示；同一六类大字号审计在修正后 22.104 秒通过。iOS 26.5 增加诊断后仍为 `Text clipped`，`issue.element` 为空；内层 Label 的文字固有高度调整未解决该报告，保留为未完成项。没有据此关闭裁切检查或宣称旧系统验收完成。
+
+最终页面源码的六类大字号审计在 iPhone Duo／iOS 27.1（20.842 秒）和 iPadOS 27（19.663 秒）均通过，报告为 `20261107-membership-accessibility-final-supported/`。原 26.5 失败仍未解决。
+
+### 场景订阅与恢复断言
+
+无交互 SDK 的首笔自动续费在远端再次超过 120 秒后，完整交易断言改由会员页面执行：先展示本地 Apple 确认页并真实点击付款，确认同账号、Xcode 环境、未撤销记录和 finish 后，再取消自动续费，核对交易仍为 purchased；终止并重开进程，显式恢复后会员仍有效且有效期不变。恢复认证使用 SKTestSession 的无对话框设置，实际购买确认页仍保留；不把本地测试当作真实 Sandbox。独立阶段现为七项 SDK 测试加两项真实页面交易测试。
+
+`final-scene-and-account-contracts/` 中两端各 242 项 App 单元、4 项账号／会员 UI 通过。iPhone 的九项 StoreKit 场景全部通过；iPad 八项通过、一项在“重启后提示必须为空”失败。StoreKit 可以向重启进程投递取消续费后的状态更新，该假设不成立。修正后仍要求恢复按钮可用、实际点击恢复、成功核对以及有效期不变；取消、无历史或错误不能保留恢复前的成功提示。后续结果保存到独立 `subscription-status-update-contracts/`，以结果包和 PR 的最新 CI 为准，不覆盖原失败。
+
+账号同步 UI 在远端曾读取旧的外层行包装，现每次重新定位实际 UISwitch，核对值由 0→1→0；同步授权说明、确认前为空、复制后收藏和历史各一条、关闭同步后的保留断言不变。金融步骤即使其他 UI 失败仍执行，两者都通过后才允许复用。
