@@ -288,8 +288,9 @@ final class CloudKitchenUITests: XCTestCase {
         XCTAssertTrue(presentation.waitForExistence(timeout: 20))
         app.selectCookingPresentation("云厨房")
 
-        let tomato = kitchenButton("kitchen.scene.tomato", in: app)
-        // Camera updates replace projected accessibility snapshots.
+        // Selection and camera changes replace projected accessibility snapshots.
+        // Resolve the unique element again for each action and state wait.
+        var tomato: XCUIElement { kitchenButton("kitchen.scene.tomato", in: app) }
         func cameraMarkerFrame() -> CGRect {
             app.buttons.matching(identifier: "kitchen.scene.pot").element.frame
         }
@@ -486,9 +487,10 @@ final class CloudKitchenUITests: XCTestCase {
     @MainActor
     private func kitchenButton(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
         // Projected UIKit accessibility elements may move outside the List's
-        // snapshot subtree during camera updates. Their identifiers stay unique.
+        // snapshot subtree during camera updates. Resolve the unique complete
+        // match: First Match can retain a stale projection while selection moves.
         if identifier.hasPrefix("kitchen.scene.") {
-            return app.buttons.matching(identifier: identifier).firstMatch
+            return app.buttons.matching(identifier: identifier).element
         }
         return kitchenContent(in: app).buttons.matching(identifier: identifier).firstMatch
     }

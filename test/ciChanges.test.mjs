@@ -86,6 +86,54 @@ test('moving source code into documentation still includes the removed source pa
   })
 })
 
+test('browser UI, adapters and their tests need Web checks without simulator jobs', () => {
+  repository(({ cwd, write, commit, base }) => {
+    for (const path of [
+      'apps/web/app/pages/my.vue',
+      'apps/web/app/components/AccountStatus.vue',
+      'apps/web/app/adapters/yunlefunAuth.ts',
+      'apps/web/app/composables/useUserDataSync.ts',
+      'apps/web/app/utils/userDataSyncSdk.ts',
+      'test/yunlefunAuthAdapter.test.ts',
+      'test/userDataSyncSdk.test.ts',
+      'specs/user-data-sync/validation.md',
+    ]) write(path)
+    const after = commit()
+    for (const [name, event] of [
+      ['push', { before: base, after }],
+      ['pull_request', { pull_request: { base: { sha: base }, head: { sha: after } } }],
+    ]) assert.equal(detectNativeChanges(name, event, cwd).skipNative, true)
+  })
+})
+
+test('shared contracts, resources, build configuration and unknown tests retain native coverage', () => {
+  for (const path of [
+    'apps/web/app/utils/userData.ts',
+    'apps/web/app/utils/newProtocol.ts',
+    'apps/web/app/data/food.ts',
+    'apps/web/nuxt.config.ts',
+    'packages/shared/links.json',
+    'scripts/generate-user-data-contract.mjs',
+    'cloudfunctions/cook-user-data/index.js',
+    'test/userDataContract.test.ts',
+    'test/newFeature.test.ts',
+  ]) {
+    repository(({ cwd, write, commit, base }) => {
+      write('apps/web/app/pages/my.vue')
+      write(path)
+      assert.equal(detectNativeChanges('push', { before: base, after: commit() }, cwd).skipNative, false, path)
+    })
+  }
+})
+
+test('moving native code to a browser adapter still includes the removed native input', () => {
+  repository(({ cwd, write, commit, base }) => {
+    write('apps/web/app/adapters/.keep')
+    renameSync(join(cwd, 'apps/ios/Cook/App.swift'), join(cwd, 'apps/web/app/adapters/moved.ts'))
+    assert.equal(detectNativeChanges('push', { before: base, after: commit() }, cwd).skipNative, false)
+  })
+})
+
 test('bundled privacy text, mixed changes and build inputs always require native jobs', () => {
   for (const path of ['docs/privacy.md', 'docs/PRIVACY.md', 'apps/ios/Resources/help.md', 'packages/data/recipe.csv', 'packages/cook/src/index.ts', 'pnpm-lock.yaml', 'package.json', '.github/workflows/ci.yml', 'scripts/ci-changes.mjs', 'docs/.vitepress/config.ts', 'unknown.md']) {
     repository(({ cwd, write, commit, base }) => {
@@ -109,7 +157,7 @@ test('the workflow entry point writes job outputs and defaults to native on inva
     execFileSync(process.execPath, [entry], { cwd, env })
     const corePlan = 'ios_suites=["core-regression"]\nios_max_parallel=2\n'
     assert.equal(readFileSync(outputPath, 'utf8'), `skip_native=true\n${corePlan}`)
-    assert.match(readFileSync(summaryPath, 'utf8'), /skipped \(only documentation or the Support sync workflow changed\)/)
+    assert.match(readFileSync(summaryPath, 'utf8'), /not required \(only browser-owned inputs, documentation or the Support sync workflow changed\)/)
     for (const invalidEvent of ['{ invalid JSON', 'null']) {
       writeFileSync(eventPath, invalidEvent)
       execFileSync(process.execPath, [entry], { cwd, env })
