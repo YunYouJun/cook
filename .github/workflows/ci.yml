@@ -206,9 +206,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run convert
       - name: Install Swift
-        uses: swift-actions/setup-swift@v2.4.0
+        uses: swift-actions/setup-swift@364295d9c23900ce04d4e5cc708387921b4e50f9 # v3
         with:
-          swift-version: 6.2.2
+          swift-version: '6.2.2'
       - run: swift --version
       - run: swift test --package-path apps/ios/CookCore
       - run: bash scripts/test-private-recipe-roundtrip.sh

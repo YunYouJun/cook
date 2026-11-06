@@ -57,3 +57,5 @@ asc subscriptions list --app 6824589542
 ### Linux 工具链验收
 
 基础 PR 首次远端运行 `42242072527` 的 Swift job 在测试执行前链接失败：`libswiftObservation.so` 缺少 `swift::threading::fatal`，并非会员断言失败。CI 固定版本由 6.2.1 升至 6.2.2，保留全部 Linux 测试及 Observation；[Swift 6.2.2 官方发布说明](https://forums.swift.org/t/announcing-swift-6-2-2/83637)列出对应修复。后续运行结果单独记录，首次失败不计为通过。
+
+第二次 `42246896481` 在安装阶段被 setup-swift v2.4.0 的内置版本清单拒绝（最高 6.2.1），未执行测试。安装 action 改为固定 v3 源码提交 `364295d9`，使用 Swiftly 安装精确的 6.2.2，保留默认签名验证；不通过降级测试或禁用 Observation 绕过链接错误。
