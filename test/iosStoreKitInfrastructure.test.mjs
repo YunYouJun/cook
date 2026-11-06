@@ -35,6 +35,8 @@ process.exit(Number(args[0] === 'build-for-testing' ? process.env.BUILD_EXIT : a
       assert.equal(run.status, buildExit || uiExit || sdkExit)
       const calls = readFileSync(callsPath, 'utf8').trim().split('\n').map(JSON.parse)
       assert.equal(calls.length, expectedCalls)
+      assert.ok(calls[0].includes('-onlyUsePackageVersionsFromResolvedFile'))
+      assert.ok(calls[0].includes('-skipPackageUpdates'))
       for (const args of calls) {
         assert.equal(args[args.indexOf('-scheme') + 1], 'CookMembershipStoreKit')
         assert.ok(args.includes('CODE_SIGNING_ALLOWED=YES'))

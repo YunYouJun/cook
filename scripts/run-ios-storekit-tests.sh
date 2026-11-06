@@ -11,6 +11,7 @@ trap 'xcrun simctl shutdown "$DEVICE" >/dev/null 2>&1 || true' EXIT
 code=0
 xcodebuild build-for-testing -project apps/ios/Cook.xcodeproj -scheme CookMembershipStoreKit \
   -destination 'generic/platform=iOS Simulator' -parallel-testing-enabled NO \
+  -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates \
   -derivedDataPath "$RUNNER_TEMP/cook-derived-data" \
   CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- > "$build_log" 2>&1 || code=$?
 cat "$build_log"
