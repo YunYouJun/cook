@@ -59,7 +59,9 @@ export function useYunlefunAuth() {
   async function signOut(): Promise<void> {
     if (!controller)
       return
-    await controller.signOut()
+    const signingOut = controller.signOut()
+    publishSnapshot(snapshot)
+    await signingOut
     publishSnapshot(snapshot)
   }
 

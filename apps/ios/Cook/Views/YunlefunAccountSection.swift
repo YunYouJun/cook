@@ -73,10 +73,10 @@ struct YunlefunAccountView: View {
             }
             Section {
                 NavigationLink { DataSyncSettingsView() } label: {
-                    Label("数据与 iCloud 同步", systemImage: "icloud")
+                    Label("数据与同步", systemImage: "icloud")
                 }
             } footer: {
-                Text("云乐坊账号与系统 iCloud 账户相互独立。做菜数据继续由本机和 iCloud 管理，与网页版暂不自动同步。")
+                Text("会员可在「数据与同步」主动启用收藏和浏览历史跨平台同步。账号记录与本机、iCloud 记录分别保留。")
             }
             if accounts.account != nil {
                 Section {

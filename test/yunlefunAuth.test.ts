@@ -114,6 +114,21 @@ describe('yunlefun auth controller', () => {
     })
   })
 
+  it('stops advertising an authenticated session while sign-out is pending', async () => {
+    const identity = fakeIdentityAdapter(account)
+    let finish!: () => void
+    identity.signOut = () => new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    const controller = createYunlefunAuthController({ identity, authorization: fakeAuthorizationAdapter() })
+    await controller.initialize()
+    const pending = controller.signOut()
+    expect(controller.snapshot().status).toBe('checking')
+    finish()
+    await pending
+    expect(controller.snapshot().status).toBe('signed-out')
+  })
+
   it('adopts an authorization delivered by the host', async () => {
     const identity = fakeIdentityAdapter()
     const controller = createYunlefunAuthController({

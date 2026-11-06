@@ -11,6 +11,7 @@ definePageMeta({
   layout: 'child',
   title: '历史记录',
 })
+const { scopeBlocked, scopeRevision } = useUserDataSync()
 
 /**
  * 按天分组，最近的在最前
@@ -33,13 +34,18 @@ const sections = computed(() => {
 })
 
 async function clearAllHistory() {
+  const revision = scopeRevision.value
   if (await confirmDestructive({ header: '历史记录清空后不可恢复', confirmText: '清空历史记录' })) {
+    if (scopeBlocked.value || scopeRevision.value !== revision)
+      return
     clearRecipeHistories()
     void yunleHaptic('success')
   }
 }
 
 function clearOneHistory(history: RecipeHistoryItem) {
+  if (scopeBlocked.value || !recipeHistories.value.includes(history))
+    return
   removeRecipeHistory(history)
   void yunleHaptic('medium')
 }

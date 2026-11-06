@@ -11,6 +11,7 @@ export default nuxt(
     {
       ignores: [
         'packages/data/**/*.json',
+        'cloudfunctions/cook-user-data/user-data.cjs',
         // 构建、验收和审查报告保留原句与机器输出；数据源另有 schema/锚点校验。
         'artifacts/**',
         'apps/web/public/**/*',

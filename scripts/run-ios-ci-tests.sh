@@ -56,6 +56,7 @@ case "$IOS_SUITE" in
     # Full journeys and system audits remain in the manually selected full matrix.
     run_tests "$DEVICE" core-regression \
       -only-testing:CookTests \
+      -only-testing:CookUITests/AccountUserDataUITests \
       -only-testing:CookUITests/DietaryGoalsUITests/testNextDayLunchAndWeightGoalAtAccessibilitySize \
       -only-testing:CookUITests/DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone \
       -only-testing:CookUITests/CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval \

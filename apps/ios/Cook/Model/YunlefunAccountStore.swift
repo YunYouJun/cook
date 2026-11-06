@@ -9,11 +9,16 @@ final class YunlefunAccountStore {
     private(set) var message: String?
     private(set) var canRetry = false
     private(set) var sessionRevision = UUID()
+    private(set) var offlineSubject: String?
     @ObservationIgnored private let service: YunlefunAccountServing
     @ObservationIgnored private let vault: YunlefunAccountVault
     @ObservationIgnored private let authorization: YunlefunAuthorizing
     @ObservationIgnored private var credential: YunlefunCredential?
     @ObservationIgnored private var didRestore = false
+
+    /// A previously verified session may keep its own offline library visible.
+    /// Sign-out/invalid credentials clear this identity before any async work.
+    var dataAccountID: String? { account?.id ?? offlineSubject }
 
     init(service: YunlefunAccountServing? = nil,
          vault: YunlefunAccountVault? = nil,
@@ -30,19 +35,27 @@ final class YunlefunAccountStore {
     }
 
     func refreshIfNeeded() async {
-        guard didRestore, let credential, credential.expiresAt.timeIntervalSinceNow < 60 else { return }
+        guard didRestore, let credential,
+              account == nil || canRetry || credential.expiresAt.timeIntervalSinceNow < 60 else { return }
         await refreshSession()
     }
 
     /// Never exposes the refresh token to a request body or assumes that signing in grants membership.
     func credentialForAIRequest() async throws -> YunlefunCredential {
+        try await credentialForRequest()
+    }
+
+    func credentialForRequest() async throws -> YunlefunCredential {
         guard !isBusy else { throw YunlefunAccountError.unavailable }
-        guard let user = account, let current = credential, user.id == current.subject else {
+        guard let current = credential else {
             throw YunlefunAccountError.expiredSession
         }
-        if current.expiresAt.timeIntervalSinceNow < 60 { await refreshSession() }
+        let subject = current.subject
+        if account?.id != subject || canRetry || current.expiresAt.timeIntervalSinceNow < 60 { await refreshSession() }
         try Task.checkCancellation()
-        guard let next = credential, account?.id == user.id, next.subject == user.id, next.expiresAt > Date() else {
+        guard let next = credential, next.subject == subject else { throw YunlefunAccountError.expiredSession }
+        guard account?.id == subject, next.expiresAt > Date() else {
+            if canRetry { throw YunlefunAccountError.unavailable }
             throw YunlefunAccountError.expiredSession
         }
         return next
@@ -65,6 +78,7 @@ final class YunlefunAccountStore {
             try Task.checkCancellation()
             try vault.save(next)
             credential = next
+            offlineSubject = next.subject
             account = user
             sessionRevision = UUID()
         } catch is CancellationError {
@@ -86,6 +100,7 @@ final class YunlefunAccountStore {
             let previous = try vault.load()
             try vault.clear()
             credential = nil
+            offlineSubject = nil
             account = nil
             sessionRevision = UUID()
             message = nil
@@ -109,15 +124,19 @@ final class YunlefunAccountStore {
             guard var current = try vault.load() else {
                 if account != nil || credential != nil { sessionRevision = UUID() }
                 credential = nil
+                offlineSubject = nil
                 account = nil
                 return
             }
+            credential = current
+            offlineSubject = current.subject
             if current.expiresAt.timeIntervalSinceNow < 60 {
                 current = try await service.refresh(current)
                 // 刷新凭据会轮换：取资料前先原子保存，断网后仍可重试。
                 try vault.save(current)
             }
             credential = current
+            offlineSubject = current.subject
             let user = try await service.account(current)
             try Task.checkCancellation()
             if account?.id != user.id { sessionRevision = UUID() }
@@ -128,6 +147,7 @@ final class YunlefunAccountStore {
             if account != nil || credential != nil { sessionRevision = UUID() }
             account = nil
             credential = nil
+            offlineSubject = nil
             do {
                 try vault.clear()
                 message = YunlefunAccountError.expiredSession.localizedDescription

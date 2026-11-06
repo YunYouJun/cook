@@ -1,0 +1,4 @@
+[
+  {"name":"favorite removals tied at quota", "kind":"favorites", "now":1000, "leftStart":0, "rightStart":500, "count":500, "expectedStart":0, "expectedCount":500},
+  {"name":"history removals tied at quota", "kind":"histories", "now":1000, "leftStart":500, "rightStart":0, "count":500, "expectedStart":0, "expectedCount":500}
+]

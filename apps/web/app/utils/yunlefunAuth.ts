@@ -133,6 +133,8 @@ export function createYunlefunAuthController(
   }
 
   async function signOut(): Promise<void> {
+    // Stop account-owned data work as soon as the user chooses sign-out.
+    update({ errorMessage: '', status: 'checking' })
     try {
       await options.identity.signOut()
       update({

@@ -79,6 +79,7 @@ function mergeFavorites(
   const favoriteRemovals = pruneTombstones(
     [...latestRemoval.values()].filter(removal => (latestAdd.get(removal.id)?.time ?? -1) <= removal.time),
     now,
+    (x, y) => x.id - y.id,
   )
     .map(({ id, time }) => ({ id, time }))
     .sort((x, y) => x.time - y.time || x.id - y.id)
@@ -95,22 +96,48 @@ function mergeHistories(
   const historyRemovals = pruneTombstones(
     uniqueBy(removals.filter(removal => removal.time > clearedAt), removal => historyKey(removal.name, removal.time)),
     now,
+    (x, y) => compareNames(x.name, y.name),
   )
     .map(({ name, time }) => ({ name, time }))
-    .sort((x, y) => x.time - y.time || x.name.localeCompare(y.name))
+    .sort((x, y) => x.time - y.time || compareNames(x.name, y.name))
   const removed = new Set(historyRemovals.map(removal => historyKey(removal.name, removal.time)))
 
   // Oldest first, matching how the app appends visits. Recipes are rebuilt in a
   // canonical shape so local and cloud copies of the same visit compare equal.
-  const histories = uniqueBy(
+  const histories = canonicalVisits(
     entries.filter(entry => entry.time > clearedAt && !removed.has(historyKey(entry.recipe.name, entry.time))),
-    entry => historyKey(entry.recipe.name, entry.time),
   )
-    .map(entry => ({ recipe: readRecipe(entry.recipe) ?? entry.recipe, time: entry.time }))
-    .sort((x, y) => x.time - y.time || x.recipe.name.localeCompare(y.recipe.name))
+    .sort((x, y) => x.time - y.time || compareNames(x.recipe.name, y.recipe.name))
     .slice(-HISTORY_LIMIT)
 
   return { histories, historyRemovals }
+}
+
+function compareNames(a: string, b: string): number {
+  return a === b ? 0 : a < b ? -1 : 1
+}
+
+function canonicalVisits(entries: HistoryEntry[]): HistoryEntry[] {
+  const selected = new Map<string, HistoryEntry>()
+  const recipeKey = (recipe: RecipeItem) => JSON.stringify([
+    recipe.name,
+    recipe.stuff,
+    recipe.tools,
+    recipe.link ?? null,
+    recipe.bv ?? null,
+    recipe.difficulty ?? null,
+    recipe.emojis ?? null,
+    recipe.tags ?? null,
+    recipe.methods ?? null,
+  ])
+  for (const entry of entries) {
+    const value = { recipe: readRecipe(entry.recipe) ?? entry.recipe, time: entry.time }
+    const key = historyKey(value.recipe.name, value.time)
+    const previous = selected.get(key)
+    if (!previous || recipeKey(value.recipe) < recipeKey(previous.recipe))
+      selected.set(key, value)
+  }
+  return [...selected.values()]
 }
 
 function historyKey(name: string, time: number): string {
@@ -136,10 +163,10 @@ function uniqueBy<T>(list: T[], key: (item: T) => string): T[] {
   return [...map.values()]
 }
 
-function pruneTombstones<T extends { time: number }>(list: T[], now: number): T[] {
+function pruneTombstones<T extends { time: number }>(list: T[], now: number, breakTie: (a: T, b: T) => number): T[] {
   return list
     .filter(item => item.time >= now - TOMBSTONE_TTL)
-    .sort((x, y) => y.time - x.time)
+    .sort((x, y) => y.time - x.time || breakTie(x, y))
     .slice(0, TOMBSTONE_LIMIT)
 }
 

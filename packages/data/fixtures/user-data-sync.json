@@ -1,0 +1,309 @@
+[
+  {
+    "name": "favorite removal wins a timestamp tie",
+    "now": 1000,
+    "a": {
+      "version": 1,
+      "favorites": [
+        {
+          "id": 1,
+          "time": 100
+        }
+      ],
+      "favoriteRemovals": [],
+      "histories": [],
+      "historyRemovals": [],
+      "historyClearedAt": 0
+    },
+    "b": {
+      "version": 1,
+      "favorites": [
+        {
+          "id": 2,
+          "time": 200
+        }
+      ],
+      "favoriteRemovals": [
+        {
+          "id": 1,
+          "time": 100
+        }
+      ],
+      "histories": [],
+      "historyRemovals": [],
+      "historyClearedAt": 0
+    },
+    "expected": {
+      "version": 1,
+      "favorites": [
+        {
+          "id": 2,
+          "time": 200
+        }
+      ],
+      "favoriteRemovals": [
+        {
+          "id": 1,
+          "time": 100
+        }
+      ],
+      "histories": [],
+      "historyRemovals": [],
+      "historyClearedAt": 0
+    }
+  },
+  {
+    "name": "later favorite revives a removal",
+    "now": 1000,
+    "a": {
+      "version": 1,
+      "favorites": [],
+      "favoriteRemovals": [
+        {
+          "id": 1,
+          "time": 100
+        }
+      ],
+      "histories": [],
+      "historyRemovals": [],
+      "historyClearedAt": 0
+    },
+    "b": {
+      "version": 1,
+      "favorites": [
+        {
+          "id": 1,
+          "time": 101
+        }
+      ],
+      "favoriteRemovals": [],
+      "histories": [],
+      "historyRemovals": [],
+      "historyClearedAt": 0
+    },
+    "expected": {
+      "version": 1,
+      "favorites": [
+        {
+          "id": 1,
+          "time": 101
+        }
+      ],
+      "favoriteRemovals": [],
+      "histories": [],
+      "historyRemovals": [],
+      "historyClearedAt": 0
+    }
+  },
+  {
+    "name": "clear watermark removes old visits and keeps a later visit",
+    "now": 1000,
+    "a": {
+      "version": 1,
+      "favorites": [],
+      "favoriteRemovals": [],
+      "histories": [
+        {
+          "recipe": {
+            "name": "A",
+            "stuff": [],
+            "tools": []
+          },
+          "time": 100
+        },
+        {
+          "recipe": {
+            "name": "B",
+            "stuff": [],
+            "tools": []
+          },
+          "time": 201
+        }
+      ],
+      "historyRemovals": [],
+      "historyClearedAt": 0
+    },
+    "b": {
+      "version": 1,
+      "favorites": [],
+      "favoriteRemovals": [],
+      "histories": [],
+      "historyRemovals": [],
+      "historyClearedAt": 200
+    },
+    "expected": {
+      "version": 1,
+      "favorites": [],
+      "favoriteRemovals": [],
+      "histories": [
+        {
+          "recipe": {
+            "name": "B",
+            "stuff": [],
+            "tools": []
+          },
+          "time": 201
+        }
+      ],
+      "historyRemovals": [],
+      "historyClearedAt": 200
+    }
+  },
+  {
+    "name": "single removal does not erase a subsequent visit",
+    "now": 1000,
+    "a": {
+      "version": 1,
+      "favorites": [],
+      "favoriteRemovals": [],
+      "histories": [
+        {
+          "recipe": {
+            "name": "A",
+            "stuff": [],
+            "tools": []
+          },
+          "time": 100
+        },
+        {
+          "recipe": {
+            "name": "A",
+            "stuff": [],
+            "tools": []
+          },
+          "time": 200
+        }
+      ],
+      "historyRemovals": [],
+      "historyClearedAt": 0
+    },
+    "b": {
+      "version": 1,
+      "favorites": [],
+      "favoriteRemovals": [],
+      "histories": [],
+      "historyRemovals": [
+        {
+          "name": "A",
+          "time": 100
+        }
+      ],
+      "historyClearedAt": 0
+    },
+    "expected": {
+      "version": 1,
+      "favorites": [],
+      "favoriteRemovals": [],
+      "histories": [
+        {
+          "recipe": {
+            "name": "A",
+            "stuff": [],
+            "tools": []
+          },
+          "time": 200
+        }
+      ],
+      "historyRemovals": [
+        {
+          "name": "A",
+          "time": 100
+        }
+      ],
+      "historyClearedAt": 0
+    }
+  },
+  {
+    "name": "same visit metadata converges and name ordering is independent of locale",
+    "now": 1000,
+    "a": {
+      "version": 1,
+      "favorites": [],
+      "favoriteRemovals": [],
+      "histories": [
+        {
+          "recipe": {
+            "name": "中",
+            "stuff": [],
+            "tools": []
+          },
+          "time": 100
+        },
+        {
+          "recipe": {
+            "name": "A",
+            "stuff": [
+              "z"
+            ],
+            "tools": []
+          },
+          "time": 100
+        }
+      ],
+      "historyRemovals": [],
+      "historyClearedAt": 0
+    },
+    "b": {
+      "version": 1,
+      "favorites": [],
+      "favoriteRemovals": [],
+      "histories": [
+        {
+          "recipe": {
+            "name": "阿",
+            "stuff": [],
+            "tools": []
+          },
+          "time": 100
+        },
+        {
+          "recipe": {
+            "name": "A",
+            "stuff": [
+              "a"
+            ],
+            "tools": []
+          },
+          "time": 100
+        }
+      ],
+      "historyRemovals": [],
+      "historyClearedAt": 0
+    },
+    "expected": {
+      "version": 1,
+      "favorites": [],
+      "favoriteRemovals": [],
+      "histories": [
+        {
+          "recipe": {
+            "name": "A",
+            "stuff": [
+              "a"
+            ],
+            "tools": []
+          },
+          "time": 100
+        },
+        {
+          "recipe": {
+            "name": "中",
+            "stuff": [],
+            "tools": []
+          },
+          "time": 100
+        },
+        {
+          "recipe": {
+            "name": "阿",
+            "stuff": [],
+            "tools": []
+          },
+          "time": 100
+        }
+      ],
+      "historyRemovals": [],
+      "historyClearedAt": 0
+    }
+  }
+]

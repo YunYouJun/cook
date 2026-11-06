@@ -97,7 +97,7 @@ async function handleSignOut(): Promise<void> {
             :color="syncStatus === 'error' ? '#ff3b30' : '#34c759'"
           />
           <ion-label>
-            <h2>收藏和历史云同步</h2>
+            <h2>会员收藏和历史同步</h2>
             <p>{{ syncText }}</p>
           </ion-label>
         </ion-item>

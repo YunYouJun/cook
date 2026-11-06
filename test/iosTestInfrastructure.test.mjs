@@ -343,7 +343,7 @@ test('every UI method is assigned exactly once per device, including both isolat
   })
 })
 
-test('core regression retains all App units and five UI flows including the current failure regressions', () => {
+test('core regression retains all App units, account sync and five existing UI flows', () => {
   replay({}, ({ result, calls, output }) => {
     assert.equal(result.status, 0, result.stderr)
     assert.deepEqual(calls.map(call => call.name), ['phone-core-regression', 'pad-core-regression'])
@@ -378,7 +378,8 @@ test('core regression retains all App units and five UI flows including the curr
       for (const test of required) assert.ok(selected(test), `${test} must run on both devices`)
       for (const test of fullOnly)
         assert.ok(!selected(test), `${test} remains in the manual full matrix`)
-      assert.equal(only.filter(selector => selector.startsWith('CookUITests/')).length, 5)
+      assert.ok(only.includes('CookUITests/AccountUserDataUITests'))
+      assert.equal(only.filter(selector => selector.startsWith('CookUITests/')).length, 6)
       for (const selector of only.filter(selector => selector.startsWith('CookUITests/'))) {
         const [, suite, method] = selector.split('/')
         const source = readFileSync(join(root, 'apps/ios/CookUITests', `${suite}.swift`), 'utf8')

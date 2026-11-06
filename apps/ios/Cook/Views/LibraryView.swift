@@ -17,6 +17,7 @@ struct LibraryView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(\.modelContext) private var context
     @Environment(FavoriteActions.self) private var favoriteActions
+    @Environment(\.accountUserData) private var accountData
     @Query(filter: #Predicate<Favorite> { $0.deletedAt == nil }, sort: \Favorite.createdAt, order: .reverse)
     private var favorites: [Favorite]
     @Query(filter: #Predicate<HistoryEntry> { $0.deletedAt == nil }, sort: \HistoryEntry.visitedAt, order: .reverse)
@@ -35,16 +36,16 @@ struct LibraryView: View {
         case .all:
             base = store.recipes
         case .favorites:
-            base = uniqueRecipeIds(favorites.map(\.recipeId)).compactMap { store.recipesById[$0] }
+            base = activeFavoriteIDs.compactMap { store.recipesById[$0] }
         case .recent:
-            base = uniqueRecipeIds(visits.map(\.recipeId)).compactMap { store.recipesById[$0] }
+            base = activeVisitIDs.compactMap { store.recipesById[$0] }
         }
         return store.filter(base, query: query)
     }
 
     var body: some View {
         let visible = recipes
-        let favoriteIds = Set(favorites.map(\.recipeId))
+        let favoriteIds = Set(activeFavoriteIDs)
 
         NavigationSplitView(preferredCompactColumn: $compactColumn) {
             List(selection: $selection) {
@@ -88,14 +89,17 @@ struct LibraryView: View {
                     .accessibilityHint("按当前食材、忌口和饮食目标随机选一道")
                     .accessibilityIdentifier("library.random")
                 }
-                if scope == .recent, !visits.isEmpty {
+                if scope == .recent, !activeVisitIDs.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("清空") { confirmingClear = true }
                     }
                 }
             }
             .confirmationDialog("清空浏览记录？", isPresented: $confirmingClear, titleVisibility: .visible) {
-                Button("清空浏览记录", role: .destructive) { context.clearHistory() }
+                Button("清空浏览记录", role: .destructive) {
+                    if let accountData, accountData.usesAccountLibrary { accountData.clearHistory() }
+                    else { context.clearHistory() }
+                }
             }
         } detail: {
             NavigationStack {
@@ -121,6 +125,14 @@ struct LibraryView: View {
         case .favorites: return "还没有收藏，右滑菜谱或在详情里点 ♡ 收藏"
         case .recent: return "还没有浏览记录"
         }
+    }
+
+    private var activeFavoriteIDs: [Int] {
+        accountData?.usesAccountLibrary == true ? accountData!.favoriteIDs : uniqueRecipeIds(favorites.map(\.recipeId))
+    }
+
+    private var activeVisitIDs: [Int] {
+        accountData?.usesAccountLibrary == true ? accountData!.visitIDs(recipeIdByName: store.recipeIdByName) : uniqueRecipeIds(visits.map(\.recipeId))
     }
 
     private var emptySymbol: String {

@@ -8,6 +8,8 @@
  */
 
 const { Buffer } = require('node:buffer')
+const { createHash } = require('node:crypto')
+const { normalizeUserData, mergeUserData } = require('./user-data.cjs')
 
 const COLLECTION = 'cook_user_data'
 const USER_DATA_VERSION = 1
@@ -19,6 +21,21 @@ const LIST_LIMITS = {
   historyRemovals: 1000,
 }
 const ANON_UIDS = new Set(['', 'anon'])
+
+// Same read-only contract as account-api/lib/orders.js: canonical uid first,
+// then legacy userId documents. No client-supplied entitlement is trusted.
+async function activeMembership(uid, now) {
+  const collection = getApp().database().collection('user_memberships')
+  const result = await collection.doc(uid).get()
+  const canonical = Array.isArray(result.data) ? result.data[0] : result.data
+  let membership = canonical && (!canonical.userId || canonical.userId === uid) ? canonical : null
+  if (!membership) {
+    const legacy = await collection.where({ userId: uid }).limit(10).get()
+    if (Array.isArray(legacy.data))
+      membership = legacy.data.find(item => item?._id === uid) || legacy.data[0]
+  }
+  return Number.isSafeInteger(membership?.expireAt) && membership.expireAt > now
+}
 
 let app
 
@@ -92,27 +109,50 @@ async function setDocument(uid, input, now) {
   const document = readDocument(input)
   if (!document)
     return fail('INVALID_DOCUMENT')
-  await getApp().database().collection(COLLECTION).doc(uid).set({ ...document, updatedAt: now })
-  return { ok: true, updatedAt: now }
+  // Both new sync and old set callers merge inside the same transaction. A
+  // snapshot read before another device's write can never erase that write.
+  return getApp().database().runTransaction(async (transaction) => {
+    const reference = transaction.collection(COLLECTION).doc(uid)
+    const response = await reference.get()
+    const raw = Array.isArray(response.data) ? response.data[0] : response.data
+    const previous = raw == null ? readDocument({ version: USER_DATA_VERSION }) : readDocument(stripMeta(raw))
+    if (!previous)
+      return fail('INVALID_REMOTE')
+    const merged = { version: USER_DATA_VERSION, ...mergeUserData(normalizeUserData(previous), normalizeUserData(document), now), updatedAt: now }
+    if (!readDocument(merged))
+      return fail('DOCUMENT_LIMIT')
+    await reference.set(merged)
+    return { ok: true, document: merged, updatedAt: now, protocolVersion: 2 }
+  })
 }
 
 async function main(event = {}) {
   const uid = callerUid()
   if (!uid)
     return fail('LOGIN_REQUIRED')
+  // Binding only: never use a client value to choose a document. This rejects
+  // an SDK session change that occurs while the browser awaits initialization.
+  if (event.ownerDigest !== undefined && event.ownerDigest !== createHash('sha256').update(uid).digest('hex'))
+    return fail('SESSION_CHANGED')
 
   try {
+    if (!await activeMembership(uid, Date.now()))
+      return fail('MEMBERSHIP_REQUIRED')
     switch (event.action) {
+      case 'capabilities':
+        return { ok: true, protocolVersion: 2 }
       case 'get':
         return await getDocument(uid)
       case 'set':
+      case 'sync':
         return await setDocument(uid, event.document, Date.now())
       default:
         return fail('UNKNOWN_ACTION')
     }
   }
-  catch (error) {
-    console.error('[cook-user-data]', event.action, error && error.message)
+  catch {
+    // SDK messages can contain document IDs or payloads; keep logs categorical.
+    console.error('[cook-user-data]', 'request_failed')
     return fail('INTERNAL_ERROR')
   }
 }

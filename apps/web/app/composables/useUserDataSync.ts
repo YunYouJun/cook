@@ -5,6 +5,7 @@ import { recipeHistories } from '~/composables/store/history'
 import { localUserData } from '~/composables/store/userData'
 import { userDataMeta } from '~/composables/store/userDataMeta'
 import {
+  activateUserDataAccount,
   createUserDataSyncScheduler,
   syncUserData,
   UserDataSyncError,
@@ -16,6 +17,8 @@ interface UserDataSyncState {
   errorMessage: string
   lastSyncedAt: number
   status: UserDataSyncStatus
+  scopeBlocked: boolean
+  scopeRevision: number
 }
 
 /** Wait this long after a local change before pushing it. */
@@ -32,15 +35,18 @@ export function useUserDataSync() {
     errorMessage: '',
     lastSyncedAt: 0,
     status: 'idle',
+    scopeBlocked: false,
+    scopeRevision: 0,
   }))
 
   function install(): void {
-    if (!import.meta.client || scheduler)
+    if (typeof window === 'undefined' || scheduler)
       return
 
     const auth = useYunlefunAuth()
     const uid = computed(() => auth.isAuthenticated.value ? auth.account.value?.uid ?? '' : '')
-    const remote = createCloudbaseUserDataRemote(auth.callFunction)
+    let sessionGeneration = 0
+    let scopeReady = true
 
     // Local writes made by a sync round must not schedule another round.
     let applyingRemote = false
@@ -57,18 +63,44 @@ export function useUserDataSync() {
       },
     }
 
+    function selectLocalScope(current: string): void {
+      scopeReady = false
+      applyingRemote = true
+      try {
+        activateUserDataAccount(current, local, window.localStorage)
+        scopeReady = true
+        state.value = { ...state.value, scopeBlocked: false }
+      }
+      catch (cause) {
+        state.value = { ...state.value, scopeBlocked: true, errorMessage: '账号记录切换失败，原数据已保留，请恢复浏览器存储后重试', lastSyncedAt: 0, status: 'error' }
+        throw new UserDataSyncError('scope_failed', { cause })
+      }
+      finally { applyingRemote = false }
+    }
+
     const activeScheduler = createUserDataSyncScheduler({
       run: async () => {
         const current = uid.value
-        if (!current)
+        const generation = sessionGeneration
+        const isCurrent = () => uid.value === current && sessionGeneration === generation
+        if (!scopeReady)
+          selectLocalScope(current)
+        if (!current) {
+          state.value = { ...state.value, errorMessage: '', status: 'idle' }
           return
+        }
         state.value = { ...state.value, errorMessage: '', status: 'syncing' }
-        await syncUserData(current, local, remote)
+        const remote = createCloudbaseUserDataRemote((name, data) => {
+          if (!isCurrent())
+            throw new UserDataSyncError('cancelled')
+          return auth.callFunction(name, data)
+        })
+        await syncUserData(current, local, remote, Date.now(), isCurrent)
         if (uid.value === current)
-          state.value = { errorMessage: '', lastSyncedAt: Date.now(), status: 'synced' }
+          state.value = { ...state.value, errorMessage: '', lastSyncedAt: Date.now(), status: 'synced' }
       },
       onError: (error) => {
-        if (!uid.value)
+        if (!uid.value || (error instanceof UserDataSyncError && error.code === 'cancelled'))
           return
         state.value = {
           ...state.value,
@@ -76,18 +108,28 @@ export function useUserDataSync() {
           status: 'error',
         }
       },
-      shouldRetry: error => !(error instanceof UserDataSyncError && error.code === 'invalid_remote'),
+      shouldRetry: error => !(error instanceof UserDataSyncError && error.code !== 'remote_failed'),
     })
     scheduler = activeScheduler
 
     watch(uid, (current) => {
+      sessionGeneration += 1
+      activeScheduler.stop()
+      state.value = { ...state.value, scopeRevision: state.value.scopeRevision + 1 }
+      try {
+        selectLocalScope(current)
+      }
+      catch {
+        return
+      }
+      state.value = { ...state.value, errorMessage: '', lastSyncedAt: 0, status: 'idle' }
       if (current) {
         activeScheduler.request()
         return
       }
       activeScheduler.stop()
-      state.value = { errorMessage: '', lastSyncedAt: 0, status: 'idle' }
-    }, { immediate: true })
+      state.value = { ...state.value, errorMessage: '', lastSyncedAt: 0, status: 'idle' }
+    }, { immediate: true, flush: 'sync' })
 
     watch(
       () => [
@@ -98,7 +140,7 @@ export function useUserDataSync() {
         userDataMeta.value.historyClearedAt,
       ],
       () => {
-        if (!applyingRemote && uid.value)
+        if (!applyingRemote && uid.value && scopeReady)
           activeScheduler.request(LOCAL_CHANGE_DELAY)
       },
       { deep: true, flush: 'sync' },
@@ -122,6 +164,8 @@ export function useUserDataSync() {
     install,
     lastSyncedAt: computed(() => state.value.lastSyncedAt),
     status: computed(() => state.value.status),
+    scopeBlocked: computed(() => state.value.scopeBlocked),
+    scopeRevision: computed(() => state.value.scopeRevision),
     syncNow,
   }
 }
