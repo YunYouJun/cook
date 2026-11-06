@@ -54,6 +54,7 @@ final class AccountUserDataUITests: XCTestCase {
         let confirm = app.buttons["复制收藏和浏览历史"].firstMatch
         XCTAssertTrue(confirm.waitForExistence(timeout: 10))
         confirm.tap()
+        reveal(counts, app: app, upwards: false)
         XCTAssertEqual(counts.waitForState("label == %@", timeout: 10, argument: "账号记录、1 个收藏，1 条浏览记录"), .completed)
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = large ? "Account sync largest text dark" : "Account sync standard light"

@@ -134,6 +134,7 @@ targets:
         buildPhase: resources
     dependencies:
       - target: Cook
+      - package: CookCore
     settings:
       base:
         GENERATE_INFOPLIST_FILE: true

@@ -1,3 +1,5 @@
+import CookCore
+import StoreKit
 import StoreKitTest
 import XCTest
 
@@ -6,7 +8,7 @@ import XCTest
 final class MembershipStoreKitUITests: XCTestCase {
     override func setUp() { continueAfterFailure = false }
 
-    @MainActor func testAutoRenewingScenePurchaseKeepsPaidHistoryAfterCancellingRenewal() throws {
+    @MainActor func testAutoRenewingScenePurchaseKeepsPaidTransactionAfterCancellingRenewal() throws {
         let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "MembershipProducts", withExtension: "storekit"))
         let session = try SKTestSession(contentsOf: url)
         session.resetToDefaultState(); session.clearTransactions(); session.disableDialogs = false
@@ -29,38 +31,53 @@ final class MembershipStoreKitUITests: XCTestCase {
         let pay = system.buttons.matching(identifier: "pay-now").element
         XCTAssertTrue(pay.waitForExistence(timeout: 5))
         pay.tap()
+        dismissLocalSuccessIfPresented(system)
         let message = list.staticTexts.matching(identifier: "membership.message").element
         reveal(message, in: list)
         XCTAssertEqual(message.waitForState("label CONTAINS %@", timeout: 15, argument: "测试购买记录已确认"), .completed)
+        XCTAssertTrue(system.navigationBars.matching(identifier: "Xcode").element.waitForNonExistence(timeout: 10))
         let active = list.staticTexts.matching(identifier: "membership.active").element
         reveal(active, in: list, upwards: false)
-        let expiry = list.staticTexts.matching(identifier: "membership.expiry").element.label
+        XCTAssertFalse(list.staticTexts.matching(identifier: "membership.expiry").element.label.isEmpty)
         let original = try XCTUnwrap(session.allTransactions().first { $0.productIdentifier == productID })
         XCTAssertTrue(original.autoRenewingEnabled)
-        // The real purchase confirmation was exercised above. Local restore
-        // uses the documented no-dialog test setting for authentication UI.
-        session.disableDialogs = true
         try session.disableAutoRenewForTransaction(identifier: original.identifier)
         let cancelled = try XCTUnwrap(session.allTransactions().first { $0.identifier == original.identifier })
         XCTAssertFalse(cancelled.autoRenewingEnabled)
         XCTAssertEqual(cancelled.state, .purchased, "Stopping renewal must retain the paid transaction")
+        let paid = XCTAttachment(screenshot: app.screenshot())
+        paid.name = "Paid subscription retained after cancellation"
+        paid.lifetime = .keepAlways; add(paid)
+    }
+
+    @MainActor func testCancelledRenewalRestoresFinishedHistoryAfterProcessRestart() async throws {
+        let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "MembershipProducts", withExtension: "storekit"))
+        let session = try SKTestSession(contentsOf: url)
+        session.resetToDefaultState(); session.clearTransactions(); session.disableDialogs = true
+        defer { session.clearTransactions() }
+        // Independent history fixture: checkout is covered by the real scene
+        // above. This case keeps both actual process launches within 120s.
+        let token = MembershipAccountToken.forUser("membership-ui-a")
+        let transaction = try await session.buyProduct(identifier: "fun.yunle.cook.local.autorenewing", options: [.appAccountToken(token)])
+        XCTAssertEqual(transaction.environment, .xcode)
+        XCTAssertEqual(transaction.appAccountToken, token)
+        XCTAssertNil(transaction.revocationDate)
+        await transaction.finish()
+        let app = launchScene(reset: true)
+        let expiry = restoreInScene(app)
+        let original = try XCTUnwrap(session.allTransactions().first { UInt64($0.identifier) == transaction.id })
+        XCTAssertTrue(original.autoRenewingEnabled)
+        try session.disableAutoRenewForTransaction(identifier: original.identifier)
+        let cancelled = try XCTUnwrap(session.allTransactions().first { $0.identifier == original.identifier })
+        XCTAssertFalse(cancelled.autoRenewingEnabled)
+        XCTAssertEqual(cancelled.state, .purchased)
         app.terminate()
 
         // StoreKit may also deliver a renewal-status update to the new process.
         // Explicit restore clears that notice before reading verified history;
         // cancellation or an empty/invalid result cannot leave it confirmed.
         let restarted = launchScene(reset: false)
-        let restoredList = restarted.collectionViews.matching(identifier: "membership.content").element
-        let restore = restoredList.buttons.matching(identifier: "membership.restore").element
-        reveal(restore, in: restoredList)
-        XCTAssertEqual(restore.waitForState("enabled == true", timeout: 10), .completed)
-        restore.tap()
-        let restoredMessage = restoredList.staticTexts.matching(identifier: "membership.message").element
-        reveal(restoredMessage, in: restoredList)
-        XCTAssertEqual(restoredMessage.waitForState("label CONTAINS %@", timeout: 15, argument: "测试购买记录已确认"), .completed)
-        let restoredActive = restoredList.staticTexts.matching(identifier: "membership.active").element
-        reveal(restoredActive, in: restoredList, upwards: false)
-        XCTAssertEqual(restoredList.staticTexts.matching(identifier: "membership.expiry").element.label, expiry)
+        XCTAssertEqual(restoreInScene(restarted), expiry)
         let history = XCTAttachment(screenshot: restarted.screenshot())
         history.name = "Paid subscription retained after cancellation and restore"
         history.lifetime = .keepAlways; add(history)
@@ -120,6 +137,30 @@ final class MembershipStoreKitUITests: XCTestCase {
         XCTAssertTrue(entry.waitForExistence(timeout: 10)); entry.tap()
         XCTAssertTrue(app.collectionViews.matching(identifier: "membership.content").element.waitForExistence(timeout: 10))
         return app
+    }
+
+    @MainActor private func restoreInScene(_ app: XCUIApplication) -> String {
+        let list = app.collectionViews.matching(identifier: "membership.content").element
+        let restore = list.buttons.matching(identifier: "membership.restore").element
+        reveal(restore, in: list)
+        XCTAssertEqual(restore.waitForState("enabled == true", timeout: 10), .completed)
+        restore.tap()
+        let message = list.staticTexts.matching(identifier: "membership.message").element
+        reveal(message, in: list)
+        XCTAssertEqual(message.waitForState("label CONTAINS %@", timeout: 15, argument: "测试购买记录已确认"), .completed)
+        let active = list.staticTexts.matching(identifier: "membership.active").element
+        reveal(active, in: list, upwards: false)
+        return list.staticTexts.matching(identifier: "membership.expiry").element.label
+    }
+
+    @MainActor private func dismissLocalSuccessIfPresented(_ system: XCUIApplication) {
+        let success = system.alerts.matching(NSPredicate(format: "label IN %@", ["You’re all set.", "You're all set."])).element
+        if success.waitForExistence(timeout: 5) {
+            let okay = success.buttons.matching(identifier: "OK").element
+            XCTAssertTrue(okay.waitForExistence(timeout: 5))
+            okay.tap()
+            XCTAssertTrue(success.waitForNonExistence(timeout: 10))
+        }
     }
 
     @MainActor private func reveal(_ element: XCUIElement, in list: XCUIElement, upwards: Bool = true) {
