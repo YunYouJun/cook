@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-11-06T13:32:00+08:00",
+  "sourceRepository": "https://github.com/YunYouJun/cook",
+  "sourceCommit": "0889d1497a7cf50f8ab67860e7ff1e962b30c485",
+  "clientSourceBaseline": "a89aeccdfbcf729e939b51b01abb0a20f3520452",
+  "pullRequest": "https://github.com/YunYouJun/cook/pull/197",
+  "environment": "yunlefun-8g7ybcxc7345c490",
+  "function": "cook-ai-intent",
+  "status": "Active",
+  "runtime": "Nodejs24.11",
+  "configurationUnchanged": true,
+  "configurationFieldsCompared": [
+    "Environment",
+    "Runtime",
+    "Timeout",
+    "MemorySize",
+    "Handler",
+    "InstallDependency",
+    "Role",
+    "VpcConfig",
+    "PublicNetConfig",
+    "Layers",
+    "Triggers",
+    "Type",
+    "ProtocolType",
+    "AccessInfo"
+  ],
+  "routing": {
+    "provider": "cloudbase",
+    "model": "deepseek-v4.1-flash-1017",
+    "changed": false
+  },
+  "currentContract": {
+    "schemaVersion": 1,
+    "policyVersion": 1,
+    "dataVersion": "1878cc5772dc",
+    "availableGoals": [
+      "weight-aware",
+      "less-added-sugar",
+      "balanced-pairing"
+    ]
+  },
+  "retainedContract": {
+    "schemaVersion": 1,
+    "policyVersion": 1,
+    "dataVersion": "faf919fc0041",
+    "availableGoals": [
+      "less-added-sugar",
+      "balanced-pairing"
+    ],
+    "distributedBuild": "2.0.0 (12)",
+    "buildId": "315742ed-3c67-48d3-907b-ed88dad320d4"
+  },
+  "deployedFilesSha256": {
+    "index.js": "d07b0d251a010f13cb440f52dbc6dc6361b2b91ab485c40484fbd10ab38e3d89",
+    "quota.js": "93be2893216d5e92e735b1636e48f8ce9fb4a05766f0d16c0d7ae142cf2dd201",
+    "package.json": "31e8e88f9ec2462a4bbb2d9fb0e99fa54dcfb18cf7c3f265736cdf50c556e69f",
+    "contract.json": "a5ca9db27a6393cf6dfff7da42ab7cc405c093d749b27f0dac7d69ad6df85093",
+    "compatible-contracts.json": "f1b5b8f722b19e4ddaa0abe6c5228c8be4b8a9d96b01821c8e696831e69be9b1"
+  },
+  "allFiveDownloadedFilesMatchCommit": true,
+  "dependencies": {
+    "fileCount": 5498,
+    "beforeAndAfterTreeSha256": "5710e6e813a1f44d541749724cde2504e0c5a81b3cbd85dbaadc1d5cee4d7c2d",
+    "unchanged": true
+  },
+  "deploymentAttempts": [
+    {
+      "method": "CloudBase MCP updateFunctionCode",
+      "requestId": "5bcc581d-e1f6-48b3-b5a4-c90cce942129",
+      "finalStatus": "UpdateFailed",
+      "error": "ResourceNotFound.Package",
+      "oldCodeRemainedAvailable": true
+    },
+    {
+      "method": "CloudBase CLI 2.11.7 fn code update",
+      "installDependency": false,
+      "finalStatus": "Active",
+      "verificationRequestId": "254e1f5b-4768-456c-adda-0b28dc967e43"
+    }
+  ],
+  "liveChecks": {
+    "currentVersionStatusBefore": 409,
+    "currentVersionStatusAfter": 200,
+    "currentEggsNoSpicyAndWeightGoalVerified": true,
+    "retainedVersionStatusAfter": 200,
+    "retainedVersionHasNoNewGoal": true,
+    "unknownVersionStatus": 409,
+    "unauthenticatedStatus": 401,
+    "invalidBearerStatus": 401,
+    "getStatus": 405,
+    "testSessionsSignedOut": true
+  },
+  "tests": {
+    "nodeServiceAndContracts": {
+      "passed": 38,
+      "failed": 0
+    },
+    "swiftCoreIntentAndContract": {
+      "passed": 14,
+      "failed": 0
+    },
+    "iphone": {
+      "device": "iPhone 16 Pro",
+      "os": "26.5",
+      "passed": 50,
+      "failed": 0,
+      "skipped": 0,
+      "appTests": 46,
+      "uiTests": 4
+    },
+    "ipadOriginal": {
+      "device": "iPad Pro 13-inch (M5)",
+      "os": "27.0",
+      "passed": 47,
+      "failed": 1,
+      "failure": "Testing was canceled",
+      "complete": false,
+      "animationsWaitObserved": true
+    },
+    "ipad": {
+      "device": "iPad Pro 11-inch (M5)",
+      "os": "27.0",
+      "passed": 50,
+      "failed": 0,
+      "skipped": 0,
+      "appTests": 46,
+      "uiTests": 4,
+      "sameTestProductsAsIphone": true,
+      "keyboard": "English (US)",
+      "chineseInputVerified": true
+    },
+    "runtimeWarnings": {
+      "iphone": 2,
+      "ipad": 2,
+      "message": "Invalid frame dimension (negative or non-finite).",
+      "screenshotsAndInteractionAssertionsPassed": true
+    }
+  },
+  "nativeSourceAndTestChanges": false,
+  "notVerified": [
+    "actual VoiceOver reading and focus order",
+    "personal DeepSeek Key calls on a physical device",
+    "new TestFlight distribution"
+  ],
+  "newTestFlightUploaded": false,
+  "issueClosed": false,
+  "localEvidence": "~/Library/Developer/ReleaseArtifacts/Cook/20261106-issue-181-contract",
+  "simulatorsRestoredToInitialBootStates": true,
+  "newSimulatorsCreated": false
+}
