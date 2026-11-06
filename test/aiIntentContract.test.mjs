@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -14,6 +15,15 @@ test('deployed intent vocabulary matches the current public recipe bundle', asyn
     assert.equal(new Set(committed[key]).size, committed[key].length)
     assert.ok(committed[key].length > 0)
   }
+})
+
+test('the distributed build 12 contract remains an immutable production snapshot', async () => {
+  const retained = JSON.parse(await readFile(new URL('../cloudfunctions/cook-ai-intent/compatible-contracts.json', import.meta.url), 'utf8'))
+  assert.equal(retained.length, 1)
+  assert.equal(retained[0].dataVersion, 'faf919fc0041')
+  // Verified against the downloaded production package and the archived build 12 data bundle.
+  assert.equal(createHash('sha256').update(JSON.stringify(retained[0])).digest('hex'), '7f63acad75d3e4952bc80b82e319940532751e49c3e7a7c1d0ceeb1aa8378926')
+  assert.deepEqual(retained[0].availableGoals, ['less-added-sugar', 'balanced-pairing'])
 })
 
 test('the generated AI contract cannot offer a dietary goal with only nine passing records', async () => {

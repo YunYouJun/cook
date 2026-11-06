@@ -86,7 +86,15 @@ node scripts/generate-ai-intent-contract.mjs --check
 node --test test/cookAiIntent.test.mjs test/aiIntentContract.test.mjs
 ```
 
-提交生成的 `contract.json` 后与客户端一起发布。Swift 的跨端测试会核对完整词典、版本和真实开放目标；新客户端数据与服务器不匹配时返回 `VERSION_MISMATCH`，不消耗模型配额。
+提交生成的 `contract.json` 后与客户端一起发布。Swift 的跨端测试会核对完整词典、版本和真实开放目标；服务器未收录的客户端版本返回 `VERSION_MISMATCH`，不消耗模型配额。
+
+### 已分发版本的契约兼容
+
+`contract.json` 跟随当前共享数据生成；`compatible-contracts.json` 保存仍在使用的已分发版本的完整契约，不随生成器更新。服务只按请求的 `schemaVersion`、`policyVersion`、`dataVersion` 精确选择这两处已核验词典，提示词与输出校验使用同一份选定契约。客户端不能上传词典或扩大可用目标；不同版本共用既有会员资格和配额。
+
+首份保留契约为 `faf919fc0041`，来自 2026-11-06 下载的生产函数，并与已归档 TestFlight 构建 12 的数据版本核对。原始 `contract.json` SHA-256 为 `721abeb4b3e70a7b68001af2fe3af0528024d46a99928ffb31d36c6b82f08f6e`；对象的紧凑 JSON SHA-256 为 `7f63acad75d3e4952bc80b82e319940532751e49c3e7a7c1d0ceeb1aa8378926`，由回归测试固定。该版本仅开放减少添加糖和均衡搭配，不能收到新版独有的食材、控制体重目标或响应版本。
+
+兼容列表必须存在且有效，不能重复注册同一个版本；最多同时保留当前及四个历史契约。损坏或歧义配置关闭模型入口，未收录版本在预留额度前拒绝。上线新版前先核对实际分发构建，保留仍需服务的旧契约，再执行单函数代码更新；不要直接覆盖旧契约后要求所有已安装客户端同时升级。移除历史契约需另行核对分发与支持范围。
 
 2026-11-02 的饮食数据 v2 开放「控制体重」后，契约同步提供 `weight-aware`。生成器保留已审核目标白名单，并要求每个开放目标至少 10 道通过记录。模型仅能将用户明确的「控制体重」翻译为份量和额外烹调油参考；减肥、减脂、低热量和疾病饮食仍列待确认，不生成营养数值或减重结论。客户端与后端须使用同一新版契约发布；本轮源码测试不代表生产云函数已更新。
 
@@ -97,6 +105,8 @@ node --test test/cookAiIntent.test.mjs test/aiIntentContract.test.mjs
 当前会员接口是云乐坊业务接口，只有一次受限 JSON 请求；模型 SDK 无法替代会员核验、额度和账号切换隔离。因此继续复用原生 URLSession 账号层与严格传输策略，不额外引入模型 SDK。CloudBase 的[官方 iOS Swift 指南](https://docs.cloudbase.net/quick-start/frameworks/ios-swift)同样使用 HTTP API。
 
 ## 2026-11-03 双通道源码验证
+
+后续契约兼容修复已于 2026-11-06 发布，当前及构建 12 的真实会员请求均已验证；实际通道为 CloudBase 托管 `deepseek-v4.1-flash-1017`。当前状态与首次发布失败记录见[智能找菜收尾](./ios-search-intent#_2026-11-06-契约与发布验收收尾)，下列记录保留其对应日期的范围。
 
 后端与生成词典共 31 项 Node 测试通过。覆盖共享部署变量优先级、旧环境变量兼容、非法配置关闭服务、CloudBase 免 DeepSeek Key、身份与会员准入、共享配额、非法输出、超时和限频错误。实际入口通过隔离模块运行验证：启动后修改注入变量不改变旧实例通道，新实例使用新值；通道配置不访问数据库，解析只访问配额集合。失败不重试或切换通道。
 
