@@ -108,3 +108,5 @@ asc subscriptions list --app 6824589542
 `1607eb34` 的 `42266245892` 中，远端 iPhone 真实页面两项（88.255／26.047 秒）和原故障注入（0.170 秒）通过，首次调用超时未复发；该次 SDK 仍因退款更新等待 10 秒失败，不能算整线通过。退款测试此前在本机购买立即 finish 后同步触发退款，没有先证明该监听已经接收交易。按 [Apple updates 文档](https://developer.apple.com/documentation/storekit/transaction/updates)，同设备购买直接通过 PurchaseResult 返回，不能用该返回值推定更新监听就绪。
 
 退款用例改由 SKTestSession 创建带本次唯一账号标记的外部测试交易，先要求 NativeMembershipStoreKit 收到对应的已验证、Xcode 环境购买更新，再 finish 和触发退款，最后仍要求收到同一交易的已验证撤销。这样增加可观察的前置条件，而不是等待固定延时、重试退款或只检查测试会话内的退款状态。购买路径继续由其他 SDK 用例及真实确认页面覆盖。
+
+同一运行的远端 iPad 七项 SDK 全部通过，实际取消页面通过，但首次购买在等待 Xcode 确认导航栏 15 秒后失败。已导出录像和 SpringBoard 层级：付款正在进行，系统远程视图仍是 RemotePlaceholder，未出现可操作的确认页；不能仅凭 UITest Runner 的 Sandbox storefront 诊断断定应用发起了真实沙盒付款。就绪等待改为 30 秒条件等待，并在断言前保存截图与层级；仍须明确观察 Xcode 本地确认页才点击付款，每例 120 秒及整阶段 10 分钟上限不变。此处延长的是等待分配，不增加金融测试总预算，也不将原失败计作通过。

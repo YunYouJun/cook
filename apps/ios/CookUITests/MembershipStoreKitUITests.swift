@@ -18,9 +18,14 @@ final class MembershipStoreKitUITests: XCTestCase {
         reveal(buy, in: list)
         buy.tap()
         let system = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        XCTAssertTrue(system.navigationBars.matching(identifier: "Xcode").element.waitForExistence(timeout: 15))
+        // A cold StoreKit service can still be presenting its remote UI after
+        // 15 seconds. Keep the case's overall 120-second limit unchanged.
+        let confirmationReady = system.navigationBars.matching(identifier: "Xcode").element.waitForExistence(timeout: 30)
         let confirmation = XCTAttachment(screenshot: app.screenshot())
         confirmation.name = "Local Apple subscription confirmation"; confirmation.lifetime = .keepAlways; add(confirmation)
+        let hierarchy = XCTAttachment(string: system.debugDescription)
+        hierarchy.name = "Apple subscription confirmation hierarchy"; hierarchy.lifetime = .keepAlways; add(hierarchy)
+        XCTAssertTrue(confirmationReady)
         let pay = system.buttons.matching(identifier: "pay-now").element
         XCTAssertTrue(pay.waitForExistence(timeout: 5))
         pay.tap()
