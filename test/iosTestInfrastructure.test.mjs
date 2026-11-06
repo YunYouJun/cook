@@ -391,6 +391,30 @@ test('core regression retains all App units, account sync and five existing UI f
   }, ['core-regression'])
 })
 
+test('membership scope runs all units, real StoreKit and account UI on both devices', () => {
+  replay({}, ({ result, calls }) => {
+    assert.equal(result.status, 0, result.stderr)
+    assert.deepEqual(calls.map(call => call.name), ['phone-membership', 'pad-membership'])
+    for (const call of calls) {
+      assert.deepEqual(call.args.filter(arg => arg.startsWith('-only-testing:')), [
+        '-only-testing:CookTests',
+        '-only-testing:CookUITests/AccountUserDataUITests',
+      ])
+      assert.ok(call.args.includes('-parallel-testing-enabled'))
+    }
+    const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
+    assert.match(workflow, /name: Verify local StoreKit contracts[\s\S]+?run: bash scripts\/run-ios-storekit-tests.sh/)
+  }, ['membership'])
+})
+
+test('a financial assertion failure is not retried or hidden by the other device', () => {
+  replay({ 'pad-membership': [fixtures.keyboardAssertion] }, ({ result, calls, output }) => {
+    assert.equal(result.status, 1)
+    assert.equal(calls.length, 2)
+    assert.equal(output, '')
+  }, ['membership'])
+})
+
 test('a core assertion failure is not retried or hidden by the other device', () => {
   replay({ 'pad-core-regression': [fixtures.keyboardAssertion] }, ({ result, calls, output }) => {
     assert.equal(result.status, 1)

@@ -2,6 +2,8 @@
 
 ## 2026-11-06 按输入范围验证
 
+后续会员基础层为纯会员模型／服务及本地 StoreKit 目录选择 `membership`：每端保留全部 App 单元测试、两项账号 UI，另以独立、ad-hoc 签名的 `CookMembershipStoreKit` Scheme 执行实际 SDK 契约；不将测试商品配置放入默认或 Release Scheme。混入工程、数据、协议、未知路径时继续 core。core 和手动 full 的 `regression-main` 也执行该 StoreKit 步骤，任一步骤失败都会令矩阵单元及 `ios` 失败，不增加金融重试。编排测试实际执行对应 Bash 并验证构建／测试失败码保留。双设备本地覆盖和历史环境失败见 [会员验证](./ios-membership.md)。
+
 浏览器专属的页面、组件、适配器、组合函数、状态及已列出的对应测试只运行 Web 检查。`scripts/ci-changes.mjs` 使用白名单：共享协议（包括位于 Web 目录的 `utils/userData.ts`）、共享数据和资源、生成器、原生代码、依赖与构建配置、未知文件仍触发原生验证。重命名同时检查删除和新增路径，不能把原生文件移进 Web 目录来避开检查。说明文档包含 `specs/**/*.md`；打包的隐私政策仍是原生输入。
 
 push 仍只在同分支的精确前一提交 CI 已成功时免除原生任务；前一提交失败、取消、查询失败时继续跑原生。既有 PR 结果复用继续核验源码树和工具链，不扩大复用范围；`ios`、`swift`、`web-acceptance` 名称和失败门禁保持。2026-11-06 只读查询 main 的 branch protection 返回未保护，适用 rules API 返回空列表，仓库当前没有服务端 required checks；本改动不修改仓库设置。
@@ -11,6 +13,8 @@ push 仍只在同分支的精确前一提交 CI 已成功时免除原生任务�
 同轮失败位于旋转流程第二次点击番茄后的 `isSelected == false` 等待：234 项 App 单元测试和其他六项 UI 通过，旋转用例 483.953 秒后报告 `Failed to get matching snapshot`。此前菜单操作两次缺少动画完成通知，各等待约 60 秒；之后全局 `First Match` 对投影按钮重复获取快照失败。这是已定位的 XCTest 查询超时，日志不能证明产品的取消选中逻辑有误，也不能证明所有环境均不存在产品缺陷。投影按钮改为唯一完整匹配，旋转用例在每次动作和状态等待前重新查询；继续保留实际点击、选择／取消、3pt 移动、2pt 复位、禁止旋转、场景重建与前后台断言，正常动画和原有时限不变，没有新增重试。
 
 本地复用 iPhone 16 Pro / iOS 26.5，显式禁用并行测试，旋转专项 49.570 秒通过，构建与测试共 93 秒；与远端硬件、系统不同，不能据此宣称远端问题已全部解决。结果摘要与完整命令日志在本机 `~/Library/Developer/ReleaseArtifacts/Cook/20261106-ci-scope/`；临时 DerivedData 和结果包在导出后回收。完整系统审计仍通过手动 full 执行。当前发布前还须保留真实支付沙盒及账号切换验收，分类不替代这些门禁。
+
+后续 [PR #201 CI](https://github.com/YunYouJun/cook/actions/runs/42233579654) 在提交 `35fa43388c0acecff19eaf870be18dc257e4c767` 全部通过，两端各实际执行 234 项 App 单元与 7 项核心 UI，手机旋转 207.561 秒通过。两个原生任务分别约 23 分 35／36 秒；这轮改动原生查询与 CI 本身，仍运行完整核心矩阵，没有将其描述为 Web 专属变更的耗时。
 
 `swift` 在 Linux 上运行 CookCore 和跨端往返检查；`ios-tests` 使用 Xcode 27.1 和现有 iPhone、iPad 模拟器。
 

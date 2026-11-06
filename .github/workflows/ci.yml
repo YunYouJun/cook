@@ -49,7 +49,7 @@ jobs:
       - name: Test change detection
         run: node --test test/ciChanges.test.mjs
       - name: Test isolated iOS infrastructure recovery
-        run: node --test test/iosTestInfrastructure.test.mjs
+        run: node --test test/iosTestInfrastructure.test.mjs test/iosStoreKitInfrastructure.test.mjs
       - run: node --test test/iosCoreReuse.test.mjs
       - name: Plan native CI coverage
         id: changes
@@ -288,6 +288,12 @@ jobs:
           DEVICE: ${{ steps.environment.outputs[matrix.device] }}
           IOS_SUITE: ${{ matrix.suite }}
         run: bash scripts/run-ios-ci-tests.sh
+      - name: Verify local StoreKit contracts
+        if: contains(fromJSON('["core-regression", "membership", "regression-main"]'), matrix.suite)
+        timeout-minutes: 10
+        env:
+          DEVICE: ${{ steps.environment.outputs[matrix.device] }}
+        run: bash scripts/run-ios-storekit-tests.sh
       - name: Identify the tested PR core environment
         if: github.event_name == 'pull_request' && matrix.suite == 'core-regression' && steps.ios_tests.outcome == 'success'
         id: core_key
