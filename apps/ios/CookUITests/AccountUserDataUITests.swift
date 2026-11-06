@@ -26,13 +26,13 @@ final class AccountUserDataUITests: XCTestCase {
         let settings = app.buttons["数据与同步"].firstMatch
         reveal(settings, app: app)
         settings.tap()
-        let toggle = app.switches["sync.enabled"].firstMatch
+        var toggle: XCUIElement { app.switches["sync.enabled"].firstMatch }
         XCTAssertTrue(toggle.waitForExistence(timeout: 10))
-        XCTAssertEqual(toggle.value as? String, "0")
         // SwiftUI exposes the entire labelled row as an outer switch. Its
         // midpoint is the label; use the observed native switch underneath.
-        let control = toggle.switches.firstMatch
+        var control: XCUIElement { toggle.switches.firstMatch }
         XCTAssertTrue(control.waitForExistence(timeout: 10))
+        XCTAssertEqual(control.value as? String, "0")
         control.tap()
         let consentScreen = XCTAttachment(screenshot: app.screenshot())
         consentScreen.name = "Account sync consent"
@@ -45,8 +45,8 @@ final class AccountUserDataUITests: XCTestCase {
         let enable = app.buttons["启用同步"].firstMatch
         XCTAssertTrue(enable.waitForExistence(timeout: 10))
         enable.tap()
-        XCTAssertEqual(toggle.waitForState("value == '1'", timeout: 10), .completed)
-        let counts = app.staticTexts["sync.counts"].firstMatch
+        XCTAssertEqual(control.waitForState("value == '1'", timeout: 10), .completed)
+        var counts: XCUIElement { app.staticTexts["sync.counts"].firstMatch }
         XCTAssertEqual(counts.waitForState("label == %@", timeout: 10, argument: "账号记录、0 个收藏，0 条浏览记录"), .completed)
         let copy = app.buttons["sync.copyLocal"].firstMatch
         reveal(copy, app: app)
@@ -61,7 +61,7 @@ final class AccountUserDataUITests: XCTestCase {
         add(screenshot)
         reveal(toggle, app: app, upwards: false)
         control.tap()
-        XCTAssertEqual(toggle.waitForState("value == '0'", timeout: 10), .completed)
+        XCTAssertEqual(control.waitForState("value == '0'", timeout: 10), .completed)
         XCTAssertTrue(app.buttons["sync.now"].waitForNonExistence(timeout: 10))
     }
 
