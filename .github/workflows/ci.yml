@@ -205,6 +205,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm run convert
+      - name: Import Swift release signing keys
+        run: curl --fail --silent --show-error --location https://www.swift.org/keys/all-keys.asc | gpg --batch --import
       - name: Install Swift
         uses: swift-actions/setup-swift@364295d9c23900ce04d4e5cc708387921b4e50f9 # v3
         with:
