@@ -148,6 +148,8 @@ test('membership-only changes use financial coverage; mixed and unknown inputs r
     assert.deepEqual(planIosTests('push', undefined, result.scope).suites, ['membership'])
     assert.deepEqual(planIosTests('pull_request', undefined, result.scope).suites, ['membership'])
     assert.deepEqual(planIosTests('workflow_dispatch', 'core', result.scope).suites, ['core-regression'])
+    assert.deepEqual(planIosTests('workflow_dispatch', 'membership', 'core'), { suites: ['membership'], maxParallel: 2 })
+    assert.equal(planIosTests('workflow_dispatch', 'unknown', result.scope).suites.length, 3)
     assert.equal(planIosTests('workflow_dispatch', 'full', result.scope).suites.length, 3)
     write('apps/ios/Cook/App.swift', 'mixed native change')
     assert.equal(detectNativeChanges('push', { before: base, after: commit() }, cwd).scope, 'core')

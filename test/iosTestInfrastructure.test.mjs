@@ -291,6 +291,7 @@ test('native CI bounds build and test time and runs device groups independently'
   assert.match(nativeJob, /timeout-minutes: \$\{\{ matrix.suite == 'core-regression' && 45 \|\| 90 \}\}/)
   assert.match(workflow, /ios_suites: \$\{\{ steps.changes.outputs.ios_suites \}\}/)
   assert.match(workflow, /ios_coverage:[\s\S]*?default: full/)
+  assert.match(workflow, /inputs\.ios_coverage == 'membership' && 'membership'/)
   assert.match(workflow, /group: ci-.*github\.event_name == 'workflow_dispatch' && inputs\.ios_coverage != 'core' && 'full' \|\| 'core'/)
   assert.match(workflow, /cancel-in-progress: true/)
 })

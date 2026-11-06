@@ -14,16 +14,17 @@ on:
   workflow_dispatch:
     inputs:
       ios_coverage:
-        description: iOS 测试范围：full 完整回归与审计，core 核心回归
+        description: iOS 测试范围：full 完整回归与审计，core 核心回归，membership 会员交易
         type: choice
         default: full
         options:
           - full
           - core
+          - membership
 
 concurrency:
   # A core push must not cancel an explicitly requested full audit.
-  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.ios_coverage != 'core' && 'full' || 'core' }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.ios_coverage == 'membership' && 'membership' || github.event_name == 'workflow_dispatch' && inputs.ios_coverage != 'core' && 'full' || 'core' }}
   cancel-in-progress: true
 
 jobs:

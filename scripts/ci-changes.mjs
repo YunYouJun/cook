@@ -69,6 +69,8 @@ function isMembershipInput(path) {
 }
 
 export function planIosTests(eventName, coverage, scope) {
+  if (eventName === 'workflow_dispatch' && coverage === 'membership')
+    return { suites: ['membership'], maxParallel: 2 }
   const core = eventName === 'push' || eventName === 'pull_request'
     || (eventName === 'workflow_dispatch' && coverage === 'core')
   if (core && eventName !== 'workflow_dispatch' && scope === 'membership')
