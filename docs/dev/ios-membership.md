@@ -53,3 +53,7 @@ asc subscriptions list --app 6824589542
 - 真实 Apple Sandbox、云端事务／并发、换机重装、完整会员 UI、VoiceOver、大字号、TestFlight 分发与正式上架均须分别留证。本地 StoreKit 和模拟器不能替代真实沙盒。
 
 本机本轮报告位于 `~/Library/Developer/ReleaseArtifacts/Cook/20261106-membership-foundation/`；任务独占 DerivedData／结果包在导出日志与摘要后回收，共享设备仅恢复本轮启动前的关闭状态，不新增或清空设备。
+
+### Linux 工具链验收
+
+基础 PR 首次远端运行 `42242072527` 的 Swift job 在测试执行前链接失败：`libswiftObservation.so` 缺少 `swift::threading::fatal`，并非会员断言失败。CI 固定版本由 6.2.1 升至 6.2.2，保留全部 Linux 测试及 Observation；[Swift 6.2.2 官方发布说明](https://forums.swift.org/t/announcing-swift-6-2-2/83637)列出对应修复。后续运行结果单独记录，首次失败不计为通过。

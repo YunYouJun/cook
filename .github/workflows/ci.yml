@@ -208,7 +208,7 @@ jobs:
       - name: Install Swift
         uses: swift-actions/setup-swift@v2.4.0
         with:
-          swift-version: 6.2.1
+          swift-version: 6.2.2
       - run: swift --version
       - run: swift test --package-path apps/ios/CookCore
       - run: bash scripts/test-private-recipe-roundtrip.sh
