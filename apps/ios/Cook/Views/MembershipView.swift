@@ -12,7 +12,7 @@ struct MembershipView: View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 8) {
-                    Label { Text("云乐坊会员") } icon: { Image(systemName: "star.circle.fill").accessibilityHidden(true) }
+                    Label { Text("云乐坊会员").fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "star.circle.fill").accessibilityHidden(true) }
                         .font(.title2.bold())
                     if membership.signedIn {
                         Text(membership.accountName).foregroundStyle(.secondary)
@@ -45,8 +45,8 @@ struct MembershipView: View {
                 }
             }
             Section {
-                Label("收藏和浏览历史跨平台同步", systemImage: "icloud")
-                Label("会员智能找菜", systemImage: "sparkles")
+                Label { Text("收藏和浏览历史跨平台同步").fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "icloud").accessibilityHidden(true) }
+                Label { Text("会员智能找菜").fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "sparkles").accessibilityHidden(true) }
                 Text("基础做菜功能无需会员。智能服务以当前可用能力和额度为准。")
                     .font(.footnote).foregroundStyle(.secondary)
             } header: {
@@ -124,6 +124,9 @@ struct MembershipView: View {
                     .contentShape(Rectangle())
                 }
                 .disabled(membership.isLoading || membership.coordinator.isBusy || accounts.isBusy)
+                .accessibilityLabel(product.title)
+                .accessibilityValue(product.displayPrice)
+                .accessibilityHint(renews ? "查看并确认自动续费方案" : "查看并确认单次购买")
                 .accessibilityIdentifier("membership.buy.\(product.id)")
             }
             if products.isEmpty {
