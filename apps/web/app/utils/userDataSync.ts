@@ -52,8 +52,8 @@ export function activateUserDataAccount(uid: string, local: UserDataLocal, cache
 }
 
 export class UserDataSyncError extends Error {
-  constructor(public readonly code: 'invalid_remote' | 'remote_failed' | 'cancelled' | 'membership_required' | 'login_required', options?: { cause?: unknown }) {
-    super(code === 'invalid_remote' ? '云端数据格式无法识别' : code === 'cancelled' ? '同步会话已改变' : code === 'membership_required' ? '跨平台同步需要有效的云乐坊会员，本机记录已保留' : code === 'login_required' ? '请重新登录后同步，本机记录已保留' : '云端同步失败', options)
+  constructor(public readonly code: 'invalid_remote' | 'remote_failed' | 'cancelled' | 'membership_required' | 'login_required' | 'scope_failed', options?: { cause?: unknown }) {
+    super(code === 'invalid_remote' ? '云端数据格式无法识别' : code === 'cancelled' ? '同步会话已改变' : code === 'membership_required' ? '跨平台同步需要有效的云乐坊会员，本机记录已保留' : code === 'login_required' ? '请重新登录后同步，本机记录已保留' : code === 'scope_failed' ? '账号记录切换失败，原数据已保留，请恢复浏览器存储后重试' : '云端同步失败', options)
     this.name = 'UserDataSyncError'
   }
 }

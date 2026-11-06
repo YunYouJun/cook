@@ -79,6 +79,7 @@ function mergeFavorites(
   const favoriteRemovals = pruneTombstones(
     [...latestRemoval.values()].filter(removal => (latestAdd.get(removal.id)?.time ?? -1) <= removal.time),
     now,
+    (x, y) => x.id - y.id,
   )
     .map(({ id, time }) => ({ id, time }))
     .sort((x, y) => x.time - y.time || x.id - y.id)
@@ -95,6 +96,7 @@ function mergeHistories(
   const historyRemovals = pruneTombstones(
     uniqueBy(removals.filter(removal => removal.time > clearedAt), removal => historyKey(removal.name, removal.time)),
     now,
+    (x, y) => compareNames(x.name, y.name),
   )
     .map(({ name, time }) => ({ name, time }))
     .sort((x, y) => x.time - y.time || compareNames(x.name, y.name))
@@ -161,10 +163,10 @@ function uniqueBy<T>(list: T[], key: (item: T) => string): T[] {
   return [...map.values()]
 }
 
-function pruneTombstones<T extends { time: number }>(list: T[], now: number): T[] {
+function pruneTombstones<T extends { time: number }>(list: T[], now: number, breakTie: (a: T, b: T) => number): T[] {
   return list
     .filter(item => item.time >= now - TOMBSTONE_TTL)
-    .sort((x, y) => y.time - x.time)
+    .sort((x, y) => y.time - x.time || breakTie(x, y))
     .slice(0, TOMBSTONE_LIMIT)
 }
 

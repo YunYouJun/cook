@@ -35,7 +35,8 @@ final class YunlefunAccountStore {
     }
 
     func refreshIfNeeded() async {
-        guard didRestore, let credential, credential.expiresAt.timeIntervalSinceNow < 60 else { return }
+        guard didRestore, let credential,
+              account == nil || canRetry || credential.expiresAt.timeIntervalSinceNow < 60 else { return }
         await refreshSession()
     }
 
@@ -46,12 +47,15 @@ final class YunlefunAccountStore {
 
     func credentialForRequest() async throws -> YunlefunCredential {
         guard !isBusy else { throw YunlefunAccountError.unavailable }
-        guard let user = account, let current = credential, user.id == current.subject else {
+        guard let current = credential else {
             throw YunlefunAccountError.expiredSession
         }
-        if current.expiresAt.timeIntervalSinceNow < 60 { await refreshSession() }
+        let subject = current.subject
+        if account?.id != subject || canRetry || current.expiresAt.timeIntervalSinceNow < 60 { await refreshSession() }
         try Task.checkCancellation()
-        guard let next = credential, account?.id == user.id, next.subject == user.id, next.expiresAt > Date() else {
+        guard let next = credential, next.subject == subject else { throw YunlefunAccountError.expiredSession }
+        guard account?.id == subject, next.expiresAt > Date() else {
+            if canRetry { throw YunlefunAccountError.unavailable }
             throw YunlefunAccountError.expiredSession
         }
         return next

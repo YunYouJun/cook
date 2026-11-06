@@ -82,7 +82,7 @@ public struct UserDataDocument: Codable, Equatable, Sendable {
         let removes = Self.latest(favoriteRemovals + other.favoriteRemovals)
         result.favorites = adds.values.filter { (removes[$0.id]?.time ?? -1) < $0.time }
             .sorted { ($0.time, $0.id) < ($1.time, $1.id) }
-        result.favoriteRemovals = Self.prune(Array(removes.values.filter { (adds[$0.id]?.time ?? -1) <= $0.time }), now: now, time: \.time)
+        result.favoriteRemovals = Self.prune(Array(removes.values.filter { (adds[$0.id]?.time ?? -1) <= $0.time }), now: now, time: \.time, breakTie: { $0.id < $1.id })
             .sorted { ($0.time, $0.id) < ($1.time, $1.id) }
 
         struct VisitKey: Hashable { let name: String; let time: Double }
@@ -90,7 +90,7 @@ public struct UserDataDocument: Codable, Equatable, Sendable {
         let removals = (historyRemovals + other.historyRemovals).filter {
             $0.time > result.historyClearedAt && removalKeys.insert(VisitKey(name: $0.name, time: $0.time)).inserted
         }
-        result.historyRemovals = Self.prune(removals, now: now, time: \.time).sorted {
+        result.historyRemovals = Self.prune(removals, now: now, time: \.time, breakTie: { $0.name.utf16.lexicographicallyPrecedes($1.name.utf16) }).sorted {
             $0.time == $1.time ? $0.name.utf16.lexicographicallyPrecedes($1.name.utf16) : $0.time < $1.time
         }
         let removed = Set(result.historyRemovals.map { VisitKey(name: $0.name, time: $0.time) })
@@ -113,8 +113,8 @@ public struct UserDataDocument: Codable, Equatable, Sendable {
         }
     }
 
-    private static func prune<T>(_ values: [T], now: Double, time: KeyPath<T, Double>) -> [T] {
+    private static func prune<T>(_ values: [T], now: Double, time: KeyPath<T, Double>, breakTie: (T, T) -> Bool) -> [T] {
         Array(values.filter { $0[keyPath: time] >= now - 180 * 24 * 60 * 60 * 1000 }
-            .sorted { $0[keyPath: time] > $1[keyPath: time] }.prefix(500))
+            .sorted { $0[keyPath: time] == $1[keyPath: time] ? breakTie($0, $1) : $0[keyPath: time] > $1[keyPath: time] }.prefix(500))
     }
 }

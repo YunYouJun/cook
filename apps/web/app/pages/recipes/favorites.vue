@@ -14,7 +14,9 @@ definePageMeta({
 })
 
 const loading = ref(true)
-const recipes = shallowRef<DbRecipeItem[]>([])
+const allRecipes = shallowRef<DbRecipeItem[]>([])
+const recipes = computed(() => allRecipes.value.filter(r => isFavorited(r)))
+const { scopeBlocked, scopeRevision } = useUserDataSync()
 const keyword = ref('')
 const sortKey = ref<'time' | 'name'>('time')
 
@@ -38,7 +40,7 @@ const displayed = computed(() => {
 async function loadFavorites() {
   try {
     const all = await db.recipes.toArray()
-    recipes.value = all.filter(r => isFavorited(r))
+    allRecipes.value = all
   }
   finally {
     loading.value = false
@@ -48,19 +50,21 @@ async function loadFavorites() {
 onMounted(loadFavorites)
 
 async function clearAllFavorites() {
+  const revision = scopeRevision.value
   if (!await confirmDestructive({ header: '将取消所有收藏', confirmText: '清空收藏' }))
+    return
+  if (scopeBlocked.value || scopeRevision.value !== revision)
     return
   for (const item of recipes.value)
     toggleFavorite(item)
   void yunleHaptic('success')
-  await loadFavorites()
 }
 
 function onToggleFavorite(item: DbRecipeItem) {
+  if (scopeBlocked.value || !isFavorited(item))
+    return
   toggleFavorite(item)
   void yunleHaptic('medium')
-  // update list immediately
-  recipes.value = recipes.value.filter(r => isFavorited(r))
 }
 </script>
 

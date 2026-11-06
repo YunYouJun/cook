@@ -107,6 +107,56 @@ final class AccountUserDataTests: XCTestCase {
         XCTAssertNil(accounts.dataAccountID)
     }
 
+    func testStillValidOfflineSessionRecoversThroughForegroundAndManualRequests() async throws {
+        let vault = MemoryYunlefunAccountVault()
+        vault.credential = auth("a")
+        let service = RecoveringAccountService()
+        let accounts = YunlefunAccountStore(service: service, vault: vault)
+        await accounts.restore()
+        XCTAssertNil(accounts.account)
+        do {
+            _ = try await accounts.credentialForRequest()
+            XCTFail("Offline profile must not be treated as verified")
+        } catch YunlefunAccountError.unavailable {} // Retryable network failure.
+        service.offline = false
+        let restored = try await accounts.credentialForRequest()
+        XCTAssertEqual(restored.subject, "a")
+        XCTAssertEqual(accounts.account?.id, "a")
+        XCTAssertEqual(service.refreshes, 0, "A valid token only needs profile recovery")
+
+        service.offline = true
+        await accounts.retry()
+        XCTAssertNil(accounts.account)
+        service.offline = false
+        await accounts.refreshIfNeeded()
+        XCTAssertEqual(accounts.account?.id, "a")
+    }
+
+    func testSyncAutomaticallyRecoversAStillValidSessionAfterNetworkReturns() async throws {
+        let vault = MemoryYunlefunAccountVault()
+        vault.credential = auth("a")
+        let accountService = RecoveringAccountService()
+        let accounts = YunlefunAccountStore(service: accountService, vault: vault)
+        await accounts.restore()
+        let cache = MemoryAccountUserDataCache()
+        cache.values["a"] = AccountUserDataSnapshot(enabled: true, document: UserDataDocument())
+        let syncService = FakeUserDataService()
+        syncService.succeeds = true
+        let restored = expectation(description: "sync resumed without another login")
+        syncService.started = { restored.fulfill() }
+        let offline = expectation(description: "profile recovery failed offline")
+        accountService.onOffline = { offline.fulfill() }
+        let store = AccountUserDataStore(cache: cache, service: syncService, credential: { try await accounts.credentialForRequest() })
+        store.activate("a")
+        await fulfillment(of: [offline], timeout: 2)
+        accountService.offline = false
+        accountService.onOffline = nil
+        await fulfillment(of: [restored], timeout: 5)
+        XCTAssertEqual(accounts.account?.id, "a")
+        XCTAssertEqual(syncService.calls, 1)
+        store.activate(nil)
+    }
+
     func testFileCacheRoundTripAndCorruptionProtection() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -147,15 +197,31 @@ private struct OfflineAccountService: YunlefunAccountServing {
 }
 
 @MainActor
+private final class RecoveringAccountService: YunlefunAccountServing {
+    var offline = true
+    var refreshes = 0
+    var onOffline: (() -> Void)?
+    func signIn(fields: [String: String], deviceID: String) async throws -> YunlefunCredential { throw URLError(.unsupportedURL) }
+    func refresh(_ credential: YunlefunCredential) async throws -> YunlefunCredential { refreshes += 1; return credential }
+    func account(_ credential: YunlefunCredential) async throws -> YunlefunAccount {
+        if offline { onOffline?(); throw URLError(.notConnectedToInternet) }
+        return YunlefunAccount(id: credential.subject, name: "Fixture", username: nil, status: "ACTIVE", isAnonymous: false)
+    }
+    func signOut(_ credential: YunlefunCredential) async throws {}
+}
+
+@MainActor
 private final class FakeUserDataService: UserDataSyncServing {
     var accessError: Error?
     var calls = 0
     var pause = false
+    var succeeds = false
     var started: (() -> Void)?
     var finish: ((UserDataDocument) -> Void)?
     func checkAccess(credential: YunlefunCredential) async throws { if let accessError { throw accessError } }
     func sync(_ document: UserDataDocument, credential: YunlefunCredential) async throws -> UserDataDocument {
         calls += 1
+        if succeeds { started?(); return document }
         if pause {
             return await withCheckedContinuation { continuation in
                 finish = { continuation.resume(returning: $0) }

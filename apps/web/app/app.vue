@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // import { installPrompt } from './utils/pwa'
 import { isClient } from '@vueuse/core'
+import ScopeUnavailable from '~/components/user-data/ScopeUnavailable.vue'
 import { useIndexedDB } from '~/composables/db'
 import { cookDocumentHead } from '~/constants'
 
@@ -11,6 +12,7 @@ useHead(cookDocumentHead())
 const indexedDB = useIndexedDB()
 const { isDark, setDarkMode, setLightMode } = useDarkMode()
 const sidebarCollapsed = shallowRef(false)
+const { scopeBlocked, syncNow } = useUserDataSync()
 
 onMounted(() => {
   // init dark mode
@@ -38,8 +40,11 @@ onMounted(() => {
     <NuxtPage />
   </NuxtLayout> -->
   <ion-app class="cook-app-shell" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
-    <DesktopSidebar v-model:collapsed="sidebarCollapsed" />
-    <ion-router-outlet class="cook-main-outlet" />
+    <ScopeUnavailable v-if="scopeBlocked" @retry="syncNow" />
+    <template v-else>
+      <DesktopSidebar v-model:collapsed="sidebarCollapsed" />
+      <ion-router-outlet class="cook-main-outlet" />
+    </template>
   </ion-app>
 </template>
 

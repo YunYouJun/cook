@@ -28,6 +28,36 @@ final class UserDataDocumentTests: XCTestCase {
         XCTAssertThrowsError(try value.validate())
     }
 
+    func testSharedQuotaBoundaryCasesConverge() throws {
+        struct Boundary: Decodable {
+            let name: String
+            let kind: String
+            let now: Double
+            let leftStart: Int
+            let rightStart: Int
+            let count: Int
+            let expectedStart: Int
+            let expectedCount: Int
+            func document(start: Int, count: Int) -> UserDataDocument {
+                var value = UserDataDocument()
+                if kind == "favorites" {
+                    value.favoriteRemovals = (start..<(start + count)).map { .init(id: $0, time: now) }
+                } else {
+                    value.historyRemovals = (start..<(start + count)).map { .init(name: String(format: "recipe-%04d", $0), time: now) }
+                }
+                return value
+            }
+        }
+        for fixture in try SharedFixtureTests.fixture([Boundary].self, "user-data-sync-boundaries.json") {
+            let a = fixture.document(start: fixture.leftStart, count: fixture.count)
+            let b = fixture.document(start: fixture.rightStart, count: fixture.count)
+            let expected = fixture.document(start: fixture.expectedStart, count: fixture.expectedCount)
+            XCTAssertEqual(a.merging(b, now: fixture.now), expected, fixture.name)
+            XCTAssertEqual(b.merging(a, now: fixture.now), expected, fixture.name)
+            XCTAssertEqual(expected.merging(b, now: fixture.now), expected, fixture.name)
+        }
+    }
+
     func testHistoryLimitAndTombstoneLifetime() throws {
         var value = UserDataDocument()
         let recipe = UserDataDocument.RecipeSnapshot(recipe: Recipe(id: 1, name: "A", stuff: [], tools: []))

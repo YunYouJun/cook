@@ -17,6 +17,8 @@ interface UserDataSyncState {
   errorMessage: string
   lastSyncedAt: number
   status: UserDataSyncStatus
+  scopeBlocked: boolean
+  scopeRevision: number
 }
 
 /** Wait this long after a local change before pushing it. */
@@ -33,10 +35,12 @@ export function useUserDataSync() {
     errorMessage: '',
     lastSyncedAt: 0,
     status: 'idle',
+    scopeBlocked: false,
+    scopeRevision: 0,
   }))
 
   function install(): void {
-    if (!import.meta.client || scheduler)
+    if (typeof window === 'undefined' || scheduler)
       return
 
     const auth = useYunlefunAuth()
@@ -59,20 +63,31 @@ export function useUserDataSync() {
       },
     }
 
+    function selectLocalScope(current: string): void {
+      scopeReady = false
+      applyingRemote = true
+      try {
+        activateUserDataAccount(current, local, window.localStorage)
+        scopeReady = true
+        state.value = { ...state.value, scopeBlocked: false }
+      }
+      catch (cause) {
+        state.value = { ...state.value, scopeBlocked: true, errorMessage: '账号记录切换失败，原数据已保留，请恢复浏览器存储后重试', lastSyncedAt: 0, status: 'error' }
+        throw new UserDataSyncError('scope_failed', { cause })
+      }
+      finally { applyingRemote = false }
+    }
+
     const activeScheduler = createUserDataSyncScheduler({
       run: async () => {
         const current = uid.value
         const generation = sessionGeneration
         const isCurrent = () => uid.value === current && sessionGeneration === generation
-        if (!current)
+        if (!scopeReady)
+          selectLocalScope(current)
+        if (!current) {
+          state.value = { ...state.value, errorMessage: '', status: 'idle' }
           return
-        if (!scopeReady) {
-          applyingRemote = true
-          try {
-            activateUserDataAccount(current, local, window.localStorage)
-            scopeReady = true
-          }
-          finally { applyingRemote = false }
         }
         state.value = { ...state.value, errorMessage: '', status: 'syncing' }
         const remote = createCloudbaseUserDataRemote((name, data) => {
@@ -82,7 +97,7 @@ export function useUserDataSync() {
         })
         await syncUserData(current, local, remote, Date.now(), isCurrent)
         if (uid.value === current)
-          state.value = { errorMessage: '', lastSyncedAt: Date.now(), status: 'synced' }
+          state.value = { ...state.value, errorMessage: '', lastSyncedAt: Date.now(), status: 'synced' }
       },
       onError: (error) => {
         if (!uid.value || (error instanceof UserDataSyncError && error.code === 'cancelled'))
@@ -100,26 +115,20 @@ export function useUserDataSync() {
     watch(uid, (current) => {
       sessionGeneration += 1
       activeScheduler.stop()
-      scopeReady = false
+      state.value = { ...state.value, scopeRevision: state.value.scopeRevision + 1 }
       try {
-        applyingRemote = true
-        activateUserDataAccount(current, local, window.localStorage)
-        scopeReady = true
+        selectLocalScope(current)
       }
       catch {
-        state.value = { errorMessage: '账号记录切换失败，原数据已保留，请导出备份后重试', lastSyncedAt: 0, status: 'error' }
         return
       }
-      finally {
-        applyingRemote = false
-      }
-      state.value = { errorMessage: '', lastSyncedAt: 0, status: 'idle' }
+      state.value = { ...state.value, errorMessage: '', lastSyncedAt: 0, status: 'idle' }
       if (current) {
         activeScheduler.request()
         return
       }
       activeScheduler.stop()
-      state.value = { errorMessage: '', lastSyncedAt: 0, status: 'idle' }
+      state.value = { ...state.value, errorMessage: '', lastSyncedAt: 0, status: 'idle' }
     }, { immediate: true, flush: 'sync' })
 
     watch(
@@ -155,6 +164,8 @@ export function useUserDataSync() {
     install,
     lastSyncedAt: computed(() => state.value.lastSyncedAt),
     status: computed(() => state.value.status),
+    scopeBlocked: computed(() => state.value.scopeBlocked),
+    scopeRevision: computed(() => state.value.scopeRevision),
     syncNow,
   }
 }

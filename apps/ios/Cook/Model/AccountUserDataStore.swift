@@ -187,6 +187,7 @@ final class AccountUserDataStore {
             guard generation == current else { return }
             message = (error as? UserDataSyncFailure)?.localizedDescription ?? UserDataSyncFailure.unavailable.localizedDescription
             if case UserDataSyncFailure.unavailable = error { retryDelay = min(30, pow(2, Double(retry))); retry += 1 }
+            else if case YunlefunAccountError.unavailable = error { retryDelay = min(30, pow(2, Double(retry))); retry += 1 }
             else if error is URLError { retryDelay = min(30, pow(2, Double(retry))); retry += 1 }
         }
         guard generation == current else { return }

@@ -185,8 +185,10 @@ struct CookApp: App {
                     .onChange(of: scenePhase) { _, phase in
                         if phase == .active {
                             ai.expireManagedCapabilityIfNeeded()
-                            Task { await accounts.refreshIfNeeded() }
-                            userData.requestSync()
+                            Task {
+                                await accounts.refreshIfNeeded()
+                                userData.requestSync()
+                            }
                         }
                     }
 

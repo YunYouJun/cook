@@ -44,13 +44,13 @@ function mergeFavorites(adds, removals, now) {
         .filter(add => (latestRemoval.get(add.id)?.time ?? -1) < add.time)
         .map(({ id, time }) => ({ id, time }))
         .sort((x, y) => x.time - y.time || x.id - y.id);
-    const favoriteRemovals = pruneTombstones([...latestRemoval.values()].filter(removal => (latestAdd.get(removal.id)?.time ?? -1) <= removal.time), now)
+    const favoriteRemovals = pruneTombstones([...latestRemoval.values()].filter(removal => (latestAdd.get(removal.id)?.time ?? -1) <= removal.time), now, (x, y) => x.id - y.id)
         .map(({ id, time }) => ({ id, time }))
         .sort((x, y) => x.time - y.time || x.id - y.id);
     return { favorites, favoriteRemovals };
 }
 function mergeHistories(entries, removals, clearedAt, now) {
-    const historyRemovals = pruneTombstones(uniqueBy(removals.filter(removal => removal.time > clearedAt), removal => historyKey(removal.name, removal.time)), now)
+    const historyRemovals = pruneTombstones(uniqueBy(removals.filter(removal => removal.time > clearedAt), removal => historyKey(removal.name, removal.time)), now, (x, y) => compareNames(x.name, y.name))
         .map(({ name, time }) => ({ name, time }))
         .sort((x, y) => x.time - y.time || compareNames(x.name, y.name));
     const removed = new Set(historyRemovals.map(removal => historyKey(removal.name, removal.time)));
@@ -106,10 +106,10 @@ function uniqueBy(list, key) {
     }
     return [...map.values()];
 }
-function pruneTombstones(list, now) {
+function pruneTombstones(list, now, breakTie) {
     return list
         .filter(item => item.time >= now - exports.TOMBSTONE_TTL)
-        .sort((x, y) => y.time - x.time)
+        .sort((x, y) => y.time - x.time || breakTie(x, y))
         .slice(0, exports.TOMBSTONE_LIMIT);
 }
 function toPlain(data) {
