@@ -57,6 +57,7 @@ case "$IOS_SUITE" in
     run_tests "$DEVICE" core-regression \
       -only-testing:CookTests \
       -only-testing:CookUITests/AccountUserDataUITests \
+      -only-testing:CookUITests/MembershipUITests \
       -only-testing:CookUITests/DietaryGoalsUITests/testNextDayLunchAndWeightGoalAtAccessibilitySize \
       -only-testing:CookUITests/DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone \
       -only-testing:CookUITests/CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval \
@@ -68,7 +69,8 @@ case "$IOS_SUITE" in
     # regular host's App units and account presentation in this invocation.
     run_tests "$DEVICE" membership \
       -only-testing:CookTests \
-      -only-testing:CookUITests/AccountUserDataUITests
+      -only-testing:CookUITests/AccountUserDataUITests \
+      -only-testing:CookUITests/MembershipUITests
     ;;
   regression-main)
     # Everything else, including all App unit tests and newly added UI suites.
@@ -76,7 +78,8 @@ case "$IOS_SUITE" in
       -skip-testing:CookUITests/CloudKitchenUITests \
       -skip-testing:CookUITests/CookDiscoveryUITests \
       -skip-testing:CookUITests/RandomRecipeUITests \
-      -skip-testing:CookUITests/DietaryGoalsUITests
+      -skip-testing:CookUITests/DietaryGoalsUITests \
+      -skip-testing:CookUITests/MembershipStoreKitUITests
     ;;
   regression-discovery)
     run_tests "$DEVICE" regression-discovery \

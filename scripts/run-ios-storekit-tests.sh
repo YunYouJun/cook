@@ -18,6 +18,7 @@ cat "$build_log"
 [[ "$code" == 0 ]] || exit "$code"
 xcrun simctl bootstatus "$DEVICE" -b
 xcodebuild test-without-building -project apps/ios/Cook.xcodeproj -scheme CookMembershipStoreKit \
+  -only-testing:CookStoreKitTests -only-testing:CookUITests/MembershipStoreKitUITests \
   -destination "id=$DEVICE" -destination-timeout 180 -parallel-testing-enabled NO \
   -derivedDataPath "$RUNNER_TEMP/cook-derived-data" -collect-test-diagnostics never \
   -test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 120 \

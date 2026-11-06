@@ -45,6 +45,8 @@ process.exit(Number(args[0] === 'build-for-testing' ? process.env.BUILD_EXIT : p
       if (calls.length === 2) {
         assert.equal(calls[1][calls[1].indexOf('-destination') + 1], 'id=existing-phone')
         assert.ok(calls[1].includes('-resultBundlePath'))
+        assert.ok(calls[1].includes('-only-testing:CookUITests/MembershipStoreKitUITests'))
+        assert.ok(calls[1].includes('-only-testing:CookStoreKitTests'))
       }
     }
     finally { rmSync(task, { recursive: true, force: true }) }

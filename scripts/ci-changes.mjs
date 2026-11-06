@@ -64,7 +64,7 @@ function isWebOnly(path) {
 }
 
 function isMembershipInput(path) {
-  return /^apps\/ios\/(?:Cook\/Model\/(?:NativeMembershipStoreKit|Membership\w*)|CookCore\/(?:Sources\/CookCore|Tests\/CookCoreTests)\/Membership\w*)\.swift$/.test(path)
+  return /^apps\/ios\/(?:Cook\/(?:Model\/(?:NativeMembershipStoreKit|Membership\w*)|Views\/Membership\w*)|CookCore\/(?:Sources\/CookCore|Tests\/CookCoreTests)\/Membership\w*|Cook(?:UI)?Tests\/Membership\w*)\.swift$/.test(path)
     || path.startsWith('apps/ios/StoreKitValidation/')
 }
 

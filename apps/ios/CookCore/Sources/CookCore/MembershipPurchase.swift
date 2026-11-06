@@ -65,6 +65,7 @@ public struct MembershipSettlementReceipt: Sendable {
 
 @MainActor public protocol MembershipSettling: AnyObject {
     var environment: MembershipStoreEnvironment { get }
+    func preparePurchase(productID: String, for identity: MembershipPurchaseIdentity) async throws
     func entitlement(for identity: MembershipPurchaseIdentity) async throws -> MembershipEntitlement
     /// Reconcile revocations as well as purchases; never extend an already settled transaction.
     func settle(_ transaction: MembershipTransaction, for identity: MembershipPurchaseIdentity) async throws -> MembershipSettlementReceipt
@@ -146,7 +147,12 @@ public enum MembershipPurchaseFailure: Error { case invalidResponse, accountChan
                 throw MembershipPurchaseFailure.invalidResponse
             }
             entitlement = value
-        } catch { if isCurrent(owner) { entitlement = nil; notice = .unavailable } }
+        } catch {
+            if isCurrent(owner) {
+                entitlement = nil
+                notice = pendingTransactionIDs.isEmpty ? .unavailable : .awaitingConfirmation
+            }
+        }
     }
 
     public func purchase(productID: String) async {
@@ -156,6 +162,8 @@ public enum MembershipPurchaseFailure: Error { case invalidResponse, accountChan
         operation = operationID; isBusy = true; notice = nil
         defer { if operation == operationID { operation = nil; isBusy = false } }
         do {
+            try await settlement.preparePurchase(productID: productID, for: owner)
+            try requireCurrent(owner)
             switch try await commerce.purchase(productID: productID, accountToken: owner.accountToken) {
             case .cancelled: if isCurrent(owner) { notice = .cancelled }
             case .pending: if isCurrent(owner) { notice = .pendingApproval }
@@ -181,18 +189,20 @@ public enum MembershipPurchaseFailure: Error { case invalidResponse, accountChan
         operation = operationID; isBusy = true; notice = nil
         defer { if operation == operationID { operation = nil; isBusy = false } }
         do {
-            await process(try await commerce.restore(), owner: owner)
+            await process(try await commerce.restore(), owner: owner, refreshAfter: false)
             if isCurrent(owner) { await refresh() }
         } catch is CancellationError { if isCurrent(owner) { notice = .cancelled } }
         catch { if isCurrent(owner) { notice = .awaitingConfirmation } }
     }
 
-    private func process(_ values: [MembershipTransaction], owner: MembershipPurchaseIdentity) async {
+    private func process(_ values: [MembershipTransaction], owner: MembershipPurchaseIdentity, refreshAfter: Bool = true) async {
         var seen = Set<String>()
+        var touchedAccount = false
         for transaction in values where seen.insert(transaction.id).inserted {
             guard isCurrent(owner) else { return }
             guard productIDs.contains(transaction.productID) else { continue }
             guard transaction.accountToken == owner.accountToken else { notice = .anotherAccount; continue }
+            touchedAccount = true
             pendingTransactionIDs.insert(transaction.id)
             do {
                 // A listener, purchase result and restore may deliver the same ID
@@ -208,7 +218,7 @@ public enum MembershipPurchaseFailure: Error { case invalidResponse, accountChan
                 if isCurrent(owner) { pendingTransactionIDs.remove(transaction.id); notice = .confirmed }
             } catch { if isCurrent(owner) { notice = .awaitingConfirmation } }
         }
-        if isCurrent(owner) { await refresh() }
+        if refreshAfter, touchedAccount, isCurrent(owner) { await refresh() }
     }
 
     private func confirm(_ transaction: MembershipTransaction, owner: MembershipPurchaseIdentity) async throws {

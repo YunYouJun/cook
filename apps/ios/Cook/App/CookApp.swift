@@ -19,6 +19,7 @@ struct CookApp: App {
     @State private var workbench: KitchenWorkbench
     @State private var ai: CookAISettings
     @State private var userData: AccountUserDataStore
+    @State private var membership: MembershipStore
     #if DEBUG
         @State private var videoFixtureLoaded = false
     #endif
@@ -47,6 +48,15 @@ struct CookApp: App {
         _session = State(initialValue: CookSession(defaultPantry: defaultPantry, context: container.mainContext, dietaryDefaults: inMemory ? nil : .standard))
         let accounts = YunlefunAccountStore(vault: inMemory ? MemoryYunlefunAccountVault() : KeychainYunlefunAccountVault())
         _accounts = State(initialValue: accounts)
+        #if DEBUG
+            if uiTesting, ProcessInfo.processInfo.arguments.contains("-ui-testing-membership") {
+                _membership = State(initialValue: MembershipUIFixture.makeStore())
+            } else {
+                _membership = State(initialValue: MembershipStore.live(accounts: accounts, isolated: inMemory))
+            }
+        #else
+            _membership = State(initialValue: MembershipStore.live(accounts: accounts, isolated: false))
+        #endif
         let disabledSyncTransport: UserDataSyncService.Transport = { _ in throw URLError(.notConnectedToInternet) }
         var syncTransport: UserDataSyncService.Transport? = inMemory ? disabledSyncTransport : nil
         var syncCredential: () async throws -> YunlefunCredential = { try await accounts.credentialForRequest() }
@@ -149,6 +159,7 @@ struct CookApp: App {
                     .environment(favoriteActions)
                     .environment(workbench)
                     .environment(accounts)
+                    .environment(membership)
                     .environment(ai)
                     .environment(\.accountUserData, userData)
                     .environment(\.privateRecipeVideos, privateVideos)
@@ -169,9 +180,16 @@ struct CookApp: App {
                             }
                         #endif
                         await accounts.restore()
+                        if CookFeatures.membershipUIEnabled || CookFeatures.membershipPurchasesEnabled { await membership.reload() }
                         if ai.wantsManagedDeepSeek { await ai.refreshManagedCapability(accounts: accounts) }
                     }
-                    .onChange(of: accounts.sessionRevision) { ai.invalidateManagedCapability(accounts: accounts) }
+                    .onChange(of: accounts.sessionRevision) {
+                        ai.invalidateManagedCapability(accounts: accounts)
+                        membership.accountChanged()
+                        if CookFeatures.membershipUIEnabled || CookFeatures.membershipPurchasesEnabled {
+                            Task { await membership.reload() }
+                        }
+                    }
                     .onChange(of: accounts.dataAccountID, initial: true) { _, uid in
                         favoriteActions.failure = nil
                         #if DEBUG
@@ -187,6 +205,10 @@ struct CookApp: App {
                             ai.expireManagedCapabilityIfNeeded()
                             Task {
                                 await accounts.refreshIfNeeded()
+                                if CookFeatures.membershipUIEnabled || CookFeatures.membershipPurchasesEnabled {
+                                    await membership.coordinator.refresh()
+                                    await membership.coordinator.retryUnfinished()
+                                }
                                 userData.requestSync()
                             }
                         }

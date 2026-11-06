@@ -187,6 +187,7 @@ import XCTest
     let environment = MembershipStoreEnvironment.xcode
     var available = false
     var confirmedIDs: Set<String> = []
+    func preparePurchase(productID: String, for identity: MembershipPurchaseIdentity) async throws { }
     func entitlement(for identity: MembershipPurchaseIdentity) async throws -> MembershipEntitlement {
         MembershipEntitlement(userID: identity.userID, expiresAt: nil)
     }
