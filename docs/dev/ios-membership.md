@@ -77,3 +77,12 @@ asc subscriptions list --app 6824589542
 会员页区分单次与自动续费，使用 StoreKit 本地化名称和价格，提供恢复购买、继续核对及订阅管理；明确 Web 时长不暂停 Apple 续费。`COOK_MEMBERSHIP_UI_ENABLED` 与 `COOK_MEMBERSHIP_PURCHASES_ENABLED` 默认均为 NO。UI fixture 仅在 DEBUG 的显式测试参数下启用，以独立本机账号和 defaults 存储，不产生认证凭据、网络或正式权益。真实本地 Apple 取消测试仅使用 `.local.*` SKU。
 
 客户端协议与页面的通过结果在 PR 中分别列示；本地假服务、真实本地 StoreKit、远端 CI 和真实 Sandbox 不互相替代。买断及自动续费服务端生命周期仍为后续产品／实现边界。
+
+### 页面阶段证据（2026-11-07）
+
+- 16 项 CookCore 金融边界、8 项官方 Functions 网关契约、37 项 CI 分类／编排测试通过。基础分支远端 `42249053236` 已使用签名验证通过的 Swift 6.2.2 执行完整 Linux 测试：113 项、1 项既有 opt-in 跳过，无失败；两条 Web→Swift→Web 往返随后分别执行并通过。iOS 矩阵结果另在 PR 更新，不将安装修复当作整条流水线通过。
+- 两端均已通过 242 项 App 单元与 2 项账号 UI。iPhone Duo 另通过两项会员交互；iPad 首轮两项会员交互因系统重复暴露“我的”标签而定位失败，按现有账号测试的外层 `firstMatch` 方式修正后，两项均通过，不放宽会员、账号归属或重启恢复断言。
+- 两端各通过 7 项真实本地 StoreKit，以及实际 Apple 确认页关闭取消 1 项。系统确认页在 SpringBoard 的 Xcode 导航栏中使用 `dismiss`／“关闭”，首次查找“取消”失败的日志与后续正确定位的截图分别保留，不用故障注入的 unknown 代替用户取消。
+- 会员详情使用独立页面，避免浮动标签栏遮挡内容；分组标题采用明确主文字颜色和完整固有高度。iOS 27.1 已通过全部六类大字号系统审计。iOS 26.5 的对比度错误在调整后消失，但仍报告 `Text clipped`；尚未确认其根因，不将其计为通过，不添加 skip 或忽略问题的处理器。后续诊断只增加问题描述／元素证据，所有报告仍让测试失败。iPadOS 27 审计单独复测。系统审计不等于真人 VoiceOver 验收。
+
+阶段报告位于 `~/Library/Developer/ReleaseArtifacts/Cook/20261106-membership-ui/` 和 `20261107-membership-accessibility*/`；成功、失败及修正后结果按目录分开保留。未创建买断／订阅商品，未变更生产会员或支付服务。

@@ -44,11 +44,13 @@ struct MembershipView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }
-            Section("会员可用功能") {
+            Section {
                 Label("收藏和浏览历史跨平台同步", systemImage: "icloud")
                 Label("会员智能找菜", systemImage: "sparkles")
                 Text("基础做菜功能无需会员。智能服务以当前可用能力和额度为准。")
                     .font(.footnote).foregroundStyle(.secondary)
+            } header: {
+                Text("会员可用功能").foregroundStyle(Color.primary).fixedSize(horizontal: false, vertical: true)
             }
             if !membership.signedIn {
                 Section {
@@ -100,6 +102,7 @@ struct MembershipView: View {
         .accessibilityIdentifier("membership.content")
         .navigationTitle("会员")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .manageSubscriptionsSheet(isPresented: $managesSubscriptions)
         .task { await membership.reload() }
     }
@@ -128,7 +131,7 @@ struct MembershipView: View {
                     .foregroundStyle(.secondary)
             }
         } header: {
-            Text(renews ? "自动续费" : "单次购买")
+            Text(renews ? "自动续费" : "单次购买").foregroundStyle(Color.primary).fixedSize(horizontal: false, vertical: true)
         } footer: {
             Text(renews
                  ? "按 App Store 显示的周期和价格自动续费，可在 App Store 管理。已有 Web 或单次时长不会暂停扣款；取消续费不影响已经生效的时长。"

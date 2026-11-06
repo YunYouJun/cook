@@ -70,7 +70,7 @@ final class MembershipUITests: XCTestCase {
     }
 
     @MainActor private func openMembership(_ app: XCUIApplication) {
-        let mine = app.buttons.matching(NSPredicate(format: "label == %@", "我的")).element
+        let mine = app.buttons.matching(NSPredicate(format: "label == %@", "我的")).firstMatch
         XCTAssertTrue(mine.waitForExistence(timeout: 15)); mine.tap()
         let list = app.collectionViews.matching(identifier: "settings.list").element
         let entry = list.buttons.matching(identifier: "settings.membership").element

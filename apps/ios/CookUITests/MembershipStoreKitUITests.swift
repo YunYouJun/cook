@@ -18,7 +18,7 @@ final class MembershipStoreKitUITests: XCTestCase {
         app.launchEnvironment["COOK_MEMBERSHIP_FIXTURE_SETTLEMENT"] = "confirmed"
         terminateAppAfterTest(app)
         app.launch()
-        let mine = app.buttons.matching(NSPredicate(format: "label == %@", "我的")).element
+        let mine = app.buttons.matching(NSPredicate(format: "label == %@", "我的")).firstMatch
         XCTAssertTrue(mine.waitForExistence(timeout: 15)); mine.tap()
         let entry = app.buttons.matching(identifier: "settings.membership").element
         XCTAssertTrue(entry.waitForExistence(timeout: 10)); entry.tap()
