@@ -12,7 +12,7 @@ final class MembershipStoreKitUITests: XCTestCase {
         let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "MembershipProducts", withExtension: "storekit"))
         let session = try SKTestSession(contentsOf: url)
         session.resetToDefaultState(); session.clearTransactions(); session.disableDialogs = false
-        defer { session.clearTransactions() }
+        clearSessionAfterAppTeardown(session)
         let productID = "fun.yunle.cook.local.autorenewing"
         let app = launchScene(reset: true)
         let list = app.collectionViews.matching(identifier: "membership.content").element
@@ -54,15 +54,14 @@ final class MembershipStoreKitUITests: XCTestCase {
         let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "MembershipProducts", withExtension: "storekit"))
         let session = try SKTestSession(contentsOf: url)
         session.resetToDefaultState(); session.clearTransactions(); session.disableDialogs = true
-        defer { session.clearTransactions() }
-        // Independent history fixture: checkout is covered by the real scene
-        // above. This case keeps both actual process launches within 120s.
+        clearSessionAfterAppTeardown(session)
+        // Independent external purchase fixture. The first App process must
+        // confirm and finish it; the second restores that completed history.
         let token = MembershipAccountToken.forUser("membership-ui-a")
         let transaction = try await session.buyProduct(identifier: "fun.yunle.cook.local.autorenewing", options: [.appAccountToken(token)])
         XCTAssertEqual(transaction.environment, .xcode)
         XCTAssertEqual(transaction.appAccountToken, token)
         XCTAssertNil(transaction.revocationDate)
-        await transaction.finish()
         let app = launchScene(reset: true)
         let expiry = restoreInScene(app)
         let original = try XCTUnwrap(session.allTransactions().first { UInt64($0.identifier) == transaction.id })
@@ -87,7 +86,7 @@ final class MembershipStoreKitUITests: XCTestCase {
         let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "MembershipProducts", withExtension: "storekit"))
         let session = try SKTestSession(contentsOf: url)
         session.resetToDefaultState(); session.clearTransactions(); session.disableDialogs = false
-        defer { session.clearTransactions() }
+        clearSessionAfterAppTeardown(session)
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-ui-testing-membership", "-ui-testing-membership-storekit", "-ui-testing-reset-membership",
                                "-ui-testing-reset-consent", "-ui-testing-disable-animations"]
@@ -113,9 +112,12 @@ final class MembershipStoreKitUITests: XCTestCase {
         let cancel = system.navigationBars.matching(identifier: "Xcode").buttons.matching(identifier: "dismiss").element
         XCTAssertTrue(cancel.waitForExistence(timeout: 5), "Close the local Xcode sheet without confirming payment")
         cancel.tap()
+        XCTAssertTrue(confirmation.waitForNonExistence(timeout: 10))
         let message = list.staticTexts.matching(identifier: "membership.message").element
         for _ in 0..<8 where !message.exists || !message.isHittable { list.swipeUp() }
         XCTAssertEqual(message.waitForState("label CONTAINS %@", timeout: 10, argument: "已取消购买"), .completed)
+        let inactive = list.staticTexts.matching(identifier: "membership.inactive").element
+        reveal(inactive, in: list, upwards: false)
         XCTAssertEqual(list.staticTexts.matching(identifier: "membership.active").count, 0)
         let screen = XCTAttachment(screenshot: app.screenshot())
         screen.name = "Cancelled local Apple purchase"
@@ -123,13 +125,41 @@ final class MembershipStoreKitUITests: XCTestCase {
         add(screen)
     }
 
-    @MainActor private func launchScene(reset: Bool) -> XCUIApplication {
+    @MainActor func testRefundFromOutsideAppDeliversVerifiedRevocationWithoutManualRefresh() async throws {
+        let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "MembershipProducts", withExtension: "storekit"))
+        let session = try SKTestSession(contentsOf: url)
+        session.resetToDefaultState(); session.clearTransactions(); session.disableDialogs = true
+        clearSessionAfterAppTeardown(session)
+        let token = MembershipAccountToken.forUser("membership-ui-b")
+        let transaction = try await session.buyProduct(identifier: "fun.yunle.cook.local.nonrenewing", options: [.appAccountToken(token)])
+        XCTAssertEqual(transaction.environment, .xcode)
+        XCTAssertEqual(transaction.appAccountToken, token)
+        let app = launchScene(reset: true, owner: "b")
+        _ = restoreInScene(app) // The App, not the UI runner, confirms and finishes.
+        try session.refundTransaction(identifier: try XCTUnwrap(UInt(exactly: transaction.id)))
+        let list = app.collectionViews.matching(identifier: "membership.content").element
+        let inactive = list.staticTexts.matching(identifier: "membership.inactive").element
+        // No restore/refresh action after the refund: only the real SDK update
+        // can reconcile the owned, verified revocation and refresh entitlement.
+        XCTAssertTrue(inactive.waitForExistence(timeout: 10))
+        reveal(inactive, in: list, upwards: false)
+        XCTAssertEqual(list.staticTexts.matching(identifier: "membership.active").count, 0)
+        let revoked = XCTAttachment(screenshot: app.screenshot())
+        revoked.name = "Verified external refund reconciled by App updates"
+        revoked.lifetime = .keepAlways; add(revoked)
+        requestRestore(in: app)
+        reveal(inactive, in: list, upwards: false)
+        XCTAssertEqual(list.staticTexts.matching(identifier: "membership.active").count, 0)
+    }
+
+    @MainActor private func launchScene(reset: Bool, owner: String = "a") -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-ui-testing-membership", "-ui-testing-membership-storekit",
                                "-ui-testing-reset-consent", "-ui-testing-disable-animations"]
         if reset { app.launchArguments.append("-ui-testing-reset-membership") }
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_MEMBERSHIP_FIXTURE_SETTLEMENT"] = "confirmed"
+        app.launchEnvironment["COOK_MEMBERSHIP_FIXTURE_OWNER"] = owner
         terminateAppAfterTest(app); app.launch()
         let mine = app.buttons.matching(NSPredicate(format: "label == %@", "我的")).firstMatch
         XCTAssertTrue(mine.waitForExistence(timeout: 15)); mine.tap()
@@ -140,6 +170,14 @@ final class MembershipStoreKitUITests: XCTestCase {
     }
 
     @MainActor private func restoreInScene(_ app: XCUIApplication) -> String {
+        requestRestore(in: app)
+        let list = app.collectionViews.matching(identifier: "membership.content").element
+        let active = list.staticTexts.matching(identifier: "membership.active").element
+        reveal(active, in: list, upwards: false)
+        return list.staticTexts.matching(identifier: "membership.expiry").element.label
+    }
+
+    @MainActor private func requestRestore(in app: XCUIApplication) {
         let list = app.collectionViews.matching(identifier: "membership.content").element
         let restore = list.buttons.matching(identifier: "membership.restore").element
         reveal(restore, in: list)
@@ -148,9 +186,6 @@ final class MembershipStoreKitUITests: XCTestCase {
         let message = list.staticTexts.matching(identifier: "membership.message").element
         reveal(message, in: list)
         XCTAssertEqual(message.waitForState("label CONTAINS %@", timeout: 15, argument: "测试购买记录已确认"), .completed)
-        let active = list.staticTexts.matching(identifier: "membership.active").element
-        reveal(active, in: list, upwards: false)
-        return list.staticTexts.matching(identifier: "membership.expiry").element.label
     }
 
     @MainActor private func dismissLocalSuccessIfPresented(_ system: XCUIApplication) {
@@ -160,6 +195,14 @@ final class MembershipStoreKitUITests: XCTestCase {
             XCTAssertTrue(okay.waitForExistence(timeout: 5))
             okay.tap()
             XCTAssertTrue(success.waitForNonExistence(timeout: 10))
+        }
+    }
+
+    @MainActor private func clearSessionAfterAppTeardown(_ session: SKTestSession) {
+        // XCTest teardown blocks run in reverse registration order. Register
+        // before launchScene so the App and its observer stop before reset.
+        addTeardownBlock {
+            await MainActor.run { session.clearTransactions() }
         }
     }
 

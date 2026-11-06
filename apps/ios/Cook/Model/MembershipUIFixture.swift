@@ -61,17 +61,34 @@ import Observation
     }
     func settle(_ transaction: MembershipTransaction, for identity: MembershipPurchaseIdentity) async throws -> MembershipSettlementReceipt {
         guard confirms else { throw URLError(.notConnectedToInternet) }
-        guard transaction.environment == .xcode, !transaction.revoked,
+        guard transaction.environment == .xcode, ids.contains(transaction.productID),
               identity == self.identity, transaction.accountToken == identity.accountToken else {
             throw MembershipPurchaseFailure.accountChanged
         }
         let key = "settled." + transaction.id
+        let revokedKey = "revoked." + transaction.id
+        let lastOrderKey = "lastOrder." + identity.userID
+        if transaction.revoked {
+            guard defaults.string(forKey: key) == identity.userID else { throw MembershipPurchaseFailure.invalidResponse }
+            defaults.set(true, forKey: revokedKey)
+            // This isolated fixture has only Apple grants. Preserve any later
+            // independent grant; production calendar/refund rules stay server-owned.
+            if defaults.string(forKey: lastOrderKey) == transaction.id {
+                defaults.removeObject(forKey: "expiry." + identity.userID)
+            }
+            return MembershipSettlementReceipt(transactionID: transaction.id, environment: .xcode, confirmed: true)
+        }
         if defaults.string(forKey: key) == nil {
             defaults.set(identity.userID, forKey: key)
             // A display fixture only: business calendar arithmetic is server-owned.
             defaults.set(Date().addingTimeInterval(30 * 86400).timeIntervalSince1970, forKey: "expiry." + identity.userID)
+            defaults.set(transaction.id, forKey: lastOrderKey)
         }
         guard defaults.string(forKey: key) == identity.userID else { throw MembershipPurchaseFailure.accountChanged }
+        // An older non-revoked snapshot cannot undo a reconciled fixture refund.
+        if defaults.bool(forKey: revokedKey), defaults.string(forKey: lastOrderKey) == transaction.id {
+            defaults.removeObject(forKey: "expiry." + identity.userID)
+        }
         return MembershipSettlementReceipt(transactionID: transaction.id, environment: .xcode, confirmed: true)
     }
 }

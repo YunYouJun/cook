@@ -12,6 +12,7 @@ import XCTest
     private static var session: SKTestSession?
 
     private func configuredSession() throws -> SKTestSession {
+        print("StoreKit SDK host pid: \(ProcessInfo.processInfo.processIdentifier)")
         let value: SKTestSession
         if let existing = Self.session { value = existing }
         else {
@@ -157,39 +158,26 @@ import XCTest
         try await commerce.finish(transactionID: try XCTUnwrap(delivered?.id))
     }
 
-    func testRefundIsDeliveredAsVerifiedRevocation() async throws {
+    // The UI runner drives the live refund from outside the App process.
+    // This separate SDK case proves verified recovery from durable history.
+    func testRefundIsRecoveredAsVerifiedRevocationFromHistory() async throws {
         let session = try configuredSession()
         defer { session.clearTransactions() }
         let commerce = NativeMembershipStoreKit(catalog: [Self.productID: .nonRenewing])
         _ = try await commerce.products()
         let token = UUID()
-        let purchased = expectation(description: "Verified external purchase observed before refund")
-        let revoked = expectation(description: "Verified refund update")
-        var purchasedID: String?
-        var refundedID: String?
-        let stream = commerce.updates()
-        let listener = Task {
-            for await event in stream {
-                guard case .transaction(let value) = event, value.accountToken == token else { continue }
-                XCTAssertEqual(value.environment, .xcode)
-                if value.revoked {
-                    refundedID = value.id; revoked.fulfill(); break
-                } else if purchasedID == nil {
-                    purchasedID = value.id; purchased.fulfill()
-                }
-            }
-        }
+        let listener = listen(to: commerce)
         defer { listener.cancel() }
-        // A same-device Product.purchase result is delivered directly; it is
-        // not a listener-readiness signal. Drive an external test transaction
-        // and require its verified update before triggering the separate refund.
-        let value = try await session.buyProduct(identifier: Self.productID, options: [.appAccountToken(token)])
-        await fulfillment(of: [purchased], timeout: 10)
-        XCTAssertEqual(purchasedID, String(value.id))
-        try await commerce.finish(transactionID: String(value.id))
-        try session.refundTransaction(identifier: try XCTUnwrap(UInt(exactly: value.id)))
-        await fulfillment(of: [revoked], timeout: 10)
-        XCTAssertEqual(refundedID, String(value.id))
+        guard case .transaction(let value) = try await commerce.purchase(productID: Self.productID, accountToken: token) else {
+            return XCTFail("A local payment is required before its refund")
+        }
+        try await commerce.finish(transactionID: value.id)
+        try session.refundTransaction(identifier: try XCTUnwrap(UInt(value.id)))
+        let history = try await commerce.restore()
+        let refunded = try XCTUnwrap(history.first { $0.id == value.id })
+        XCTAssertTrue(refunded.revoked)
+        XCTAssertEqual(refunded.accountToken, token)
+        XCTAssertEqual(refunded.environment, .xcode)
     }
 
     private func listen(to commerce: NativeMembershipStoreKit) -> Task<Void, Never> {
