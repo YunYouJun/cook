@@ -111,7 +111,7 @@ async function setDocument(uid, input, now) {
     return fail('INVALID_DOCUMENT')
   // Both new sync and old set callers merge inside the same transaction. A
   // snapshot read before another device's write can never erase that write.
-  const transactionResult = await getApp().database().runTransaction(async (transaction) => {
+  return getApp().database().runTransaction(async (transaction) => {
     const reference = transaction.collection(COLLECTION).doc(uid)
     const response = await reference.get()
     const raw = Array.isArray(response.data) ? response.data[0] : response.data
@@ -124,7 +124,6 @@ async function setDocument(uid, input, now) {
     await reference.set(merged)
     return { ok: true, document: merged, updatedAt: now, protocolVersion: 2 }
   })
-  return transactionResult.result
 }
 
 async function main(event = {}) {

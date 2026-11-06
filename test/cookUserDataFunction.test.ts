@@ -33,7 +33,8 @@ function createApp(userInfo: Record<string, unknown> | (() => never), expiry = D
   const runTransaction = vi.fn((run: (transaction: unknown) => Promise<unknown>) => {
     const result = previous.then(() => run({ collection }))
     previous = result.then(() => {}, () => {})
-    return result.then(result => ({ result }))
+    // The deployed Node SDK 3.18.3 returns the callback value directly.
+    return result
   })
   const app = {
     auth: () => ({ getUserInfo: typeof userInfo === 'function' ? userInfo : () => userInfo }),
@@ -132,6 +133,18 @@ describe('cook-user-data function', () => {
     await fn.main({ action: 'set', document: second })
     expect(docs.get('u1')?.favorites).toEqual([...first.favorites, ...second.favorites])
     await expect(fn.main({ action: 'capabilities' })).resolves.toEqual({ ok: true, protocolVersion: 2 })
+  })
+
+  it.each(['set', 'sync'])('returns a serializable protocol 2 document after a %s transaction commits', async (action) => {
+    const { docs } = createApp({ uid: 'u1' })
+    const result = await fn.main({ action, document })
+    expect(result).toEqual({
+      ok: true,
+      protocolVersion: 2,
+      document: docs.get('u1'),
+      updatedAt: expect.any(Number),
+    })
+    expect(JSON.parse(JSON.stringify(result)).document).toMatchObject(document)
   })
 
   it('rejects expired membership for all legacy and new actions without touching user data', async () => {
