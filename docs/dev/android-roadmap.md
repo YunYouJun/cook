@@ -5,6 +5,7 @@
 - 决策：[0016 原生 Android 与 Capacitor 外壳退役](../decisions/0016-native-android-and-capacitor-retirement)
 - 总计划：[#98](https://github.com/YunYouJun/cook/issues/98)
 - Android 待办：[#169](https://github.com/YunYouJun/cook/issues/169)
+- 启动证据：[2026-11-06 历史包身份、环境与工具链核对](./android-startup-2026-11-06)；分发和正式签名仍待确认。
 
 ## 目标与边界
 
