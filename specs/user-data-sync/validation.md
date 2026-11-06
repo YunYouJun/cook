@@ -57,4 +57,8 @@
 
 Web 自动发布结果以 [PR #198](https://github.com/YunYouJun/cook/pull/198) 及其部署记录为准。iOS 未在本轮上传 TestFlight 或分发安装包。
 
+### Web 发布后错误传递复核
+
+PR #198 已合并为 `031e62be`，生产构建更新，会员页面实际显示「会员收藏和历史同步」「已同步」。非会员实际响应仍为 `MEMBERSHIP_REQUIRED`，但页面显示通用错误并重试：Web SDK 3.7.1 的 gateway 模式将带 `code` 的失败直接返回在结果外层，通用调用器只检查 `result`，丢失业务错误码。补丁保留 SDK 错误码，统一映射已知同步拒绝；未知暂时错误继续重试。新增测试经过 SDK 响应、通用调用器、同步适配器和真实 Vue composable，验证会员／登录提示、停止自动重试及暂时故障恢复。原线上代码复现 2 项失败，修复后全量 60 文件、489 项通过；补丁发布后的真实页面复验单独记录。
+
 完整本机证据目录：`~/Library/Developer/ReleaseArtifacts/Cook/20261106-user-data-sync`。只复用共享 iPhone 16 Pro 与 iPad 11 英寸，无新增、克隆或清空模拟器；完成后恢复本轮初始 Shutdown 状态。

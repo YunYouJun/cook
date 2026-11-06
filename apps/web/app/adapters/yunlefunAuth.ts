@@ -58,6 +58,7 @@ export type CloudbaseFunctionCaller = (name: string, data: Record<string, unknow
 interface CloudbaseApp {
   auth: (options?: { persistence: 'session' }) => CloudbaseAuthClient
   callFunction: (options: { name: string, data: Record<string, unknown> }) => Promise<{
+    code?: string
     errCode?: number | string
     errMsg?: string
     result?: unknown
@@ -198,8 +199,11 @@ export async function callCloudbaseFunction(
   const app = await getCloudbaseApp(env)
   const response = await app.callFunction({ name, data })
   // A missing result means the call itself failed (not deployed, crashed, …).
-  if (!response || response.result === undefined)
-    throw new Error(`CloudBase function ${name} failed: ${response?.errCode ?? response?.errMsg ?? 'no result'}`)
+  if (!response || response.result === undefined) {
+    // Gateway-mode SDK calls put coded failures outside the result envelope.
+    const code = response?.code ?? response?.errCode
+    throw Object.assign(new Error(`CloudBase function ${name} failed: ${code ?? response?.errMsg ?? 'no result'}`), { code })
+  }
   return response.result
 }
 

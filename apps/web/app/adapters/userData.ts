@@ -17,16 +17,28 @@ interface FunctionResult {
  * client never names a uid.
  */
 export function createCloudbaseUserDataRemote(callFunction: CloudbaseFunctionCaller): UserDataRemote {
-  async function call(data: Record<string, unknown>): Promise<FunctionResult> {
-    const result = await callFunction(USER_DATA_FUNCTION, data) as FunctionResult | null
-    if (result?.code === 'MEMBERSHIP_REQUIRED')
+  function throwFunctionFailure(code: unknown): void {
+    if (code === 'MEMBERSHIP_REQUIRED')
       throw new UserDataSyncError('membership_required')
-    if (result?.code === 'LOGIN_REQUIRED')
+    if (code === 'LOGIN_REQUIRED')
       throw new UserDataSyncError('login_required')
-    if (result?.code === 'SESSION_CHANGED')
+    if (code === 'SESSION_CHANGED')
       throw new UserDataSyncError('cancelled')
-    if (['INVALID_REMOTE', 'INVALID_DOCUMENT', 'DOCUMENT_LIMIT', 'UNKNOWN_ACTION'].includes(result?.code ?? ''))
+    if (typeof code === 'string' && ['INVALID_REMOTE', 'INVALID_DOCUMENT', 'DOCUMENT_LIMIT', 'UNKNOWN_ACTION'].includes(code))
       throw new UserDataSyncError('invalid_remote')
+  }
+
+  async function call(data: Record<string, unknown>): Promise<FunctionResult> {
+    let result: FunctionResult | null
+    try {
+      result = await callFunction(USER_DATA_FUNCTION, data) as FunctionResult | null
+    }
+    catch (error) {
+      if (error && typeof error === 'object' && 'code' in error)
+        throwFunctionFailure(error.code)
+      throw error
+    }
+    throwFunctionFailure(result?.code)
     if (!result || result.ok !== true)
       throw new Error(`${USER_DATA_FUNCTION} failed: ${result?.code ?? 'unknown'}`)
     return result
