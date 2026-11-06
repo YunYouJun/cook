@@ -171,4 +171,4 @@ schemes:
       storeKitConfiguration: StoreKitValidation/Fixtures/MembershipProducts.storekit
     test:
       config: Debug
-      targets: [CookStoreKitTests, CookUITests]
+      targets: [CookUITests, CookStoreKitTests]
