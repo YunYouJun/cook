@@ -293,7 +293,7 @@ function createAdapters({ fetchImpl = globalThis.fetch, getModel = getCloudBaseM
       }
       return account.membership
     },
-    async complete(text) {
+    async complete(text, selectedContract = contract) {
       try {
         const request = {
           model: config.model,
@@ -301,7 +301,7 @@ function createAdapters({ fetchImpl = globalThis.fetch, getModel = getCloudBaseM
           response_format: { type: 'json_object' },
           max_tokens: 2048,
           stream: false,
-          messages: [{ role: 'system', content: modelPrompt(contract) }, { role: 'user', content: text }],
+          messages: [{ role: 'system', content: modelPrompt(selectedContract) }, { role: 'user', content: text }],
         }
         if (config.provider === 'cloudbase') {
           // The SDK can execute registered tools by default; one step permits only a condition draft.
@@ -343,7 +343,11 @@ function createAdapters({ fetchImpl = globalThis.fetch, getModel = getCloudBaseM
 }
 
 /** Dependencies keep authorization, atomic admission and provider calls independently testable. */
-function createHandler({ verifyIdentity, readMembership, reserveQuota, complete, config, contract, now = Date.now, logFailure = () => {} }) {
+function createHandler({ verifyIdentity, readMembership, reserveQuota, complete, config, contract, compatibleContracts = [], now = Date.now, logFailure = () => {} }) {
+  const contracts = Array.isArray(compatibleContracts) ? [contract, ...compatibleContracts] : []
+  const contractKey = value => JSON.stringify([value.schemaVersion, value.policyVersion, value.dataVersion])
+  const validContracts = contracts.length > 0 && contracts.length <= 5 && contracts.every(validContract)
+    && new Set(contracts.map(contractKey)).size === contracts.length
   return async (event) => {
     try {
       const body = requestBody(event)
@@ -354,7 +358,7 @@ function createHandler({ verifyIdentity, readMembership, reserveQuota, complete,
       const membership = await readMembership(token)
       const currentTime = now()
       const active = membership?.isActive === true && Number.isSafeInteger(membership.expireAt) && membership.expireAt > currentTime
-      const ready = config?.enabled === true && validContract(contract)
+      const ready = config?.enabled === true && validContracts
       if (body.action === 'capabilities') {
         return response(200, {
           ok: true,
@@ -367,13 +371,14 @@ function createHandler({ verifyIdentity, readMembership, reserveQuota, complete,
         throw new IntentServiceError('MEMBERSHIP_REQUIRED')
       if (!ready)
         throw new IntentServiceError('SERVICE_UNAVAILABLE')
-      if (body.schemaVersion !== contract.schemaVersion || body.policyVersion !== contract.policyVersion || body.dataVersion !== contract.dataVersion)
+      const selectedContract = contracts.find(value => contractKey(value) === contractKey(body))
+      if (!selectedContract)
         throw new IntentServiceError('VERSION_MISMATCH')
       await reserveQuota({ uid: identity.uid, now: currentTime })
       // Admission and cleanup can take time; expiration never permits a provider call.
       if (membership.expireAt <= now())
         throw new IntentServiceError('MEMBERSHIP_REQUIRED')
-      const intent = validateIntent(await complete(body.text), contract)
+      const intent = validateIntent(await complete(body.text, selectedContract), selectedContract)
       return response(200, { ok: true, intent })
     }
     catch (error) {
@@ -414,6 +419,13 @@ function loadContract() {
   catch { return null }
 }
 
+function loadCompatibleContracts() {
+  try {
+    return require('./compatible-contracts.json')
+  }
+  catch { return null }
+}
+
 // Each deployed instance keeps one environment snapshot; switching requires a config deployment.
 const deploymentConfig = Object.freeze(readConfig())
 
@@ -425,6 +437,7 @@ async function main(event) {
     ...adapters,
     config,
     contract,
+    compatibleContracts: loadCompatibleContracts(),
     logFailure: (code, diagnostic) => console.warn('[cook-ai-intent]', code, diagnostic),
     reserveQuota: async (input) => {
       const database = getDatabase()

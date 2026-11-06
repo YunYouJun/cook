@@ -286,6 +286,8 @@ test('deployed entry point keeps its startup routing snapshot and accesses only 
           return { env: environment }
         if (name === './contract.json')
           return CONTRACT
+        if (name === './compatible-contracts.json')
+          return []
         if (name === '@cloudbase/node-sdk') {
           return { SYMBOL_CURRENT_ENV: 'fixture-environment', init: () => {
             initializations++
@@ -355,6 +357,77 @@ test('a parse derives identity, verifies membership, reserves once, then validat
     ['model', '鸡蛋，不吃辣'],
   ])
   assert.ok(!result.body.includes('attacker'))
+})
+
+test('current and explicitly retained clients use their own trusted vocabulary and goals', async () => {
+  const current = { ...CONTRACT, dataVersion: 'fixture-v2', stuff: [...CONTRACT.stuff, '秋葵'], availableGoals: [...CONTRACT.availableGoals, 'weight-aware'] }
+  for (const selected of [current, CONTRACT]) {
+    const f = fixture({
+      contract: current,
+      compatibleContracts: [CONTRACT],
+      async complete(text, vocabulary) {
+        assert.equal(text, '鸡蛋，不吃辣')
+        assert.deepEqual(vocabulary, selected)
+        return intent({ dataVersion: vocabulary.dataVersion })
+      },
+    })
+    const result = await f.handler(event(input({ dataVersion: selected.dataVersion })))
+    assert.equal(result.statusCode, 200)
+    assert.equal(JSON.parse(result.body).intent.dataVersion, selected.dataVersion)
+    assert.equal(f.calls.filter(call => call[0] === 'quota').length, 1)
+  }
+})
+
+test('retained clients cannot receive current-only goals, ingredients or response versions', async () => {
+  const current = { ...CONTRACT, dataVersion: 'fixture-v2', stuff: [...CONTRACT.stuff, '秋葵'], availableGoals: [...CONTRACT.availableGoals, 'weight-aware'] }
+  for (const invalid of [
+    intent({ goal: 'weight-aware' }),
+    intent({ query: { ...intent().query, stuff: ['秋葵'] } }),
+    intent({ dataVersion: current.dataVersion }),
+  ]) {
+    const f = fixture({ contract: current, compatibleContracts: [CONTRACT], complete: async () => invalid })
+    await assertCode(f.handler, event(), 502, 'INVALID_MODEL_RESPONSE')
+  }
+})
+
+test('an unretained client version is rejected before quota admission or provider initialization', async () => {
+  for (const version of [{ dataVersion: 'unretained' }, { schemaVersion: 2 }, { policyVersion: 2 }]) {
+    const f = fixture({ compatibleContracts: [{ ...CONTRACT, dataVersion: 'retained' }] })
+    await assertCode(f.handler, event(input(version)), 409, 'VERSION_MISMATCH')
+    assert.deepEqual(f.calls.map(call => call[0]), ['identity', 'membership'])
+  }
+})
+
+test('missing, invalid, ambiguous or excessive retained contracts disable the model path', async () => {
+  for (const compatibleContracts of [null, {}, [CONTRACT], [{ ...CONTRACT, availableGoals: ['keto'] }], Array.from({ length: 5 }, (_, i) => ({ ...CONTRACT, dataVersion: `old-${i}` }))]) {
+    const f = fixture({ compatibleContracts })
+    const capability = await f.handler(event({ action: 'capabilities' }))
+    assert.equal(JSON.parse(capability.body).enabled, false)
+    await assertCode(f.handler, event(), 503, 'SERVICE_UNAVAILABLE')
+    assert.ok(f.calls.every(call => ['identity', 'membership'].includes(call[0])))
+  }
+})
+
+test('both provider transports embed the selected retained contract rather than the latest contract', async () => {
+  const current = { ...CONTRACT, dataVersion: 'fixture-v2', availableGoals: [...CONTRACT.availableGoals, 'weight-aware'] }
+  for (const provider of ['deepseek', 'cloudbase']) {
+    let prompt
+    const adapters = createAdapters({
+      contract: current,
+      config: readConfig({ ...ENV, COOK_AI_PROVIDER: provider }),
+      fetchImpl: async (_url, options) => {
+        prompt = JSON.parse(options.body).messages[0].content
+        return jsonResponse(envelope())
+      },
+      getModel: () => ({ generateText: async (options) => {
+        prompt = options.messages[0].content
+        return { rawResponses: [envelope()] }
+      } }),
+    })
+    await adapters.complete('鸡蛋，不吃辣', CONTRACT)
+    assert.ok(prompt.includes(`PUBLIC CONTRACT: ${JSON.stringify(CONTRACT)}`))
+    assert.ok(!prompt.includes(current.dataVersion))
+  }
 })
 
 test('unsupported methods, malformed and oversized bodies, spoof fields and missing fields do not reach identity or model', async () => {
