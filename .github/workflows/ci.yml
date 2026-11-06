@@ -279,6 +279,7 @@ jobs:
         id: environment
       - name: Build for testing
         timeout-minutes: 15
+        id: native_build
         run: |
           xcodebuild build-for-testing -project apps/ios/Cook.xcodeproj -scheme Cook \
             -destination 'generic/platform=iOS Simulator' \
@@ -291,13 +292,14 @@ jobs:
           IOS_SUITE: ${{ matrix.suite }}
         run: bash scripts/run-ios-ci-tests.sh
       - name: Verify local StoreKit contracts
-        if: contains(fromJSON('["core-regression", "membership", "regression-main"]'), matrix.suite)
+        id: storekit_tests
+        if: ${{ !cancelled() && steps.native_build.outcome == 'success' && contains(fromJSON('["core-regression", "membership", "regression-main"]'), matrix.suite) }}
         timeout-minutes: 10
         env:
           DEVICE: ${{ steps.environment.outputs[matrix.device] }}
         run: bash scripts/run-ios-storekit-tests.sh
       - name: Identify the tested PR core environment
-        if: github.event_name == 'pull_request' && matrix.suite == 'core-regression' && steps.ios_tests.outcome == 'success'
+        if: github.event_name == 'pull_request' && matrix.suite == 'core-regression' && steps.ios_tests.outcome == 'success' && steps.storekit_tests.outcome == 'success'
         id: core_key
         env:
           IPHONE: ${{ steps.environment.outputs.iphone }}
