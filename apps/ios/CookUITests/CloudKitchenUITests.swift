@@ -294,7 +294,7 @@ final class CloudKitchenUITests: XCTestCase {
         func cameraMarkerFrame() -> CGRect {
             app.buttons.matching(identifier: "kitchen.scene.pot").element.frame
         }
-        let rotation = kitchenButton("kitchen.rotation", in: app)
+        var rotation: XCUIElement { app.buttons.matching(identifier: "kitchen.rotation").element }
         reveal(tomato, in: app)
         reveal(rotation, in: app)
         XCTAssertTrue(tomato.waitForExistence(timeout: 30))
