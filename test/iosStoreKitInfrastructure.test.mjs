@@ -10,8 +10,8 @@ import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 
-test('StoreKit uses its dedicated signed scheme and preserves build/test failures', () => {
-  for (const [buildExit, testExit, expectedCalls] of [[0, 0, 2], [65, 0, 1], [0, 65, 2]]) {
+test('StoreKit checks the cold scene before the SDK and preserves either failure without retry', () => {
+  for (const [buildExit, uiExit, sdkExit, expectedCalls] of [[0, 0, 0, 3], [65, 0, 0, 1], [0, 65, 0, 3], [0, 0, 66, 3], [0, 65, 66, 3]]) {
     const task = mkdtempSync(join(tmpdir(), 'cook-storekit-ci-'))
     try {
       const bin = join(task, 'bin')
@@ -22,17 +22,17 @@ const fs = require('node:fs')
 const args = process.argv.slice(2)
 fs.appendFileSync(process.env.CALLS, JSON.stringify(args) + '\\n')
 console.log('COMPLETE_STOREKIT_LOG_' + args[0])
-process.exit(Number(args[0] === 'build-for-testing' ? process.env.BUILD_EXIT : process.env.TEST_EXIT))
+process.exit(Number(args[0] === 'build-for-testing' ? process.env.BUILD_EXIT : args.includes('-only-testing:CookStoreKitTests') ? process.env.SDK_EXIT : process.env.UI_EXIT))
 `, { mode: 0o755 })
       const callsPath = join(task, 'calls')
       const run = spawnSync('bash', ['scripts/run-ios-storekit-tests.sh'], {
         cwd: root,
         encoding: 'utf8',
         timeout: 10_000,
-        env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, DEVICE: 'existing-phone', RUNNER_TEMP: task, CALLS: callsPath, BUILD_EXIT: String(buildExit), TEST_EXIT: String(testExit) },
+        env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, DEVICE: 'existing-phone', RUNNER_TEMP: task, CALLS: callsPath, BUILD_EXIT: String(buildExit), UI_EXIT: String(uiExit), SDK_EXIT: String(sdkExit) },
       })
       assert.equal(run.error, undefined)
-      assert.equal(run.status, buildExit || testExit)
+      assert.equal(run.status, buildExit || uiExit || sdkExit)
       const calls = readFileSync(callsPath, 'utf8').trim().split('\n').map(JSON.parse)
       assert.equal(calls.length, expectedCalls)
       for (const args of calls) {
@@ -42,11 +42,15 @@ process.exit(Number(args[0] === 'build-for-testing' ? process.env.BUILD_EXIT : p
         assert.equal(args[args.indexOf('-parallel-testing-enabled') + 1], 'NO')
         assert.match(run.stdout, new RegExp(`COMPLETE_STOREKIT_LOG_${args[0]}`))
       }
-      if (calls.length === 2) {
-        assert.equal(calls[1][calls[1].indexOf('-destination') + 1], 'id=existing-phone')
-        assert.ok(calls[1].includes('-resultBundlePath'))
+      if (calls.length === 3) {
+        for (const args of calls.slice(1)) {
+          assert.equal(args[args.indexOf('-destination') + 1], 'id=existing-phone')
+          assert.ok(args.includes('-resultBundlePath'))
+          assert.equal(args[args.indexOf('-maximum-test-execution-time-allowance') + 1], '120')
+        }
         assert.ok(calls[1].includes('-only-testing:CookUITests/MembershipStoreKitUITests'))
-        assert.ok(calls[1].includes('-only-testing:CookStoreKitTests'))
+        assert.ok(calls[2].includes('-only-testing:CookStoreKitTests'))
+        assert.notEqual(calls[1][calls[1].indexOf('-resultBundlePath') + 1], calls[2][calls[2].indexOf('-resultBundlePath') + 1])
       }
     }
     finally { rmSync(task, { recursive: true, force: true }) }
