@@ -104,6 +104,7 @@ test('StoreKit checks both ordered targets in one operation and preserves either
   assert.deepEqual(plan.testTargets.map(({ target }) => target.name), ['CookStoreKitTests', 'CookUITests'])
   assert.ok(plan.testTargets.every(({ parallelizable }) => parallelizable === false))
   assert.match(project.slice(project.indexOf('\n  CookMembershipStoreKit:')), /testPlans:\n\s+- path: StoreKitValidation\/CookMembershipStoreKit\.xctestplan\n\s+defaultPlan: true/)
+  assert.ok(script.indexOf('run_with_timeout 10') < script.indexOf('launchctl kickstart -k user/501/com.apple.storekitd'))
   assert.ok(script.indexOf('launchctl kickstart -k user/501/com.apple.storekitd') < script.indexOf('run_stage storekit'))
   assert.match(script, /launchctl print user\/501\/com\.apple\.storekitd[\s\S]*\[\[ "\$state" == running \]\]/)
   for (const [buildExit, uiExit, sdkExit, expectedCalls] of [[0, 0, 0, 2], [65, 0, 0, 1], [0, 65, 0, 2], [0, 0, 66, 2], [0, 65, 66, 2]]) {
@@ -157,6 +158,50 @@ process.exit(args[0] === 'build-for-testing' ? Number(process.env.BUILD_EXIT) : 
     }
     finally { rmSync(task, { recursive: true, force: true }) }
   }
+})
+
+test('a hung StoreKit daemon restart is stopped before the readiness probe', { timeout: 15_000 }, () => {
+  const task = mkdtempSync(join(tmpdir(), 'cook-storekit-stuck-service-'))
+  try {
+    const bin = join(task, 'bin')
+    mkdirSync(bin)
+    writeFileSync(join(bin, 'xcrun'), `#!/bin/sh
+case "$*" in
+  "simctl spawn existing-phone launchctl kickstart -k user/501/com.apple.storekitd")
+    trap '' TERM
+    echo STOREKIT_RESTART_HUNG
+    while :; do sleep 1; done
+    ;;
+  "simctl spawn existing-phone launchctl print user/501/com.apple.storekitd")
+    echo "state = running"
+    ;;
+esac
+exit 0
+`, { mode: 0o755 })
+    writeFileSync(join(bin, 'xcodebuild'), `#!/usr/bin/env node
+const fs = require('node:fs')
+fs.appendFileSync(process.env.CALLS, JSON.stringify(process.argv.slice(2)) + '\\n')
+`, { mode: 0o755 })
+    const callsPath = join(task, 'calls')
+    const run = spawnSync('bash', ['scripts/run-ios-storekit-tests.sh'], {
+      cwd: root,
+      encoding: 'utf8',
+      timeout: 10_000,
+      env: {
+        ...process.env,
+        PATH: `${bin}:${process.env.PATH}`,
+        DEVICE: 'existing-phone',
+        RUNNER_TEMP: task,
+        CALLS: callsPath,
+        STOREKIT_RESTART_TIMEOUT_SECONDS: '1',
+      },
+    })
+    assert.equal(run.error, undefined)
+    assert.equal(run.status, 0)
+    assert.match(run.stderr, /StoreKit service restart did not finish within 1 seconds/)
+    assert.equal(readFileSync(callsPath, 'utf8').trim().split('\n').length, 2)
+  }
+  finally { rmSync(task, { recursive: true, force: true }) }
 })
 
 test('core StoreKit contracts run once in parallel while financial changes keep both devices', () => {

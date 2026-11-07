@@ -27,6 +27,12 @@ run_logged() {
   active_command=''
   return "$command_code"
 }
+run_with_timeout() {
+  local seconds="$1" log="$2"
+  shift 2
+  COOK_IOS_COMMAND_TIMEOUT_SECONDS="$seconds" \
+    python3 scripts/run-ios-test-command.py "$log" "$@"
+}
 code=0
 run_logged "$build_log" \
   xcodebuild build-for-testing -project apps/ios/Cook.xcodeproj -scheme CookMembershipStoreKit \
@@ -37,10 +43,21 @@ run_logged "$build_log" \
   CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- || code=$?
 [[ "$code" == 0 ]] || exit "$code"
 xcrun simctl bootstatus "$DEVICE" -b
-xcrun simctl spawn "$DEVICE" launchctl kickstart -k user/501/com.apple.storekitd
+# A fresh simulator can leave launchctl waiting indefinitely. Bound each
+# service-control call and decide from the readiness probe instead.
+restart_timeout="${STOREKIT_RESTART_TIMEOUT_SECONDS:-10}"
+status_timeout="${STOREKIT_STATUS_TIMEOUT_SECONDS:-3}"
+echo "Restarting StoreKit test service on $DEVICE"
+restart_code=0
+run_with_timeout "$restart_timeout" "$RUNNER_TEMP/xcresult/$DEVICE-storekit-service.log" \
+  xcrun simctl spawn "$DEVICE" launchctl kickstart -k user/501/com.apple.storekitd || restart_code=$?
+if [[ "$restart_code" != 0 ]]; then
+  echo "StoreKit service restart did not finish within $restart_timeout seconds; waiting for readiness" >&2
+fi
 for attempt in {1..30}; do
-  state=$(xcrun simctl spawn "$DEVICE" launchctl print user/501/com.apple.storekitd 2>/dev/null \
-    | sed -n 's/^[[:space:]]*state = //p' | head -1)
+  state=$(run_with_timeout "$status_timeout" "$RUNNER_TEMP/xcresult/$DEVICE-storekit-service-status.log" \
+    xcrun simctl spawn "$DEVICE" launchctl print user/501/com.apple.storekitd 2>/dev/null \
+    | sed -n 's/^[[:space:]]*state = //p' | head -1 || true)
   [[ "$state" == running ]] && break
   if [[ "$attempt" == 30 ]]; then
     echo "StoreKit test service did not start" >&2
