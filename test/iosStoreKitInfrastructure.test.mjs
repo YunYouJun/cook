@@ -204,6 +204,51 @@ fs.appendFileSync(process.env.CALLS, JSON.stringify(process.argv.slice(2)) + '\\
   finally { rmSync(task, { recursive: true, force: true }) }
 })
 
+test('simulator cleanup is bounded after successful StoreKit checks', { timeout: 15_000 }, () => {
+  const task = mkdtempSync(join(tmpdir(), 'cook-storekit-stuck-shutdown-'))
+  try {
+    const bin = join(task, 'bin')
+    mkdirSync(bin)
+    writeFileSync(join(bin, 'xcrun'), `#!/bin/sh
+printf '%s\\n' "$*" >> "$CALLS"
+case "$*" in
+  "simctl shutdown existing-phone")
+    trap '' TERM
+    echo STOREKIT_SHUTDOWN_HUNG
+    while :; do sleep 1; done
+    ;;
+  "simctl spawn existing-phone launchctl print user/501/com.apple.storekitd")
+    echo "state = running"
+    ;;
+esac
+exit 0
+`, { mode: 0o755 })
+    writeFileSync(join(bin, 'xcodebuild'), `#!/usr/bin/env node
+const fs = require('node:fs')
+fs.appendFileSync(process.env.CALLS, 'xcodebuild ' + process.argv.slice(2).join(' ') + '\\n')
+`, { mode: 0o755 })
+    const callsPath = join(task, 'calls')
+    const run = spawnSync('bash', ['scripts/run-ios-storekit-tests.sh'], {
+      cwd: root,
+      encoding: 'utf8',
+      timeout: 10_000,
+      env: {
+        ...process.env,
+        PATH: `${bin}:${process.env.PATH}`,
+        DEVICE: 'existing-phone',
+        RUNNER_TEMP: task,
+        CALLS: callsPath,
+        STOREKIT_SHUTDOWN_TIMEOUT_SECONDS: '1',
+      },
+    })
+    assert.equal(run.error, undefined)
+    assert.equal(run.status, 0)
+    assert.match(readFileSync(callsPath, 'utf8'), /simctl shutdown existing-phone/)
+    assert.match(readFileSync(join(task, 'xcresult/existing-phone-storekit-shutdown.log'), 'utf8'), /STOREKIT_SHUTDOWN_HUNG/)
+  }
+  finally { rmSync(task, { recursive: true, force: true }) }
+})
+
 test('core StoreKit contracts run once in parallel while financial changes keep both devices', () => {
   const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
   const nativeJob = workflow.slice(workflow.indexOf('\n  ios-tests:\n'), workflow.indexOf('\n  ios-storekit:\n'))

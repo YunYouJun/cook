@@ -7,7 +7,6 @@ set -euo pipefail
 # Ad-hoc simulator signing needs no Apple development or distribution identity.
 mkdir -p "$RUNNER_TEMP/xcresult"
 build_log="$RUNNER_TEMP/xcresult/$DEVICE-storekit-build.log"
-trap 'xcrun simctl shutdown "$DEVICE" >/dev/null 2>&1 || true' EXIT
 active_command=''
 stop_job() {
   trap '' INT TERM
@@ -33,6 +32,12 @@ run_with_timeout() {
   COOK_IOS_COMMAND_TIMEOUT_SECONDS="$seconds" \
     python3 scripts/run-ios-test-command.py "$log" "$@"
 }
+shutdown_device() {
+  local shutdown_timeout="${STOREKIT_SHUTDOWN_TIMEOUT_SECONDS:-5}"
+  run_with_timeout "$shutdown_timeout" "$RUNNER_TEMP/xcresult/$DEVICE-storekit-shutdown.log" \
+    xcrun simctl shutdown "$DEVICE" >/dev/null 2>&1 || true
+}
+trap shutdown_device EXIT
 code=0
 run_logged "$build_log" \
   xcodebuild build-for-testing -project apps/ios/Cook.xcodeproj -scheme CookMembershipStoreKit \
