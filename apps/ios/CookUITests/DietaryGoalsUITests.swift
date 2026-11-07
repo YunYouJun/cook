@@ -56,7 +56,9 @@ final class DietaryGoalsUITests: XCTestCase {
         // current footer instead of retaining a resolved element from the old sheet.
         let summary = app.otherElements.matching(identifier: "filter.summary").firstMatch
         XCTAssertTrue(summary.waitForExistence(timeout: 10), file: file, line: line)
-        let count = summary.descendants(matching: .any).matching(identifier: "filter.resultCount").firstMatch
+        // Xcode 27.2 can stall while enumerating an `.any` descendant tree at
+        // maximum Dynamic Type. The count is an explicitly combined HStack.
+        let count = summary.otherElements.matching(identifier: "filter.resultCount").firstMatch
         XCTAssertTrue(count.waitForExistence(timeout: 10), file: file, line: line)
         XCTAssertEqual(count.label.filter { $0.isASCII && $0.isNumber }, expected, file: file, line: line)
     }

@@ -7,7 +7,6 @@ set -euo pipefail
 # Ad-hoc simulator signing needs no Apple development or distribution identity.
 mkdir -p "$RUNNER_TEMP/xcresult"
 build_log="$RUNNER_TEMP/xcresult/$DEVICE-storekit-build.log"
-trap 'xcrun simctl shutdown "$DEVICE" >/dev/null 2>&1 || true' EXIT
 active_command=''
 stop_job() {
   trap '' INT TERM
@@ -27,22 +26,58 @@ run_logged() {
   active_command=''
   return "$command_code"
 }
+run_with_timeout() {
+  local seconds="$1" log="$2"
+  shift 2
+  COOK_IOS_COMMAND_TIMEOUT_SECONDS="$seconds" \
+    python3 scripts/run-ios-test-command.py "$log" "$@"
+}
+shutdown_device() {
+  local shutdown_timeout="${STOREKIT_SHUTDOWN_TIMEOUT_SECONDS:-5}"
+  run_with_timeout "$shutdown_timeout" "$RUNNER_TEMP/xcresult/$DEVICE-storekit-shutdown.log" \
+    xcrun simctl shutdown "$DEVICE" >/dev/null 2>&1 || true
+}
+trap shutdown_device EXIT
 code=0
 run_logged "$build_log" \
   xcodebuild build-for-testing -project apps/ios/Cook.xcodeproj -scheme CookMembershipStoreKit \
+  -testPlan CookMembershipStoreKit \
   -destination 'generic/platform=iOS Simulator' -parallel-testing-enabled NO \
   -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates \
   -derivedDataPath "$RUNNER_TEMP/cook-derived-data" \
   CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- || code=$?
 [[ "$code" == 0 ]] || exit "$code"
 xcrun simctl bootstatus "$DEVICE" -b
+# A fresh simulator can leave launchctl waiting indefinitely. Bound each
+# service-control call and decide from the readiness probe instead.
+restart_timeout="${STOREKIT_RESTART_TIMEOUT_SECONDS:-10}"
+status_timeout="${STOREKIT_STATUS_TIMEOUT_SECONDS:-3}"
+echo "Restarting StoreKit test service on $DEVICE"
+restart_code=0
+run_with_timeout "$restart_timeout" "$RUNNER_TEMP/xcresult/$DEVICE-storekit-service.log" \
+  xcrun simctl spawn "$DEVICE" launchctl kickstart -k user/501/com.apple.storekitd || restart_code=$?
+if [[ "$restart_code" != 0 ]]; then
+  echo "StoreKit service restart did not finish within $restart_timeout seconds; waiting for readiness" >&2
+fi
+for attempt in {1..30}; do
+  state=$(run_with_timeout "$status_timeout" "$RUNNER_TEMP/xcresult/$DEVICE-storekit-service-status.log" \
+    xcrun simctl spawn "$DEVICE" launchctl print user/501/com.apple.storekitd 2>/dev/null \
+    | sed -n 's/^[[:space:]]*state = //p' | head -1 || true)
+  [[ "$state" == running ]] && break
+  if [[ "$attempt" == 30 ]]; then
+    echo "StoreKit test service did not start" >&2
+    exit 1
+  fi
+  sleep 1
+done
 run_stage() {
   local stage="$1" stage_code=0
   local test_log="$RUNNER_TEMP/xcresult/$DEVICE-$stage.log"
   run_logged "$test_log" \
     xcodebuild test-without-building -project apps/ios/Cook.xcodeproj -scheme CookMembershipStoreKit \
-    -only-testing:CookUITests/MembershipStoreKitUITests \
+    -testPlan CookMembershipStoreKit \
     -only-testing:CookStoreKitTests \
+    -only-testing:CookUITests/MembershipStoreKitUITests \
     -destination "id=$DEVICE" -destination-timeout 180 -parallel-testing-enabled NO \
     -derivedDataPath "$RUNNER_TEMP/cook-derived-data" -collect-test-diagnostics never \
     -test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 120 \
@@ -50,8 +85,8 @@ run_stage() {
     CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- || stage_code=$?
   if [[ "$code" == 0 && "$stage_code" != 0 ]]; then code=$stage_code; fi
 }
-# The scheme orders the cold purchase scene before the headless SDK host.
-# Keep both targets in one Xcode operation to avoid a second destination /
-# test-manager bootstrap. Every financial case executes once; any failure fails.
+# Start and await the StoreKit service before the first purchase scene. Xcode 27
+# can leave a cold service unavailable to the first UI runner. Keep both targets
+# in one operation so the service starts before Apple's real purchase sheet.
 run_stage storekit
 exit "$code"

@@ -59,7 +59,7 @@ asc subscriptions list --app 6824589542
 - 未签名的 iOS 26.5 首轮配置操作报 `SKInternalErrorDomain Code=3`；未签名的 iPadOS 27 后续出现 Apple 登录提示，已取消并中止，没有输入 Apple 凭据或真实扣款。沿用平台既有 ad-hoc 签名参数后，iPadOS 27 单项购买／恢复 0.648 秒通过。历史失败保留，不能计入通过数。[Apple DTS 对相关配置问题的记录](https://developer.apple.com/forums/thread/826971)仅用于解释诊断方向。
 - iOS 26.5 的后续签名组合运行仍因本地配置不可用而失败，236 项 App／账号测试通过、七项 StoreKit 测试未通过，保留系统限制。现有 iPhone Duo／iOS 27.1 独立 Scheme 首轮为五项通过、两项失败：自动续费首次冷运行超过新设的 60 秒预算，后续定向 0.629 秒通过，尚不能据此认定根因消失；故障注入将 `generic(userCancelled)` 实际转换为 `StoreKitError.unknown`。注入测试现在明确核对该未知失败不会报告付款／恢复成功，而不将其算作用户实际取消的证据；实际取消仍须会员 UI 验收。StoreKit 单例限时保留为 120 秒，任务限时 10 分钟，不新增重试。
 - 最终复测：iPhone Duo／iOS 27.1 和 iPad Pro 11 英寸 M5／iPadOS 27 各通过 **234 项 App 单元、2 项账号 UI、7 项本地 StoreKit**，没有跳过。共享一次常规构建 34.86 秒；手机常规会员组 116.54 秒、独立 StoreKit（含签名构建）47.69 秒；平板分别为 117.00／42.47 秒。每端合计含冷构建约 3 分 20 秒，只是本机实测，不能当作远端耗时；对应报告目录为 `financial-reviewed-contracts/`。原 26.5 失败及首次冷启动超时记录继续保留，不由后续通过覆盖。
-- 原生 CI 的会员专属输入选择 `membership`：两端各运行全部 App 单元测试、本地 StoreKit 和账号 UI。混入工程、共享协议、数据或其他未知输入继续核心矩阵。核心和手动完整回归也保留本地 StoreKit；金融断言失败不重试，不能由另一台设备通过掩盖。
+- 原生 CI 的会员专属输入选择 `membership`：App 单元测试只执行一次，两端执行账号 UI 和本地 StoreKit。混入工程、共享协议、数据或其他未知输入继续核心矩阵；日常 core 的 StoreKit 只在一个设备执行，手动完整回归仍保留两端本地 StoreKit。金融断言失败不重试，不能由另一台设备通过掩盖。
 - 真实 Apple Sandbox、云端事务／并发、换机重装、完整会员 UI、VoiceOver、大字号、TestFlight 分发与正式上架均须分别留证。本地 StoreKit 和模拟器不能替代真实沙盒。
 
 本机本轮报告位于 `~/Library/Developer/ReleaseArtifacts/Cook/20261106-membership-foundation/`；任务独占 DerivedData／结果包在导出日志与摘要后回收，共享设备仅恢复本轮启动前的关闭状态，不新增或清空设备。
@@ -127,7 +127,9 @@ asc subscriptions list --app 6824589542
 
 `6620d51b` 的 `42277968947` 中，Linux／Web 及两端 242 项 App、4 项普通 UI 全部通过。手机三个金融页面通过，但 SDK 退款通知未收到；平板七项 SDK 通过，取消页面的业务断言完成后，App 终止阶段仍超过 120 秒，因此整线失败。现在先注册测试会话清理，再注册 App 终止，利用 XCTest 的逆序 teardown 在 App 停止后清空交易；取消用例还明确等待系统确认页消失并显示未开通状态。独立 SDK 进程的诊断实验仍未稳定收到通知，失败记录保留在 `session-cleanup-and-isolated-refund/`，没有采用该编排。
 
-当前金融阶段为七项 SDK 加四项真实页面测试。新增页面用例由 UI runner 从 App 外部退款，要求真实 App 的 `Transaction.updates` 在未点击刷新／恢复时将已开通变为未开通，然后显式恢复仍保持撤销结果；仅 DEBUG 隔离夹具模拟服务端核对，严格要求已结算的同账号、同商品、Xcode 环境交易，保留后续独立授权。SDK 退款用例另行证明 `AppStore.sync()` 和完整已验证历史可以恢复同一交易的撤销、账号标记与环境；不会以测试会话内部状态代替 App 通知。最新结果按对应源码单独记录，历史失败及七加二／七加三结果保留。
+当前金融阶段为七项 SDK 加四项真实页面测试。新增页面用例由 UI runner 从 App 外部退款，要求真实 App 的 `Transaction.updates` 在未点击刷新／恢复时将已开通变为未开通，然后显式恢复仍保持撤销结果；仅 DEBUG 隔离夹具模拟服务端核对，严格要求已结算的同账号、同商品、Xcode 环境交易，保留后续独立授权。SDK 退款用例另行验证完整交易历史可以恢复同一交易的撤销、账号标记与环境；不会以测试会话内部状态代替 App 通知。最新结果按对应源码单独记录，历史失败及七加二／七加三结果保留。
+
+`42398154792` 的远端 StoreKit 任务在 Ask to Buy 的历史用例修复后，又阻塞于另一条无界面 `Product.purchase`；结果包显示历史用例已在 0.185 秒通过。七项 SDK 用例现在不再从测试宿主直接发起购买：需要真实交易时统一使用 `SKTestSession.buyProduct` 创建带账号标记的 Xcode 环境 fixture，再验证未完成队列、协调器恢复、退款更新和 finish；待批准结果的界面状态仍由会员 UI fixture 覆盖，Apple 本地确认页购买仍由四项页面测试覆盖。历史与退款映射用例只替换平台网络同步边界，交易、验证、撤销和恢复仍来自 StoreKit。退款测试等待同一交易的已验证撤销更新后再读取历史，避免 API 返回后的短暂旧快照。所有单例 120 秒上限和原业务断言保持不变。
 
 `544e3c83` 的 `42285336418` 通过 Swift／GPG、Web 及两端普通会员组，手机另四项真实交易页面与七项 SDK 全部通过。平板四项真实页面全部通过，但第二次 Xcode 操作启动 SDK 宿主未在整阶段十分钟内完成，整线失败；没有完成证据的 SDK 不计为通过。取消后的 Xcode 仍在改写 Staging 文件，artifact ZIP 因 ENOENT 上传失败，现有控制台证据已归档。
 

@@ -30,6 +30,15 @@ function evidence() {
     labels: ['xcode-27'],
     steps: ['Build for testing', 'Build and test', `Verified iOS core #193 ${checkout} ${key}`].map(name => ({ name, status: 'completed', conclusion: 'success' })),
   }))
+  jobs.push({
+    name: 'ios-storekit (iphone)',
+    run_id: 725,
+    run_attempt: 2,
+    status: 'completed',
+    conclusion: 'success',
+    labels: ['xcode-27'],
+    steps: [{ name: 'Verify local StoreKit contracts', status: 'completed', conclusion: 'success' }],
+  })
   const commit = { sha: checkout, tree: { sha: tree }, parents: [{ sha: base }, { sha: head }] }
   const input = {
     eventName: 'push',
@@ -55,7 +64,7 @@ function evidence() {
   return { input, pr, run, jobs, commit }
 }
 
-test('a merged PR must match the checkout actually tested by both core jobs', () => {
+test('a merged PR must match both core jobs and the StoreKit job', () => {
   assert.deepEqual(findCoreRun(evidence().input), { key, runId: 725, attempt: 2, pr: 193 })
 })
 
@@ -79,6 +88,9 @@ test('unrelated merges, old workflows, missing or partial test evidence cannot s
     ({ jobs }) => { jobs[0].steps.pop() },
     ({ jobs }) => { jobs[1].steps[2].name = jobs[1].steps[2].name.replace(key, 'b'.repeat(64)) },
     ({ jobs }) => { jobs[0].steps[2].name = jobs[0].steps[2].name.replace('#193', '#194') },
+    ({ jobs }) => { jobs.pop() },
+    ({ jobs }) => { jobs[2].conclusion = 'failure' },
+    ({ jobs }) => { jobs[2].steps[0].conclusion = 'skipped' },
     ({ commit }) => { commit.parents[0].sha = head },
     ({ commit }) => { commit.parents[1].sha = base },
     ({ commit }) => { commit.tree.sha = '6'.repeat(40) },
@@ -176,7 +188,7 @@ test('source tree, executing workflow, tools, runner and both simulated devices 
 
 test('the macOS probe grants reuse only for a nonempty exact fingerprint match', () => {
   const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
-  const step = workflow.split('      - name: Compare with both successful PR jobs')[1].split(/\n {2}\S/)[0]
+  const step = workflow.split('      - name: Compare with successful PR core jobs')[1].split(/\n {2}\S/)[0]
   const script = step.split('        run: |\n')[1].split('\n').map(line => line.slice(10)).join('\n')
   const directory = mkdtempSync(join(tmpdir(), 'cook-core-probe-'))
   try {
