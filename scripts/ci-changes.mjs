@@ -63,9 +63,18 @@ function isWebOnly(path) {
     || webTestFiles.has(path)
 }
 
-export function planIosTests(eventName, coverage) {
+function isMembershipInput(path) {
+  return /^apps\/ios\/(?:Cook\/Model\/(?:NativeMembershipStoreKit|Membership\w*)|CookCore\/(?:Sources\/CookCore|Tests\/CookCoreTests)\/Membership\w*)\.swift$/.test(path)
+    || path.startsWith('apps/ios/StoreKitValidation/')
+}
+
+export function planIosTests(eventName, coverage, scope) {
+  if (eventName === 'workflow_dispatch' && coverage === 'membership')
+    return { suites: ['membership'], maxParallel: 2 }
   const core = eventName === 'push' || eventName === 'pull_request'
     || (eventName === 'workflow_dispatch' && coverage === 'core')
+  if (core && eventName !== 'workflow_dispatch' && scope === 'membership')
+    return { suites: ['membership'], maxParallel: 2 }
   return {
     suites: core ? ['core-regression'] : ['regression-main', 'regression-discovery', 'dietary'],
     maxParallel: core ? 2 : 3,
@@ -104,6 +113,7 @@ export function detectNativeChanges(eventName, event, cwd = process.cwd()) {
     const paths = diff.split('\0').filter(Boolean)
     return {
       skipNative: paths.length > 0 && paths.every(path => isDocumentation(path) || isWebOnly(path) || path === '.github/workflows/support-sync.yml'),
+      scope: paths.some(isMembershipInput) && paths.every(path => isMembershipInput(path) || isDocumentation(path) || isWebOnly(path)) ? 'membership' : 'core',
       changedFiles: paths.length,
       comparison: `${base}${separator}${head}`,
     }
@@ -161,7 +171,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     result.previousPushPassed = previousPushPassed(event)
     result.skipNative = result.previousPushPassed
   }
-  const ios = planIosTests(process.env.GITHUB_EVENT_NAME, event?.inputs?.ios_coverage)
+  const ios = planIosTests(process.env.GITHUB_EVENT_NAME, event?.inputs?.ios_coverage, result.scope)
   if (process.env.GITHUB_OUTPUT)
     appendFileSync(process.env.GITHUB_OUTPUT, `skip_native=${result.skipNative}\nios_suites=${JSON.stringify(ios.suites)}\nios_max_parallel=${ios.maxParallel}\n`)
   if (process.env.GITHUB_STEP_SUMMARY) {

@@ -132,6 +132,17 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         PRODUCT_BUNDLE_IDENTIFIER: fun.yunle.cook.uitests
         TEST_TARGET_NAME: Cook
+  CookStoreKitTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: StoreKitValidation
+    dependencies:
+      - target: Cook
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: true
+        PRODUCT_BUNDLE_IDENTIFIER: fun.yunle.cook.storekit-tests
 schemes:
   Cook:
     build:
@@ -141,3 +152,14 @@ schemes:
         CookUITests: [test]
     test:
       targets: [CookTests, CookUITests]
+  CookMembershipStoreKit:
+    build:
+      targets:
+        Cook: all
+        CookStoreKitTests: [test]
+    run:
+      config: Debug
+      storeKitConfiguration: StoreKitValidation/Fixtures/MembershipProducts.storekit
+    test:
+      config: Debug
+      targets: [CookStoreKitTests]

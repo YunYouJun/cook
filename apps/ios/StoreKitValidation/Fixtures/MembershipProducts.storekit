@@ -1,0 +1,53 @@
+{
+  "identifier": "637E5672-3562-46BB-9E41-2167A83905E1",
+  "nonRenewingSubscriptions": [
+    {
+      "displayPrice": "1.00",
+      "familyShareable": false,
+      "internalID": "B6722B0B-E21A-48D8-A68B-38475A72378E",
+      "localizations": [
+        {
+          "description": "仅供本地 StoreKit 契约测试，不代表 Cook 商品或定价",
+          "displayName": "Cook 本地测试商品",
+          "locale": "zh_CN"
+        }
+      ],
+      "productID": "fun.yunle.cook.local.nonrenewing",
+      "referenceName": "Local contract fixture",
+      "type": "NonRenewingSubscription"
+    }
+  ],
+  "products": [],
+  "settings": { "_locale": "zh_CN", "_storefront": "CHN", "_storeKitErrors": [] },
+  "subscriptionGroups": [
+    {
+      "id": "962757FD-7DF3-4E0B-9942-9C040A1EF69F",
+      "localizations": [],
+      "name": "Local subscription fixture",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "1.00",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "79BF68FD-1EB2-4058-AFB8-2502C4147EF2",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "仅供本地 StoreKit 契约测试，不代表 Cook 商品或定价",
+              "displayName": "Cook 本地自动续费测试商品",
+              "locale": "zh_CN"
+            }
+          ],
+          "productID": "fun.yunle.cook.local.autorenewing",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Local auto-renewing fixture",
+          "subscriptionGroupID": "962757FD-7DF3-4E0B-9942-9C040A1EF69F",
+          "type": "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version": { "major": 3, "minor": 0 }
+}

@@ -63,6 +63,13 @@ case "$IOS_SUITE" in
       -only-testing:CookUITests/CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients \
       -only-testing:CookUITests/CloudKitchenUITests/testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled
     ;;
+  membership)
+    # The workflow also runs the dedicated, signed StoreKit scheme. Keep the
+    # regular host's App units and account presentation in this invocation.
+    run_tests "$DEVICE" membership \
+      -only-testing:CookTests \
+      -only-testing:CookUITests/AccountUserDataUITests
+    ;;
   regression-main)
     # Everything else, including all App unit tests and newly added UI suites.
     run_tests "$DEVICE" regression-main \

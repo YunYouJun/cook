@@ -7,7 +7,7 @@ import process from 'node:process'
 // eslint-disable-next-line test/no-import-node-test -- This bootstrap check runs before installing Vitest or workspace dependencies.
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { detectNativeChanges } from '../scripts/ci-changes.mjs'
+import { detectNativeChanges, planIosTests } from '../scripts/ci-changes.mjs'
 
 function repository(run) {
   const cwd = mkdtempSync(join(tmpdir(), 'cook-ci-changes-'))
@@ -131,6 +131,30 @@ test('moving native code to a browser adapter still includes the removed native 
     write('apps/web/app/adapters/.keep')
     renameSync(join(cwd, 'apps/ios/Cook/App.swift'), join(cwd, 'apps/web/app/adapters/moved.ts'))
     assert.equal(detectNativeChanges('push', { before: base, after: commit() }, cwd).skipNative, false)
+  })
+})
+
+test('membership-only changes use financial coverage; mixed and unknown inputs retain core', () => {
+  repository(({ cwd, write, commit, base }) => {
+    write('apps/ios/Cook/Model/NativeMembershipStoreKit.swift')
+    write('apps/ios/CookCore/Sources/CookCore/MembershipPurchase.swift')
+    write('apps/ios/CookCore/Tests/CookCoreTests/MembershipPurchaseTests.swift')
+    write('apps/ios/StoreKitValidation/NativeMembershipStoreKitTests.swift')
+    write('docs/dev/ios-membership.md')
+    const after = commit()
+    const result = detectNativeChanges('push', { before: base, after }, cwd)
+    assert.equal(result.skipNative, false)
+    assert.equal(result.scope, 'membership')
+    assert.deepEqual(planIosTests('push', undefined, result.scope).suites, ['membership'])
+    assert.deepEqual(planIosTests('pull_request', undefined, result.scope).suites, ['membership'])
+    assert.deepEqual(planIosTests('workflow_dispatch', 'core', result.scope).suites, ['core-regression'])
+    assert.deepEqual(planIosTests('workflow_dispatch', 'membership', 'core'), { suites: ['membership'], maxParallel: 2 })
+    assert.equal(planIosTests('workflow_dispatch', 'unknown', result.scope).suites.length, 3)
+    assert.equal(planIosTests('workflow_dispatch', 'full', result.scope).suites.length, 3)
+    write('apps/ios/Cook/App.swift', 'mixed native change')
+    assert.equal(detectNativeChanges('push', { before: base, after: commit() }, cwd).scope, 'core')
+    write('apps/ios/project.yml')
+    assert.equal(detectNativeChanges('push', { before: after, after: commit() }, cwd).scope, 'core')
   })
 })
 
