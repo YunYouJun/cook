@@ -23,16 +23,16 @@
       "parallelizable" : false,
       "target" : {
         "containerPath" : "container:Cook.xcodeproj",
-        "identifier" : "5A216D8184EE0A3A7CB97253",
-        "name" : "CookUITests"
+        "identifier" : "588CA693F674821511BC6DA0",
+        "name" : "CookStoreKitTests"
       }
     },
     {
       "parallelizable" : false,
       "target" : {
         "containerPath" : "container:Cook.xcodeproj",
-        "identifier" : "588CA693F674821511BC6DA0",
-        "name" : "CookStoreKitTests"
+        "identifier" : "5A216D8184EE0A3A7CB97253",
+        "name" : "CookUITests"
       }
     }
   ],

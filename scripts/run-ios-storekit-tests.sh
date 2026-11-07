@@ -43,8 +43,8 @@ run_stage() {
   run_logged "$test_log" \
     xcodebuild test-without-building -project apps/ios/Cook.xcodeproj -scheme CookMembershipStoreKit \
     -testPlan CookMembershipStoreKit \
-    -only-testing:CookUITests/MembershipStoreKitUITests \
     -only-testing:CookStoreKitTests \
+    -only-testing:CookUITests/MembershipStoreKitUITests \
     -destination "id=$DEVICE" -destination-timeout 180 -parallel-testing-enabled NO \
     -derivedDataPath "$RUNNER_TEMP/cook-derived-data" -collect-test-diagnostics never \
     -test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 120 \
@@ -52,8 +52,8 @@ run_stage() {
     CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- || stage_code=$?
   if [[ "$code" == 0 && "$stage_code" != 0 ]]; then code=$stage_code; fi
 }
-# The scheme orders the cold purchase scene before the headless SDK host.
-# Keep both targets in one Xcode operation to avoid a second destination /
-# test-manager bootstrap. Every financial case executes once; any failure fails.
+# Warm the SDK host before the first purchase scene. Xcode 27 can leave a
+# cold StoreKit service unavailable to the first UI runner. Keep both targets
+# in one operation so the service initialization precedes Apple's real sheet.
 run_stage storekit
 exit "$code"

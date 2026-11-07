@@ -95,7 +95,7 @@ test('StoreKit checks both ordered targets in one operation and preserves either
   const project = readFileSync(join(root, 'apps/ios/project.yml'), 'utf8')
   const plan = JSON.parse(readFileSync(join(root, 'apps/ios/StoreKitValidation/CookMembershipStoreKit.xctestplan'), 'utf8'))
   assert.equal(plan.defaultOptions.storeKitConfiguration.identifier, 'StoreKitValidation/Fixtures/MembershipProducts.storekit')
-  assert.deepEqual(plan.testTargets.map(({ target }) => target.name), ['CookUITests', 'CookStoreKitTests'])
+  assert.deepEqual(plan.testTargets.map(({ target }) => target.name), ['CookStoreKitTests', 'CookUITests'])
   assert.ok(plan.testTargets.every(({ parallelizable }) => parallelizable === false))
   assert.match(project.slice(project.indexOf('\n  CookMembershipStoreKit:')), /testPlans:\n\s+- path: StoreKitValidation\/CookMembershipStoreKit\.xctestplan\n\s+defaultPlan: true/)
   for (const [buildExit, uiExit, sdkExit, expectedCalls] of [[0, 0, 0, 2], [65, 0, 0, 1], [0, 65, 0, 2], [0, 0, 66, 2], [0, 65, 66, 2]]) {
@@ -138,8 +138,8 @@ process.exit(args[0] === 'build-for-testing' ? Number(process.env.BUILD_EXIT) : 
           assert.ok(args.includes('-resultBundlePath'))
           assert.equal(args[args.indexOf('-maximum-test-execution-time-allowance') + 1], '120')
         }
-        assert.ok(calls[1].includes('-only-testing:CookUITests/MembershipStoreKitUITests'))
         assert.ok(calls[1].includes('-only-testing:CookStoreKitTests'))
+        assert.ok(calls[1].indexOf('-only-testing:CookStoreKitTests') < calls[1].indexOf('-only-testing:CookUITests/MembershipStoreKitUITests'))
       }
     }
     finally { rmSync(task, { recursive: true, force: true }) }
