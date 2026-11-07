@@ -345,7 +345,7 @@ test('every UI method is assigned exactly once per device, including audits and 
   }, undefined, true)
 })
 
-test('core regression retains all App units, account sync and five existing UI flows', () => {
+test('core regression retains all App units, account sync and six UI flows', () => {
   replay({}, ({ result, calls, output }) => {
     assert.equal(result.status, 0, result.stderr)
     assert.deepEqual(calls.map(call => call.name), ['phone-core-regression', 'pad-core-regression'])
@@ -354,6 +354,7 @@ test('core regression retains all App units, account sync and five existing UI f
       'CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients',
       'CloudKitchenUITests/testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled',
       'DietaryGoalsUITests/testNextDayLunchAndWeightGoalAtAccessibilitySize',
+      'DietaryGoalsUITests/testInstitutionalLowGIAtAccessibilitySize',
       'DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone',
     ].map(test => `CookUITests/${test}`)
     const fullOnly = [
@@ -382,7 +383,7 @@ test('core regression retains all App units, account sync and five existing UI f
         assert.ok(!selected(test), `${test} remains in the manual full matrix`)
       assert.ok(only.includes('CookUITests/AccountUserDataUITests'))
       assert.ok(only.includes('CookUITests/MembershipUITests'))
-      assert.equal(only.filter(selector => selector.startsWith('CookUITests/')).length, 7)
+      assert.equal(only.filter(selector => selector.startsWith('CookUITests/')).length, 8)
       for (const selector of only.filter(selector => selector.startsWith('CookUITests/'))) {
         const [, suite, method] = selector.split('/')
         const source = readFileSync(join(root, 'apps/ios/CookUITests', `${suite}.swift`), 'utf8')

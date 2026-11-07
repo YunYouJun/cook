@@ -2,6 +2,7 @@ import SwiftUI
 
 /// 筛选菜单中的可选场景，与食材和厨具共用当前条件。
 struct CookDiscoveryScenePrompt: View {
+    @Environment(RecipeStore.self) private var store
     @Binding var selection: CookDiscoveryScene?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -46,7 +47,7 @@ struct CookDiscoveryScenePrompt: View {
 
     @ViewBuilder
     private func choices(wrapping: Bool) -> some View {
-        ForEach(CookDiscoveryScene.allCases) { scene in
+        ForEach(store.discoveryScenes) { scene in
             Button {
                 selection = selection == scene ? nil : scene
             } label: {

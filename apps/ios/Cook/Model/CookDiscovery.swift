@@ -30,6 +30,7 @@ enum CookDiscoveryScene: String, CaseIterable, Identifiable {
     case soup
     case home
     case nextDayLunch = "next-day-lunch"
+    case institutionalLowGI = "institutional-low-gi"
 
     var id: String { rawValue }
 
@@ -39,10 +40,11 @@ enum CookDiscoveryScene: String, CaseIterable, Identifiable {
         case .soup: return "来点热乎的"
         case .home: return "换个家常口味"
         case .nextDayLunch: return "次日便当"
+        case .institutionalLowGI: return "机构低 GI 食谱"
         }
     }
 
-    var emoji: String { self == .nextDayLunch ? "🍱" : (self == .home ? "🍚" : "🍲") }
+    var emoji: String { self == .institutionalLowGI ? "📖" : (self == .nextDayLunch ? "🍱" : (self == .home ? "🍚" : "🍲")) }
 
     var title: String {
         switch self {
@@ -50,6 +52,7 @@ enum CookDiscoveryScene: String, CaseIterable, Identifiable {
         case .soup: return "想端起一碗热乎的。"
         case .home: return "熟悉的饭桌，也想换道菜。"
         case .nextDayLunch: return "提前备好，明天带饭。"
+        case .institutionalLowGI: return "按机构原方，找一道低 GI 食谱。"
         }
     }
 
@@ -59,6 +62,7 @@ enum CookDiscoveryScene: String, CaseIterable, Identifiable {
         case .soup: return "锅里咕嘟咕嘟，桌上多了一只汤碗。今天，想从一碗汤开始。"
         case .home: return "米饭已经盛好，想找道有家常味、又不是昨天那一道的菜。"
         case .nextDayLunch: return "先挑带饭的菜，再搭配主食和蔬菜。"
+        case .institutionalLowGI: return "先查看配方要求，再打开机构原文。"
         }
     }
 
@@ -68,6 +72,7 @@ enum CookDiscoveryScene: String, CaseIterable, Identifiable {
         case .soup: return "先看看标有「汤」的汤羹做法"
         case .home: return "先看看标有「家常菜」的做法"
         case .nextDayLunch: return "份量和用油参考见图文做法。须快速冷却、冷藏运输和存放，次日彻底复热。"
+        case .institutionalLowGI: return InstitutionalLowGICatalog.explanation
         }
     }
 
@@ -77,6 +82,7 @@ enum CookDiscoveryScene: String, CaseIterable, Identifiable {
         case .soup: return CookDiscoveryFilters(methodGroup: "汤羹")
         case .home: return CookDiscoveryFilters(tag: "家常菜")
         case .nextDayLunch: return CookDiscoveryFilters(tag: "次日便当")
+        case .institutionalLowGI: return CookDiscoveryFilters(tag: InstitutionalLowGICatalog.tag)
         }
     }
 }

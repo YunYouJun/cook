@@ -67,7 +67,7 @@ final class CookSession {
             matches = store.recommender.recommend(options)
         }
         guard let discoveryScene else { return matches }
-        return matches.filter { CookDiscovery.matches($0.recipe, using: discoveryScene.filters) }
+        return matches.filter { matchesScene($0.recipe, scene: discoveryScene, options: options, store: store) }
     }
 
     func candidates(in store: RecipeStore, ignoringKeyword: Bool = false) -> [Recipe] {
@@ -96,10 +96,16 @@ final class CookSession {
         return CookCandidateSnapshot(
             recipes: recipes.filter { recipe in
                 (keyword.isEmpty || recipe.name.contains(keyword))
-                    && (discoveryScene.map { CookDiscovery.matches(recipe, using: $0.filters) } ?? true)
+                    && (discoveryScene.map { matchesScene(recipe, scene: $0, options: options, store: store) } ?? true)
             },
             matchesByID: [:]
         )
+    }
+
+    private func matchesScene(_ recipe: Recipe, scene: CookDiscoveryScene, options: RecommendationOptions, store: RecipeStore) -> Bool {
+        guard CookDiscovery.matches(recipe, using: scene.filters) else { return false }
+        return scene != .institutionalLowGI
+            || store.institutionalLowGICatalog?.permits(recipe, options: options, normalizer: store.data.normalizer) == true
     }
 
     /// 查询变化时重新绑定；只读、不保存，重复调用不会触发写入或查询循环。
@@ -174,7 +180,7 @@ final class CookSession {
 
     func matchCount(using recommender: Recommender) -> Int? {
         // 没有目标核对目录时不能据普通推荐器报告目标结果数。
-        guard hasSelection, dietaryGoal == nil else { return nil }
+        guard hasSelection, dietaryGoal == nil, discoveryScene != .institutionalLowGI else { return nil }
         let recipes = selectedStuff.isEmpty ? recommender.candidates(options) : recommender.recommend(options).map(\.recipe)
         let keyword = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
         return recipes.filter { recipe in

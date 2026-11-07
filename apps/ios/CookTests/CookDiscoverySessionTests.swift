@@ -5,6 +5,44 @@ import XCTest
 
 @MainActor
 final class CookDiscoverySessionTests: XCTestCase {
+    func testInstitutionalLowGISceneUsesReviewedPoolAndClearsWithoutLosingIngredients() throws {
+        let store = try RecipeStore.loadBundled(inMemory: true)
+        let session = CookSession(defaultPantry: [], context: container.mainContext, dietaryDefaults: nil)
+        XCTAssertTrue(store.discoveryScenes.contains(.institutionalLowGI))
+        session.selectDiscoveryScene(.institutionalLowGI)
+        XCTAssertNil(session.matchCount(using: store.recommender), "A plain recommender cannot validate institutional sources")
+        let initial = session.candidateSnapshot(in: store)
+        XCTAssertEqual(initial.recipes.count, 10)
+        XCTAssertEqual(session.matchCount(in: store), 10)
+        XCTAssertEqual(Set(initial.recipes.map(\.id)), Set(878...887))
+        XCTAssertTrue(CookDiscovery.sample(initial.recipes).allSatisfy { (878...887).contains($0.id) })
+        session.addStuff("虾")
+        let matched = session.candidateSnapshot(in: store)
+        XCTAssertFalse(matched.recipes.isEmpty)
+        XCTAssertTrue(matched.recipes.allSatisfy { (878...887).contains($0.id) })
+        XCTAssertEqual(Set(matched.matchesByID.keys), Set(session.matches(in: store).map(\.recipe.id)))
+        session.toggleAvoid("虾")
+        XCTAssertTrue(session.candidates(in: store).isEmpty)
+        session.toggleAvoid("虾")
+        session.clearFilters()
+        XCTAssertNil(session.discoveryScene)
+        XCTAssertEqual(session.selectedStuff, ["虾"])
+        XCTAssertFalse(CookSession(defaultPantry: [], context: container.mainContext, dietaryDefaults: nil).discoveryScene == .institutionalLowGI)
+    }
+
+    func testMissingInstitutionalReviewCannotPromoteTheCSVTagOrRelaxAnEmptyIntersection() throws {
+        let bundled = try RecipeStore.loadBundled(inMemory: true)
+        let unavailable = RecipeStore(data: bundled.data)
+        let session = CookSession(defaultPantry: [], context: container.mainContext, dietaryDefaults: nil)
+        XCTAssertFalse(unavailable.discoveryScenes.contains(.institutionalLowGI))
+        session.selectDiscoveryScene(.institutionalLowGI)
+        XCTAssertTrue(session.candidates(in: unavailable).isEmpty)
+        session.selectDietaryGoal(.weightAware)
+        XCTAssertTrue(session.candidates(in: bundled).isEmpty)
+        session.selectDiscoveryScene(nil)
+        XCTAssertEqual(session.candidates(in: bundled).count, 10)
+    }
+
     private lazy var container = Persistence.makeContainer(inMemory: true)
 
     private func store() throws -> RecipeStore {
