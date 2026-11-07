@@ -5,6 +5,58 @@ final class DietaryGoalsUITests: XCTestCase {
     override func setUp() { continueAfterFailure = false }
 
     @MainActor
+    func testInstitutionalLowGIShowsOriginalRecipeAndEditorialEvidence() {
+        verifyInstitutionalLowGI(contentSize: .large)
+    }
+
+    @MainActor
+    func testInstitutionalLowGIAtAccessibilitySize() {
+        verifyInstitutionalLowGI(contentSize: .accessibilityExtraExtraExtraLarge)
+    }
+
+    @MainActor
+    private func verifyInstitutionalLowGI(contentSize: UIContentSizeCategory) {
+        let app = self.app(contentSize: contentSize)
+        let options = openFilterOptions(in: app)
+        let scene = options.buttons["discovery.scene.institutional-low-gi"]
+        XCTAssertTrue(scene.waitForExistence(timeout: 10))
+        app.revealFilterOption(scene)
+        scene.tap()
+        assertFilterCount("10", in: app)
+        XCTAssertTrue(options.staticTexts["discovery.explanation"].label.contains("未提供整道菜的实验室实测 GI 值"))
+        closeFilterOptions(in: app)
+        showResults(app)
+        guard let recipe = revealRecipe("dietary.recipe.881", in: app,
+                                       maximumSwipes: contentSize.isAccessibilityCategory ? 25 : 5) else { return }
+        recipe.tap()
+        let list = app.collectionViews["recipe.detail"]
+        XCTAssertTrue(list.waitForExistence(timeout: 10))
+        let requirements = list.staticTexts["institutionalLowGI.requirements"]
+        for _ in 0..<12 {
+            if requirements.exists && requirements.isHittable { break }
+            list.swipeUp()
+        }
+        XCTAssertTrue(requirements.waitForExistence(timeout: 10))
+        XCTAssertTrue(requirements.label.contains("Basmati"))
+        // UIKit may project a SwiftUI Link as a link rather than a button on iPad.
+        let source = app.descendants(matching: .any).matching(identifier: "institutionalLowGI.openSource").firstMatch
+        for _ in 0..<5 {
+            if source.exists && source.isHittable { break }
+            list.swipeUp()
+        }
+        if !source.exists || !source.isHittable {
+            capture(app, named: "institutional-low-gi-source-unavailable-\(contentSize.rawValue)")
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "institutional-low-gi-source-hierarchy"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+        }
+        XCTAssertTrue(source.isHittable)
+        XCTAssertTrue(source.label.contains("打开机构原方"))
+        capture(app, named: "institutional-low-gi-source-\(contentSize.rawValue)")
+    }
+
+    @MainActor
     func testNextDayLunchAndWeightGoalIntersectAndShowSourceOilUnits() {
         verifyNextDayLunchAndWeightGoal(contentSize: .large)
     }

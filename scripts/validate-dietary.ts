@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import Ajv from 'ajv'
 import { parseRecipeCsv } from '../packages/cook/src/utils/csv'
 import { dietaryGoals, validateDietaryData } from './lib/dietary'
+import { validateInstitutionalLowGIData } from './lib/institutional-low-gi'
 
 const read = (file: string) => JSON.parse(fs.readFileSync(`packages/data/${file}`, 'utf8'))
 const data = read('recipe-dietary.json')
@@ -20,3 +21,10 @@ for (const goal of dietaryGoals) {
   const counts = Object.fromEntries(['pass', 'fail', 'unknown'].map(status => [status, Object.values(data.recipes).filter(entry => entry.assessments[goal].status === status).length]))
   console.log(`${goal} ${data.enabledGoals.includes(goal) ? '已开放' : '未开放'} ${JSON.stringify(counts)}`)
 }
+const institutional = read('recipe-institutional-low-gi.json')
+if (!ajv.validate(read('schema/recipe-institutional-low-gi.schema.json'), institutional))
+  throw new Error(ajv.errorsText(ajv.errors))
+const institutionalErrors = validateInstitutionalLowGIData(institutional, recipes)
+if (institutionalErrors.length)
+  throw new Error(institutionalErrors.join('\n'))
+console.log(`机构低 GI 食谱来源与配方校验通过：${Object.keys(institutional.recipes).length} 道；不含实测 GI 数值`)

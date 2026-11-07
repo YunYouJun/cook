@@ -1,0 +1,373 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": 1,
+  "dataVersion": "94a3992a84e9",
+  "publisher": "GI News / University of Sydney",
+  "authorityURL": "https://glycemicindex.com/2026/01/copyright-and-permission-105/",
+  "claimKind": "institutional-editorial",
+  "recipes": {
+    "878": {
+      "recipeFingerprint": "2aeaea239150acfb",
+      "sourceURL": "https://glycemicindex.com/2007/06/low-gi-recipes-of-the-month-26/",
+      "sourceRecipeTitle": "Chicken and sweetcorn soup",
+      "classificationTitle": "Low GI Recipes of the Month",
+      "author": "Catherine Saxelby / Jennene Plummer",
+      "reviewedAt": "2026-11-07",
+      "requirements": "4 人份；原页搭配酸种或谷物面包，不能把任意白面包当作同一配方。",
+      "ingredients": [
+        "鸡肉",
+        "玉米",
+        "青菜",
+        "面包",
+        "鸡高汤",
+        "水",
+        "雪利酒",
+        "姜",
+        "蒜",
+        "葱",
+        "生抽",
+        "鸡蛋（可选）",
+        "菌菇（可选）",
+        "辣椒（可选）"
+      ],
+      "avoidIngredients": [
+        "鸡肉",
+        "玉米",
+        "青菜",
+        "面包",
+        "姜",
+        "蒜",
+        "葱",
+        "生抽",
+        "鸡蛋",
+        "菌菇",
+        "辣椒"
+      ],
+      "unresolvedIngredients": [
+        "鸡高汤",
+        "生抽"
+      ],
+      "ingredientEvidence": "原方含鸡胸肉、奶油状玉米、玉米笋、菜心及面包；鸡蛋、菌菇、辣椒为原文可选项。",
+      "preparationEvidence": "大锅煮高汤及调味，加入鸡肉与玉米，再加入青菜，原文有分阶段时长。"
+    },
+    "879": {
+      "recipeFingerprint": "e617e97f1ad0dba9",
+      "sourceURL": "https://glycemicindex.com/2008/06/low-gi-recipes-of-the-month-13/",
+      "sourceRecipeTitle": "Chakchouka",
+      "classificationTitle": "Low GI Recipes of the Month",
+      "author": "Kate Hemphill",
+      "reviewedAt": "2026-11-07",
+      "requirements": "4 人份；保留原方谷物面包及 Harissa 调味酱；不从这道菜推导其他番茄炒蛋的 GI。",
+      "ingredients": [
+        "红椒",
+        "青椒",
+        "番茄",
+        "鸡蛋",
+        "面包",
+        "橄榄油",
+        "蒜",
+        "辣椒",
+        "Harissa 辣椒酱",
+        "盐（可选）",
+        "葛缕子",
+        "甜椒粉",
+        "孜然"
+      ],
+      "avoidIngredients": [
+        "红椒",
+        "青椒",
+        "番茄",
+        "鸡蛋",
+        "面包",
+        "油",
+        "蒜",
+        "辣椒",
+        "盐",
+        "孜然"
+      ],
+      "unresolvedIngredients": [
+        "Harissa 辣椒酱"
+      ],
+      "ingredientEvidence": "原方含红绿彩椒、罐装番茄、四个鸡蛋、四片谷物面包及辣椒调味。",
+      "preparationEvidence": "平底锅先炒软彩椒，加入番茄和调味后焖煮，打入鸡蛋加盖至蛋白熟；另有烤箱分装做法。"
+    },
+    "880": {
+      "recipeFingerprint": "00f9568d1e8455b5",
+      "sourceURL": "https://glycemicindex.com/2007/12/low-gi-recipes-of-the-month-19/",
+      "sourceRecipeTitle": "Vietnamese-Style Trout with Cucumber Salad",
+      "classificationTitle": "Low GI Recipes of the Month",
+      "author": "Kate Hemphill",
+      "reviewedAt": "2026-11-07",
+      "requirements": "2 人份；条目对应鳟鱼与黄瓜配菜；原页另建议低 GI 米饭，任意米饭组合不在此标注范围。",
+      "ingredients": [
+        "鱼",
+        "黄瓜",
+        "辣椒",
+        "香菜",
+        "莳萝",
+        "薄荷",
+        "青柠汁",
+        "葱",
+        "蒜",
+        "鱼露",
+        "糖"
+      ],
+      "avoidIngredients": [
+        "鱼",
+        "黄瓜",
+        "辣椒",
+        "香菜",
+        "莳萝",
+        "薄荷",
+        "青柠",
+        "葱",
+        "蒜",
+        "糖"
+      ],
+      "unresolvedIngredients": [
+        "鱼露"
+      ],
+      "ingredientEvidence": "原方包含鳟鱼、黄瓜、辣椒与香草酱，鱼露和糖也在完整配方内。",
+      "preparationEvidence": "原文将鱼包锡纸烤制，提供烤箱温度、时长及熟度判断；黄瓜与余下香草酱拌食。"
+    },
+    "881": {
+      "recipeFingerprint": "488d67ff1410bdce",
+      "sourceURL": "https://glycemicindex.com/2008/05/low-gi-recipes-of-the-month-14/",
+      "sourceRecipeTitle": "Lemon and kaffir lime prawn pilaf",
+      "classificationTitle": "Low GI Recipes of the Month",
+      "author": "Kate Hemphill",
+      "reviewedAt": "2026-11-07",
+      "requirements": "4–6 人份；须用原方 Basmati 米，保留原方比例；需可上灶和入烤箱的有盖锅，不能套用于普通米饭。",
+      "ingredients": [
+        "洋葱",
+        "米",
+        "虾",
+        "橄榄油",
+        "蒜",
+        "卡菲尔青柠叶",
+        "柠檬汁及皮",
+        "蔬菜高汤或水",
+        "香菜"
+      ],
+      "avoidIngredients": [
+        "洋葱",
+        "米",
+        "虾",
+        "油",
+        "蒜",
+        "柠檬",
+        "香菜"
+      ],
+      "unresolvedIngredients": [
+        "蔬菜高汤"
+      ],
+      "ingredientEvidence": "原方指定 Basmati 米、整只大虾与洋葱，保留具体米种作为配方条件。",
+      "preparationEvidence": "先在灶上炒洋葱和米，加入液体煮沸，摆虾后将有盖锅移入烤箱；原文给出温度与时长。"
+    },
+    "882": {
+      "recipeFingerprint": "21a768ad56ccb554",
+      "sourceURL": "https://glycemicindex.com/2008/07/low-gi-recipes-of-the-month-12/",
+      "sourceRecipeTitle": "Dhai baingon (Eggplant with yoghurt)",
+      "classificationTitle": "Low GI Recipes of the Month",
+      "author": "Liz and Ian Hemphill",
+      "reviewedAt": "2026-11-07",
+      "requirements": "2 人份，或作为配菜供 4 人；使用原方低脂原味酸奶；不据此推导总热量或其他茄子菜的 GI。",
+      "ingredients": [
+        "茄子",
+        "洋葱",
+        "番茄",
+        "酸奶",
+        "植物油",
+        "孜然",
+        "姜黄",
+        "盐",
+        "芫荽籽粉",
+        "辣椒粉",
+        "葫芦巴叶",
+        "番茄膏",
+        "水",
+        "香菜"
+      ],
+      "avoidIngredients": [
+        "茄子",
+        "洋葱",
+        "番茄",
+        "酸奶",
+        "牛奶",
+        "油",
+        "孜然",
+        "姜黄",
+        "盐",
+        "辣椒",
+        "香菜"
+      ],
+      "unresolvedIngredients": [
+        "番茄膏"
+      ],
+      "ingredientEvidence": "原方为茄子、洋葱、番茄与低脂原味酸奶，含辣椒粉及香料。",
+      "preparationEvidence": "先分批煎茄子并炒蔬菜香料，再分层装入烤盘，覆酸奶加盖入烤箱至热透。"
+    },
+    "883": {
+      "recipeFingerprint": "be185c18b681c3b1",
+      "sourceURL": "https://glycemicindex.com/2007/11/low-gi-recipes-of-the-month-20/",
+      "sourceRecipeTitle": "Lebanese Lamb Skewers",
+      "classificationTitle": "Low GI Recipes of the Month",
+      "author": "Kate Hemphill",
+      "reviewedAt": "2026-11-07",
+      "requirements": "原方制作 12 串；此条目对应羊肉串本身，原页另荐配菜未纳入。没有将低碳水肉类写成 GI 为 0。",
+      "ingredients": [
+        "羊肉",
+        "红葡萄酒",
+        "石榴糖浆",
+        "Baharat 香料"
+      ],
+      "avoidIngredients": [
+        "羊肉",
+        "葡萄酒"
+      ],
+      "unresolvedIngredients": [
+        "Baharat 香料",
+        "石榴糖浆"
+      ],
+      "ingredientEvidence": "原方羊腿肉用葡萄酒、石榴糖浆及 Baharat 香料腌制，提供平底煎烤锅做法。",
+      "preparationEvidence": "冷藏腌制至少两小时后串肉；平底煎烤锅或烧烤炉逐面加热，原文给出时间和静置要求。"
+    },
+    "884": {
+      "recipeFingerprint": "a067a84422f199d6",
+      "sourceURL": "https://glycemicindex.com/2009/06/low-gi-recipes-of-the-month/",
+      "sourceRecipeTitle": "Cream of carrot and celery soup",
+      "classificationTitle": "Low GI Recipes of the Month",
+      "author": "Johanna Burani",
+      "reviewedAt": "2026-11-07",
+      "requirements": "4 人份；保留原方黑麦面包，帕尔马干酪为调味；不默认任意面包等价。",
+      "ingredients": [
+        "胡萝卜",
+        "芹菜",
+        "面包",
+        "葛缕子",
+        "橄榄油",
+        "帕尔马干酪",
+        "盐",
+        "水"
+      ],
+      "avoidIngredients": [
+        "胡萝卜",
+        "芹菜",
+        "面包",
+        "油",
+        "牛奶",
+        "芝士",
+        "盐"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": "原方胡萝卜和芹菜煮汤，配黑麦面包；每碗少量帕尔马干酪为调味。",
+      "preparationEvidence": "大锅煮软蔬菜后分批用料理机打成浓汤，倒在碗内黑麦面包上，按原方加入油和干酪调味。"
+    },
+    "885": {
+      "recipeFingerprint": "8f5ee1e592aa6b73",
+      "sourceURL": "https://glycemicindex.com/2009/06/low-gi-recipes-of-the-month/",
+      "sourceRecipeTitle": "Melt-in-the-mouth beef goulash",
+      "classificationTitle": "Low GI Recipes of the Month",
+      "author": "Diane Temple",
+      "reviewedAt": "2026-11-07",
+      "requirements": "原方 8 人份；完整原页另列主食选择，低 GI 米饭须符合原页要求，不把任意主食搭配纳入本条目。",
+      "ingredients": [
+        "牛肉",
+        "洋葱",
+        "红椒",
+        "青椒",
+        "菌菇",
+        "橄榄油",
+        "红酒醋",
+        "红糖",
+        "甜椒粉",
+        "番茄膏",
+        "牛或鸡高汤",
+        "欧芹"
+      ],
+      "avoidIngredients": [
+        "牛肉",
+        "鸡肉",
+        "洋葱",
+        "红椒",
+        "青椒",
+        "菌菇",
+        "油",
+        "醋",
+        "糖",
+        "番茄",
+        "欧芹"
+      ],
+      "unresolvedIngredients": [
+        "牛或鸡高汤",
+        "番茄膏"
+      ],
+      "ingredientEvidence": "原方为牛肉、洋葱、彩椒和菌菇，调味含红糖、番茄膏及高汤，未把它标为减少添加糖。",
+      "preparationEvidence": "大锅分批煎肉，炒洋葱后加入醋、糖及蔬菜炖煮，后加菌菇；原文有各阶段时长。"
+    },
+    "886": {
+      "recipeFingerprint": "aed8fbf3f3766615",
+      "sourceURL": "https://glycemicindex.com/2005/11/low-gi-recipe-of-the-month-12/",
+      "sourceRecipeTitle": "Garlic Prawns, Red Capsicum and Coriander (Cilantro) Pasta",
+      "classificationTitle": "Low GI Recipe of the Month",
+      "author": "Lisa Lintner",
+      "reviewedAt": "2026-11-07",
+      "requirements": "4 人份；原方为菠菜宽意面，配低 GI 面包；原页意面克数与盎司不一致，以原文核对，不自行换算。",
+      "ingredients": [
+        "面食",
+        "虾",
+        "红椒或黄椒",
+        "面包",
+        "蒜",
+        "橄榄油",
+        "盐",
+        "黑胡椒",
+        "香菜"
+      ],
+      "avoidIngredients": [
+        "面食",
+        "虾",
+        "红椒",
+        "青椒",
+        "面包",
+        "蒜",
+        "油",
+        "盐",
+        "香菜"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": "原方菠菜宽意面与大虾、彩椒搭配，另要求低 GI 面包；不把宽意面替换为任意面条。",
+      "preparationEvidence": "原文分别煮意面、腌虾并烤制，随后与彩椒香菜混合；提供相应时长。"
+    },
+    "887": {
+      "recipeFingerprint": "f0325a7908121ab3",
+      "sourceURL": "https://glycemicindex.com/2009/04/low-gi-recipes-of-the-month-3/",
+      "sourceRecipeTitle": "Herbed fettuccine nests",
+      "classificationTitle": "Low GI Recipes of the Month",
+      "author": "Johanna Burani",
+      "reviewedAt": "2026-11-07",
+      "requirements": "4 人份；原方指定 100% 杜兰小麦粗粒粉宽意面并煮至 al dente，不能套用于普通面条或煮烂的版本。",
+      "ingredients": [
+        "面食",
+        "黄油",
+        "鼠尾草",
+        "柠檬汁",
+        "盐",
+        "黑胡椒",
+        "帕尔马干酪"
+      ],
+      "avoidIngredients": [
+        "面食",
+        "黄油",
+        "牛奶",
+        "芝士",
+        "鼠尾草",
+        "柠檬",
+        "盐"
+      ],
+      "unresolvedIngredients": [],
+      "ingredientEvidence": "原方以 100% 杜兰小麦粗粒粉宽意面配黄油鼠尾草酱，帕尔马干酪为食用调味。",
+      "preparationEvidence": "黄油小锅加热制酱；意面按原方煮至 al dente 后拌酱，不复制或改写原页完整步骤。"
+    }
+  }
+}

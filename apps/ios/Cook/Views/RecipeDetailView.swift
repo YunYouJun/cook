@@ -26,6 +26,10 @@ struct RecipeDetailView: View {
         return store.dietaryCatalog?.entry(for: recipe, goal: goal)
     }
 
+    private var institutionalReview: InstitutionalLowGICatalog.Entry? {
+        store.institutionalLowGICatalog?.entry(for: recipe)
+    }
+
     private var isFavorite: Bool {
         if let accountData, accountData.usesAccountLibrary { return accountData.favoriteIDs.contains(recipe.id) }
         return favorites.contains { $0.recipeId == recipe.id }
@@ -89,6 +93,12 @@ struct RecipeDetailView: View {
                 .padding(.vertical, 8)
             }
 
+            if let review = institutionalReview, let textURL {
+                Section {
+                    InstitutionalLowGIReviewSection(review: review, sourceURL: textURL)
+                }
+            }
+
             Section {
                 if let goal = route.dietaryGoal, let review = dietaryReview,
                    let text = store.dietaryCatalog?.text(for: recipe.id) {
@@ -144,7 +154,7 @@ struct RecipeDetailView: View {
                     } label: {
                         Label("看图文做法", systemImage: "doc.text")
                     }
-                } else if dietaryReview == nil, let textURL {
+                } else if dietaryReview == nil, institutionalReview == nil, let textURL {
                     Button {
                         openURL(textURL)
                     } label: {
@@ -192,7 +202,7 @@ struct RecipeDetailView: View {
             if let accountData, accountData.usesAccountLibrary { accountData.recordVisit(recipe) }
             else { context.recordVisit(recipe.id) }
             // 从推荐结果点进来时，匿名记录这组食材下点开了第几个，用来评估排序
-            if route.dietaryGoal == nil, let rank = route.rank {
+            if route.dietaryGoal == nil, institutionalReview == nil, let rank = route.rank {
                 feedback.signalOpen(stuff: session.selectedStuff, tool: session.tool, mode: session.mode, recipeId: recipe.id, rank: rank)
             }
         }

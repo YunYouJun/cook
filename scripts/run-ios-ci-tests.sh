@@ -52,13 +52,14 @@ run_tests() {
 }
 case "$IOS_SUITE" in
   core-regression)
-    # Compile every test and run all App units plus five representative UI flows.
+    # Compile every test and run all App units plus six representative UI flows.
     # Full journeys and system audits remain in the manually selected full matrix.
     run_tests "$DEVICE" core-regression \
       -only-testing:CookTests \
       -only-testing:CookUITests/AccountUserDataUITests \
       -only-testing:CookUITests/MembershipUITests \
       -only-testing:CookUITests/DietaryGoalsUITests/testNextDayLunchAndWeightGoalAtAccessibilitySize \
+      -only-testing:CookUITests/DietaryGoalsUITests/testInstitutionalLowGIAtAccessibilitySize \
       -only-testing:CookUITests/DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone \
       -only-testing:CookUITests/CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval \
       -only-testing:CookUITests/CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients \
