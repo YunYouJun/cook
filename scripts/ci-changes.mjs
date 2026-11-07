@@ -23,6 +23,44 @@ function isDocumentation(path) {
 
   return readmes.has(path)
     || (path.startsWith('docs/') && /\.(?:md|png|jpe?g|gif|webp|svg|ico)$/.test(path))
+    || (path.startsWith('specs/') && path.endsWith('.md'))
+}
+
+// Only browser-owned inputs are exempt. Protocol sources, native resources,
+// generators, shared data, dependencies and unclassified paths fail closed.
+// userData.ts lives under apps/web but also generates the server sync contract.
+const webTestFiles = new Set([
+  'acquisition',
+  'analytics',
+  'appFeedbackFlow',
+  'authInitialization',
+  'authInitializationPlugin',
+  'clarityPlugin',
+  'component',
+  'cookFunnel',
+  'feedbackContext',
+  'feedbackMail',
+  'feedbackRemote',
+  'landingData',
+  'phoneDemo',
+  'privateRecipeStorage',
+  'seo',
+  'userDataPages',
+  'userDataStore',
+  'userDataSync',
+  'userDataSyncComposable',
+  'userDataSyncSdk',
+  'yunlefunAuth',
+  'yunlefunAuthAdapter',
+  'yunlefunAuthComposable',
+  'yunlefunSsoConfig',
+  'yunleHost',
+].map(name => `test/${name}.test.ts`))
+
+function isWebOnly(path) {
+  return /^apps\/web\/app\/(?:adapters|assets|components|composables|constants|layouts|middleware|pages|plugins|stores)\//.test(path)
+    || /^apps\/web\/app\/utils\/(?:acquisition|analytics|authInitialization|userDataSync|userDataSyncSdk)\.ts$/.test(path)
+    || webTestFiles.has(path)
 }
 
 export function planIosTests(eventName, coverage) {
@@ -65,7 +103,7 @@ export function detectNativeChanges(eventName, event, cwd = process.cwd()) {
     })
     const paths = diff.split('\0').filter(Boolean)
     return {
-      skipNative: paths.length > 0 && paths.every(path => isDocumentation(path) || path === '.github/workflows/support-sync.yml'),
+      skipNative: paths.length > 0 && paths.every(path => isDocumentation(path) || isWebOnly(path) || path === '.github/workflows/support-sync.yml'),
       changedFiles: paths.length,
       comparison: `${base}${separator}${head}`,
     }
@@ -83,7 +121,7 @@ function previousPushPassed(event) {
 
   const branch = event.ref.slice('refs/heads/'.length)
   try {
-    // A docs or Support push can cancel the only run that covers the previous
+    // A Web/docs/Support push can cancel the only run that covers the previous
     // native change. Carry its coverage forward only from a successful push.
     const output = execFileSync('gh', [
       'api',
@@ -128,7 +166,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     appendFileSync(process.env.GITHUB_OUTPUT, `skip_native=${result.skipNative}\nios_suites=${JSON.stringify(ios.suites)}\nios_max_parallel=${ios.maxParallel}\n`)
   if (process.env.GITHUB_STEP_SUMMARY) {
     const reason = result.previousPushPassed === false ? ' Previous push did not have a verified successful CI run.' : ''
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Native CI: ${result.skipNative ? 'skipped (only documentation or the Support sync workflow changed)' : ios.suites.join(', ')}.${reason} Changed paths: ${result.changedFiles ?? 'unknown'}. Comparison: ${result.comparison}.\n`)
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Native CI: ${result.skipNative ? 'not required (only browser-owned inputs, documentation or the Support sync workflow changed)' : ios.suites.join(', ')}.${reason} Changed paths: ${result.changedFiles ?? 'unknown'}. Comparison: ${result.comparison}.\n`)
   }
   console.log(JSON.stringify({ ...result, ios }))
 }
