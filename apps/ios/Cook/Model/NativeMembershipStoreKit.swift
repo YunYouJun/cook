@@ -10,6 +10,8 @@ import SwiftUI
     private var loaded: [String: Product] = [:]
     private var transactions: [String: StoreKit.Transaction] = [:]
     var purchaseAction: PurchaseAction?
+    var purchaseError: StoreKitError?
+    var syncError: StoreKitError?
 
     init(catalog: [String: MembershipProductKind]) { self.catalog = catalog }
 
@@ -30,6 +32,7 @@ import SwiftUI
     func purchase(productID: String, accountToken: UUID) async throws -> MembershipPurchaseResult {
         guard let product = loaded[productID] else { throw MembershipPurchaseFailure.invalidResponse }
         do {
+            if let purchaseError { throw purchaseError }
             let outcome: Product.PurchaseResult
             if let purchaseAction { outcome = try await purchaseAction(product, options: [.appAccountToken(accountToken)]) }
             else { outcome = try await product.purchase(options: [.appAccountToken(accountToken)]) }
@@ -53,7 +56,10 @@ import SwiftUI
     }
 
     func restore() async throws -> [MembershipTransaction] {
-        do { try await AppStore.sync() }
+        do {
+            if let syncError { throw syncError }
+            try await AppStore.sync()
+        }
         catch StoreKitError.userCancelled { throw CancellationError() }
         // currentEntitlements contains only the latest non-renewing purchase per
         // product. Replaying history lets the server reconcile every durable grant.

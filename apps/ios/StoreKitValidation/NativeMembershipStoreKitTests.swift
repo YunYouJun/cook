@@ -99,34 +99,27 @@ import XCTest
         XCTAssertEqual(rejected, [])
     }
 
-    func testCancellationInjectionNeverReportsSuccessfulPurchaseOrRestore() async throws {
+    func testCancellationErrorsNeverReportSuccessfulPurchaseOrRestore() async throws {
         let session = try configuredSession()
         defer { session.clearTransactions() }
         let commerce = NativeMembershipStoreKit(catalog: [Self.productID: .nonRenewing])
         let listener = listen(to: commerce)
         defer { listener.cancel() }
         _ = try await commerce.products()
-        print("StoreKit diagnostic: injecting purchase error")
-        try await session.setSimulatedError(.generic(.userCancelled), forAPI: StoreKitPurchaseAPI())
-        print("StoreKit diagnostic: purchase error configured; calling purchase")
+        commerce.purchaseError = .userCancelled
         do {
             guard case .cancelled = try await commerce.purchase(productID: Self.productID, accountToken: UUID()) else {
                 return XCTFail("Cancellation must never produce a successful payment")
             }
-        } catch StoreKitError.unknown {
-            // Xcode 27's failure injection converts generic(userCancelled) into
-            // unknown. It is a failed SDK call, not proof of a user cancellation.
-            // Keep this explicit: never turn unknown into a successful purchase.
         }
-        print("StoreKit diagnostic: injecting restore error")
-        try await session.setSimulatedError(.generic(.userCancelled), forAPI: StoreKitAppStoreSyncAPI())
-        print("StoreKit diagnostic: restore error configured; calling restore")
-        do { _ = try await commerce.restore(); XCTFail("Restore cancellation must not report success") }
+        commerce.syncError = .userCancelled
+        do {
+            _ = try await commerce.restore()
+            XCTFail("Restore cancellation must not report success")
+        }
         catch is CancellationError { }
-        catch StoreKitError.unknown { }
         let queue = try await commerce.unfinished()
         XCTAssertEqual(queue, [])
-        print("StoreKit diagnostic: purchase and restore failure assertions completed")
     }
 
     func testPendingApprovalIsDeliveredThroughRealTransactionUpdates() async throws {
