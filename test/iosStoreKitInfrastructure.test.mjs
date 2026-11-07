@@ -7,6 +7,7 @@ import process from 'node:process'
 // eslint-disable-next-line test/no-import-node-test -- Verify the actual financial CI shell before installing workspace packages.
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
+import { planIosTests } from '../scripts/ci-changes.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 
@@ -140,14 +141,22 @@ process.exit(args[0] === 'build-for-testing' ? Number(process.env.BUILD_EXIT) : 
   }
 })
 
-test('every core and membership matrix entry requires the StoreKit step before recording reuse', () => {
+test('core StoreKit contracts run once in parallel while financial changes keep both devices', () => {
   const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
-  const job = workflow.slice(workflow.indexOf('\n  ios-tests:\n'), workflow.indexOf('\n  ios:\n'))
-  assert.match(job, /name: Build for testing\n\s+timeout-minutes: 15\n\s+id: native_build/)
-  assert.match(job, /name: Verify local StoreKit contracts\n\s+id: storekit_tests\n\s+if: \$\{\{ !cancelled\(\) && steps\.native_build\.outcome == 'success' && contains\(/)
-  assert.match(job, /contains\(fromJSON\('\["core-regression", "membership", "regression-main"\]'\), matrix.suite\)/)
-  assert.match(job, /if: .*steps\.ios_tests\.outcome == 'success' && steps\.storekit_tests\.outcome == 'success'/)
-  assert.match(job, /run: bash scripts\/run-ios-storekit-tests.sh/)
-  assert.ok(job.indexOf('name: Verify local StoreKit contracts') < job.indexOf('name: Identify the tested PR core environment'))
-  assert.doesNotMatch(job.slice(job.indexOf('name: Verify local StoreKit contracts'), job.indexOf('name: Identify the tested PR core environment')), /continue-on-error/)
+  const nativeJob = workflow.slice(workflow.indexOf('\n  ios-tests:\n'), workflow.indexOf('\n  ios-storekit:\n'))
+  const storekitJob = workflow.slice(workflow.indexOf('\n  ios-storekit:\n'), workflow.indexOf('\n  ios:\n'))
+  const gate = workflow.slice(workflow.indexOf('\n  ios:\n'))
+  assert.doesNotMatch(nativeJob, /run-ios-storekit-tests\.sh/)
+  assert.match(storekitJob, /ios_storekit_devices/)
+  assert.match(storekitJob, /name: Verify local StoreKit contracts\n\s+id: storekit_tests\n\s+timeout-minutes: 10/)
+  assert.match(storekitJob, /run: bash scripts\/run-ios-storekit-tests\.sh/)
+  assert.doesNotMatch(storekitJob, /continue-on-error/)
+  assert.match(gate, /needs: \[changes, ios-core-reuse, ios-tests, ios-storekit\]/)
+  assert.match(gate, /STOREKIT_RESULT: \$\{\{ needs\.ios-storekit\.result \}\}/)
+  assert.match(gate, /\[\[ "\$IOS_RESULT" == success && "\$STOREKIT_RESULT" == success \]\]/)
+  assert.deepEqual(planIosTests('pull_request').storekitDevices, ['iphone'])
+  assert.deepEqual(planIosTests('push', undefined, 'membership').storekitDevices, ['iphone', 'ipad'])
+  assert.deepEqual(planIosTests('workflow_dispatch', 'core').storekitDevices, ['iphone'])
+  assert.deepEqual(planIosTests('workflow_dispatch', 'full').storekitDevices, ['iphone', 'ipad'])
+  assert.deepEqual(planIosTests('workflow_dispatch', 'membership').storekitDevices, ['iphone', 'ipad'])
 })

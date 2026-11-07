@@ -59,7 +59,7 @@ asc subscriptions list --app 6824589542
 - 未签名的 iOS 26.5 首轮配置操作报 `SKInternalErrorDomain Code=3`；未签名的 iPadOS 27 后续出现 Apple 登录提示，已取消并中止，没有输入 Apple 凭据或真实扣款。沿用平台既有 ad-hoc 签名参数后，iPadOS 27 单项购买／恢复 0.648 秒通过。历史失败保留，不能计入通过数。[Apple DTS 对相关配置问题的记录](https://developer.apple.com/forums/thread/826971)仅用于解释诊断方向。
 - iOS 26.5 的后续签名组合运行仍因本地配置不可用而失败，236 项 App／账号测试通过、七项 StoreKit 测试未通过，保留系统限制。现有 iPhone Duo／iOS 27.1 独立 Scheme 首轮为五项通过、两项失败：自动续费首次冷运行超过新设的 60 秒预算，后续定向 0.629 秒通过，尚不能据此认定根因消失；故障注入将 `generic(userCancelled)` 实际转换为 `StoreKitError.unknown`。注入测试现在明确核对该未知失败不会报告付款／恢复成功，而不将其算作用户实际取消的证据；实际取消仍须会员 UI 验收。StoreKit 单例限时保留为 120 秒，任务限时 10 分钟，不新增重试。
 - 最终复测：iPhone Duo／iOS 27.1 和 iPad Pro 11 英寸 M5／iPadOS 27 各通过 **234 项 App 单元、2 项账号 UI、7 项本地 StoreKit**，没有跳过。共享一次常规构建 34.86 秒；手机常规会员组 116.54 秒、独立 StoreKit（含签名构建）47.69 秒；平板分别为 117.00／42.47 秒。每端合计含冷构建约 3 分 20 秒，只是本机实测，不能当作远端耗时；对应报告目录为 `financial-reviewed-contracts/`。原 26.5 失败及首次冷启动超时记录继续保留，不由后续通过覆盖。
-- 原生 CI 的会员专属输入选择 `membership`：两端各运行全部 App 单元测试、本地 StoreKit 和账号 UI。混入工程、共享协议、数据或其他未知输入继续核心矩阵。核心和手动完整回归也保留本地 StoreKit；金融断言失败不重试，不能由另一台设备通过掩盖。
+- 原生 CI 的会员专属输入选择 `membership`：App 单元测试只执行一次，两端执行账号 UI 和本地 StoreKit。混入工程、共享协议、数据或其他未知输入继续核心矩阵；日常 core 的 StoreKit 只在一个设备执行，手动完整回归仍保留两端本地 StoreKit。金融断言失败不重试，不能由另一台设备通过掩盖。
 - 真实 Apple Sandbox、云端事务／并发、换机重装、完整会员 UI、VoiceOver、大字号、TestFlight 分发与正式上架均须分别留证。本地 StoreKit 和模拟器不能替代真实沙盒。
 
 本机本轮报告位于 `~/Library/Developer/ReleaseArtifacts/Cook/20261106-membership-foundation/`；任务独占 DerivedData／结果包在导出日志与摘要后回收，共享设备仅恢复本轮启动前的关闭状态，不新增或清空设备。

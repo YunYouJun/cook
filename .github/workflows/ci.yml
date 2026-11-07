@@ -40,6 +40,7 @@ jobs:
       skip_native: ${{ steps.changes.outputs.skip_native }}
       ios_suites: ${{ steps.changes.outputs.ios_suites }}
       ios_max_parallel: ${{ steps.changes.outputs.ios_max_parallel }}
+      ios_storekit_devices: ${{ steps.changes.outputs.ios_storekit_devices }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -243,7 +244,7 @@ jobs:
           IPHONE: ${{ steps.environment.outputs.iphone }}
           IPAD: ${{ steps.environment.outputs.ipad }}
         run: node scripts/ios-core-evidence.mjs
-      - name: Compare with both successful PR jobs
+      - name: Compare with successful PR core jobs
         id: compare
         env:
           EXPECTED: ${{ needs.changes.outputs.core_key }}
@@ -252,9 +253,9 @@ jobs:
         run: |
           if [[ -n "$ACTUAL" && "$ACTUAL" == "$EXPECTED" ]]; then
             echo 'verified=true' >> "$GITHUB_OUTPUT"
-            echo "Reusing both iOS core checks from [PR CI run $SOURCE_RUN]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN)." >> "$GITHUB_STEP_SUMMARY"
+            echo "Reusing iOS core and StoreKit checks from [PR CI run $SOURCE_RUN]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN)." >> "$GITHUB_STEP_SUMMARY"
           else
-            echo 'Toolchain evidence unavailable or different; running both core jobs.' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Toolchain evidence unavailable or different; running the native jobs.' >> "$GITHUB_STEP_SUMMARY"
           fi
 
   # 云食册 iOS App：XcodeGen 生成工程，在 iPhone 和 iPad 模拟器上编译并跑测试（窄屏和宽屏两种布局）
@@ -290,17 +291,11 @@ jobs:
         id: ios_tests
         env:
           DEVICE: ${{ steps.environment.outputs[matrix.device] }}
+          IOS_DEVICE: ${{ matrix.device }}
           IOS_SUITE: ${{ matrix.suite }}
         run: bash scripts/run-ios-ci-tests.sh
-      - name: Verify local StoreKit contracts
-        id: storekit_tests
-        if: ${{ !cancelled() && steps.native_build.outcome == 'success' && contains(fromJSON('["core-regression", "membership", "regression-main"]'), matrix.suite) }}
-        timeout-minutes: 10
-        env:
-          DEVICE: ${{ steps.environment.outputs[matrix.device] }}
-        run: bash scripts/run-ios-storekit-tests.sh
       - name: Identify the tested PR core environment
-        if: github.event_name == 'pull_request' && matrix.suite == 'core-regression' && steps.ios_tests.outcome == 'success' && steps.storekit_tests.outcome == 'success'
+        if: github.event_name == 'pull_request' && matrix.suite == 'core-regression' && steps.ios_tests.outcome == 'success'
         id: core_key
         env:
           IPHONE: ${{ steps.environment.outputs.iphone }}
@@ -330,14 +325,63 @@ jobs:
         if: ${{ failure() || cancelled() || steps.ios_tests.outputs.infrastructure_retries == 'true' }}
         uses: actions/upload-artifact@v7
         with:
-          name: ios-xcresult-${{ matrix.device }}-${{ matrix.suite }}
+          name: ios-xcresult-${{ matrix.device }}-${{ matrix.suite }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/xcresult/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Financial contracts need the signed StoreKit scheme, not another copy of
+  # App and UI tests. Core PRs exercise them once; financial changes and full
+  # audits retain both form factors.
+  ios-storekit:
+    needs: [changes, ios-core-reuse]
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.skip_native != 'true') && (needs.ios-core-reuse.result != 'success' || needs.ios-core-reuse.outputs.verified != 'true') }}
+    runs-on: xcode-27
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        device: ${{ fromJSON(needs.changes.outputs.ios_storekit_devices || '["iphone","ipad"]') }}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/ios-test-environment
+        id: environment
+      - name: Verify local StoreKit contracts
+        id: storekit_tests
+        timeout-minutes: 10
+        env:
+          DEVICE: ${{ steps.environment.outputs[matrix.device] }}
+        run: bash scripts/run-ios-storekit-tests.sh
+      - name: Show StoreKit failures
+        timeout-minutes: 5
+        if: ${{ failure() || cancelled() }}
+        run: |
+          for bundle in "$RUNNER_TEMP"/xcresult/*.xcresult; do
+            [ -d "$bundle" ] || continue
+            xcrun xcresulttool get test-results summary --path "$bundle" | python3 -c '
+          import json, sys
+          for failure in json.load(sys.stdin).get("testFailures", []):
+              name = failure.get("testName", "")
+              text = failure.get("failureText", "")
+              print(f"::error title={name}::{text}")
+              print(json.dumps(failure, ensure_ascii=False, indent=2))
+          '
+          done
+      - name: Upload StoreKit test results
+        if: ${{ failure() || cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-storekit-xcresult-${{ matrix.device }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/xcresult/
           if-no-files-found: ignore
           retention-days: 7
 
   # Preserve the stable required-check name while requiring every native matrix cell.
   ios:
-    needs: [changes, ios-core-reuse, ios-tests]
+    needs: [changes, ios-core-reuse, ios-tests, ios-storekit]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     permissions: {}
@@ -348,8 +392,9 @@ jobs:
           SKIP_NATIVE: ${{ needs.changes.outputs.skip_native }}
           REUSED_CORE: ${{ github.event_name == 'push' && needs.changes.outputs.core_key != '' && needs.ios-core-reuse.result == 'success' && needs.ios-core-reuse.outputs.verified == 'true' }}
           IOS_RESULT: ${{ needs.ios-tests.result }}
+          STOREKIT_RESULT: ${{ needs.ios-storekit.result }}
         run: |
-          if [[ "$CHANGES_RESULT" == success && "$IOS_RESULT" == skipped && ("$SKIP_NATIVE" == true || "$REUSED_CORE" == true) ]]; then
+          if [[ "$CHANGES_RESULT" == success && "$IOS_RESULT" == skipped && "$STOREKIT_RESULT" == skipped && ("$SKIP_NATIVE" == true || "$REUSED_CORE" == true) ]]; then
             exit 0
           fi
-          [[ "$IOS_RESULT" == success ]]
+          [[ "$IOS_RESULT" == success && "$STOREKIT_RESULT" == success ]]

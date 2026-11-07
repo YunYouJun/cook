@@ -1,8 +1,14 @@
 # iOS CI
 
+## 2026-11-07 核心回归并行化
+
+PR 和 `main` / `dev` 推送的 `core-regression` 不再让两台设备串行承担同一套 App 单测和 StoreKit。App 单元测试只在 iPhone 执行；七个核心 UI 选择器按布局分工，iPhone 覆盖会员、默认目录和相机旋转，iPad 覆盖账号数据、两个饮食目标流程及宽屏输入。全部 UI 测试仍先完整编译，手动 full 仍在两端执行每个 UI 用例。
+
+真实 StoreKit 契约从 `ios-tests` 拆到并行运行的 `ios-storekit`：日常 core 只执行一次 iPhone，会员专属改动和手动 full 继续覆盖 iPhone、iPad。`ios` 汇总门禁同时要求 App／UI 矩阵和 StoreKit 成功，任一失败都不能由另一项通过覆盖。结果包名称加入 `run_attempt`，重跑时不会与上一轮同名。这样减少的主要是串行等待和重复的设备无关测试，没有删除 UI 用例或降低金融断言上限。
+
 ## 2026-11-06 按输入范围验证
 
-后续会员基础层为纯会员模型／服务及本地 StoreKit 目录选择 `membership`：每端保留全部 App 单元测试、两项账号 UI，另以独立、ad-hoc 签名的 `CookMembershipStoreKit` Scheme 执行实际 SDK 契约；不将测试商品配置放入默认或 Release Scheme。混入工程、数据、协议、未知路径时继续 core。core 和手动 full 的 `regression-main` 也执行该 StoreKit 步骤，任一步骤失败都会令矩阵单元及 `ios` 失败，不增加金融重试。编排测试实际执行对应 Bash 并验证构建／测试失败码保留。双设备本地覆盖和历史环境失败见 [会员验证](./ios-membership.md)。
+后续会员基础层为纯会员模型／服务及本地 StoreKit 目录选择 `membership`：App 单元测试只执行一次，两端保留账号 UI，另以独立、ad-hoc 签名的 `CookMembershipStoreKit` Scheme 在两端执行实际 SDK 契约；不将测试商品配置放入默认或 Release Scheme。混入工程、数据、协议、未知路径时继续 core。core 和手动 full 的 StoreKit 独立任务也执行真实契约，任一步骤失败都会令 `ios` 失败，不增加金融重试。编排测试实际执行对应 Bash 并验证构建／测试失败码保留。双设备本地覆盖和历史环境失败见 [会员验证](./ios-membership.md)。
 
 浏览器专属的页面、组件、适配器、组合函数、状态及已列出的对应测试只运行 Web 检查。`scripts/ci-changes.mjs` 使用白名单：共享协议（包括位于 Web 目录的 `utils/userData.ts`）、共享数据和资源、生成器、原生代码、依赖与构建配置、未知文件仍触发原生验证。重命名同时检查删除和新增路径，不能把原生文件移进 Web 目录来避开检查。说明文档包含 `specs/**/*.md`；打包的隐私政策仍是原生输入。
 
@@ -18,7 +24,7 @@ push 仍只在同分支的精确前一提交 CI 已成功时免除原生任务�
 
 `swift` 在 Linux 上运行 CookCore 和跨端往返检查；`ios-tests` 使用 Xcode 27.1 和现有 iPhone、iPad 模拟器。
 
-PR 和向 `main` / `dev` 的推送默认执行 `core-regression`，iPhone、iPad 各一个任务。每端保留全部 216 项 App 单元测试，以及五个 UI 流程：最大字号便当与体重目标交集及原文用油、结果页取消目标、忌口搜索、默认目录数量、相机旋转与复位。所有 App 和 UI 测试代码仍先完整编译；核心用例的断言失败直接使检查失败，不自动重试。
+PR 和向 `main` / `dev` 的推送默认执行 `core-regression`，iPhone、iPad 各一个 App／UI 任务，另有日常一次的 iPhone StoreKit 任务。App 单元测试只在 iPhone 运行；七个核心 UI 选择器覆盖会员、账号数据、最大字号便当与体重目标交集、结果页取消目标、宽屏忌口搜索、默认目录数量及相机旋转与复位，按窄屏和宽屏分工。所有 App 和 UI 测试代码仍先完整编译；核心用例的断言失败直接使检查失败，不自动重试。
 
 合并后，push 可复用两台设备已经通过的 PR 核心测试。仅接受同仓库、同目标分支、与 push 提交对应的已合并 PR。GitHub 必须记录两组实际构建和测试均成功，且来自同一次 CI 运行和尝试。核验使用两端真正测试的合并 checkout：其父提交必须是当前 push 的前一提交和 PR head，Git 树必须等于合并后的树。仓库代码和本地工作流、脚本、配置、锁文件均在比较范围内。
 
@@ -38,7 +44,7 @@ PR 和向 `main` / `dev` 的推送默认执行 `core-regression`，iPhone、iPad
 
 只有 `classify-ios-test-retry.mjs` 已识别的单项审计服务超时或宿主启动故障可在同一个既有设备上重试一次。断言、真实审计发现、未知错误、混合失败或再次失败均不能被重试掩盖。
 
-失败、取消或发生基础设施重试时，结果上传为 `ios-xcresult-<device>-<suite>`，保留 7 天。`Show test failures` 会输出结果包中的错误；下载 Artifacts 后可用 Xcode 打开完整记录。
+失败、取消或发生基础设施重试时，App／UI 结果上传为 `ios-xcresult-<device>-<suite>-attempt-<run_attempt>`，StoreKit 结果上传为 `ios-storekit-xcresult-<device>-attempt-<run_attempt>`，均保留 7 天。失败步骤会输出结果包中的错误；下载 Artifacts 后可用 Xcode 打开完整记录。
 
 `xcodebuild` 的 stdout/stderr 先写入同目录的 `<device>-<stage>.log`，测试结束后再完整输出到 Actions，退出码继续决定成败。CI #698 的失败录像中目标选项已经显示，采样栈显示 App 在 XCTest 查询元素属性期间阻塞于 `writev`。日志管道回压是据此排查的一个方向；磁盘缓冲让 Actions 消费日志的速度不再直接限制测试进程输出。编排测试故意暂停 stdout 消费并输出超过管道容量的日志，验证测试工具仍能完成、完整失败日志保留且任务继续失败。没有重试或跳过相关业务用例。
 
@@ -111,6 +117,6 @@ PR 同步主线 `7b3200cc` 的原生状态等待、受限容器查询、筛选�
 
 2026-11-07 后续会员基础分支 CI `42249053236` 在旋转按钮的存在查询再次遇到快照超时（所有 App 单元及其余核心 UI 通过），并非食材选中断言失败。旋转控件改为每次全局定位唯一 ID，避免复用 List 子树的 First Match 代理；拖动、点击、选中、关闭复位与重建场景验证保持完整。本机 iOS 27.1 定向用例 58.713 秒通过，远端结果仍须独立跟进，不以先前 #201 的一轮通过覆盖这次失败。
 
-StoreKit 金融阶段在通用构建成功且任务未取消时，即使其他 UI 失败也继续执行并保留结果。主 UI 的失败仍然令矩阵失败；记录 PR 复用凭据必须同时满足主 UI 和 StoreKit 成功，不能用金融通过覆盖其他失败，也不能让无关 UI 的快照错误阻止交易契约验收。
+StoreKit 金融契约在独立的 `ios-storekit` 任务中与 App／UI 矩阵并行，即使其他 UI 失败也会继续执行并保留结果。记录 PR 复用凭据必须同时满足两台设备的 App／UI 核心任务和 iPhone StoreKit 成功；不能用金融通过覆盖其他失败，也不能让无关 UI 的快照错误阻止交易契约验收。
 
-手动 `workflow_dispatch` 可显式选择 `ios_coverage=membership`，执行两端全部 App 单元、账号 UI 和独立真实本地 StoreKit；后续会员页面分支还加入两项会员交互。full 仍是默认值；core、默认未知输入和 PR／push 的保守分类不改变。会员任务使用独立 concurrency 组，不取消显式完整审计。手动会员结果不表示完整核心回归已通过。
+手动 `workflow_dispatch` 可显式选择 `ios_coverage=membership`，App 单元只执行一次，两端执行账号／会员 UI 和独立真实本地 StoreKit；后续会员页面分支还加入两项会员交互。full 仍是默认值；core、默认未知输入和 PR／push 的保守分类不改变。会员任务使用独立 concurrency 组，不取消显式完整审计。手动会员结果不表示完整核心回归已通过。

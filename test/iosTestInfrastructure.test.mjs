@@ -72,6 +72,7 @@ function replay(scenarios, verify, suites = ['regression-main', 'regression-disc
         GITHUB_OUTPUT: outputPath,
         GITHUB_STEP_SUMMARY: join(temporary, 'step-summary'),
         DEVICE: device,
+        IOS_DEVICE: device === 'phone' ? 'iphone' : 'ipad',
         IOS_SUITE: suite,
         COOK_IOS_CALLS: callsPath,
         COOK_IOS_SCENARIOS: scenarioPath,
@@ -111,6 +112,7 @@ test('a slow Actions log consumer cannot block xcodebuild or hide its failure', 
       PATH: `${bin}:${process.env.PATH}`,
       RUNNER_TEMP: temporary,
       DEVICE: 'phone',
+      IOS_DEVICE: 'iphone',
       IOS_SUITE: 'core-regression',
       COOK_XCODE_COMPLETED: completed,
     },
@@ -231,8 +233,12 @@ test('business assertions, real audit findings, skipped tests and mixed failures
 })
 
 test('pushes and PRs use core coverage while manual and unknown requests retain full coverage', () => {
-  const core = { suites: ['core-regression'], maxParallel: 2 }
-  const full = { suites: ['regression-main', 'regression-discovery', 'dietary'], maxParallel: 3 }
+  const core = { suites: ['core-regression'], maxParallel: 2, storekitDevices: ['iphone'] }
+  const full = {
+    suites: ['regression-main', 'regression-discovery', 'dietary'],
+    maxParallel: 3,
+    storekitDevices: ['iphone', 'ipad'],
+  }
   for (const event of ['push', 'pull_request']) {
     assert.deepEqual(planIosTests(event), core)
     assert.deepEqual(planIosTests(event, 'full'), core)
@@ -271,6 +277,7 @@ test('the real change-detection command publishes the selected native matrix', (
       assert.equal(output.skip_native, 'false', 'an explicit manual run must execute native tests')
       assert.deepEqual(JSON.parse(output.ios_suites), plan.suites)
       assert.equal(Number(output.ios_max_parallel), plan.maxParallel)
+      assert.deepEqual(JSON.parse(output.ios_storekit_devices), plan.storekitDevices)
     }
   }
   finally {
@@ -284,13 +291,18 @@ test('native CI bounds build and test time and runs device groups independently'
   const suites = workflow.match(/suite: \$\{\{ fromJSON\(needs.changes.outputs.ios_suites \|\| '([^']+)'\) \}\}/)
   assert.ok(suites, 'the matrix uses the tested coverage plan with a full-coverage fallback')
   assert.deepEqual(JSON.parse(suites[1]), ['regression-main', 'regression-discovery', 'dietary'])
-  const nativeJob = workflow.slice(workflow.indexOf('\n  ios-tests:\n'), workflow.indexOf('\n  ios:\n'))
+  const nativeJob = workflow.slice(workflow.indexOf('\n  ios-tests:\n'), workflow.indexOf('\n  ios-storekit:\n'))
+  const storekitJob = workflow.slice(workflow.indexOf('\n  ios-storekit:\n'), workflow.indexOf('\n  ios:\n'))
   assert.match(nativeJob, /max-parallel: \$\{\{ fromJSON\(needs.changes.outputs.ios_max_parallel \|\| '3'\) \}\}/)
+  assert.doesNotMatch(nativeJob, /run-ios-storekit-tests\.sh/)
+  assert.match(storekitJob, /device: \$\{\{ fromJSON\(needs\.changes\.outputs\.ios_storekit_devices \|\| '\["iphone","ipad"\]'\) \}\}/)
+  assert.match(storekitJob, /run: bash scripts\/run-ios-storekit-tests\.sh/)
   assert.match(workflow, /\n {2}workflow_dispatch:/)
   assert.match(workflow, /name: Build for testing\n\s+timeout-minutes: 15/)
   assert.match(workflow, /name: Build and test\n\s+timeout-minutes: \$\{\{ matrix.suite == 'core-regression' && 30 \|\| 60 \}\}/)
   assert.match(nativeJob, /timeout-minutes: \$\{\{ matrix.suite == 'core-regression' && 45 \|\| 90 \}\}/)
   assert.match(workflow, /ios_suites: \$\{\{ steps.changes.outputs.ios_suites \}\}/)
+  assert.match(workflow, /ios_storekit_devices: \$\{\{ steps.changes.outputs.ios_storekit_devices \}\}/)
   assert.match(workflow, /ios_coverage:[\s\S]*?default: full/)
   assert.match(workflow, /inputs\.ios_coverage == 'membership' && 'membership'/)
   assert.match(workflow, /group: ci-.*github\.event_name == 'workflow_dispatch' && inputs\.ios_coverage != 'core' && 'full' \|\| 'core'/)
@@ -301,23 +313,32 @@ test('the stable ios gate rejects failed, cancelled and unexpectedly skipped mat
   const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
   const gate = workflow.slice(workflow.indexOf('\n  ios:\n'))
   const command = gate.split('        run: |\n')[1].split('\n').map(line => line.slice(10)).join('\n')
-  for (const [changes, skipNative, ios, success, reused = 'false'] of [
-    ['success', 'false', 'success', true],
-    ['success', 'false', 'skipped', true, 'true'],
-    ['failure', 'false', 'skipped', false, 'true'],
-    ['success', 'false', 'failure', false, 'true'],
-    ['success', 'false', 'cancelled', false, 'true'],
-    ['success', 'true', 'skipped', true],
-    ['success', 'false', 'failure', false],
-    ['success', 'false', 'cancelled', false],
-    ['success', 'false', 'skipped', false],
-    ['failure', 'true', 'skipped', false],
-    ['success', 'true', 'cancelled', false],
+  for (const [changes, skipNative, ios, storekit, success, reused = 'false'] of [
+    ['success', 'false', 'success', 'success', true],
+    ['success', 'false', 'skipped', 'skipped', true, 'true'],
+    ['failure', 'false', 'skipped', 'skipped', false, 'true'],
+    ['success', 'false', 'failure', 'success', false, 'true'],
+    ['success', 'false', 'success', 'failure', false, 'true'],
+    ['success', 'false', 'cancelled', 'cancelled', false, 'true'],
+    ['success', 'true', 'skipped', 'skipped', true],
+    ['success', 'false', 'failure', 'success', false],
+    ['success', 'false', 'success', 'failure', false],
+    ['success', 'false', 'skipped', 'success', false],
+    ['success', 'false', 'success', 'skipped', false],
+    ['failure', 'true', 'skipped', 'skipped', false],
+    ['success', 'true', 'success', 'cancelled', false],
   ]) {
     const result = spawnSync('bash', ['-e', '-c', command], {
-      env: { ...process.env, CHANGES_RESULT: changes, SKIP_NATIVE: skipNative, REUSED_CORE: reused, IOS_RESULT: ios },
+      env: {
+        ...process.env,
+        CHANGES_RESULT: changes,
+        SKIP_NATIVE: skipNative,
+        REUSED_CORE: reused,
+        IOS_RESULT: ios,
+        STOREKIT_RESULT: storekit,
+      },
     })
-    assert.equal(result.status === 0, success, `${changes}/${skipNative}/${ios}`)
+    assert.equal(result.status === 0, success, `${changes}/${skipNative}/${ios}/${storekit}`)
   }
 })
 
@@ -345,17 +366,27 @@ test('every UI method is assigned exactly once per device, including audits and 
   }, undefined, true)
 })
 
-test('core regression retains all App units, account sync and five existing UI flows', () => {
+test('core regression runs App units once and distributes representative UI across form factors', () => {
   replay({}, ({ result, calls, output }) => {
     assert.equal(result.status, 0, result.stderr)
     assert.deepEqual(calls.map(call => call.name), ['phone-core-regression', 'pad-core-regression'])
-    const required = [
-      'CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval',
-      'CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients',
-      'CloudKitchenUITests/testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled',
-      'DietaryGoalsUITests/testNextDayLunchAndWeightGoalAtAccessibilitySize',
-      'DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone',
-    ].map(test => `CookUITests/${test}`)
+    const phone = calls.find(call => call.name === 'phone-core-regression')
+    const pad = calls.find(call => call.name === 'pad-core-regression')
+    const selectors = call => call.args
+      .filter(arg => arg.startsWith('-only-testing:'))
+      .map(arg => arg.slice('-only-testing:'.length))
+    assert.deepEqual(selectors(phone), [
+      'CookTests',
+      'CookUITests/MembershipUITests',
+      'CookUITests/CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients',
+      'CookUITests/CloudKitchenUITests/testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled',
+    ])
+    assert.deepEqual(selectors(pad), [
+      'CookUITests/AccountUserDataUITests',
+      'CookUITests/DietaryGoalsUITests/testNextDayLunchAndWeightGoalAtAccessibilitySize',
+      'CookUITests/DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone',
+      'CookUITests/CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval',
+    ])
     const fullOnly = [
       'CookUITests/testCookFlowByAccessibilityLabels',
       'CookUITests/testPantryShelfRemembersChoicesAndRestoresDefaults',
@@ -375,14 +406,8 @@ test('core regression retains all App units, account sync and five existing UI f
       const skip = args.filter(arg => arg.startsWith('-skip-testing:')).map(arg => arg.slice(14))
       const selected = test => only.some(selector => test === selector || test.startsWith(`${selector}/`))
         && !skip.some(selector => test === selector || test.startsWith(`${selector}/`))
-      assert.ok(only.includes('CookTests'), 'the complete App unit-test target must run')
-      assert.ok(!skip.some(selector => selector.startsWith('CookTests')), 'App unit tests must not be excluded')
-      for (const test of required) assert.ok(selected(test), `${test} must run on both devices`)
       for (const test of fullOnly)
         assert.ok(!selected(test), `${test} remains in the manual full matrix`)
-      assert.ok(only.includes('CookUITests/AccountUserDataUITests'))
-      assert.ok(only.includes('CookUITests/MembershipUITests'))
-      assert.equal(only.filter(selector => selector.startsWith('CookUITests/')).length, 7)
       for (const selector of only.filter(selector => selector.startsWith('CookUITests/'))) {
         const [, suite, method] = selector.split('/')
         const source = readFileSync(join(root, 'apps/ios/CookUITests', `${suite}.swift`), 'utf8')
@@ -390,28 +415,29 @@ test('core regression retains all App units, account sync and five existing UI f
           assert.match(source, new RegExp(`\\bfunc\\s+${method}\\s*\\(`))
       }
     }
+    assert.equal(calls.filter(call => selectors(call).includes('CookTests')).length, 1, 'App units run once')
     assert.equal(output, '')
   }, ['core-regression'])
 })
 
-test('membership scope runs all units, real StoreKit and account UI on both devices', () => {
+test('membership scope runs App units once and account UI on both devices', () => {
   replay({}, ({ result, calls }) => {
     assert.equal(result.status, 0, result.stderr)
     assert.deepEqual(calls.map(call => call.name), ['phone-membership', 'pad-membership'])
-    for (const call of calls) {
-      assert.deepEqual(call.args.filter(arg => arg.startsWith('-only-testing:')), [
-        '-only-testing:CookTests',
-        '-only-testing:CookUITests/AccountUserDataUITests',
-        '-only-testing:CookUITests/MembershipUITests',
-      ])
-      assert.ok(call.args.includes('-parallel-testing-enabled'))
-    }
-    const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
-    assert.match(workflow, /name: Verify local StoreKit contracts[\s\S]+?run: bash scripts\/run-ios-storekit-tests.sh/)
+    assert.deepEqual(calls[0].args.filter(arg => arg.startsWith('-only-testing:')), [
+      '-only-testing:CookTests',
+      '-only-testing:CookUITests/AccountUserDataUITests',
+      '-only-testing:CookUITests/MembershipUITests',
+    ])
+    assert.deepEqual(calls[1].args.filter(arg => arg.startsWith('-only-testing:')), [
+      '-only-testing:CookUITests/AccountUserDataUITests',
+      '-only-testing:CookUITests/MembershipUITests',
+    ])
+    for (const call of calls) assert.ok(call.args.includes('-parallel-testing-enabled'))
   }, ['membership'])
 })
 
-test('a financial assertion failure is not retried or hidden by the other device', () => {
+test('a membership UI assertion failure is not retried or hidden by the other device', () => {
   replay({ 'pad-membership': [fixtures.keyboardAssertion] }, ({ result, calls, output }) => {
     assert.equal(result.status, 1)
     assert.equal(calls.length, 2)
