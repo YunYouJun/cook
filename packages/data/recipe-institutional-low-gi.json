@@ -1,10 +1,26 @@
 {
   "schemaVersion": 1,
   "policyVersion": 1,
-  "dataVersion": "94a3992a84e9",
+  "dataVersion": "916115b807d8",
   "publisher": "GI News / University of Sydney",
   "authorityURL": "https://glycemicindex.com/2026/01/copyright-and-permission-105/",
   "claimKind": "institutional-editorial",
+  "chineseReferences": [
+    {
+      "id": "adult-diabetes-dietary-guide-2023",
+      "publisher": "国家卫生健康委",
+      "title": "《成人糖尿病食养指南（2023年版）》问答",
+      "url": "https://www.nhc.gov.cn/wjw/c100378/202301/7faed9993c9b45aea158c5335346f282/files/1732844468167_10535.pdf",
+      "scope": "用于核对 GI 的定义和膳食边界；不证明这些配方经过实测，也不代表适合个人疾病饮食。"
+    },
+    {
+      "id": "ws-t-652-2019",
+      "publisher": "国家卫生健康委",
+      "title": "食物血糖生成指数测定方法（WS/T 652—2019）",
+      "url": "https://www.nhc.gov.cn/fzs/c100048/201906/ae057c7a93744972bd7722077c91ca34/files/1733125684903_75354.pdf",
+      "scope": "规定食物 GI 的标准测定方法；不提供本批次具体配方的 GI 实测值。"
+    }
+  ],
   "recipes": {
     "878": {
       "recipeFingerprint": "2aeaea239150acfb",

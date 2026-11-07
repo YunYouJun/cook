@@ -5,6 +5,14 @@ import { dietaryRecipeFingerprint } from './dietary'
 export const institutionalLowGITag = '机构低 GI 食谱'
 export const institutionalLowGIAuthorityURL = 'https://glycemicindex.com/2026/01/copyright-and-permission-105/'
 
+export interface InstitutionalLowGIChineseReference {
+  id: 'adult-diabetes-dietary-guide-2023' | 'ws-t-652-2019'
+  publisher: '国家卫生健康委'
+  title: string
+  url: string
+  scope: string
+}
+
 export interface InstitutionalLowGIEntry {
   recipeFingerprint: string
   sourceURL: string
@@ -27,8 +35,26 @@ export interface InstitutionalLowGIData {
   publisher: 'GI News / University of Sydney'
   authorityURL: string
   claimKind: 'institutional-editorial'
+  chineseReferences: InstitutionalLowGIChineseReference[]
   recipes: Record<string, InstitutionalLowGIEntry>
 }
+
+const requiredChineseReferences: InstitutionalLowGIChineseReference[] = [
+  {
+    id: 'adult-diabetes-dietary-guide-2023',
+    publisher: '国家卫生健康委',
+    title: '《成人糖尿病食养指南（2023年版）》问答',
+    url: 'https://www.nhc.gov.cn/wjw/c100378/202301/7faed9993c9b45aea158c5335346f282/files/1732844468167_10535.pdf',
+    scope: '用于核对 GI 的定义和膳食边界；不证明这些配方经过实测，也不代表适合个人疾病饮食。',
+  },
+  {
+    id: 'ws-t-652-2019',
+    publisher: '国家卫生健康委',
+    title: '食物血糖生成指数测定方法（WS/T 652—2019）',
+    url: 'https://www.nhc.gov.cn/fzs/c100048/201906/ae057c7a93744972bd7722077c91ca34/files/1733125684903_75354.pdf',
+    scope: '规定食物 GI 的标准测定方法；不提供本批次具体配方的 GI 实测值。',
+  },
+]
 
 export function institutionalLowGIDataVersion(data: InstitutionalLowGIData): string {
   const { dataVersion: _version, ...content } = data
@@ -38,9 +64,20 @@ export function institutionalLowGIDataVersion(data: InstitutionalLowGIData): str
 /** Manual source review is independent of the legacy nutrition labels and lab measurements. */
 export function validateInstitutionalLowGIData(data: InstitutionalLowGIData, recipes: RecipeItem[]): string[] {
   const errors: string[] = []
+  const chineseReferencesMatch = data.chineseReferences.length === requiredChineseReferences.length
+    && requiredChineseReferences.every((required) => {
+      const reference = data.chineseReferences.find(item => item.id === required.id)
+      if (!reference)
+        return false
+      return reference.publisher === required.publisher
+        && reference.title === required.title
+        && reference.url === required.url
+        && reference.scope === required.scope
+    })
   if (data.schemaVersion !== 1 || data.policyVersion !== 1
     || data.publisher !== 'GI News / University of Sydney'
-    || data.authorityURL !== institutionalLowGIAuthorityURL || data.claimKind !== 'institutional-editorial') {
+    || data.authorityURL !== institutionalLowGIAuthorityURL || data.claimKind !== 'institutional-editorial'
+    || !chineseReferencesMatch) {
     errors.push('机构来源或审核政策不支持')
   }
   if (data.dataVersion !== institutionalLowGIDataVersion(data))

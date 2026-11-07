@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "policyVersion", "dataVersion", "publisher", "authorityURL", "claimKind", "recipes"],
+  "required": ["schemaVersion", "policyVersion", "dataVersion", "publisher", "authorityURL", "claimKind", "chineseReferences", "recipes"],
   "properties": {
     "schemaVersion": { "const": 1 },
     "policyVersion": { "const": 1 },
@@ -10,6 +10,54 @@
     "publisher": { "const": "GI News / University of Sydney" },
     "authorityURL": { "const": "https://glycemicindex.com/2026/01/copyright-and-permission-105/" },
     "claimKind": { "const": "institutional-editorial" },
+    "chineseReferences": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "publisher", "title", "url", "scope"],
+        "properties": {
+          "id": { "enum": ["adult-diabetes-dietary-guide-2023", "ws-t-652-2019"] },
+          "publisher": { "const": "国家卫生健康委" },
+          "title": {
+            "enum": [
+              "《成人糖尿病食养指南（2023年版）》问答",
+              "食物血糖生成指数测定方法（WS/T 652—2019）"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https://www\\.nhc\\.gov\\.cn/.+\\.pdf$"
+          },
+          "scope": { "type": "string", "minLength": 1 }
+        }
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "id": { "const": "adult-diabetes-dietary-guide-2023" },
+              "url": { "const": "https://www.nhc.gov.cn/wjw/c100378/202301/7faed9993c9b45aea158c5335346f282/files/1732844468167_10535.pdf" }
+            },
+            "required": ["id", "url"]
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "id": { "const": "ws-t-652-2019" },
+              "url": { "const": "https://www.nhc.gov.cn/fzs/c100048/201906/ae057c7a93744972bd7722077c91ca34/files/1733125684903_75354.pdf" }
+            },
+            "required": ["id", "url"]
+          }
+        }
+      ]
+    },
     "recipes": {
       "type": "object",
       "minProperties": 10,

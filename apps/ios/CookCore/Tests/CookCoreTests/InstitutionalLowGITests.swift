@@ -17,6 +17,8 @@ final class InstitutionalLowGITests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(catalog.entries[881]).requirements.contains("Basmati"))
         XCTAssertTrue(try XCTUnwrap(catalog.entries[887]).requirements.contains("al dente"))
         XCTAssertTrue(InstitutionalLowGICatalog.explanation.contains("未提供整道菜的实验室实测 GI 值"))
+        XCTAssertEqual(catalog.chineseReferences, InstitutionalLowGICatalog.chineseReferences)
+        XCTAssertEqual(catalog.chineseReferences.map(\.publisher), ["国家卫生健康委", "国家卫生健康委"])
     }
 
     func testOneStaleRecipeClosesTheFilterInsteadOfPromotingAnUnreviewedTag() throws {
@@ -35,6 +37,11 @@ final class InstitutionalLowGITests: XCTestCase {
     func testUntrustedPublisherLookalikeHostAndDuplicateSourceSectionsCannotOpenTheFilter() throws {
         XCTAssertThrowsError(try catalog { $0["publisher"] = "Unknown blog" })
         XCTAssertThrowsError(try catalog { $0["claimKind"] = "measured-gi" })
+        XCTAssertThrowsError(try catalog { document in
+            var references = document["chineseReferences"] as! [[String: Any]]
+            references[0]["url"] = "https://example.com/guide.pdf"
+            document["chineseReferences"] = references
+        })
         let lookalike = try catalog { document in
             var entries = document["recipes"] as! [String: [String: Any]]
             entries["881"]!["sourceURL"] = "https://glycemicindex.com.example.org/2008/05/low-gi-recipes-of-the-month-14/"
