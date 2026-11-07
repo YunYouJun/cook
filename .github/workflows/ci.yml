@@ -167,7 +167,7 @@ jobs:
       - run: pnpm run test
       - name: Install pinned artifact SDK for runtime contract verification
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        run: npm install --prefix "$RUNNER_TEMP/cook-artifact-contract" --ignore-scripts --no-audit --no-fund @actions/artifact@6.3.1
+        run: npm install --prefix "$RUNNER_TEMP/cook-artifact-contract" --ignore-scripts --no-audit --no-fund @actions/artifact@6.3.1 @azure/core-xml@1.6.0
       - name: Verify finalized checkpoints with the real Actions artifact runtime
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v9
