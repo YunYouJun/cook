@@ -37,6 +37,17 @@ run_logged "$build_log" \
   CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- || code=$?
 [[ "$code" == 0 ]] || exit "$code"
 xcrun simctl bootstatus "$DEVICE" -b
+xcrun simctl spawn "$DEVICE" launchctl kickstart -k user/501/com.apple.storekitd
+for attempt in {1..30}; do
+  state=$(xcrun simctl spawn "$DEVICE" launchctl print user/501/com.apple.storekitd 2>/dev/null \
+    | sed -n 's/^[[:space:]]*state = //p' | head -1)
+  [[ "$state" == running ]] && break
+  if [[ "$attempt" == 30 ]]; then
+    echo "StoreKit test service did not start" >&2
+    exit 1
+  fi
+  sleep 1
+done
 run_stage() {
   local stage="$1" stage_code=0
   local test_log="$RUNNER_TEMP/xcresult/$DEVICE-$stage.log"

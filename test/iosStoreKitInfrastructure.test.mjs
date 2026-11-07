@@ -24,7 +24,12 @@ async function checkCancellation(ignoresInterrupt) {
   try {
     const bin = join(task, 'bin')
     mkdirSync(bin)
-    writeFileSync(join(bin, 'xcrun'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+    writeFileSync(join(bin, 'xcrun'), `#!/bin/sh
+case "$*" in
+  "simctl spawn existing-phone launchctl print user/501/com.apple.storekitd") echo "state = running" ;;
+esac
+exit 0
+`, { mode: 0o755 })
     const descendant = `
 const fs = require('node:fs')
 process.on('SIGINT', () => {})
@@ -93,17 +98,25 @@ setInterval(() => {}, 1000)
 
 test('StoreKit checks both ordered targets in one operation and preserves either failure without retry', () => {
   const project = readFileSync(join(root, 'apps/ios/project.yml'), 'utf8')
+  const script = readFileSync(join(root, 'scripts/run-ios-storekit-tests.sh'), 'utf8')
   const plan = JSON.parse(readFileSync(join(root, 'apps/ios/StoreKitValidation/CookMembershipStoreKit.xctestplan'), 'utf8'))
   assert.equal(plan.defaultOptions.storeKitConfiguration.identifier, 'StoreKitValidation/Fixtures/MembershipProducts.storekit')
   assert.deepEqual(plan.testTargets.map(({ target }) => target.name), ['CookStoreKitTests', 'CookUITests'])
   assert.ok(plan.testTargets.every(({ parallelizable }) => parallelizable === false))
   assert.match(project.slice(project.indexOf('\n  CookMembershipStoreKit:')), /testPlans:\n\s+- path: StoreKitValidation\/CookMembershipStoreKit\.xctestplan\n\s+defaultPlan: true/)
+  assert.ok(script.indexOf('launchctl kickstart -k user/501/com.apple.storekitd') < script.indexOf('run_stage storekit'))
+  assert.match(script, /launchctl print user\/501\/com\.apple\.storekitd[\s\S]*\[\[ "\$state" == running \]\]/)
   for (const [buildExit, uiExit, sdkExit, expectedCalls] of [[0, 0, 0, 2], [65, 0, 0, 1], [0, 65, 0, 2], [0, 0, 66, 2], [0, 65, 66, 2]]) {
     const task = mkdtempSync(join(tmpdir(), 'cook-storekit-ci-'))
     try {
       const bin = join(task, 'bin')
       mkdirSync(bin)
-      writeFileSync(join(bin, 'xcrun'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+      writeFileSync(join(bin, 'xcrun'), `#!/bin/sh
+case "$*" in
+  "simctl spawn existing-phone launchctl print user/501/com.apple.storekitd") echo "state = running" ;;
+esac
+exit 0
+`, { mode: 0o755 })
       writeFileSync(join(bin, 'xcodebuild'), `#!/usr/bin/env node
 const fs = require('node:fs')
 const args = process.argv.slice(2)

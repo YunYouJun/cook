@@ -106,11 +106,6 @@ import XCTest
         let listener = listen(to: commerce)
         defer { listener.cancel() }
         _ = try await commerce.products()
-        // Xcode 27 may leave the first cold purchase behind while the test
-        // service starts. Initialize it through the test session before
-        // injecting the cancellation under test, then remove the warm-up.
-        _ = try await session.buyProduct(identifier: Self.productID)
-        session.clearTransactions()
         print("StoreKit diagnostic: injecting purchase error")
         try await session.setSimulatedError(.generic(.userCancelled), forAPI: StoreKitPurchaseAPI())
         print("StoreKit diagnostic: purchase error configured; calling purchase")
