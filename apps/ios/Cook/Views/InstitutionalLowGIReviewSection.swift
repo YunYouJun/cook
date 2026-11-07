@@ -23,6 +23,20 @@ struct InstitutionalLowGIReviewSection: View {
             Label("打开机构原方（英文，需联网）", systemImage: "arrow.up.right.square")
         }
         .accessibilityIdentifier("institutionalLowGI.openSource")
-        Link("机构来源与审核说明", destination: URL(string: InstitutionalLowGICatalog.authorityURL)!)
+        Link("机构版权与食谱分析范围（英文）", destination: URL(string: InstitutionalLowGICatalog.authorityURL)!)
+        Text("中文权威参考")
+            .font(.subheadline)
+            .fontWeight(.semibold)
+        ForEach(InstitutionalLowGICatalog.chineseReferences) { reference in
+            VStack(alignment: .leading, spacing: 4) {
+                Link(destination: URL(string: reference.url)!) {
+                    Label(reference.title, systemImage: "arrow.up.right.square")
+                }
+                .accessibilityIdentifier("institutionalLowGI.reference.\(reference.id)")
+                Text("\(reference.publisher) · \(reference.scope)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 }

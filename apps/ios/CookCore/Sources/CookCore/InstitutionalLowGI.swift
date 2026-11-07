@@ -6,7 +6,31 @@ public struct InstitutionalLowGICatalog: Sendable {
     public static let tag = "机构低 GI 食谱"
     public static let publisher = "GI News / University of Sydney"
     public static let authorityURL = "https://glycemicindex.com/2026/01/copyright-and-permission-105/"
-    public static let explanation = "来源为悉尼大学 GI News 的低 GI 食谱栏目，属于机构食谱参考，未提供整道菜的实验室实测 GI 值。请按原方的食材品种、比例和做法制作；不表示无糖、低热量或适合个人疾病饮食。原方为英文外链，阅读需联网。"
+    public static let chineseReferences = [
+        ChineseReference(
+            id: "adult-diabetes-dietary-guide-2023",
+            publisher: "国家卫生健康委",
+            title: "《成人糖尿病食养指南（2023年版）》问答",
+            url: "https://www.nhc.gov.cn/wjw/c100378/202301/7faed9993c9b45aea158c5335346f282/files/1732844468167_10535.pdf",
+            scope: "用于核对 GI 的定义和膳食边界；不证明这些配方经过实测，也不代表适合个人疾病饮食。"
+        ),
+        ChineseReference(
+            id: "ws-t-652-2019",
+            publisher: "国家卫生健康委",
+            title: "食物血糖生成指数测定方法（WS/T 652—2019）",
+            url: "https://www.nhc.gov.cn/fzs/c100048/201906/ae057c7a93744972bd7722077c91ca34/files/1733125684903_75354.pdf",
+            scope: "规定食物 GI 的标准测定方法；不提供本批次具体配方的 GI 实测值。"
+        ),
+    ]
+    public static let explanation = "来源为悉尼大学 GI News 的低 GI 食谱栏目，属于机构食谱参考，未提供整道菜的实验室实测 GI 值。原方目前只有英文；详情另列国家卫生健康委中文资料，用于解释 GI 概念与标准测定，不是本批配方的中文版或认证。请按原方的食材品种、比例和做法制作；不表示无糖、低热量或适合个人疾病饮食。"
+
+    public struct ChineseReference: Decodable, Equatable, Identifiable, Sendable {
+        public let id: String
+        public let publisher: String
+        public let title: String
+        public let url: String
+        public let scope: String
+    }
 
     public struct Entry: Decodable, Sendable {
         public let recipeFingerprint: String
@@ -47,11 +71,13 @@ public struct InstitutionalLowGICatalog: Sendable {
         let publisher: String
         let authorityURL: String
         let claimKind: String
+        let chineseReferences: [ChineseReference]
         let recipes: [String: Entry]
     }
 
     public let dataVersion: String
     public let entries: [Int: Entry]
+    public let chineseReferences: [ChineseReference]
     public var isAvailable: Bool { entries.count >= 10 }
 
     public static func load(from directory: URL, recipes: [Recipe]) throws -> Self {
@@ -63,6 +89,7 @@ public struct InstitutionalLowGICatalog: Sendable {
         guard document.schemaVersion == 1, document.policyVersion == 1 else { throw DietaryCatalogError.unsupportedVersion }
         guard document.publisher == Self.publisher, document.authorityURL == Self.authorityURL,
               document.claimKind == "institutional-editorial",
+              document.chineseReferences == Self.chineseReferences,
               document.dataVersion.range(of: #"^[a-f0-9]{12}$"#, options: .regularExpression) != nil else { throw DietaryCatalogError.invalidVersion }
         let identities = document.recipes.values.map { "\($0.sourceURL)\n\($0.sourceRecipeTitle)" }
         guard Set(identities).count == identities.count else { throw DietaryCatalogError.invalidVersion }
@@ -72,6 +99,7 @@ public struct InstitutionalLowGICatalog: Sendable {
             return (id, entry)
         })
         dataVersion = document.dataVersion
+        chineseReferences = document.chineseReferences
     }
 
     public func entry(for recipe: Recipe) -> Entry? {

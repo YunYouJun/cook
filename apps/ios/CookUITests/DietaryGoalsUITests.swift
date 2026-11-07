@@ -53,7 +53,24 @@ final class DietaryGoalsUITests: XCTestCase {
         }
         XCTAssertTrue(source.isHittable)
         XCTAssertTrue(source.label.contains("打开机构原方"))
-        capture(app, named: "institutional-low-gi-source-\(contentSize.rawValue)")
+        let guidance = revealInstitutionalReference("adult-diabetes-dietary-guide-2023", in: app, list: list)
+        XCTAssertTrue(guidance.isHittable)
+        XCTAssertTrue(guidance.label.contains("成人糖尿病食养指南"))
+        let standard = revealInstitutionalReference("ws-t-652-2019", in: app, list: list)
+        XCTAssertTrue(standard.isHittable)
+        XCTAssertTrue(standard.label.contains("WS/T 652"))
+        capture(app, named: "institutional-low-gi-sources-\(contentSize.rawValue)")
+    }
+
+    @MainActor
+    private func revealInstitutionalReference(_ id: String, in app: XCUIApplication, list: XCUIElement) -> XCUIElement {
+        let reference = app.descendants(matching: .any).matching(identifier: "institutionalLowGI.reference.\(id)").firstMatch
+        for _ in 0..<12 {
+            if reference.exists && reference.isHittable { break }
+            list.swipeUp()
+        }
+        XCTAssertTrue(reference.exists)
+        return reference
     }
 
     @MainActor
