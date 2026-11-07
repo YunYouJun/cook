@@ -8,6 +8,14 @@
 
 两类周期需要分别记录付款凭据和 Apple 续费状态，不能把“取消自动续费”当作退款，也不能把某条 Apple 权益撤销当作清空账号会员。自动续费的续订、宽限、取消续订及退款仍须单独实现并验收；原平台的非续期周期计算不能直接代表这些行为已支持。
 
+## 收尾合并与上线边界 · 2026-11-07
+
+维护者已授权本轮代码收尾合并。`COOK_MEMBERSHIP_UI_ENABLED` 与 `COOK_MEMBERSHIP_PURCHASES_ENABLED` 保持 NO；合并不创建 ASC 商品、确定价格、部署支付函数或发放正式权益。买断尚无已确认的范围和价格，不新增永久授权。
+
+原生业务代码的最新远端证据仍为 `3c7e51ed` 的 [run 42291946063](https://github.com/YunYouJun/cook/actions/runs/42291946063)，整线失败：手机普通组 246 项通过，平板普通组 245 项通过、同步授权页快照查询 1 项失败；两端金融组各 10 项通过、1 项超过 120 秒。七项 SDK、实时退款和实际付款取消在两端均通过，不能覆盖其余 UI 失败。本机两端各 11 项金融用例通过，也不能替代远端结果。
+
+本次收尾仅补充合并记录，未放宽时限、增加金融重试或把失败标为通过。剩余 UI 超时、iOS 26.5 裁切审计、真人 VoiceOver、真实 Apple Sandbox、云端 SDK 事务／并发及自动续费服务端生命周期继续单独处理；支付上线须另行完成实现、配置和验收。
+
 ## 只读盘点 · 2026-11-06
 
 通过现有 `asc` 登录执行：
@@ -42,7 +50,7 @@ asc subscriptions list --app 6824589542
 
 `NativeMembershipStoreKit` 接受明确的商品／类型配置，不使用其他 App 的 SKU。正常启动不调用 `AppStore.sync()`；只有用户恢复操作同步 App Store，随后遍历完整已验证历史。非续期商品的 `currentEntitlements` 只提供每种商品的最新记录，恢复多次单次购买仍依赖自有持久账本及幂等结算。参见 [Apple 当前权益序列](https://developer.apple.com/documentation/storekit/transaction/currententitlements)、[同步操作](<https://developer.apple.com/documentation/storekit/appstore/sync()>)、[未完成交易](https://developer.apple.com/documentation/storekit/transaction/unfinished)。
 
-生产购买及会员入口默认关闭；原生会员页与专属服务适配在后续分支实现，不代表支付服务已经部署。服务端必须明确确认对应交易和环境后，编排才允许 finish；Xcode、Sandbox、Production 之间不回退。退款由服务端重算／安全回退并重新读取有效会员，本机不因某条 Apple 撤销直接删除 Web 权益。自动续费通知需按 [Apple Notifications V2](https://developer.apple.com/documentation/appstoreservernotifications/receiving-app-store-server-notifications) 和 [Server API](https://developer.apple.com/documentation/appstoreserverapi/get-transaction-history) 独立核对。
+生产购买及会员入口默认关闭；原生会员页与专属服务适配的实现不代表支付服务已经部署。服务端必须明确确认对应交易和环境后，编排才允许 finish；Xcode、Sandbox、Production 之间不回退。退款由服务端重算／安全回退并重新读取有效会员，本机不因某条 Apple 撤销直接删除 Web 权益。自动续费通知需按 [Apple Notifications V2](https://developer.apple.com/documentation/appstoreservernotifications/receiving-app-store-server-notifications) 和 [Server API](https://developer.apple.com/documentation/appstoreserverapi/get-transaction-history) 独立核对。
 
 ## 验证与交付边界
 
@@ -70,7 +78,7 @@ asc subscriptions list --app 6824589542
 
 自动续费购买、账号标记、环境、finish、取消续订保留已购记录及恢复的原断言移至 #203 会员页的真实本地 Apple 确认流程，使用生产页面同样的 SwiftUI PurchaseAction 场景；不再用无交互场景的首笔自动续费调用代替用户购买路径。基础层只证明自动续费目录类型，非续期完整交易及其他金融断言继续执行。没有增加重试、延长 120 秒限时或忽略失败，不能把目录测试当作自动续费交易通过。
 
-## 原生会员页面与购买前校验（后续分支）
+## 原生会员页面与购买前校验
 
 `MembershipService` 通过固定官方 Functions API 和当前登录的 Bearer token 读取账户会员，不使用 Web SDK 包装、不传客户端 UID、不跟随跳转。购买仅访问 Cook 独立入口 `cook-iap-order`／`cook-iap-order-sandbox`，严格核对应用、bundle、商品类型和账本环境。购买前重新查询 `getCapabilities`；不支持、未部署或账号变化时不打开 Apple 付款。服务端响应须确认同一订单，未确认交易继续保留；权益和补交都离线时仍显示购买待核对。
 
