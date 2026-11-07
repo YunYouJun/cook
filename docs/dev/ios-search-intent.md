@@ -2,6 +2,26 @@
 
 关联 [#181](https://github.com/YunYouJun/cook/issues/181)、[#174](https://github.com/YunYouJun/cook/issues/174) 与 [0007](../decisions/0007-ai-and-sentence-input)。2026-10-28 冻结首版产品边界：先验收自然语言转可编辑条件，再接真实模型；仅 iOS，Web 后续单独推进。
 
+## 2026-11-07 真机与候选盘点
+
+[#197](https://github.com/YunYouJun/cook/pull/197) 已于 2026-11-06 合并，合并提交为 `c7a28d65bd486f2ec77af2105190100fd0cfb72b`，无需重新实施契约修复。本次冻结的源码候选为 main `691cc38fe6abc38e3ef9d112139726788341d630`。智能找菜的八个核心／原生源文件、五个相关测试文件、Git 跟踪的顶层 JSON／菜谱 CSV 以及 `cook-ai-intent` 与 #197 最终 head `c511b5a8` 无差异；同步测试夹具、未跟踪的生成文件及其他模块不在该等价结论内。当前生成的公共词典、版本与服务契约另由生成器只读检查核对。
+
+生产函数已重新只读查询为 `Active / Nodejs24.11`，实际通道仍为 `cloudbase / deepseek-v4.1-flash-1017`。完整包五个源文件的 SHA-256 均与[上一轮证据](./evidence/search-intent-closeout-2026-11-06.json)一致，当前 `1878cc5772dc` 与已分发 `faf919fc0041` 的三项版本选择保持有效。本次未部署、切换模型或重复真实计费调用；11 月 6 日的真实 HTTP 结果仍按其原始日期记录。
+
+ASC 只读回查的最新构建仍为 `2.0.0 (12)`，Build ID `315742ed-3c67-48d3-907b-ed88dad320d4`，状态 `VALID / INTERNAL_ONLY / IN_BETA_TESTING`，外部 `NOT_APPLICABLE`，仅关联既有内部测试组。已处理及上传记录观察到的下一构建号为 `13`，本次未预留上传操作。
+
+已从本地候选提交 `e988475ffe3f9059049c3336088a26da55ee640b` 准备 `2.0.0 (13)` 的 Release 归档、dSYM 与仅内部测试 IPA；相对上述 main 仅修改工程版本来源的构建号，产品代码和数据不变。IPA SHA-256 为 `6787dd0dc9733d641a91f36c357f7429de3295b9a6e097591b8ed08203749886`。分发签名、描述文件、关闭调试权限、Production 权限及隐私清单已通过共享验包脚本；正式反馈／AI 地址、关闭的会员入口／购买开关和 dSYM UUID 已逐项核对。从实际 IPA 内置文件重建的完整公共契约与生产当前词典一致，数据版本 `1878cc5772dc`、877 道菜、饮食标注 `ead74d1c15c9`。同一散列的 IPA 已通过 Apple `altool --validate-app`，结果为无错误；此操作没有上传 TestFlight。
+
+首次归档因 Swift Package 资源目标缺少开发团队失败；补齐全局 `DEVELOPMENT_TEAM` 参数后归档、导出成功，没有修改产品源码或新建签名资源。原始失败记录保留。本地版本分支尚未推送或合入 main，候选包未上传、安装或分发；后续须重新核对构建号占用、完成候选审阅及人工验收，并按实际授权执行分发，不能把验包成功称为 S4 通过。候选包、源码副本与签名证据位于 `~/Library/Developer/ReleaseArtifacts/Cook/20261107-issue-181-candidate-13`。
+
+设备盘点实际发现一台可连接的 iPhone 15 Pro／iOS 27.0.1，已配对、开发者模式开启、无线隧道连通。其已安装 App 为 `fun.yunle.cook / 2.0.0 (12)`；仅核对安装清单，不据版本号推定该安装包与归档逐字相同。VoiceOver 查询为关闭。查看画面时设备正在其他使用中，本次没有接管手机、启用 VoiceOver、更改网络或覆盖现有 App；本轮未发现可用的实体 iPad。本机有效签名身份及 Cook 开发／分发描述文件已盘点，但签名资源存在不代表新包已构建或验收。
+
+本次进程环境未提供个人 DeepSeek Key，手机内 Key 是否可用尚待持有人在 App 内确认；没有提取手机钥匙串或使用服务端 Key 冒充个人路径。源码仍使用不可同步、仅解锁可用且限本机的 Keychain 条目；普通设置仅保存通道选择。这是源码核对，不能替代个人 Key 真机真实调用与故障恢复。
+
+新增[人工验收步骤与待填记录](./ios-search-intent-manual-acceptance)，并校正 #174 [共用人工清单](https://github.com/YunYouJun/cook/blob/main/specs/dietary-goals/manual-acceptance.md)中已过时的入口、目标与标注版本。真实 VoiceOver、个人 Key、断网／失败恢复及同一新版候选使用均未执行，S4 和 #181 继续开放；维护者内容复核、会员购买／恢复及其已知 UI 超时不由本轮结论覆盖。
+
+验证复用 #197 的 38 项 Node、14 项 Swift 核心及 iPhone／iPad 各 46 项 App＋4 条 UI 成功记录，只用于上述源码／数据等价范围。此次仅修改验收文档，不重复运行原生矩阵或新增 mock。脱敏生产回读、源码对比清单、设备／ASC 摘要与清理记录保存在本机 `~/Library/Developer/ReleaseArtifacts/Cook/20261107-issue-181-readiness`；原始失败、取消及线上回退证据仍在 11 月 6 日目录，未改动。
+
 ## 2026-11-06 契约与发布验收收尾
 
 本轮按维护者要求先完成无需真机的部分，[修复 PR #197](https://github.com/YunYouJun/cook/pull/197)。实际 VoiceOver 朗读和个人 Key 真机调用继续待验收，S4 与 issue 保持开放；本轮没有上传新的 TestFlight。
