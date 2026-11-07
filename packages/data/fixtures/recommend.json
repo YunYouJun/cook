@@ -1,6 +1,6 @@
 {
   "description": "由 pnpm fixtures 生成，勿手改。Web（test/fixtures.test.ts）和 iOS（CookCore）都要和它一致。",
-  "recipeCount": 877,
+  "recipeCount": 887,
   "normalize": [
     {
       "input": [
@@ -798,6 +798,7 @@
         {"id":717,"matched":["鸡肉"],"pantry":[],"missing":["土豆","青椒"],"optional":[]},
         {"id":738,"matched":["鸡肉"],"pantry":[],"missing":["鸡蛋","面粉"],"optional":[]},
         {"id":814,"matched":["洋葱"],"pantry":[],"missing":["面食","猪肉"],"optional":[]},
+        {"id":881,"matched":["洋葱"],"pantry":[],"missing":["米","虾"],"optional":[]},
         {"id":166,"matched":["鸡肉"],"pantry":[],"missing":["鸡蛋","香肠"],"optional":[]},
         {"id":66,"matched":["鸡肉"],"pantry":[],"missing":["番茄","土豆"],"optional":[]},
         {"id":312,"matched":["洋葱"],"pantry":[],"missing":["猪肉","土豆"],"optional":[]}
@@ -948,6 +949,7 @@
         {"id":820,"matched":["米"],"pantry":[],"missing":["玉米","火腿"],"optional":[]},
         {"id":831,"matched":["米"],"pantry":[],"missing":["鸡蛋","猪肉"],"optional":[]},
         {"id":835,"matched":["番茄"],"pantry":[],"missing":["面食","鸡蛋"],"optional":[]},
+        {"id":881,"matched":["米"],"pantry":[],"missing":["洋葱","虾"],"optional":[]},
         {"id":66,"matched":["番茄"],"pantry":[],"missing":["鸡肉","土豆"],"optional":[]},
         {"id":314,"matched":["米"],"pantry":[],"missing":["胡萝卜","猪肉"],"optional":[]},
         {"id":333,"matched":["番茄"],"pantry":[],"missing":["西葫芦","鸡蛋"],"optional":[]},

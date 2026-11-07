@@ -69,6 +69,7 @@ case "$IOS_SUITE" in
         run_tests "$DEVICE" core-regression \
           -only-testing:CookUITests/AccountUserDataUITests \
           -only-testing:CookUITests/DietaryGoalsUITests/testNextDayLunchAndWeightGoalAtAccessibilitySize \
+          -only-testing:CookUITests/DietaryGoalsUITests/testInstitutionalLowGIAtAccessibilitySize \
           -only-testing:CookUITests/DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone \
           -only-testing:CookUITests/CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval
         ;;

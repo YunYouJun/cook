@@ -10,9 +10,9 @@ const recipes = parseRecipeCsv(readFileSync(resolve(process.cwd(), 'packages/dat
 const cases = [
   { stuff: ['番茄', '鸡蛋'], counts: [53, 99, 58], first: '微波炉版番茄鸡蛋汤', partial: '番茄鸡蛋', missing: ['米'] },
   { stuff: ['土豆'], counts: [31, 34, 25], first: '烤箱版M记同款薯条', partial: '电饭煲版焖鸡腿土豆', missing: ['鸡肉'] },
-  { stuff: ['腊肠', '米'], counts: [6, 35, 32], first: '电饭煲版广式腊肠煲饭', partial: '电饭煲版胡萝卜腊肠饭', missing: ['胡萝卜'] },
-  { stuff: ['鸡肉', '洋葱', '菌菇'], counts: [81, 44, 30], first: '电饭煲版烧鸡', partial: '电饭煲版南瓜鸡腿焖饭', missing: ['米'] },
-  { stuff: ['牛肉', '番茄', '米'], counts: [21, 65, 63], first: '电饭煲版番茄牛腩焖饭', partial: '电饭煲版番茄炖排骨', missing: ['猪肉'] },
+  { stuff: ['腊肠', '米'], counts: [6, 35, 33], first: '电饭煲版广式腊肠煲饭', partial: '电饭煲版胡萝卜腊肠饭', missing: ['胡萝卜'] },
+  { stuff: ['鸡肉', '洋葱', '菌菇'], counts: [81, 44, 31], first: '电饭煲版烧鸡', partial: '电饭煲版南瓜鸡腿焖饭', missing: ['米'] },
+  { stuff: ['牛肉', '番茄', '米'], counts: [21, 65, 64], first: '电饭煲版番茄牛腩焖饭', partial: '电饭煲版番茄炖排骨', missing: ['猪肉'] },
 ]
 
 describe('local recipe dataset acceptance', () => {

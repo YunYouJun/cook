@@ -387,6 +387,7 @@ test('core regression runs App units once and distributes representative UI acro
     assert.deepEqual(selectors(pad), [
       'CookUITests/AccountUserDataUITests',
       'CookUITests/DietaryGoalsUITests/testNextDayLunchAndWeightGoalAtAccessibilitySize',
+      'CookUITests/DietaryGoalsUITests/testInstitutionalLowGIAtAccessibilitySize',
       'CookUITests/DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone',
       'CookUITests/CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval',
     ])

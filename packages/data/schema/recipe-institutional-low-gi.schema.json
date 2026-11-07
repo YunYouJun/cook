@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "policyVersion", "dataVersion", "publisher", "authorityURL", "claimKind", "recipes"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "policyVersion": { "const": 1 },
+    "dataVersion": { "type": "string", "pattern": "^[a-f0-9]{12}$" },
+    "publisher": { "const": "GI News / University of Sydney" },
+    "authorityURL": { "const": "https://glycemicindex.com/2026/01/copyright-and-permission-105/" },
+    "claimKind": { "const": "institutional-editorial" },
+    "recipes": {
+      "type": "object",
+      "minProperties": 10,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(0|[1-9][0-9]*)$": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["recipeFingerprint", "sourceURL", "sourceRecipeTitle", "classificationTitle", "author", "reviewedAt", "requirements", "ingredients", "avoidIngredients", "unresolvedIngredients", "ingredientEvidence", "preparationEvidence"],
+          "properties": {
+            "recipeFingerprint": { "type": "string", "pattern": "^[a-f0-9]{16}$" },
+            "sourceURL": { "type": "string", "pattern": "^https://glycemicindex\\.com/[0-9]{4}/[0-9]{2}/low-gi-recipes?-of-the-month(-[0-9]+)?/$" },
+            "sourceRecipeTitle": { "type": "string", "minLength": 1 },
+            "classificationTitle": { "enum": ["Low GI Recipe of the Month", "Low GI Recipes of the Month"] },
+            "author": { "type": "string", "minLength": 1 },
+            "reviewedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+            "requirements": { "type": "string", "minLength": 1 },
+            "ingredients": { "$ref": "#/definitions/names" },
+            "avoidIngredients": { "$ref": "#/definitions/names" },
+            "unresolvedIngredients": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+            "ingredientEvidence": { "type": "string", "minLength": 1 },
+            "preparationEvidence": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "names": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+  }
+}
