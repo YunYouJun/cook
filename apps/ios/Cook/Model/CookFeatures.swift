@@ -1,6 +1,15 @@
 import Foundation
 
 enum CookFeatures {
+    static var membershipUIEnabled: Bool {
+        #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-ui-testing-membership") { return true }
+        #endif
+        return Bundle.main.object(forInfoDictionaryKey: "CookMembershipUIEnabled") as? String == "YES"
+    }
+    static var membershipPurchasesEnabled: Bool {
+        Bundle.main.object(forInfoDictionaryKey: "CookMembershipPurchasesEnabled") as? String == "YES"
+    }
     /// Reserved for the future native WeChat entry, not Yunlefun web sign-in or link handling.
     /// Only an explicit YES enables it; missing or unresolved build settings stay disabled.
     static var weChatLoginEnabled: Bool {

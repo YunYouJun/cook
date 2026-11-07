@@ -1,13 +1,15 @@
 import CookCore
 import Foundation
 import StoreKit
+import SwiftUI
 
 /// The caller supplies Cook's reviewed product catalog. No other application's
 /// SKU or subscription model is inferred from the platform implementation.
 @MainActor final class NativeMembershipStoreKit: MembershipCommerce {
     private let catalog: [String: MembershipProductKind]
     private var loaded: [String: Product] = [:]
-    private var transactions: [String: Transaction] = [:]
+    private var transactions: [String: StoreKit.Transaction] = [:]
+    var purchaseAction: PurchaseAction?
 
     init(catalog: [String: MembershipProductKind]) { self.catalog = catalog }
 
@@ -28,7 +30,10 @@ import StoreKit
     func purchase(productID: String, accountToken: UUID) async throws -> MembershipPurchaseResult {
         guard let product = loaded[productID] else { throw MembershipPurchaseFailure.invalidResponse }
         do {
-            switch try await product.purchase(options: [.appAccountToken(accountToken)]) {
+            let outcome: Product.PurchaseResult
+            if let purchaseAction { outcome = try await purchaseAction(product, options: [.appAccountToken(accountToken)]) }
+            else { outcome = try await product.purchase(options: [.appAccountToken(accountToken)]) }
+            switch outcome {
             case .success(let result):
                 guard let value = try record(result) else { throw MembershipPurchaseFailure.invalidResponse }
                 return .transaction(value)
@@ -41,7 +46,7 @@ import StoreKit
 
     func unfinished() async throws -> [MembershipTransaction] {
         var values: [MembershipTransaction] = []
-        for await result in Transaction.unfinished {
+        for await result in StoreKit.Transaction.unfinished {
             if let value = try record(result) { values.append(value) }
         }
         return values
@@ -53,7 +58,7 @@ import StoreKit
         // currentEntitlements contains only the latest non-renewing purchase per
         // product. Replaying history lets the server reconcile every durable grant.
         var values: [String: MembershipTransaction] = [:]
-        for await result in Transaction.all {
+        for await result in StoreKit.Transaction.all {
             if let value = try record(result) { values[value.id] = value }
         }
         return values.values.sorted { $0.id < $1.id }
@@ -62,7 +67,7 @@ import StoreKit
     func finish(transactionID: String) async throws {
         // Refresh StoreKit's synchronization snapshot before finishing, as in
         // the platform adapter; never finish an unverified transaction.
-        for await result in Transaction.unfinished {
+        for await result in StoreKit.Transaction.unfinished {
             if case .unverified(let value, _) = result, String(value.id) == transactionID {
                 throw MembershipPurchaseFailure.unverified
             }
@@ -79,7 +84,7 @@ import StoreKit
     func updates() -> AsyncStream<MembershipTransactionEvent> {
         AsyncStream { continuation in
             let observer = Task { [weak self] in
-                for await result in Transaction.updates {
+                for await result in StoreKit.Transaction.updates {
                     guard let self, !Task.isCancelled else { break }
                     do {
                         if let value = try self.record(result) { continuation.yield(.transaction(value)) }
@@ -91,7 +96,7 @@ import StoreKit
         }
     }
 
-    private func record(_ result: VerificationResult<Transaction>) throws -> MembershipTransaction? {
+    private func record(_ result: VerificationResult<StoreKit.Transaction>) throws -> MembershipTransaction? {
         // Filtering an unrelated SKU never makes its payload trusted.
         guard catalog[result.unsafePayloadValue.productID] != nil else { return nil }
         guard case .verified(let value) = result else { throw MembershipPurchaseFailure.unverified }

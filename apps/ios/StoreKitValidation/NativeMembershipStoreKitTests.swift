@@ -12,6 +12,7 @@ import XCTest
     private static var session: SKTestSession?
 
     private func configuredSession() throws -> SKTestSession {
+        print("StoreKit SDK host pid: \(ProcessInfo.processInfo.processIdentifier)")
         let value: SKTestSession
         if let existing = Self.session { value = existing }
         else {
@@ -105,7 +106,9 @@ import XCTest
         let listener = listen(to: commerce)
         defer { listener.cancel() }
         _ = try await commerce.products()
+        print("StoreKit diagnostic: injecting purchase error")
         try await session.setSimulatedError(.generic(.userCancelled), forAPI: StoreKitPurchaseAPI())
+        print("StoreKit diagnostic: purchase error configured; calling purchase")
         do {
             guard case .cancelled = try await commerce.purchase(productID: Self.productID, accountToken: UUID()) else {
                 return XCTFail("Cancellation must never produce a successful payment")
@@ -115,12 +118,15 @@ import XCTest
             // unknown. It is a failed SDK call, not proof of a user cancellation.
             // Keep this explicit: never turn unknown into a successful purchase.
         }
+        print("StoreKit diagnostic: injecting restore error")
         try await session.setSimulatedError(.generic(.userCancelled), forAPI: StoreKitAppStoreSyncAPI())
+        print("StoreKit diagnostic: restore error configured; calling restore")
         do { _ = try await commerce.restore(); XCTFail("Restore cancellation must not report success") }
         catch is CancellationError { }
         catch StoreKitError.unknown { }
         let queue = try await commerce.unfinished()
         XCTAssertEqual(queue, [])
+        print("StoreKit diagnostic: purchase and restore failure assertions completed")
     }
 
     func testPendingApprovalIsDeliveredThroughRealTransactionUpdates() async throws {
@@ -152,29 +158,26 @@ import XCTest
         try await commerce.finish(transactionID: try XCTUnwrap(delivered?.id))
     }
 
-    func testRefundIsDeliveredAsVerifiedRevocation() async throws {
+    // The UI runner drives the live refund from outside the App process.
+    // This separate SDK case proves verified recovery from durable history.
+    func testRefundIsRecoveredAsVerifiedRevocationFromHistory() async throws {
         let session = try configuredSession()
         defer { session.clearTransactions() }
         let commerce = NativeMembershipStoreKit(catalog: [Self.productID: .nonRenewing])
         _ = try await commerce.products()
-        let revoked = expectation(description: "Verified refund update")
-        var refundedID: String?
-        let stream = commerce.updates()
-        let listener = Task {
-            for await event in stream {
-                if case .transaction(let value) = event, value.revoked {
-                    refundedID = value.id; revoked.fulfill(); break
-                }
-            }
-        }
+        let token = UUID()
+        let listener = listen(to: commerce)
         defer { listener.cancel() }
-        guard case .transaction(let value) = try await commerce.purchase(productID: Self.productID, accountToken: UUID()) else {
+        guard case .transaction(let value) = try await commerce.purchase(productID: Self.productID, accountToken: token) else {
             return XCTFail("A local payment is required before its refund")
         }
         try await commerce.finish(transactionID: value.id)
         try session.refundTransaction(identifier: try XCTUnwrap(UInt(value.id)))
-        await fulfillment(of: [revoked], timeout: 10)
-        XCTAssertEqual(refundedID, value.id)
+        let history = try await commerce.restore()
+        let refunded = try XCTUnwrap(history.first { $0.id == value.id })
+        XCTAssertTrue(refunded.revoked)
+        XCTAssertEqual(refunded.accountToken, token)
+        XCTAssertEqual(refunded.environment, .xcode)
     }
 
     private func listen(to commerce: NativeMembershipStoreKit) -> Task<Void, Never> {
@@ -187,6 +190,7 @@ import XCTest
     let environment = MembershipStoreEnvironment.xcode
     var available = false
     var confirmedIDs: Set<String> = []
+    func preparePurchase(productID: String, for identity: MembershipPurchaseIdentity) async throws { }
     func entitlement(for identity: MembershipPurchaseIdentity) async throws -> MembershipEntitlement {
         MembershipEntitlement(userID: identity.userID, expiresAt: nil)
     }

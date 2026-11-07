@@ -22,7 +22,7 @@ function workflowCommand() {
 
 // Replay only the external Xcode/simulator boundary. The actual checked-in CI
 // shell and retry classifier execute unchanged; no local simulator is touched.
-function replay(scenarios, verify, suites = ['regression-main', 'regression-discovery', 'dietary']) {
+function replay(scenarios, verify, suites = ['regression-main', 'regression-discovery', 'dietary'], includeStoreKit = false) {
   const temporary = mkdtempSync(join(tmpdir(), 'cook-ios-ci-replay-'))
   const bin = join(temporary, 'bin')
   mkdirSync(bin)
@@ -38,6 +38,7 @@ function replay(scenarios, verify, suites = ['regression-main', 'regression-disc
   writeCommand('xcodebuild', `
     const fs = require('node:fs'), path = require('node:path');
     const args = process.argv.slice(2);
+    if (args[0] === 'build-for-testing') process.exit(0);
     const bundle = args[args.indexOf('-resultBundlePath') + 1];
     const name = path.basename(bundle, '.xcresult');
     const base = name.replace(/-infrastructure-retry$/, '');
@@ -60,7 +61,7 @@ function replay(scenarios, verify, suites = ['regression-main', 'regression-disc
     }
   `)
   try {
-    const runs = ['phone', 'pad'].flatMap(device => suites.map(suite => spawnSync('bash', ['-e', '-c', workflowCommand()], {
+    const runs = ['phone', 'pad'].flatMap(device => [...suites, ...(includeStoreKit ? ['storekit'] : [])].map(suite => spawnSync('bash', ['-e', '-c', suite === 'storekit' ? readFileSync(join(root, 'scripts/run-ios-storekit-tests.sh'), 'utf8') : workflowCommand()], {
       cwd: root,
       encoding: 'utf8',
       timeout: 15_000,
@@ -320,7 +321,7 @@ test('the stable ios gate rejects failed, cancelled and unexpectedly skipped mat
   }
 })
 
-test('every UI method is assigned exactly once per device, including both isolated audits', () => {
+test('every UI method is assigned exactly once per device, including audits and the signed financial scheme', () => {
   replay({}, ({ calls }) => {
     const directory = join(root, 'apps/ios/CookUITests')
     for (const file of readdirSync(directory).filter(file => file.endsWith('.swift'))) {
@@ -341,7 +342,7 @@ test('every UI method is assigned exactly once per device, including both isolat
         }
       }
     }
-  })
+  }, undefined, true)
 })
 
 test('core regression retains all App units, account sync and five existing UI flows', () => {
@@ -380,7 +381,8 @@ test('core regression retains all App units, account sync and five existing UI f
       for (const test of fullOnly)
         assert.ok(!selected(test), `${test} remains in the manual full matrix`)
       assert.ok(only.includes('CookUITests/AccountUserDataUITests'))
-      assert.equal(only.filter(selector => selector.startsWith('CookUITests/')).length, 6)
+      assert.ok(only.includes('CookUITests/MembershipUITests'))
+      assert.equal(only.filter(selector => selector.startsWith('CookUITests/')).length, 7)
       for (const selector of only.filter(selector => selector.startsWith('CookUITests/'))) {
         const [, suite, method] = selector.split('/')
         const source = readFileSync(join(root, 'apps/ios/CookUITests', `${suite}.swift`), 'utf8')
@@ -400,6 +402,7 @@ test('membership scope runs all units, real StoreKit and account UI on both devi
       assert.deepEqual(call.args.filter(arg => arg.startsWith('-only-testing:')), [
         '-only-testing:CookTests',
         '-only-testing:CookUITests/AccountUserDataUITests',
+        '-only-testing:CookUITests/MembershipUITests',
       ])
       assert.ok(call.args.includes('-parallel-testing-enabled'))
     }

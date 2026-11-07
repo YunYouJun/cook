@@ -60,6 +60,16 @@ import XCTest
         XCTAssertEqual(fixture.commerce.finished, [])
     }
 
+    func testUnavailablePaymentServicePreventsOpeningApplePurchase() async {
+        let fixture = Fixture()
+        fixture.backend.ready = false
+        await fixture.coordinator.loadProducts()
+        await fixture.coordinator.purchase(productID: "cook.test.member")
+        XCTAssertEqual(fixture.coordinator.notice, .unavailable)
+        XCTAssertNil(fixture.commerce.purchasedToken)
+        XCTAssertEqual(fixture.backend.settled, [])
+    }
+
     func testRestoreReplaysHistoryWithoutLocallyExtendingMembership() async {
         let fixture = Fixture()
         fixture.commerce.history = [fixture.transaction, fixture.transaction]
@@ -182,6 +192,18 @@ import XCTest
         XCTAssertEqual(fixture.coordinator.notice, .unavailable)
     }
 
+    func testPaidTransactionStaysPendingWhenSettlementAndEntitlementAreOffline() async {
+        let fixture = Fixture()
+        fixture.commerce.queue = [fixture.transaction]
+        fixture.backend.fail = true
+        fixture.backend.entitlementFails = true
+        await fixture.coordinator.retryUnfinished()
+        XCTAssertEqual(fixture.coordinator.pendingTransactionIDs, ["100"])
+        XCTAssertEqual(fixture.coordinator.notice, .awaitingConfirmation)
+        XCTAssertNil(fixture.coordinator.entitlement)
+        XCTAssertTrue(fixture.commerce.finished.isEmpty)
+    }
+
     func testUnrelatedProductsNeverBecomePurchasable() async {
         let fixture = Fixture()
         fixture.commerce.catalog = [MembershipProduct(id: "another.app.member", title: "Other", displayPrice: "$1")]
@@ -236,6 +258,8 @@ private extension MembershipPurchaseResult {
 @MainActor private final class SettlementFixture: MembershipSettling {
     let environment = MembershipStoreEnvironment.sandbox
     var fail = false
+    var ready = true
+    var entitlementFails = false
     var pause = false
     var snapshotOwner: String?
     var expiry: Date?
@@ -245,8 +269,12 @@ private extension MembershipPurchaseResult {
     var beforeReceiptReturns: (() -> Void)?
     var didBegin: (() -> Void)?
     private var waiting: CheckedContinuation<Void, Never>?
+    func preparePurchase(productID: String, for identity: MembershipPurchaseIdentity) async throws {
+        if !ready { throw MembershipPurchaseFailure.invalidResponse }
+    }
     func entitlement(for identity: MembershipPurchaseIdentity) async throws -> MembershipEntitlement {
-        MembershipEntitlement(userID: snapshotOwner ?? identity.userID, expiresAt: expiry)
+        if entitlementFails { throw MembershipPurchaseFailure.invalidResponse }
+        return MembershipEntitlement(userID: snapshotOwner ?? identity.userID, expiresAt: expiry)
     }
     func settle(_ transaction: MembershipTransaction, for identity: MembershipPurchaseIdentity) async throws -> MembershipSettlementReceipt {
         settled.append(transaction.id); revoked.append(transaction.revoked)

@@ -137,6 +137,8 @@ test('moving native code to a browser adapter still includes the removed native 
 test('membership-only changes use financial coverage; mixed and unknown inputs retain core', () => {
   repository(({ cwd, write, commit, base }) => {
     write('apps/ios/Cook/Model/NativeMembershipStoreKit.swift')
+    write('apps/ios/Cook/Views/MembershipView.swift')
+    write('apps/ios/CookUITests/MembershipUITests.swift')
     write('apps/ios/CookCore/Sources/CookCore/MembershipPurchase.swift')
     write('apps/ios/CookCore/Tests/CookCoreTests/MembershipPurchaseTests.swift')
     write('apps/ios/StoreKitValidation/NativeMembershipStoreKitTests.swift')

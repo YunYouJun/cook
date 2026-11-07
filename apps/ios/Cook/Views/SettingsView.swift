@@ -6,6 +6,14 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 YunlefunAccountSection()
+                if CookFeatures.membershipUIEnabled {
+                    Section {
+                        NavigationLink { MembershipView() } label: {
+                            SettingsRowLabel("会员", symbol: "star.circle.fill", color: .orange)
+                        }
+                        .accessibilityIdentifier("settings.membership")
+                    }
+                }
                 Section("我的厨房") {
                     NavigationLink { PrivateRecipesView() } label: {
                         SettingsRowLabel("我的菜谱", symbol: "book.closed.fill", color: .orange)
