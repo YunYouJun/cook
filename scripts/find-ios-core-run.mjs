@@ -28,6 +28,17 @@ function receipt(jobs, device, run, pr) {
     return { checkout: mark[2], key: mark[3] }
 }
 
+function storekitReceipt(jobs, run) {
+  const matches = jobs.filter(job => job.name === 'ios-storekit (iphone)')
+  const job = matches[0]
+  if (matches.length !== 1 || job.run_id !== run.id || job.run_attempt !== run.run_attempt
+    || job.status !== 'completed' || job.conclusion !== 'success' || !job.labels.includes('xcode-27')) {
+    return false
+  }
+  return job.steps.some(step =>
+    step.name === 'Verify local StoreKit contracts' && step.status === 'completed' && step.conclusion === 'success')
+}
+
 export function findCoreRun({ eventName, event, repo, checkout, parent, tree, api }) {
   const branch = event?.ref?.slice('refs/heads/'.length)
   if (eventName !== 'push' || !['main', 'dev'].includes(branch) || event.ref !== `refs/heads/${branch}`
@@ -54,7 +65,7 @@ export function findCoreRun({ eventName, event, repo, checkout, parent, tree, ap
     return
   const phone = receipt(jobs, 'iphone', run, pr)
   const pad = receipt(jobs, 'ipad', run, pr)
-  if (!phone || !pad || phone.checkout !== pad.checkout || phone.key !== pad.key)
+  if (!phone || !pad || phone.checkout !== pad.checkout || phone.key !== pad.key || !storekitReceipt(jobs, run))
     return
   const tested = api(`git/commits/${phone.checkout}`)
   if (tested.sha !== phone.checkout || tested.tree.sha !== tree || tested.parents.length !== 2
@@ -84,10 +95,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     })
     if (result) {
       appendFileSync(env.GITHUB_OUTPUT, `key=${result.key}\nrun_id=${result.runId}\n`)
-      console.log(`PR #${result.pr}, run ${result.runId} attempt ${result.attempt}: both core jobs passed. Checking the current toolchain.`)
+      console.log(`PR #${result.pr}, run ${result.runId} attempt ${result.attempt}: core and StoreKit jobs passed. Checking the current toolchain.`)
     }
     else {
-      console.log('No matching PR core results; run the iOS matrix.')
+      console.log('No matching PR core and StoreKit results; run the iOS matrix.')
     }
   }
   catch {

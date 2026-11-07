@@ -69,15 +69,28 @@ function isMembershipInput(path) {
 }
 
 export function planIosTests(eventName, coverage, scope) {
-  if (eventName === 'workflow_dispatch' && coverage === 'membership')
-    return { suites: ['membership'], maxParallel: 2 }
+  if (eventName === 'workflow_dispatch' && coverage === 'membership') {
+    return {
+      suites: ['membership'],
+      maxParallel: 2,
+      storekitDevices: ['iphone', 'ipad'],
+    }
+  }
   const core = eventName === 'push' || eventName === 'pull_request'
     || (eventName === 'workflow_dispatch' && coverage === 'core')
-  if (core && eventName !== 'workflow_dispatch' && scope === 'membership')
-    return { suites: ['membership'], maxParallel: 2 }
+  if (core && eventName !== 'workflow_dispatch' && scope === 'membership') {
+    return {
+      suites: ['membership'],
+      maxParallel: 2,
+      storekitDevices: ['iphone', 'ipad'],
+    }
+  }
   return {
     suites: core ? ['core-regression'] : ['regression-main', 'regression-discovery', 'dietary'],
     maxParallel: core ? 2 : 3,
+    // Core PRs exercise device-independent financial contracts once. Membership
+    // changes and full audits retain both form factors.
+    storekitDevices: core ? ['iphone'] : ['iphone', 'ipad'],
   }
 }
 
@@ -172,11 +185,18 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     result.skipNative = result.previousPushPassed
   }
   const ios = planIosTests(process.env.GITHUB_EVENT_NAME, event?.inputs?.ios_coverage, result.scope)
-  if (process.env.GITHUB_OUTPUT)
-    appendFileSync(process.env.GITHUB_OUTPUT, `skip_native=${result.skipNative}\nios_suites=${JSON.stringify(ios.suites)}\nios_max_parallel=${ios.maxParallel}\n`)
+  if (process.env.GITHUB_OUTPUT) {
+    appendFileSync(process.env.GITHUB_OUTPUT, [
+      `skip_native=${result.skipNative}`,
+      `ios_suites=${JSON.stringify(ios.suites)}`,
+      `ios_max_parallel=${ios.maxParallel}`,
+      `ios_storekit_devices=${JSON.stringify(ios.storekitDevices)}`,
+      '',
+    ].join('\n'))
+  }
   if (process.env.GITHUB_STEP_SUMMARY) {
     const reason = result.previousPushPassed === false ? ' Previous push did not have a verified successful CI run.' : ''
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Native CI: ${result.skipNative ? 'not required (only browser-owned inputs, documentation or the Support sync workflow changed)' : ios.suites.join(', ')}.${reason} Changed paths: ${result.changedFiles ?? 'unknown'}. Comparison: ${result.comparison}.\n`)
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Native CI: ${result.skipNative ? 'not required (only browser-owned inputs, documentation or the Support sync workflow changed)' : ios.suites.join(', ')}. StoreKit devices: ${ios.storekitDevices.join(', ')}.${reason} Changed paths: ${result.changedFiles ?? 'unknown'}. Comparison: ${result.comparison}.\n`)
   }
   console.log(JSON.stringify({ ...result, ios }))
 }

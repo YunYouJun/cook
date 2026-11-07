@@ -150,7 +150,12 @@ test('membership-only changes use financial coverage; mixed and unknown inputs r
     assert.deepEqual(planIosTests('push', undefined, result.scope).suites, ['membership'])
     assert.deepEqual(planIosTests('pull_request', undefined, result.scope).suites, ['membership'])
     assert.deepEqual(planIosTests('workflow_dispatch', 'core', result.scope).suites, ['core-regression'])
-    assert.deepEqual(planIosTests('workflow_dispatch', 'membership', 'core'), { suites: ['membership'], maxParallel: 2 })
+    assert.deepEqual(planIosTests('push', undefined, result.scope).storekitDevices, ['iphone', 'ipad'])
+    assert.deepEqual(planIosTests('workflow_dispatch', 'membership', 'core'), {
+      suites: ['membership'],
+      maxParallel: 2,
+      storekitDevices: ['iphone', 'ipad'],
+    })
     assert.equal(planIosTests('workflow_dispatch', 'unknown', result.scope).suites.length, 3)
     assert.equal(planIosTests('workflow_dispatch', 'full', result.scope).suites.length, 3)
     write('apps/ios/Cook/App.swift', 'mixed native change')
@@ -181,7 +186,7 @@ test('the workflow entry point writes job outputs and defaults to native on inva
     const env = { ...process.env, GITHUB_EVENT_NAME: 'pull_request', GITHUB_EVENT_PATH: eventPath, GITHUB_OUTPUT: outputPath, GITHUB_STEP_SUMMARY: summaryPath }
     writeFileSync(eventPath, JSON.stringify({ pull_request: { base: { sha: base }, head: { sha: after } } }))
     execFileSync(process.execPath, [entry], { cwd, env })
-    const corePlan = 'ios_suites=["core-regression"]\nios_max_parallel=2\n'
+    const corePlan = 'ios_suites=["core-regression"]\nios_max_parallel=2\nios_storekit_devices=["iphone"]\n'
     assert.equal(readFileSync(outputPath, 'utf8'), `skip_native=true\n${corePlan}`)
     assert.match(readFileSync(summaryPath, 'utf8'), /not required \(only browser-owned inputs, documentation or the Support sync workflow changed\)/)
     for (const invalidEvent of ['{ invalid JSON', 'null']) {

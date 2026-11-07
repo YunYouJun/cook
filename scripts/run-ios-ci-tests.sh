@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+: "${IOS_DEVICE:?Select iphone or ipad}"
+
 xcrun simctl list runtimes
 xcrun simctl list devices available
 # Each matrix cell uses one existing device, with serial tests and bounded retries.
@@ -52,25 +54,50 @@ run_tests() {
 }
 case "$IOS_SUITE" in
   core-regression)
-    # Compile every test and run all App units plus five representative UI flows.
-    # Full journeys and system audits remain in the manually selected full matrix.
-    run_tests "$DEVICE" core-regression \
-      -only-testing:CookTests \
-      -only-testing:CookUITests/AccountUserDataUITests \
-      -only-testing:CookUITests/MembershipUITests \
-      -only-testing:CookUITests/DietaryGoalsUITests/testNextDayLunchAndWeightGoalAtAccessibilitySize \
-      -only-testing:CookUITests/DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone \
-      -only-testing:CookUITests/CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval \
-      -only-testing:CookUITests/CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients \
-      -only-testing:CookUITests/CloudKitchenUITests/testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled
+    # App units do not vary by form factor, so run them once. The representative
+    # UI flows are split across narrow and wide layouts; the manual full matrix
+    # still runs every flow on both devices.
+    case "$IOS_DEVICE" in
+      iphone)
+        run_tests "$DEVICE" core-regression \
+          -only-testing:CookTests \
+          -only-testing:CookUITests/MembershipUITests \
+          -only-testing:CookUITests/CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients \
+          -only-testing:CookUITests/CloudKitchenUITests/testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled
+        ;;
+      ipad)
+        run_tests "$DEVICE" core-regression \
+          -only-testing:CookUITests/AccountUserDataUITests \
+          -only-testing:CookUITests/DietaryGoalsUITests/testNextDayLunchAndWeightGoalAtAccessibilitySize \
+          -only-testing:CookUITests/DietaryGoalsUITests/testClearingGoalFromResultsKeepsPickerPresentedUntilDone \
+          -only-testing:CookUITests/CookUITests/testAvoidPickerSearchKeepsSelectionsAvailableForRemoval
+        ;;
+      *)
+        echo "Unknown iOS device role: $IOS_DEVICE" >&2
+        exit 2
+        ;;
+    esac
     ;;
   membership)
     # The workflow also runs the dedicated, signed StoreKit scheme. Keep the
     # regular host's App units and account presentation in this invocation.
-    run_tests "$DEVICE" membership \
-      -only-testing:CookTests \
-      -only-testing:CookUITests/AccountUserDataUITests \
-      -only-testing:CookUITests/MembershipUITests
+    case "$IOS_DEVICE" in
+      iphone)
+        run_tests "$DEVICE" membership \
+          -only-testing:CookTests \
+          -only-testing:CookUITests/AccountUserDataUITests \
+          -only-testing:CookUITests/MembershipUITests
+        ;;
+      ipad)
+        run_tests "$DEVICE" membership \
+          -only-testing:CookUITests/AccountUserDataUITests \
+          -only-testing:CookUITests/MembershipUITests
+        ;;
+      *)
+        echo "Unknown iOS device role: $IOS_DEVICE" >&2
+        exit 2
+        ;;
+    esac
     ;;
   regression-main)
     # Everything else, including all App unit tests and newly added UI suites.

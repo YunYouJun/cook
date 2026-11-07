@@ -43,7 +43,7 @@ jobs:
           node-version-file: .nvmrc
       - name: Install pinned release tooling outside the checkout
         run: |
-          npm install --prefix "$RUNNER_TEMP/cook-release-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1 @actions/artifact@6.3.1
+          npm install --prefix "$RUNNER_TEMP/cook-release-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1 @actions/artifact@6.3.1 @azure/core-xml@1.6.0
       - name: Associate changes and reconcile verified production delivery
         uses: actions/github-script@v9
         env:

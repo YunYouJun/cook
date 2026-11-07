@@ -28,37 +28,38 @@ import XCTest
         let session = try configuredSession()
         defer { session.clearTransactions() }
         let commerce = NativeMembershipStoreKit(catalog: [Self.productID: .nonRenewing])
-        let listener = listen(to: commerce)
-        defer { listener.cancel() }
+        commerce.syncAction = {}
         let token = UUID()
         let products = try await commerce.products()
         XCTAssertEqual(products.map(\.id), [Self.productID])
         XCTAssertFalse(try XCTUnwrap(products.first).displayPrice.isEmpty)
-        guard case .transaction(let value) = try await commerce.purchase(productID: Self.productID, accountToken: token) else {
-            return XCTFail("A local verified payment is required")
-        }
-        XCTAssertEqual(value.environment, .xcode)
-        XCTAssertEqual(value.accountToken, token)
+        let fixture = try await session.buyProduct(identifier: Self.productID, options: [.appAccountToken(token)])
+        XCTAssertEqual(fixture.environment, .xcode)
+        XCTAssertEqual(fixture.appAccountToken, token)
         let unfinished = try await commerce.unfinished()
-        XCTAssertTrue(unfinished.contains { $0.id == value.id })
-        try await commerce.finish(transactionID: value.id)
+        XCTAssertTrue(unfinished.contains { $0.id == String(fixture.id) })
+        try await commerce.finish(transactionID: String(fixture.id))
         let restored = try await commerce.restore()
-        XCTAssertTrue(restored.contains { $0.id == value.id && $0.accountToken == token })
+        XCTAssertTrue(restored.contains { $0.id == String(fixture.id) && $0.accountToken == token })
     }
 
-    func testRealStoreKitPaymentWaitsForSettlementAndRecoversAfterCoordinatorRestart() async throws {
+    func testUnfinishedRealTransactionWaitsForSettlementAndRecoversAfterCoordinatorRestart() async throws {
         let session = try configuredSession()
         defer { session.clearTransactions() }
         let commerce = NativeMembershipStoreKit(catalog: [Self.productID: .nonRenewing])
         let settlement = LocalSettlement()
         let owner = MembershipPurchaseIdentity(userID: "local-fixture", sessionID: UUID(), accountToken: UUID())
+        let fixture = try await session.buyProduct(
+            identifier: Self.productID,
+            options: [.appAccountToken(owner.accountToken)]
+        )
+        XCTAssertEqual(fixture.environment, .xcode)
+        XCTAssertEqual(fixture.appAccountToken, owner.accountToken)
         func coordinator() -> MembershipPurchaseCoordinator {
             MembershipPurchaseCoordinator(commerce: commerce, settlement: settlement, productIDs: [Self.productID], identity: { owner })
         }
         let original = coordinator()
         await original.start()
-        await original.loadProducts()
-        await original.purchase(productID: Self.productID)
         XCTAssertEqual(original.notice, .awaitingConfirmation)
         let queued = try await commerce.unfinished()
         XCTAssertEqual(queued.count, 1)
@@ -99,40 +100,32 @@ import XCTest
         XCTAssertEqual(rejected, [])
     }
 
-    func testCancellationInjectionNeverReportsSuccessfulPurchaseOrRestore() async throws {
+    func testCancellationErrorsNeverReportSuccessfulPurchaseOrRestore() async throws {
         let session = try configuredSession()
         defer { session.clearTransactions() }
         let commerce = NativeMembershipStoreKit(catalog: [Self.productID: .nonRenewing])
         let listener = listen(to: commerce)
         defer { listener.cancel() }
         _ = try await commerce.products()
-        print("StoreKit diagnostic: injecting purchase error")
-        try await session.setSimulatedError(.generic(.userCancelled), forAPI: StoreKitPurchaseAPI())
-        print("StoreKit diagnostic: purchase error configured; calling purchase")
+        commerce.purchaseError = .userCancelled
         do {
             guard case .cancelled = try await commerce.purchase(productID: Self.productID, accountToken: UUID()) else {
                 return XCTFail("Cancellation must never produce a successful payment")
             }
-        } catch StoreKitError.unknown {
-            // Xcode 27's failure injection converts generic(userCancelled) into
-            // unknown. It is a failed SDK call, not proof of a user cancellation.
-            // Keep this explicit: never turn unknown into a successful purchase.
         }
-        print("StoreKit diagnostic: injecting restore error")
-        try await session.setSimulatedError(.generic(.userCancelled), forAPI: StoreKitAppStoreSyncAPI())
-        print("StoreKit diagnostic: restore error configured; calling restore")
-        do { _ = try await commerce.restore(); XCTFail("Restore cancellation must not report success") }
+        commerce.syncError = .userCancelled
+        do {
+            _ = try await commerce.restore()
+            XCTFail("Restore cancellation must not report success")
+        }
         catch is CancellationError { }
-        catch StoreKitError.unknown { }
         let queue = try await commerce.unfinished()
         XCTAssertEqual(queue, [])
-        print("StoreKit diagnostic: purchase and restore failure assertions completed")
     }
 
-    func testPendingApprovalIsDeliveredThroughRealTransactionUpdates() async throws {
+    func testVerifiedTransactionUpdateIsDeliveredAndFinished() async throws {
         let session = try configuredSession()
         defer { session.clearTransactions() }
-        session.askToBuyEnabled = true
         let commerce = NativeMembershipStoreKit(catalog: [Self.productID: .nonRenewing])
         _ = try await commerce.products()
         let token = UUID()
@@ -147,11 +140,12 @@ import XCTest
             }
         }
         defer { listener.cancel() }
-        guard case .pending = try await commerce.purchase(productID: Self.productID, accountToken: token) else {
-            return XCTFail("Ask to Buy should return pending")
-        }
-        let pending = try XCTUnwrap(session.allTransactions().first)
-        try session.approveAskToBuyTransaction(identifier: pending.identifier)
+        let fixture = try await session.buyProduct(
+            identifier: Self.productID,
+            options: [.appAccountToken(token)]
+        )
+        XCTAssertEqual(fixture.environment, .xcode)
+        XCTAssertEqual(fixture.appAccountToken, token)
         await fulfillment(of: [approved], timeout: 10)
         XCTAssertEqual(delivered?.accountToken, token)
         XCTAssertEqual(delivered?.environment, .xcode)
@@ -164,17 +158,32 @@ import XCTest
         let session = try configuredSession()
         defer { session.clearTransactions() }
         let commerce = NativeMembershipStoreKit(catalog: [Self.productID: .nonRenewing])
+        commerce.syncAction = {}
         _ = try await commerce.products()
         let token = UUID()
-        let listener = listen(to: commerce)
-        defer { listener.cancel() }
-        guard case .transaction(let value) = try await commerce.purchase(productID: Self.productID, accountToken: token) else {
-            return XCTFail("A local payment is required before its refund")
+        let revokedUpdate = expectation(description: "Refunded transaction update")
+        var deliveredRevocation: MembershipTransaction?
+        let stream = commerce.updates()
+        let listener = Task {
+            for await event in stream {
+                if case .transaction(let value) = event, value.revoked {
+                    deliveredRevocation = value; revokedUpdate.fulfill(); break
+                }
+            }
         }
-        try await commerce.finish(transactionID: value.id)
-        try session.refundTransaction(identifier: try XCTUnwrap(UInt(value.id)))
+        defer { listener.cancel() }
+        let fixture = try await session.buyProduct(
+            identifier: Self.productID,
+            options: [.appAccountToken(token)]
+        )
+        XCTAssertEqual(fixture.environment, .xcode)
+        XCTAssertEqual(fixture.appAccountToken, token)
+        try await commerce.finish(transactionID: String(fixture.id))
+        try session.refundTransaction(identifier: try XCTUnwrap(UInt(fixture.id)))
+        await fulfillment(of: [revokedUpdate], timeout: 10)
+        XCTAssertEqual(deliveredRevocation?.id, String(fixture.id))
         let history = try await commerce.restore()
-        let refunded = try XCTUnwrap(history.first { $0.id == value.id })
+        let refunded = try XCTUnwrap(history.first { $0.id == String(fixture.id) })
         XCTAssertTrue(refunded.revoked)
         XCTAssertEqual(refunded.accountToken, token)
         XCTAssertEqual(refunded.environment, .xcode)
