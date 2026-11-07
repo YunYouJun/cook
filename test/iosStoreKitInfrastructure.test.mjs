@@ -93,7 +93,11 @@ setInterval(() => {}, 1000)
 
 test('StoreKit checks both ordered targets in one operation and preserves either failure without retry', () => {
   const project = readFileSync(join(root, 'apps/ios/project.yml'), 'utf8')
-  assert.match(project.slice(project.indexOf('\n  CookMembershipStoreKit:')), /targets: \[CookUITests, CookStoreKitTests\]/)
+  const plan = JSON.parse(readFileSync(join(root, 'apps/ios/StoreKitValidation/CookMembershipStoreKit.xctestplan'), 'utf8'))
+  assert.equal(plan.defaultOptions.storeKitConfiguration.identifier, 'StoreKitValidation/Fixtures/MembershipProducts.storekit')
+  assert.deepEqual(plan.testTargets.map(({ target }) => target.name), ['CookUITests', 'CookStoreKitTests'])
+  assert.ok(plan.testTargets.every(({ parallelizable }) => parallelizable === false))
+  assert.match(project.slice(project.indexOf('\n  CookMembershipStoreKit:')), /testPlans:\n\s+- path: StoreKitValidation\/CookMembershipStoreKit\.xctestplan\n\s+defaultPlan: true/)
   for (const [buildExit, uiExit, sdkExit, expectedCalls] of [[0, 0, 0, 2], [65, 0, 0, 1], [0, 65, 0, 2], [0, 0, 66, 2], [0, 65, 66, 2]]) {
     const task = mkdtempSync(join(tmpdir(), 'cook-storekit-ci-'))
     try {
@@ -122,6 +126,7 @@ process.exit(args[0] === 'build-for-testing' ? Number(process.env.BUILD_EXIT) : 
       assert.ok(calls[0].includes('-skipPackageUpdates'))
       for (const args of calls) {
         assert.equal(args[args.indexOf('-scheme') + 1], 'CookMembershipStoreKit')
+        assert.equal(args[args.indexOf('-testPlan') + 1], 'CookMembershipStoreKit')
         assert.ok(args.includes('CODE_SIGNING_ALLOWED=YES'))
         assert.ok(args.includes('CODE_SIGN_IDENTITY=-'))
         assert.equal(args[args.indexOf('-parallel-testing-enabled') + 1], 'NO')

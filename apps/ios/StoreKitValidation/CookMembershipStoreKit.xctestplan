@@ -1,0 +1,40 @@
+{
+  "configurations" : [
+    {
+      "id" : "95B8C59A-2728-4C63-905F-C25383B97687",
+      "name" : "Local StoreKit",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "storeKitConfiguration" : {
+      "identifier" : "StoreKitValidation/Fixtures/MembershipProducts.storekit"
+    },
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Cook.xcodeproj",
+      "identifier" : "8A5EE9C004E2579DCB7B2054",
+      "name" : "Cook"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:Cook.xcodeproj",
+        "identifier" : "5A216D8184EE0A3A7CB97253",
+        "name" : "CookUITests"
+      }
+    },
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:Cook.xcodeproj",
+        "identifier" : "588CA693F674821511BC6DA0",
+        "name" : "CookStoreKitTests"
+      }
+    }
+  ],
+  "version" : 1
+}

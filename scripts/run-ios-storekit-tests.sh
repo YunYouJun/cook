@@ -30,6 +30,7 @@ run_logged() {
 code=0
 run_logged "$build_log" \
   xcodebuild build-for-testing -project apps/ios/Cook.xcodeproj -scheme CookMembershipStoreKit \
+  -testPlan CookMembershipStoreKit \
   -destination 'generic/platform=iOS Simulator' -parallel-testing-enabled NO \
   -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates \
   -derivedDataPath "$RUNNER_TEMP/cook-derived-data" \
@@ -41,6 +42,7 @@ run_stage() {
   local test_log="$RUNNER_TEMP/xcresult/$DEVICE-$stage.log"
   run_logged "$test_log" \
     xcodebuild test-without-building -project apps/ios/Cook.xcodeproj -scheme CookMembershipStoreKit \
+    -testPlan CookMembershipStoreKit \
     -only-testing:CookUITests/MembershipStoreKitUITests \
     -only-testing:CookStoreKitTests \
     -destination "id=$DEVICE" -destination-timeout 180 -parallel-testing-enabled NO \

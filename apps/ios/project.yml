@@ -171,4 +171,7 @@ schemes:
       storeKitConfiguration: StoreKitValidation/Fixtures/MembershipProducts.storekit
     test:
       config: Debug
-      targets: [CookUITests, CookStoreKitTests]
+      # Keep StoreKit local in CLI runs; scheme run options alone are not reliable.
+      testPlans:
+        - path: StoreKitValidation/CookMembershipStoreKit.xctestplan
+          defaultPlan: true
