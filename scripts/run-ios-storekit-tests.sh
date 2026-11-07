@@ -63,8 +63,8 @@ run_stage() {
     CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- || stage_code=$?
   if [[ "$code" == 0 && "$stage_code" != 0 ]]; then code=$stage_code; fi
 }
-# Warm the SDK host before the first purchase scene. Xcode 27 can leave a
-# cold StoreKit service unavailable to the first UI runner. Keep both targets
-# in one operation so the service initialization precedes Apple's real sheet.
+# Start and await the StoreKit service before the first purchase scene. Xcode 27
+# can leave a cold service unavailable to the first UI runner. Keep both targets
+# in one operation so the service starts before Apple's real purchase sheet.
 run_stage storekit
 exit "$code"
