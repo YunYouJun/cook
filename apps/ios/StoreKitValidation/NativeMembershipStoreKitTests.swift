@@ -28,22 +28,19 @@ import XCTest
         let session = try configuredSession()
         defer { session.clearTransactions() }
         let commerce = NativeMembershipStoreKit(catalog: [Self.productID: .nonRenewing])
-        let listener = listen(to: commerce)
-        defer { listener.cancel() }
+        commerce.syncAction = {}
         let token = UUID()
         let products = try await commerce.products()
         XCTAssertEqual(products.map(\.id), [Self.productID])
         XCTAssertFalse(try XCTUnwrap(products.first).displayPrice.isEmpty)
-        guard case .transaction(let value) = try await commerce.purchase(productID: Self.productID, accountToken: token) else {
-            return XCTFail("A local verified payment is required")
-        }
-        XCTAssertEqual(value.environment, .xcode)
-        XCTAssertEqual(value.accountToken, token)
+        let fixture = try await session.buyProduct(identifier: Self.productID, options: [.appAccountToken(token)])
+        XCTAssertEqual(fixture.environment, .xcode)
+        XCTAssertEqual(fixture.appAccountToken, token)
         let unfinished = try await commerce.unfinished()
-        XCTAssertTrue(unfinished.contains { $0.id == value.id })
-        try await commerce.finish(transactionID: value.id)
+        XCTAssertTrue(unfinished.contains { $0.id == String(fixture.id) })
+        try await commerce.finish(transactionID: String(fixture.id))
         let restored = try await commerce.restore()
-        XCTAssertTrue(restored.contains { $0.id == value.id && $0.accountToken == token })
+        XCTAssertTrue(restored.contains { $0.id == String(fixture.id) && $0.accountToken == token })
     }
 
     func testRealStoreKitPaymentWaitsForSettlementAndRecoversAfterCoordinatorRestart() async throws {

@@ -11,6 +11,7 @@ import SwiftUI
     private var transactions: [String: StoreKit.Transaction] = [:]
     var purchaseAction: PurchaseAction?
     var purchaseError: StoreKitError?
+    var syncAction: (() async throws -> Void)?
     var syncError: StoreKitError?
 
     init(catalog: [String: MembershipProductKind]) { self.catalog = catalog }
@@ -58,7 +59,8 @@ import SwiftUI
     func restore() async throws -> [MembershipTransaction] {
         do {
             if let syncError { throw syncError }
-            try await AppStore.sync()
+            if let syncAction { try await syncAction() }
+            else { try await AppStore.sync() }
         }
         catch StoreKitError.userCancelled { throw CancellationError() }
         // currentEntitlements contains only the latest non-renewing purchase per
