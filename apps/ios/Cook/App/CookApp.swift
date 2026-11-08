@@ -79,9 +79,16 @@ struct CookApp: App {
         actions.accountData = userData
         _favoriteActions = State(initialValue: actions)
         _workbench = State(initialValue: KitchenWorkbench(defaults: inMemory ? nil : .standard, notifications: inMemory ? .disabled : .live))
-        _ai = State(initialValue: CookAISettings(defaults: inMemory ? nil : .standard,
-                                                vault: inMemory ? MemoryCookAIKeyVault() : KeychainCookAIKeyVault(),
-                                                managedService: ManagedCookAIService(endpoint: inMemory ? nil : ManagedCookAIService.configuredEndpoint)))
+        let ai = CookAISettings(defaults: inMemory ? nil : .standard,
+                                vault: inMemory ? MemoryCookAIKeyVault() : KeychainCookAIKeyVault(),
+                                managedService: ManagedCookAIService(endpoint: inMemory ? nil : ManagedCookAIService.configuredEndpoint))
+        #if DEBUG
+            if uiTesting, ProcessInfo.processInfo.arguments.contains("-ui-testing-step-guidance") {
+                _ = ai.saveAPIKey("sk-ui-test-step-guidance")
+                _ = ai.selectProvider(.ownDeepSeek)
+            }
+        #endif
+        _ai = State(initialValue: ai)
         #if DEBUG
             if uiTesting {
                 // Functional tests exercise controls, validation and draft retention.

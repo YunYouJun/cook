@@ -100,6 +100,7 @@ export default defineConfig(withYunlefun({
             { text: '食材模型展柜', link: '/dev/ingredient-models' },
             { text: '云厨房实现', link: '/dev/cloud-kitchen' },
             { text: 'iOS App 打磨目标', link: '/dev/ios-roadmap' },
+            { text: 'iOS 步骤讲解与提问', link: '/dev/ios-step-guidance' },
           ],
         },
       ],
