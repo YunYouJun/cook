@@ -2,6 +2,8 @@ import type { Difficulty, RecipeItem } from '../types/recipe'
 import { normalizeStuff } from './alias'
 import { DEFAULT_RECIPE_SCORE } from './score'
 
+export { DEFAULT_RECIPE_SCORE }
+
 // 整句识别跟着推荐入口一起导出，Web 只引 @yunyoujun/cook/recommend
 export { isEmptyCookQuery, parseCookQuery } from './query'
 export type { CookQuery } from './query'

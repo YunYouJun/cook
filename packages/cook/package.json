@@ -35,6 +35,10 @@
     "./personal-catalog": {
       "types": "./dist/utils/personal-catalog.d.mts",
       "import": "./dist/utils/personal-catalog.mjs"
+    },
+    "./reviewed-data": {
+      "types": "./dist/utils/reviewed-data.d.mts",
+      "import": "./dist/utils/reviewed-data.mjs"
     }
   },
   "main": "./dist/index.mjs",

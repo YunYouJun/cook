@@ -1,12 +1,13 @@
 import type { RecipeItem } from '../../packages/cook/src/types/recipe'
 import type { RecipeText } from '../../packages/cook/src/types/recipe-text'
+import type { DietaryGoalID } from '../../packages/cook/src/utils/reviewed-data'
 import type { AmountAnchor } from './recipe-amounts'
-import { Buffer } from 'node:buffer'
 import { createHash } from 'node:crypto'
+import { addedSugarIngredients, dietaryGoals, dietaryRecipeFingerprint } from '../../packages/cook/src/utils/reviewed-data'
 import { sourceFingerprint, sourceLines } from './recipe-amounts'
 
-export const dietaryGoals = ['weight-aware', 'less-added-sugar', 'balanced-pairing'] as const
-export type DietaryGoalID = typeof dietaryGoals[number]
+export { dietaryGoals, dietaryRecipeFingerprint }
+export type { DietaryGoalID } from '../../packages/cook/src/utils/reviewed-data'
 
 export interface DietaryAssessment {
   status: 'pass' | 'fail' | 'unknown'
@@ -41,17 +42,6 @@ export interface DietaryData {
   amountsFingerprint: string
   enabledGoals: DietaryGoalID[]
   recipes: Record<string, DietaryEntry>
-}
-
-/** Bind annotations to recipe identity and preparation metadata, independently of display scores. */
-export function dietaryRecipeFingerprint(recipe: RecipeItem): string {
-  const tokens = [String(recipe.id), recipe.name, recipe.link ?? '', recipe.bv ?? '', recipe.difficulty ?? '']
-  for (const values of [recipe.stuff, recipe.tools, recipe.methods ?? [], recipe.tags ?? []])
-    tokens.push(String(values.length), ...values)
-  let hash = 14695981039346656037n
-  for (const byte of Buffer.from(tokens.join('\0'), 'utf8'))
-    hash = BigInt.asUintN(64, (hash ^ BigInt(byte)) * 1099511628211n)
-  return hash.toString(16).padStart(16, '0')
 }
 
 /** Include every annotation field in its version without refreshing any reviewed source fingerprints. */
@@ -104,7 +94,7 @@ export function validateDietaryData(data: DietaryData, recipes: RecipeItem[], te
         const expected = { 'weight-aware': 'portion-oil-reference', 'less-added-sugar': 'no-added-sugar', 'balanced-pairing': 'food-group-pairing' }[goal]
         if (assessment.reason !== expected)
           fail(`${goal} 通过理由无效`)
-        if (goal === 'less-added-sugar' && (entry.unresolvedIngredients.length || entry.ingredients.some(name => ['糖', '白糖', '冰糖', '砂糖', '糖浆', '蜂蜜'].includes(name))))
+        if (goal === 'less-added-sugar' && (entry.unresolvedIngredients.length || entry.ingredients.some(name => addedSugarIngredients.includes(name as typeof addedSugarIngredients[number]))))
           fail('添加糖或未核对复合调料不能标为未添加糖')
         if (goal === 'weight-aware') {
           const oil = entry.portionOil

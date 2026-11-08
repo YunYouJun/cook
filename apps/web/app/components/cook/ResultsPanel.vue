@@ -141,13 +141,13 @@ watch(() => rStore.selectedStuff.length > 0 || Boolean(rStore.curTool), (has) =>
 })
 
 // ---------- 结果数据 ----------
-const toolMode = computed(() => !rStore.selectedStuff.length && Boolean(rStore.curTool))
-const hasSelection = computed(() => rStore.selectedStuff.length > 0 || Boolean(rStore.curTool))
+const browseMode = computed(() => !rStore.selectedStuff.length)
+const hasSelection = computed(() => rStore.selectedStuff.length > 0 || Boolean(rStore.curTool) || rStore.hasReviewedSelection)
 const groupLabels = ['齐全', '差一种', '差两种']
 const groupHints = ['食材都有', '补一种就能做', '补两种就能做']
 const groups = computed(() => groupLabels.map((label, missing) => ({
   label,
-  items: rStore.recipeMatches.filter(match => match.missingStuff.length === missing),
+  items: rStore.recipeMatches.filter((match: RecipeMatch) => match.missingStuff.length === missing),
 })))
 const active = ref(0)
 const slideDirection = ref(1)
@@ -160,9 +160,9 @@ watch(() => rStore.recipeMatches, () => {
 })
 
 const currentMatches = computed(() => groups.value[active.value]?.items ?? [])
-const total = computed(() => toolMode.value ? rStore.toolRecipes.length : currentMatches.value.length)
+const total = computed(() => browseMode.value ? rStore.browseRecipes.length : currentMatches.value.length)
 const visibleMatches = computed(() => currentMatches.value.slice(0, limit.value))
-const visibleToolRecipes = computed(() => rStore.toolRecipes.slice(0, limit.value))
+const visibleBrowseRecipes = computed(() => rStore.browseRecipes.slice(0, limit.value))
 
 function onGroupChange(value: unknown) {
   const next = Number(value) || 0
@@ -202,6 +202,10 @@ const selectedSummary = computed(() => {
   const names = [...rStore.selectedStuff]
   if (rStore.curTool)
     names.push(rStore.curTool === '一口大锅' ? '炒锅' : rStore.curTool)
+  if (rStore.activeDietaryGoalOption)
+    names.push(rStore.activeDietaryGoalOption.label)
+  if (rStore.activeDiscoverySceneOption)
+    names.push(rStore.activeDiscoverySceneOption.label)
   return names.join('、')
 })
 
@@ -269,10 +273,10 @@ const sheetStyle = computed(() => {
     <div id="cook-results-body" ref="bodyRef" class="results-panel-body" :aria-busy="bodyVisible && rStore.isSearching" :style="{ opacity: bodyOpacity, visibility: bodyOpacity ? 'visible' : 'hidden' }">
       <div v-if="desktop && !hasSelection && !rStore.loadError" class="results-panel-welcome">
         <h3>从左侧选几样食材</h3>
-        <p>也可以只选厨具，查看适合它的菜谱。做法和难度可以继续缩小范围。</p>
+        <p>也可以只选厨具、饮食目标或专题，查看适合的菜谱。做法和难度可以继续缩小范围。</p>
       </div>
       <template v-else-if="bodyVisible && !rStore.loadError">
-        <div v-if="!toolMode && (rStore.isSearching || rStore.unlockSuggestions.length)" class="results-panel-unlock" aria-label="再补一样" :aria-hidden="rStore.isSearching || undefined">
+        <div v-if="!browseMode && (rStore.isSearching || rStore.unlockSuggestions.length)" class="results-panel-unlock" aria-label="再补一样" :aria-hidden="rStore.isSearching || undefined">
           <span class="results-panel-unlock-label">再补一样</span>
           <div v-if="rStore.isSearching" class="results-panel-unlock-row">
             <span v-for="item in 3" :key="item" class="results-panel-unlock-chip results-panel-unlock-placeholder" />
@@ -284,7 +288,7 @@ const sheetStyle = computed(() => {
           </TransitionGroup>
         </div>
 
-        <ion-segment v-if="!toolMode" class="results-panel-segment" :disabled="rStore.isSearching" :value="String(active)" @ion-change="onGroupChange($event.detail.value)">
+        <ion-segment v-if="!browseMode" class="results-panel-segment" :disabled="rStore.isSearching" :value="String(active)" @ion-change="onGroupChange($event.detail.value)">
           <ion-segment-button v-for="(group, index) in groups" :key="group.label" :value="String(index)">
             <ion-label>
               {{ group.label }} <span v-if="rStore.isSearching" class="results-panel-count-placeholder" aria-hidden="true" /><span v-else>{{ group.items.length }}</span>
@@ -303,9 +307,9 @@ const sheetStyle = computed(() => {
             @ion-input="onKeyword"
           />
           <div class="results-panel-summary">
-            <span><span v-if="rStore.isSearching" class="results-panel-count-placeholder" aria-hidden="true" /><span v-else>{{ total }}</span> 道{{ toolMode ? '' : ` · ${groupHints[active]}` }}</span>
+            <span><span v-if="rStore.isSearching" class="results-panel-count-placeholder" aria-hidden="true" /><span v-else>{{ total }}</span> 道{{ browseMode ? '' : ` · ${groupHints[active]}` }}</span>
             <ion-select
-              v-if="!toolMode"
+              v-if="!browseMode"
               class="results-panel-mode"
               aria-label="匹配范围"
               interface="popover"
@@ -317,8 +321,14 @@ const sheetStyle = computed(() => {
               </ion-select-option>
             </ion-select>
           </div>
-          <div v-if="(rStore.curTool && !toolMode) || rStore.methodGroups.length || rStore.difficulty.length" class="results-panel-filter">
-            <button v-if="rStore.curTool && !toolMode" type="button" class="results-panel-filter-chip" :aria-label="`取消厨具筛选：${rStore.curTool}`" @click="rStore.toggleTools(rStore.curTool)">
+          <div v-if="rStore.activeDietaryGoalOption || rStore.activeDiscoverySceneOption || rStore.curTool || rStore.methodGroups.length || rStore.difficulty.length" class="results-panel-filter">
+            <button v-if="rStore.activeDietaryGoalOption" type="button" class="results-panel-filter-chip" :aria-label="`取消饮食目标：${rStore.activeDietaryGoalOption.label}`" @click="rStore.toggleDietaryGoal(rStore.activeDietaryGoalOption.id)">
+              目标：{{ rStore.activeDietaryGoalOption.label }}<ion-icon :icon="ioniconsClose" aria-hidden="true" />
+            </button>
+            <button v-if="rStore.activeDiscoverySceneOption" type="button" class="results-panel-filter-chip" :aria-label="`取消专题：${rStore.activeDiscoverySceneOption.label}`" @click="rStore.toggleDiscoveryScene(rStore.activeDiscoverySceneOption.id)">
+              专题：{{ rStore.activeDiscoverySceneOption.label }}<ion-icon :icon="ioniconsClose" aria-hidden="true" />
+            </button>
+            <button v-if="rStore.curTool" type="button" class="results-panel-filter-chip" :aria-label="`取消厨具筛选：${rStore.curTool}`" @click="rStore.toggleTools(rStore.curTool)">
               厨具：{{ rStore.curTool }}<ion-icon :icon="ioniconsClose" aria-hidden="true" />
             </button>
             <button v-for="label in rStore.methodGroups" :key="label" type="button" class="results-panel-filter-chip" :aria-label="`取消做法筛选：${label}`" @click="rStore.toggleMethodGroup(label)">
@@ -331,11 +341,11 @@ const sheetStyle = computed(() => {
 
           <ResultsSkeleton v-if="rStore.isSearching" :desktop="desktop" />
           <Transition v-else :name="slideDirection > 0 ? 'results-slide-left' : 'results-slide-right'" mode="out-in">
-            <ion-list v-if="total" :key="toolMode ? 'tool' : active" :inset="true" class="results-panel-list">
-              <template v-if="toolMode">
+            <ion-list v-if="total" :key="browseMode ? 'browse' : active" :inset="true" class="results-panel-list">
+              <template v-if="browseMode">
                 <RecipeResultRow
-                  v-for="(recipe, i) in visibleToolRecipes"
-                  :key="`${recipe.bv}-${recipe.name}-${i}`"
+                  v-for="(recipe, i) in visibleBrowseRecipes"
+                  :key="recipe.id ?? `${recipe.bv}-${recipe.name}-${i}`"
                   :recipe="recipe"
                   :style="{ '--i': Math.min(i, 8) }"
                   @select="emit('detail', recipe)"
@@ -358,8 +368,8 @@ const sheetStyle = computed(() => {
               </ion-item>
             </ion-list>
             <div v-else :key="`empty-${active}`" class="results-panel-empty">
-              <h3>这一组暂时没有菜</h3>
-              <p>{{ rStore.keyword || rStore.curMode !== 'loose' ? '试试清除菜名或放宽匹配范围' : count ? '换个分组，或者再加几样食材' : '试试换成常见食材，或清除厨具筛选' }}</p>
+              <h3>{{ browseMode ? '当前条件下暂无已核对菜谱' : '这一组暂时没有菜' }}</h3>
+              <p>{{ rStore.keyword || rStore.curMode !== 'loose' ? '试试清除菜名或放宽匹配范围' : rStore.hasReviewedSelection ? '当前选择、忌口或厨具没有交集；不会自动扩大到普通目录。' : count ? '换个分组，或者再加几样食材' : '试试换成常见食材，或清除厨具筛选' }}</p>
               <ion-button fill="clear" @click="goAdjust">
                 调整食材
               </ion-button>
@@ -367,7 +377,12 @@ const sheetStyle = computed(() => {
           </Transition>
 
           <p class="cook-group-footer results-panel-footnote">
-            只核对菜谱里记录的食材，西红柿算番茄、鸡翅算鸡肉；常备调料只在菜谱写明时算作已有。用量和调味以视频为准。
+            <template v-if="rStore.hasReviewedSelection">
+              饮食目标和专题只从审核记录仍与当前做法一致的菜谱中取交集；详情会区分已核对图文与其他来源。
+            </template>
+            <template v-else>
+              只核对菜谱里记录的食材，西红柿算番茄、鸡翅算鸡肉；常备调料只在菜谱写明时算作已有。用量和调味以视频为准。
+            </template>
           </p>
         </div>
       </template>

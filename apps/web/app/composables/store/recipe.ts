@@ -1,14 +1,23 @@
 import type { Difficulty, RecommendationMode } from '@yunyoujun/cook'
 import type { CookQuery } from '@yunyoujun/cook/recommend'
 import type { RecipeItem, StuffItem } from '~/types'
+import type { DietaryGoalID, DiscoverySceneID, ReviewedRecipeCatalog } from '~/utils/reviewed-recipes'
 import { StorageSerializers, useStorage } from '@vueuse/core'
-import { createRecipeRecommender, hasAvoidedStuff, matchesTaste, parseCookQuery, uniqueStuff } from '@yunyoujun/cook/recommend'
+import { createRecipeRecommender, DEFAULT_RECIPE_SCORE, hasAvoidedStuff, matchesTaste, parseCookQuery, uniqueStuff } from '@yunyoujun/cook/recommend'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { useIndexedDB } from '~/composables/db'
 import { usePersonalCatalog } from '~/composables/usePersonalCatalog'
 import { defaultPantry, pantryOptions } from '~/data/pantry'
 import { trackCookEvent } from '~/utils/analytics'
+import {
+  dietaryGoalOptions,
+  dietaryReviewReason,
+  discoverySceneOptions,
+  loadReviewedRecipeCatalog,
+  reviewedDietaryEntryAllows,
+  reviewedInstitutionalEntryAllows,
+} from '~/utils/reviewed-recipes'
 import { db } from '../../utils/db'
 import { useAppStore } from './app'
 import { customRecipes } from './customRecipe'
@@ -32,10 +41,14 @@ export const useRecipeStore = defineStore('recipe', () => {
   const noSpicy = settings.keepLocalData ? useStorage(`${namespace}:no-spicy`, false) : shallowRef(false)
   const methodGroups = settings.keepLocalData ? useStorage<string[]>(`${namespace}:method-groups`, []) : ref<string[]>([])
   const difficulty = settings.keepLocalData ? useStorage<Difficulty[]>(`${namespace}:difficulty`, []) : ref<Difficulty[]>([])
+  // Review selections are session-only. They are never written to URLs, logs, replay or synced preferences.
+  const dietaryGoal = shallowRef<DietaryGoalID | null>(null)
+  const discoveryScene = shallowRef<DiscoverySceneID | null>(null)
 
   const selectedStuff = computed(() => uniqueStuff([...curStuff.value]))
   const selectedPantry = computed(() => uniqueStuff(pantry.value).filter(item => pantryOptions.includes(item)))
   const selectedAvoid = computed(() => uniqueStuff(avoid.value))
+  const hasReviewedSelection = computed(() => Boolean(dietaryGoal.value || discoveryScene.value))
 
   function toggleStuff(name: string) {
     const names = uniqueStuff([name])
@@ -110,6 +123,8 @@ export const useRecipeStore = defineStore('recipe', () => {
     curMode.value = 'loose'
     methodGroups.value = []
     difficulty.value = []
+    dietaryGoal.value = null
+    discoveryScene.value = null
   }
 
   function reset() {
@@ -128,7 +143,12 @@ export const useRecipeStore = defineStore('recipe', () => {
   const recipes = shallowRef<RecipeItem[]>([])
   const isSearching = shallowRef(true)
   const loadError = shallowRef('')
+  const reviewedCatalog = shallowRef<ReviewedRecipeCatalog | null>(null)
+  const hasLoadedReviewedRecipes = shallowRef(false)
+  const isReviewingRecipes = shallowRef(false)
+  const reviewedCatalogError = shallowRef('')
   let loading: Promise<void> | undefined
+  let reviewLoading: Promise<void> | undefined
   function loadRecipes() {
     if (loading)
       return loading
@@ -151,10 +171,96 @@ export const useRecipeStore = defineStore('recipe', () => {
     return loading
   }
 
+  function loadReviewedRecipes(loader = loadReviewedRecipeCatalog) {
+    if (reviewLoading)
+      return reviewLoading
+    isReviewingRecipes.value = true
+    reviewedCatalogError.value = ''
+    reviewLoading = (async () => {
+      try {
+        await loadRecipes()
+        reviewedCatalog.value = await loader(recipes.value)
+        hasLoadedReviewedRecipes.value = true
+      }
+      catch {
+        reviewedCatalog.value = null
+        reviewedCatalogError.value = '已审核筛选暂时不可用，普通找菜仍可继续。'
+      }
+      finally {
+        isReviewingRecipes.value = false
+        reviewLoading = undefined
+      }
+    })()
+    return reviewLoading
+  }
+
   // 自己添加的菜谱排在前面：匹配程度相同时优先推荐
   const allRecipes = computed<RecipeItem[]>(() => [...customRecipes.value, ...recipes.value])
+  const reviewedGoalOptions = computed(() => dietaryGoalOptions(reviewedCatalog.value))
+  const reviewedSceneOptions = computed(() => discoverySceneOptions(reviewedCatalog.value))
+  const activeDietaryGoalOption = computed(() => reviewedGoalOptions.value.find(option => option.id === dietaryGoal.value))
+  const activeDiscoverySceneOption = computed(() => reviewedSceneOptions.value.find(option => option.id === discoveryScene.value))
 
-  const recommend = computed(() => createRecipeRecommender(allRecipes.value))
+  function toggleDietaryGoal(goal: DietaryGoalID) {
+    if (dietaryGoal.value === goal) {
+      dietaryGoal.value = null
+      return
+    }
+    const option = reviewedGoalOptions.value.find(item => item.id === goal)
+    if (!option?.enabled)
+      return
+    dietaryGoal.value = goal
+  }
+
+  function toggleDiscoveryScene(scene: DiscoverySceneID) {
+    if (discoveryScene.value === scene) {
+      discoveryScene.value = null
+      return
+    }
+    const option = reviewedSceneOptions.value.find(item => item.id === scene)
+    if (!option?.enabled)
+      return
+    discoveryScene.value = scene
+  }
+
+  function permitsReviewedRecipe(recipe: RecipeItem) {
+    if (!hasReviewedSelection.value)
+      return true
+    const catalog = reviewedCatalog.value
+    if (!catalog || typeof recipe.id !== 'number')
+      return false
+    const id = String(recipe.id)
+    if (dietaryGoal.value) {
+      const availability = catalog.goals[dietaryGoal.value]
+      const entry = catalog.dietaryEntries[id]
+      if (!availability.enabled || entry?.assessments[dietaryGoal.value]?.status !== 'pass'
+        || !reviewedDietaryEntryAllows(entry, selectedAvoid.value, noSpicy.value)) {
+        return false
+      }
+    }
+    if (discoveryScene.value === 'next-day-lunch') {
+      if (!catalog.scenes['next-day-lunch'].enabled || !catalog.lunchEntries[id])
+        return false
+    }
+    if (discoveryScene.value === 'institutional-low-gi') {
+      const availability = catalog.scenes['institutional-low-gi']
+      const entry = catalog.institutionalEntries[id]
+      if (!availability.enabled || !entry
+        || !reviewedInstitutionalEntryAllows(entry, selectedAvoid.value, noSpicy.value)) {
+        return false
+      }
+    }
+    return true
+  }
+
+  /** Every public recommendation outlet starts from this snapshot; private recipes never inherit public review. */
+  const eligibleRecipes = computed<RecipeItem[]>(() => {
+    if (!hasReviewedSelection.value)
+      return allRecipes.value
+    return recipes.value.filter(permitsReviewedRecipe)
+  })
+
+  const recommend = computed(() => createRecipeRecommender(eligibleRecipes.value))
   // 同一推荐入口允许工作台传入「用户明确确认」的调料，不继承经典模式的默认油盐。
   function recommendWithPantry(confirmedPantry: string[]) {
     return recommend.value({
@@ -170,21 +276,30 @@ export const useRecipeStore = defineStore('recipe', () => {
     })
   }
   const recipeMatches = computed(() => recommendWithPantry(selectedPantry.value))
-  /** 只选了厨具、还没选食材时，列出用这个厨具能做的菜（保留原来经典视图的用法） */
-  const toolRecipes = computed(() => {
-    if (selectedStuff.value.length || !curTool.value)
+  const browseRecipes = computed(() => {
+    if (selectedStuff.value.length || (!curTool.value && !hasReviewedSelection.value))
       return []
     const text = keyword.value.trim()
-    return allRecipes.value.filter(recipe => recipe.tools?.includes(curTool.value)
-      && (!text || recipe.name.includes(text))
-      && passesPreferences(recipe))
+    return eligibleRecipes.value
+      .map((recipe, sourceIndex) => ({ recipe, sourceIndex }))
+      .filter(({ recipe }) => (!curTool.value || recipe.tools?.includes(curTool.value))
+        && (!text || recipe.name.includes(text))
+        && passesPreferences(recipe))
+      .sort((a, b) => hasReviewedSelection.value
+        ? (b.recipe.score ?? DEFAULT_RECIPE_SCORE) - (a.recipe.score ?? DEFAULT_RECIPE_SCORE) || a.sourceIndex - b.sourceIndex
+        : a.sourceIndex - b.sourceIndex)
+      .map(({ recipe }) => recipe)
   })
+  /** 只选厨具或已审核场景、还没选食材时，都可从同一候选池列出菜谱。 */
+  const toolRecipes = computed(() => !selectedStuff.value.length && curTool.value ? browseRecipes.value : [])
+  const reviewedBrowseRecipes = computed(() => !selectedStuff.value.length && hasReviewedSelection.value ? browseRecipes.value : [])
   /** 「吃什么」随机的候选：选了食材就从匹配结果里抽，否则按厨具和忌口从全部菜谱里抽 */
   const randomPool = computed(() => {
     if (selectedStuff.value.length)
       return recipeMatches.value.map(match => match.recipe)
-    return allRecipes.value.filter(recipe => (!curTool.value || recipe.tools?.includes(curTool.value))
-      && passesPreferences(recipe))
+    if (hasReviewedSelection.value || curTool.value)
+      return browseRecipes.value
+    return eligibleRecipes.value.filter(recipe => passesPreferences(recipe))
   })
   /** 「再补一样」建议：差一种的菜里缺得最多的食材，补上后能直接多做几道 */
   const unlockSuggestions = computed(() => {
@@ -200,15 +315,41 @@ export const useRecipeStore = defineStore('recipe', () => {
       .slice(0, 4)
       .map(([name, count]) => ({ name, count }))
   })
-  const resultCount = computed(() => selectedStuff.value.length ? recipeMatches.value.length : toolRecipes.value.length)
+  const resultCount = computed(() => selectedStuff.value.length ? recipeMatches.value.length : browseRecipes.value.length)
   const recipesLength = computed(() => allRecipes.value.length)
+
+  function dietaryReview(recipeID: number | undefined, goal: DietaryGoalID | null = dietaryGoal.value) {
+    if (typeof recipeID !== 'number' || !goal)
+      return undefined
+    const entry = reviewedCatalog.value?.dietaryEntries[String(recipeID)]
+    return entry?.assessments[goal]?.status === 'pass' ? entry : undefined
+  }
+
+  function dietaryReviewSummary(recipeID: number | undefined, goal: DietaryGoalID | null = dietaryGoal.value) {
+    const entry = dietaryReview(recipeID, goal)
+    return entry && goal ? dietaryReviewReason(goal, entry) : ''
+  }
+
+  function institutionalReview(recipeID: number | undefined) {
+    return typeof recipeID === 'number'
+      ? reviewedCatalog.value?.institutionalEntries[String(recipeID)]
+      : undefined
+  }
+
+  function lunchReview(recipeID: number | undefined) {
+    return typeof recipeID === 'number'
+      ? reviewedCatalog.value?.lunchEntries[String(recipeID)]
+      : undefined
+  }
 
   function clickTool(item: StuffItem) {
     toggleTools(item.name)
     trackCookEvent('click_tool')
   }
 
-  onMounted(loadRecipes)
+  onMounted(() => {
+    void loadRecipes()
+  })
 
   return {
     recipesLength,
@@ -221,6 +362,20 @@ export const useRecipeStore = defineStore('recipe', () => {
     methodGroups,
     noSpicy,
     difficulty,
+    dietaryGoal,
+    discoveryScene,
+    hasReviewedSelection,
+    reviewedGoalOptions,
+    reviewedSceneOptions,
+    activeDietaryGoalOption,
+    activeDiscoverySceneOption,
+    toggleDietaryGoal,
+    toggleDiscoveryScene,
+    reviewedCatalog,
+    hasLoadedReviewedRecipes,
+    isReviewingRecipes,
+    reviewedCatalogError,
+    loadReviewedRecipes,
     isSearching,
     loadError,
     loadRecipes,
@@ -241,11 +396,17 @@ export const useRecipeStore = defineStore('recipe', () => {
     parseText,
     applyQuery,
     recipeMatches,
+    browseRecipes,
+    reviewedBrowseRecipes,
     recommendWithPantry,
     toolRecipes,
     randomPool,
     unlockSuggestions,
     resultCount,
+    dietaryReview,
+    dietaryReviewSummary,
+    institutionalReview,
+    lunchReview,
     clickTool,
   }
 })
