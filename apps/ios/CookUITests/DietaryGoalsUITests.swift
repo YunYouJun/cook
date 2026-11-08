@@ -145,13 +145,14 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     private func app(contentSize: UIContentSizeCategory = .large, showsIntroduction: Bool = false,
-                     savedGoal: String? = nil) -> XCUIApplication {
+                     savedGoal: String? = nil, textImageBase: String? = nil) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-ui-testing-reset-dietary", "-ui-testing-reset-presentation",
                                "-UIPreferredContentSizeCategoryName", contentSize.rawValue]
         if showsIntroduction { app.launchArguments.append("-ui-testing-show-dietary-introduction") }
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_UI_TEST_SAVED_DIETARY_GOAL"] = savedGoal
+        app.launchEnvironment["COOK_UI_TEST_TEXT_IMAGE_BASE"] = textImageBase
         terminateAppAfterTest(app)
         app.launch()
         // The launch fixture resets presentation to the ingredient list.
@@ -471,6 +472,73 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(goalOption("dietary.goal.none", in: app).isSelected)
         assertRememberControlAbsent(in: app)
         finishGoalSelection(in: app, closingFilters: reopenedFilters)
+    }
+
+    @MainActor
+    func testSavedGoalColdLaunchOpensResultsReviewedTextAndKitchen() {
+        executionTimeAllowance = 600
+        let app = app()
+        select("balanced-pairing", in: app)
+        app.terminate()
+        app.launchArguments.removeAll { $0 == "-ui-testing-reset-dietary" }
+        app.launch()
+        XCTAssertTrue(app.collectionViews.matching(identifier: "cook.chooser").element.waitForExistence(timeout: 15))
+        assertGoalValue("均衡搭配", in: app)
+        showResults(app)
+        // The cold-launch journey opens the full 36-item balanced-pairing list,
+        // so its target can sit beyond the short-list search bound.
+        guard let recipe = revealRecipe("dietary.recipe.333", in: app, maximumSwipes: 15) else { return }
+        recipe.tap()
+        XCTAssertTrue(app.buttons["dietary.openReviewedRecipe"].waitForExistence(timeout: 10))
+        let kitchen = app.buttons["recipe.openKitchen"]
+        XCTAssertTrue(kitchen.waitForExistence(timeout: 10))
+        kitchen.tap()
+        XCTAssertTrue(app.buttons["kitchen.close"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.otherElements["dietary.reviewSummary"].waitForExistence(timeout: 10))
+        app.buttons["kitchen.close"].tap()
+        app.buttons["dietary.openReviewedRecipe"].tap()
+        let article = app.descendants(matching: .any).matching(identifier: "recipe.textContent").firstMatch
+        XCTAssertTrue(article.waitForExistence(timeout: 10))
+        XCTAssertTrue(article.staticTexts.matching(NSPredicate(format: "label CONTAINS %@",
+                                                               "西葫芦炒鸡蛋是一道清爽可口的家常快手菜")).firstMatch.exists)
+        capture(app, named: "dietary-cold-launch-reviewed-text")
+    }
+
+    @MainActor
+    func testReviewedTextSurvivesImageFailureAndLoadsAfterRecovery() {
+        executionTimeAllowance = 600
+        let app = app(savedGoal: "less-added-sugar", textImageBase: "http://127.0.0.1:9/cook/")
+        showResults(app)
+        guard let recipe = revealRecipe("dietary.recipe.333", in: app, maximumSwipes: 5) else { return }
+        recipe.tap()
+        let reviewed = app.buttons["dietary.openReviewedRecipe"]
+        XCTAssertTrue(reviewed.waitForExistence(timeout: 10))
+        reviewed.tap()
+        let article = app.descendants(matching: .any).matching(identifier: "recipe.textContent").firstMatch
+        XCTAssertTrue(article.waitForExistence(timeout: 10))
+        let image = app.buttons["recipe.textImage.0"]
+        XCTAssertTrue(image.waitForNonExistence(timeout: 15), "不可达的配图地址应结束加载并收起图片占位")
+        XCTAssertTrue(article.staticTexts.matching(NSPredicate(format: "label CONTAINS %@",
+                                                               "西葫芦炒鸡蛋是一道清爽可口的家常快手菜")).firstMatch.exists)
+        let navigation = app.navigationBars.allElementsBoundByIndex.last(where: { $0.isHittable }) ?? app.navigationBars.firstMatch
+        navigation.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(reviewed.waitForExistence(timeout: 10), "图片失败不能阻断返回操作")
+
+        app.terminate()
+        app.launchEnvironment.removeValue(forKey: "COOK_UI_TEST_TEXT_IMAGE_BASE")
+        app.launch()
+        XCTAssertTrue(app.collectionViews.matching(identifier: "cook.chooser").element.waitForExistence(timeout: 15))
+        showResults(app)
+        guard let recoveredRecipe = revealRecipe("dietary.recipe.333", in: app, maximumSwipes: 5) else { return }
+        recoveredRecipe.tap()
+        let recoveredReviewed = app.buttons["dietary.openReviewedRecipe"]
+        XCTAssertTrue(recoveredReviewed.waitForExistence(timeout: 10))
+        recoveredReviewed.tap()
+        XCTAssertTrue(article.waitForExistence(timeout: 10))
+        let recoveredImage = app.buttons["recipe.textImage.0"]
+        XCTAssertEqual(recoveredImage.waitForState("exists == true AND isEnabled == true", timeout: 15), .completed,
+                       "恢复可用图片地址并重新打开正文后应重新加载配图")
+        capture(app, named: "dietary-image-recovered")
     }
 
     @MainActor
