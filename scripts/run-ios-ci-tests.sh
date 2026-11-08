@@ -3,6 +3,7 @@ set -euo pipefail
 
 : "${IOS_DEVICE:?Select iphone or ipad}"
 
+architecture="$(uname -m)"
 xcrun simctl list runtimes
 xcrun simctl list devices available
 # Each matrix cell uses one existing device, with serial tests and bounded retries.
@@ -23,10 +24,12 @@ run_once() {
     echo "Capturing xcodebuild output in $log; full output follows when tests finish."
     xcodebuild test-without-building -project apps/ios/Cook.xcodeproj -scheme Cook -destination "id=$device" \
       -destination-timeout 180 -parallel-testing-enabled NO \
+      -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates \
       -derivedDataPath "$RUNNER_TEMP/cook-derived-data" \
       -collect-test-diagnostics never \
       -test-timeouts-enabled YES -default-test-execution-time-allowance "$allowance" -maximum-test-execution-time-allowance 600 \
       "$@" -resultBundlePath "$RUNNER_TEMP/xcresult/$device-$stage.xcresult" \
+      ARCHS="$architecture" ONLY_ACTIVE_ARCH=YES \
       CODE_SIGNING_ALLOWED=NO > "$log" 2>&1 || code=$?
     cat "$log" || code=1
   else

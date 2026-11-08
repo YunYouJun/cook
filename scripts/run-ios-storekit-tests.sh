@@ -5,6 +5,7 @@ set -euo pipefail
 
 # Local StoreKit is deliberately isolated from Cook's normal/Release scheme.
 # Ad-hoc simulator signing needs no Apple development or distribution identity.
+architecture="$(uname -m)"
 mkdir -p "$RUNNER_TEMP/xcresult"
 build_log="$RUNNER_TEMP/xcresult/$DEVICE-storekit-build.log"
 active_command=''
@@ -45,31 +46,41 @@ run_logged "$build_log" \
   -destination 'generic/platform=iOS Simulator' -parallel-testing-enabled NO \
   -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates \
   -derivedDataPath "$RUNNER_TEMP/cook-derived-data" \
+  ARCHS="$architecture" ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO \
   CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- || code=$?
 [[ "$code" == 0 ]] || exit "$code"
 xcrun simctl bootstatus "$DEVICE" -b
 # A fresh simulator can leave launchctl waiting indefinitely. Bound each
-# service-control call and decide from the readiness probe instead.
+# service-control call and decide from the readiness probe instead. Do not
+# restart a healthy service: the cold launch can otherwise consume minutes.
 restart_timeout="${STOREKIT_RESTART_TIMEOUT_SECONDS:-10}"
 status_timeout="${STOREKIT_STATUS_TIMEOUT_SECONDS:-3}"
-echo "Restarting StoreKit test service on $DEVICE"
-restart_code=0
-run_with_timeout "$restart_timeout" "$RUNNER_TEMP/xcresult/$DEVICE-storekit-service.log" \
-  xcrun simctl spawn "$DEVICE" launchctl kickstart -k user/501/com.apple.storekitd || restart_code=$?
-if [[ "$restart_code" != 0 ]]; then
-  echo "StoreKit service restart did not finish within $restart_timeout seconds; waiting for readiness" >&2
-fi
-for attempt in {1..30}; do
-  state=$(run_with_timeout "$status_timeout" "$RUNNER_TEMP/xcresult/$DEVICE-storekit-service-status.log" \
+read_service_state() {
+  run_with_timeout "$status_timeout" "$RUNNER_TEMP/xcresult/$DEVICE-storekit-service-status.log" \
     xcrun simctl spawn "$DEVICE" launchctl print user/501/com.apple.storekitd 2>/dev/null \
-    | sed -n 's/^[[:space:]]*state = //p' | head -1 || true)
-  [[ "$state" == running ]] && break
-  if [[ "$attempt" == 30 ]]; then
-    echo "StoreKit test service did not start" >&2
-    exit 1
+    | sed -n 's/^[[:space:]]*state = //p' | head -1 || true
+}
+state=$(read_service_state)
+if [[ "$state" == running ]]; then
+  echo "StoreKit test service is already running; skipping restart"
+else
+  echo "Restarting StoreKit test service on $DEVICE"
+  restart_code=0
+  run_with_timeout "$restart_timeout" "$RUNNER_TEMP/xcresult/$DEVICE-storekit-service.log" \
+    xcrun simctl spawn "$DEVICE" launchctl kickstart -k user/501/com.apple.storekitd || restart_code=$?
+  if [[ "$restart_code" != 0 ]]; then
+    echo "StoreKit service restart did not finish within $restart_timeout seconds; waiting for readiness" >&2
   fi
-  sleep 1
-done
+  for attempt in {1..30}; do
+    state=$(read_service_state)
+    [[ "$state" == running ]] && break
+    if [[ "$attempt" == 30 ]]; then
+      echo "StoreKit test service did not start" >&2
+      exit 1
+    fi
+    sleep 1
+  done
+fi
 run_stage() {
   local stage="$1" stage_code=0
   local test_log="$RUNNER_TEMP/xcresult/$DEVICE-$stage.log"
@@ -79,9 +90,11 @@ run_stage() {
     -only-testing:CookStoreKitTests \
     -only-testing:CookUITests/MembershipStoreKitUITests \
     -destination "id=$DEVICE" -destination-timeout 180 -parallel-testing-enabled NO \
+    -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates \
     -derivedDataPath "$RUNNER_TEMP/cook-derived-data" -collect-test-diagnostics never \
     -test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 120 \
     -resultBundlePath "$RUNNER_TEMP/xcresult/$DEVICE-$stage.xcresult" \
+    ARCHS="$architecture" ONLY_ACTIVE_ARCH=YES \
     CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- || stage_code=$?
   if [[ "$code" == 0 && "$stage_code" != 0 ]]; then code=$stage_code; fi
 }

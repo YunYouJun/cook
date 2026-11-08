@@ -279,13 +279,23 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/ios-test-environment
         id: environment
+      - name: Boot selected simulator
+        env:
+          DEVICE: ${{ steps.environment.outputs[matrix.device] }}
+        run: |
+          echo "Starting $DEVICE while the native test products compile."
+          xcrun simctl boot "$DEVICE" >/dev/null 2>&1 || true
       - name: Build for testing
         timeout-minutes: 15
         id: native_build
         run: |
+          architecture="$(uname -m)"
           xcodebuild build-for-testing -project apps/ios/Cook.xcodeproj -scheme Cook \
             -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath "$RUNNER_TEMP/cook-derived-data" CODE_SIGNING_ALLOWED=NO
+            -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates \
+            -derivedDataPath "$RUNNER_TEMP/cook-derived-data" \
+            ARCHS="$architecture" ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO \
+            CODE_SIGNING_ALLOWED=NO
       - name: Build and test
         timeout-minutes: ${{ matrix.suite == 'core-regression' && 30 || 60 }}
         id: ios_tests
@@ -337,7 +347,7 @@ jobs:
     needs: [changes, ios-core-reuse]
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.skip_native != 'true') && (needs.ios-core-reuse.result != 'success' || needs.ios-core-reuse.outputs.verified != 'true') }}
     runs-on: xcode-27
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -351,7 +361,7 @@ jobs:
         id: environment
       - name: Verify local StoreKit contracts
         id: storekit_tests
-        timeout-minutes: 10
+        timeout-minutes: 15
         env:
           DEVICE: ${{ steps.environment.outputs[matrix.device] }}
         run: bash scripts/run-ios-storekit-tests.sh

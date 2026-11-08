@@ -19,7 +19,9 @@ runs:
       run: |
         pnpm install --frozen-lockfile
         pnpm run convert
-        brew install xcodegen
+        if ! command -v xcodegen >/dev/null 2>&1; then
+          brew install xcodegen
+        fi
         xcodegen generate --spec apps/ios/project.yml
         xcodebuild -version
     - name: Select compatible simulators

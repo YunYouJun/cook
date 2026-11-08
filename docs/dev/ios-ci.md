@@ -1,5 +1,15 @@
 # iOS CI
 
+## 2026-11-08 原生检查启动开销
+
+[PR #205 的成功 CI](https://github.com/YunYouJun/cook/actions/runs/42458399313) 中，iPhone core 任务耗时 18 分 04 秒，iPad core 耗时 22 分 35 秒，StoreKit 耗时 10 分 12 秒。日志显示原生构建同时编译 `arm64` 与 `x86_64`，但每台 runner 只使用宿主架构的模拟器；StoreKit 在服务已经运行时仍强制 `kickstart`，冷服务控制及等待可占数分钟。
+
+本 PR 在 App / UI 任务选好设备后先请求启动模拟器，让启动与 `build-for-testing` 重叠；构建和 `test-without-building` 都使用 `uname -m` 对应的单一宿主架构，并关闭本任务不需要的 compiler index store。构建复用 resolved package versions，不检查包更新。StoreKit 冷 runner 的首次构建与 VM 启动同时进行会争抢资源并挤压契约执行时间，因此 StoreKit 保持构建后启动设备，只在 `storekitd` 探测结果不是 `running` 时执行有界重启和 readiness polling。健康服务直接进入契约测试；包含构建与全部 StoreKit 验收的步骤保留 15 分钟预算，任务限时 20 分钟。
+
+设备已安装 XcodeGen 时不再重复执行 Homebrew 安装。选择器和断言没有减少：日常 iPhone／iPad core 的全部既有 App／UI 检查、会员专属和手动 full 的布局覆盖、StoreKit SDK 与真实确认页断言、独立失败传播及 `ios` 汇总门禁全部保留。
+
+本 PR 的全绿 [CI run 42487849807](https://github.com/YunYouJun/cook/actions/runs/42487849807) 中，iPhone core 耗时 18 分 12 秒，iPad core 耗时 21 分 13 秒，StoreKit 耗时 10 分 42 秒；同一 PR 早先一次 core 全绿运行的 iPhone／iPad 分别为 10 分 38 秒和 14 分 54 秒。冷 runner 和 UI 用例的执行波动很大，因此这些数据只能证明单宿主架构构建与服务启动路径已按预期执行，不能承诺每次总时长都稳定低于旧基线；后续若继续压缩，应先采集整套 UI 用例的分项耗时，再调整分组。
+
 ## 2026-11-07 核心回归并行化
 
 PR 和 `main` / `dev` 推送的 `core-regression` 不再让两台设备串行承担同一套 App 单测和 StoreKit。App 单元测试只在 iPhone 执行；七个核心 UI 选择器按布局分工，iPhone 覆盖会员、默认目录和相机旋转，iPad 覆盖账号数据、两个饮食目标流程及宽屏输入。全部 UI 测试仍先完整编译，手动 full 仍在两端执行每个 UI 用例。
@@ -38,7 +48,7 @@ PR 和向 `main` / `dev` 的推送默认执行 `core-regression`，iPhone、iPad
 | `regression-discovery` | 云厨房、找菜和随机挑选 UI 测试                         |
 | `dietary`              | 两项独立无障碍审计，然后执行其余饮食目标 UI 测试       |
 
-每个任务先 `build-for-testing`，后续调用 `test-without-building` 复用编译结果。日常核心组最多并行两个原生任务，手动完整矩阵最多并行三个；其他仓库和运行仍可能占用共享配额。同一模拟器内仍禁用并行测试，避免产生克隆设备。`ios` 汇总门禁要求本次选择的全部分组成功；只涉及已列出的文档或独立工单工作流 `.github/workflows/support-sync.yml` 时，PR 可跳过原生测试。推送还要求同一分支、前一提交的 CI 已成功。无法核实前一提交时仍执行核心测试，手动 full 始终执行完整矩阵。
+每个任务先请求启动所选模拟器，再执行 `build-for-testing`，后续调用 `test-without-building` 复用编译结果。日常核心组最多并行两个原生任务，手动完整矩阵最多并行三个；其他仓库和运行仍可能占用共享配额。同一模拟器内仍禁用并行测试，避免产生克隆设备。`ios` 汇总门禁要求本次选择的全部分组成功；只涉及已列出的文档或独立工单工作流 `.github/workflows/support-sync.yml` 时，PR 可跳过原生测试。推送还要求同一分支、前一提交的 CI 已成功。无法核实前一提交时仍执行核心测试，手动 full 始终执行完整矩阵。
 
 构建限时 15 分钟；核心测试步骤限时 30 分钟、任务限时 45 分钟；完整测试步骤限时 60 分钟、任务限时 90 分钟。2026-11-04 的 iPad 完整常规回归在冷启动、213 项单元测试和持续通过的 UI 用例上耗尽了原先的 45 分钟预算，因此为完整回归保留额外时间。普通用例默认允许 300 秒，独立审计允许 600 秒；取消空目标、结果页清除目标、目标保存、云厨房跨布局浏览、旋转／前后台恢复、云厨房目标浏览和最大字号便当流程也显式使用 600 秒上限。其中取消空目标、目标保存、云厨房跨布局浏览在慢速 CI 快照下曾分别耗时约 360 秒、264 秒和超过 300 秒，云厨房目标浏览曾在 297 秒完成主体后于清理中超过 300 秒。查询已缩小范围，各操作的原有等待期限与失败断言保留。禁用失败后的全局诊断收集，仍保留结果包中的测试操作、截图与错误。相同分支的新运行会取消旧运行。
 

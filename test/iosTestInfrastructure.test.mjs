@@ -13,6 +13,7 @@ import { planIosTests } from '../scripts/ci-changes.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const fixtures = JSON.parse(readFileSync(new URL('./fixtures/ios-infrastructure-failures.json', import.meta.url), 'utf8'))
+const hostArchitecture = spawnSync('uname', ['-m'], { encoding: 'utf8' }).stdout.trim()
 
 function workflowCommand() {
   const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
@@ -156,6 +157,10 @@ test('the matrix preserves serial invocations and uses compiled products on exis
       assert.equal(args[0], 'test-without-building')
       assert.equal(args[args.indexOf('-test-timeouts-enabled') + 1], 'YES')
       assert.equal(args[args.indexOf('-parallel-testing-enabled') + 1], 'NO')
+      assert.ok(args.includes('-onlyUsePackageVersionsFromResolvedFile'))
+      assert.ok(args.includes('-skipPackageUpdates'))
+      assert.ok(args.includes(`ARCHS=${hostArchitecture}`))
+      assert.ok(args.includes('ONLY_ACTIVE_ARCH=YES'))
       for (const argument of args.filter(value => /^-(?:only|skip)-testing:/.test(value))) {
         const [target, suite, method] = argument.split(':')[1].split('/')
         assert.equal(target, 'CookUITests')
@@ -310,6 +315,17 @@ test('native CI bounds build and test time and runs device groups independently'
   assert.match(workflow, /inputs\.ios_coverage == 'membership' && 'membership'/)
   assert.match(workflow, /group: ci-.*github\.event_name == 'workflow_dispatch' && inputs\.ios_coverage != 'core' && 'full' \|\| 'core'/)
   assert.match(workflow, /cancel-in-progress: true/)
+})
+
+test('native CI overlaps simulator boot with a host-architecture build', () => {
+  const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
+  const nativeJob = workflow.slice(workflow.indexOf('\n  ios-tests:\n'), workflow.indexOf('\n  ios-storekit:\n'))
+  assert.match(nativeJob, /id: environment\n\s+- name: Boot selected simulator\n\s+env:\n\s+DEVICE: \$\{\{ steps\.environment\.outputs\[matrix\.device\] \}\}\n\s+run: \|[\s\S]*?xcrun simctl boot "\$DEVICE"[\s\S]*?- name: Build for testing/)
+  assert.match(nativeJob, /architecture="\$\(uname -m\)"[\s\S]*?ARCHS="\$architecture" ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO/)
+  assert.match(nativeJob, /-onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates/)
+
+  const environmentAction = readFileSync(join(root, '.github/actions/ios-test-environment/action.yml'), 'utf8')
+  assert.match(environmentAction, /if ! command -v xcodegen >\/dev\/null 2>&1; then\n\s+brew install xcodegen\n\s+fi/)
 })
 
 test('the stable ios gate rejects failed, cancelled and unexpectedly skipped matrices', () => {
