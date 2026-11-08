@@ -34,6 +34,13 @@ final class RecipeStore {
     }
 
     var dietaryCatalog: DietaryCatalog? { try? dietaryResult.get() }
+    @ObservationIgnored private lazy var institutionalLowGIResult: InstitutionalLowGICatalog? = dataDirectory.flatMap {
+        try? InstitutionalLowGICatalog.load(from: $0, recipes: data.recipes)
+    }
+    var institutionalLowGICatalog: InstitutionalLowGICatalog? { institutionalLowGIResult }
+    var discoveryScenes: [CookDiscoveryScene] {
+        CookDiscoveryScene.allCases.filter { $0 != .institutionalLowGI || institutionalLowGICatalog?.isAvailable == true }
+    }
     var dietaryGoals: [DietaryGoal] { dietaryCatalog?.availableGoals ?? [] }
     var dietaryUnavailableMessage: String? { dietaryUnavailableMessage(for: nil) }
 
