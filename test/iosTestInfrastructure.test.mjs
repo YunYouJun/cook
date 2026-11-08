@@ -59,8 +59,8 @@ function replay(scenarios, verify, suites = ['regression-main', 'regression-disc
       const bundle = args[args.indexOf('--path') + 1];
       process.stdout.write(fs.readFileSync(path.join(bundle, 'summary.json'), 'utf8'));
     }
-    if (args[0] === 'simctl' && args[1] === 'spawn' && args[3] === 'launchctl' && args[4] === 'list') {
-      process.stdout.write('\\t"PID" = 123;\\n');
+    if (args[0] === 'simctl' && args[1] === 'spawn' && args[3] === 'launchctl' && args[4] === 'print') {
+      process.stdout.write('state = running\\n');
     }
   `)
   try {

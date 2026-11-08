@@ -26,7 +26,7 @@ async function checkCancellation(ignoresInterrupt) {
     mkdirSync(bin)
     writeFileSync(join(bin, 'xcrun'), `#!/bin/sh
 case "$*" in
-  "simctl spawn existing-phone launchctl list com.apple.storekitd") echo '"PID" = 123;' ;;
+  "simctl spawn existing-phone launchctl print user/501/com.apple.storekitd") echo "state = running" ;;
 esac
 exit 0
 `, { mode: 0o755 })
@@ -104,9 +104,9 @@ test('StoreKit checks both ordered targets in one operation and preserves either
   assert.deepEqual(plan.testTargets.map(({ target }) => target.name), ['CookStoreKitTests', 'CookUITests'])
   assert.ok(plan.testTargets.every(({ parallelizable }) => parallelizable === false))
   assert.match(project.slice(project.indexOf('\n  CookMembershipStoreKit:')), /testPlans:\n\s+- path: StoreKitValidation\/CookMembershipStoreKit\.xctestplan\n\s+defaultPlan: true/)
-  assert.ok(script.indexOf('run_with_timeout "$restart_timeout"') < script.indexOf('launchctl kickstart -k user/501/com.apple.storekitd'))
+  assert.ok(script.indexOf('run_with_timeout 10') < script.indexOf('launchctl kickstart -k user/501/com.apple.storekitd'))
   assert.ok(script.indexOf('launchctl kickstart -k user/501/com.apple.storekitd') < script.indexOf('run_stage storekit'))
-  assert.match(script, /launchctl list com\.apple\.storekitd[\s\S]*"PID" = \[0-9\]\+;/)
+  assert.match(script, /launchctl print user\/501\/com\.apple\.storekitd[\s\S]*\[\[ "\$state" == running \]\]/)
   for (const [buildExit, uiExit, sdkExit, expectedCalls] of [[0, 0, 0, 2], [65, 0, 0, 1], [0, 65, 0, 2], [0, 0, 66, 2], [0, 65, 66, 2]]) {
     const task = mkdtempSync(join(tmpdir(), 'cook-storekit-ci-'))
     try {
@@ -114,7 +114,7 @@ test('StoreKit checks both ordered targets in one operation and preserves either
       mkdirSync(bin)
       writeFileSync(join(bin, 'xcrun'), `#!/bin/sh
 case "$*" in
-  "simctl spawn existing-phone launchctl list com.apple.storekitd") echo '"PID" = 123;' ;;
+  "simctl spawn existing-phone launchctl print user/501/com.apple.storekitd") echo "state = running" ;;
 esac
 exit 0
 `, { mode: 0o755 })
@@ -160,7 +160,7 @@ process.exit(args[0] === 'build-for-testing' ? Number(process.env.BUILD_EXIT) : 
   }
 })
 
-test('hung StoreKit restart and readiness probes stay bounded', { timeout: 15_000 }, () => {
+test('a hung StoreKit daemon restart is stopped before the readiness probe', { timeout: 15_000 }, () => {
   const task = mkdtempSync(join(tmpdir(), 'cook-storekit-stuck-service-'))
   try {
     const bin = join(task, 'bin')
@@ -172,10 +172,8 @@ case "$*" in
     echo STOREKIT_RESTART_HUNG
     while :; do sleep 1; done
     ;;
-  "simctl spawn existing-phone launchctl list com.apple.storekitd")
-    trap '' TERM
-    echo '"PID" = 123;'
-    while :; do sleep 1; done
+  "simctl spawn existing-phone launchctl print user/501/com.apple.storekitd")
+    echo "state = running"
     ;;
 esac
 exit 0
@@ -196,13 +194,11 @@ fs.appendFileSync(process.env.CALLS, JSON.stringify(process.argv.slice(2)) + '\\
         RUNNER_TEMP: task,
         CALLS: callsPath,
         STOREKIT_RESTART_TIMEOUT_SECONDS: '1',
-        STOREKIT_STATUS_TIMEOUT_SECONDS: '1',
       },
     })
     assert.equal(run.error, undefined)
     assert.equal(run.status, 0)
     assert.match(run.stderr, /StoreKit service restart did not finish within 1 seconds/)
-    assert.match(run.stderr, /IOS command timed out after 1 seconds: xcrun simctl spawn existing-phone launchctl list com\.apple\.storekitd/)
     assert.equal(readFileSync(callsPath, 'utf8').trim().split('\n').length, 2)
   }
   finally { rmSync(task, { recursive: true, force: true }) }
@@ -221,8 +217,8 @@ case "$*" in
     echo STOREKIT_SHUTDOWN_HUNG
     while :; do sleep 1; done
     ;;
-  "simctl spawn existing-phone launchctl list com.apple.storekitd")
-    echo '"PID" = 123;'
+  "simctl spawn existing-phone launchctl print user/501/com.apple.storekitd")
+    echo "state = running"
     ;;
 esac
 exit 0

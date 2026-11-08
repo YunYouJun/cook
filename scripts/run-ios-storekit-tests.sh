@@ -50,8 +50,8 @@ run_logged "$build_log" \
 xcrun simctl bootstatus "$DEVICE" -b
 # A fresh simulator can leave launchctl waiting indefinitely. Bound each
 # service-control call and decide from the readiness probe instead.
-restart_timeout="${STOREKIT_RESTART_TIMEOUT_SECONDS:-3}"
-status_timeout="${STOREKIT_STATUS_TIMEOUT_SECONDS:-5}"
+restart_timeout="${STOREKIT_RESTART_TIMEOUT_SECONDS:-10}"
+status_timeout="${STOREKIT_STATUS_TIMEOUT_SECONDS:-3}"
 echo "Restarting StoreKit test service on $DEVICE"
 restart_code=0
 run_with_timeout "$restart_timeout" "$RUNNER_TEMP/xcresult/$DEVICE-storekit-service.log" \
@@ -60,13 +60,10 @@ if [[ "$restart_code" != 0 ]]; then
   echo "StoreKit service restart did not finish within $restart_timeout seconds; waiting for readiness" >&2
 fi
 for attempt in {1..30}; do
-  status_log="$RUNNER_TEMP/xcresult/$DEVICE-storekit-service-status.log"
-  # `launchctl print` emits the full service definition and can remain blocked
-  # after its state is visible. The compact list form exits quickly and exposes
-  # a PID only after StoreKit has actually started.
-  run_with_timeout "$status_timeout" "$status_log" \
-    xcrun simctl spawn "$DEVICE" launchctl list com.apple.storekitd >/dev/null || true
-  grep -Eq '^[[:space:]]*"PID" = [0-9]+;' "$status_log" && break
+  state=$(run_with_timeout "$status_timeout" "$RUNNER_TEMP/xcresult/$DEVICE-storekit-service-status.log" \
+    xcrun simctl spawn "$DEVICE" launchctl print user/501/com.apple.storekitd 2>/dev/null \
+    | sed -n 's/^[[:space:]]*state = //p' | head -1 || true)
+  [[ "$state" == running ]] && break
   if [[ "$attempt" == 30 ]]; then
     echo "StoreKit test service did not start" >&2
     exit 1
