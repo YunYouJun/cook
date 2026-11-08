@@ -13,6 +13,16 @@
 | 隐私清单     | `apps/ios/Cook/Resources/PrivacyInfo.xcprivacy`                           |
 | 正式反馈地址 | `https://api.yunle.fun/cook-feedback`                                     |
 
+## 2026-11-09 饮食目标候选 14（未上传）
+
+2026-11-09 只读回查 ASC：实际已处理最新构建仍是 `2.0.0 (12)`，Build ID `315742ed-3c67-48d3-907b-ed88dad320d4`，状态 `VALID / INTERNAL_ONLY / IN_BETA_TESTING`，外部 `NOT_APPLICABLE`，未过期。构建 13 仍只有 `AWAITING_UPLOAD` 分析会话 `330c89c1-715d-4a28-9161-4af5fa76a2c5`，文件为 `ASSET_SPI` 与 `ASSET_DESCRIPTION`；ASC 下一可用构建号复核为 14，因此本轮不复活或覆盖构建 13。
+
+已从源码提交 `1b456042` 准备 `2.0.0 (14)` Release 归档和仅内部测试 IPA。IPA SHA-256 为 `fe7aed5916dd899eaf187773376625c0fdb3a8adbda054dc218f1d7fe90c0dfa`，通过共享验包脚本确认正式 Bundle ID、Team、仅内部标记、分发签名、App Store 描述文件和关闭调试权限；同一文件通过 Apple `altool --validate-app`，结果为无错误。归档包内 887 道目录、数据版本 `353bc8dab0ea`、饮食标注 36 道、机构低 GI 原方 10 道，审核与共享数据文件同仓库逐字节一致；完整契约可用包内数据重建为 `353bc8dab0ea`。会员 UI／购买和微信登录开关均为 `NO`，正式反馈／AI 地址、Production 推送与 iCloud 权限、隐私清单和 App／dSYM UUID `B2950AFB-2F14-3595-B7AA-8CB6145CF78A` 一致。
+
+首次导出使用 PATH 中的 Homebrew rsync，因 `--extended-attributes` 不被其服务端接受而报 `Copy failed`；仅在本次发布子进程把系统 `/usr/bin` 放到 PATH 前面后重试成功，未修改全局环境。`reviewReady=true`，但 `distributionReady=false`：生产 `cook-ai-intent` 仍为 `1878cc5772dc`，兼容快照只有 `faf919fc0041` 与 `1878cc5772dc`，必须先部署支持 `353bc8dab0ea` 的函数；此外真人 VoiceOver、飞行模式验收和维护者内容批准仍未完成。本轮未上传、未分发、未通知测试员，也未修改手机或生产函数。
+
+归档、IPA、dSYM、源码快照、验包与 Apple 校验回执、数据对比和定向 UI 结果保存在 `~/Library/Developer/ReleaseArtifacts/Cook/20261109-2.0.0-14-dietary-closeout`。脱敏摘要见[发布收尾证据](./evidence/dietary-release-closeout-2026-11-09.json)。
+
 2026-10-24 的发布记录：`2.0.0 (1)` 是早期内测，构建 `2` 的 Xcode 导出曾创建待上传记录；整合 #133 需求墙入口的 `2.0.0 (3)` 随后已完成内部组分发、iPhone 实际安装与反馈流程验收，[#133](https://github.com/YunYouJun/cook/issues/133) 已于当日 14:24（UTC+8）关闭。该历史验收不包含 CloudKit 同步。
 
 后续包含私人菜谱、个人词典和偏好同步修复的 `2.0.0 (4)` 已完成 TestFlight 内部发布，固定源码 `6e4343faa523f400a6d2eeb0380223e80d632f95`（含 #137 布局修复）。该候选的 [CI](https://github.com/YunYouJun/cook/actions/runs/40079188284) 全部通过后，[#136](https://github.com/YunYouJun/cook/pull/136) 已合并为 main `e090866474fe5f589c0ac01d36892b802dc33b62`；合并时两者源码树相同。后续主线提交不自动扩大冻结发布范围。服务端发布状态已按精确构建回读，详情见下方验收记录；构建 `4` 的单机升级、数据保留与偏好持久化结果同样见下方记录，不能推导为生产同步通过。每次上传前重新查询已处理和上传中构建，不能复用已占用的构建号。

@@ -2,10 +2,18 @@
   "appId": "6824589542",
   "groupId": "a2e33916-bbd0-4433-8ff7-4895ae926412",
   "version": "2.0.0",
-  "buildNumber": "7",
-  "sourceCommit": "ed5087f174e16b15b4260e5bd96b3580a2bbfddd",
-  "ipaSha256": "162ed1d7e4e0aa578c7626f30690b0cb2c6b5e8798292e9948902302aaafddfc",
+  "buildNumber": "14",
+  "buildId": "PENDING_UPLOAD",
+  "sourceCommit": "1b4560429eba5921db08296aa983479d826be187",
+  "ipaSha256": "fe7aed5916dd899eaf187773376625c0fdb3a8adbda054dc218f1d7fe90c0dfa",
   "testerLimit": 30,
   "acceptancePolicy": "simulator",
-  "buildId": "3f9e3992-bceb-4687-9346-875bf527fe0c"
+  "reviewReady": true,
+  "distributionReady": false,
+  "uploaded": false,
+  "distributionBlockers": [
+    "production cook-ai-intent contract 353bc8dab0ea is not deployed",
+    "human VoiceOver and airplane-mode acceptance are incomplete",
+    "maintainer content approval is incomplete"
+  ]
 }
