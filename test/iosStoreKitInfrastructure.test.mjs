@@ -105,7 +105,7 @@ test('StoreKit checks both ordered targets in one operation and preserves either
   assert.deepEqual(plan.testTargets.map(({ target }) => target.name), ['CookStoreKitTests', 'CookUITests'])
   assert.ok(plan.testTargets.every(({ parallelizable }) => parallelizable === false))
   assert.match(project.slice(project.indexOf('\n  CookMembershipStoreKit:')), /testPlans:\n\s+- path: StoreKitValidation\/CookMembershipStoreKit\.xctestplan\n\s+defaultPlan: true/)
-  assert.match(script, /xcrun simctl boot "\$DEVICE"[\s\S]*xcodebuild build-for-testing/)
+  assert.match(script, /xcodebuild build-for-testing[\s\S]*xcrun simctl bootstatus "\$DEVICE" -b/)
   assert.match(script, /state=\$\(read_service_state\)[\s\S]*if \[\[ "\$state" == running \]\][\s\S]*launchctl kickstart -k user\/501\/com\.apple\.storekitd[\s\S]*run_stage storekit/)
   for (const [buildExit, uiExit, sdkExit, expectedCalls] of [[0, 0, 0, 2], [65, 0, 0, 1], [0, 65, 0, 2], [0, 0, 66, 2], [0, 65, 66, 2]]) {
     const task = mkdtempSync(join(tmpdir(), 'cook-storekit-ci-'))
@@ -139,7 +139,8 @@ process.exit(args[0] === 'build-for-testing' ? Number(process.env.BUILD_EXIT) : 
       assert.equal(run.status, buildExit || uiExit || sdkExit)
       const calls = readFileSync(callsPath, 'utf8').trim().split('\n').map(JSON.parse)
       const commands = readFileSync(orderPath, 'utf8').trim().split('\n')
-      assert.ok(commands.indexOf('xcrun simctl boot existing-phone') < commands.findIndex(command => command.startsWith('xcodebuild build-for-testing')))
+      if (buildExit === 0)
+        assert.ok(commands.findIndex(command => command.startsWith('xcodebuild build-for-testing')) < commands.indexOf('xcrun simctl bootstatus existing-phone -b'))
       assert.doesNotMatch(commands.join('\n'), /launchctl kickstart/)
       assert.equal(calls.length, expectedCalls)
       for (const args of calls) {
@@ -216,7 +217,7 @@ fs.appendFileSync(process.env.ORDER, 'xcodebuild ' + args.join(' ') + '\\n')
     assert.match(run.stderr, /StoreKit service restart did not finish within 1 seconds/)
     assert.equal(readFileSync(callsPath, 'utf8').trim().split('\n').length, 2)
     const commands = readFileSync(orderPath, 'utf8').trim().split('\n')
-    assert.ok(commands.indexOf('xcrun simctl boot existing-phone') < commands.findIndex(command => command.startsWith('xcodebuild build-for-testing')))
+    assert.ok(commands.findIndex(command => command.startsWith('xcodebuild build-for-testing')) < commands.indexOf('xcrun simctl bootstatus existing-phone -b'))
     assert.match(commands.join('\n'), /launchctl kickstart -k user\/501\/com\.apple\.storekitd/)
   }
   finally { rmSync(task, { recursive: true, force: true }) }
@@ -274,7 +275,8 @@ test('core StoreKit contracts run once in parallel while financial changes keep 
   const gate = workflow.slice(workflow.indexOf('\n  ios:\n'))
   assert.doesNotMatch(nativeJob, /run-ios-storekit-tests\.sh/)
   assert.match(storekitJob, /ios_storekit_devices/)
-  assert.match(storekitJob, /name: Verify local StoreKit contracts\n\s+id: storekit_tests\n\s+timeout-minutes: 10/)
+  assert.match(storekitJob, /timeout-minutes: 20/)
+  assert.match(storekitJob, /name: Verify local StoreKit contracts\n\s+id: storekit_tests\n\s+timeout-minutes: 15/)
   assert.match(storekitJob, /run: bash scripts\/run-ios-storekit-tests\.sh/)
   assert.doesNotMatch(storekitJob, /continue-on-error/)
   assert.match(gate, /needs: \[changes, ios-core-reuse, ios-tests, ios-storekit\]/)

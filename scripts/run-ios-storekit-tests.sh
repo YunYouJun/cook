@@ -40,8 +40,6 @@ shutdown_device() {
 }
 trap shutdown_device EXIT
 code=0
-# Start the simulator before the long build so boot and Xcode work overlap.
-xcrun simctl boot "$DEVICE" >/dev/null 2>&1 || true
 run_logged "$build_log" \
   xcodebuild build-for-testing -project apps/ios/Cook.xcodeproj -scheme CookMembershipStoreKit \
   -testPlan CookMembershipStoreKit \

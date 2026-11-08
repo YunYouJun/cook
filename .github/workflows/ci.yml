@@ -347,7 +347,7 @@ jobs:
     needs: [changes, ios-core-reuse]
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.skip_native != 'true') && (needs.ios-core-reuse.result != 'success' || needs.ios-core-reuse.outputs.verified != 'true') }}
     runs-on: xcode-27
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -361,7 +361,7 @@ jobs:
         id: environment
       - name: Verify local StoreKit contracts
         id: storekit_tests
-        timeout-minutes: 10
+        timeout-minutes: 15
         env:
           DEVICE: ${{ steps.environment.outputs[matrix.device] }}
         run: bash scripts/run-ios-storekit-tests.sh

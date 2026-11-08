@@ -4,7 +4,7 @@
 
 [PR #205 的成功 CI](https://github.com/YunYouJun/cook/actions/runs/42458399313) 中，iPhone core 任务耗时 18 分 04 秒，iPad core 耗时 22 分 35 秒，StoreKit 耗时 10 分 12 秒。日志显示原生构建同时编译 `arm64` 与 `x86_64`，但每台 runner 只使用宿主架构的模拟器；StoreKit 在服务已经运行时仍强制 `kickstart`，冷服务控制及等待可占数分钟。
 
-本 PR 在每个原生化任务选好设备后先请求启动模拟器，让启动与 `build-for-testing` 重叠；构建和 `test-without-building` 都使用 `uname -m` 对应的单一宿主架构，并关闭本任务不需要的 compiler index store。构建复用 resolved package versions，不检查包更新。StoreKit 任务也会在构建前开始启动模拟器，构建后只在 `storekitd` 探测结果不是 `running` 时执行有界重启和 readiness polling。若服务已由预启动拉起，则直接进入契约测试。
+本 PR 在 App / UI 任务选好设备后先请求启动模拟器，让启动与 `build-for-testing` 重叠；构建和 `test-without-building` 都使用 `uname -m` 对应的单一宿主架构，并关闭本任务不需要的 compiler index store。构建复用 resolved package versions，不检查包更新。StoreKit 冷 runner 的首次构建与 VM 启动同时进行会争抢资源并挤压契约执行时间，因此 StoreKit 保持构建后启动设备，只在 `storekitd` 探测结果不是 `running` 时执行有界重启和 readiness polling。健康服务直接进入契约测试；包含构建与全部 StoreKit 验收的步骤保留 15 分钟预算，任务限时 20 分钟。
 
 设备已安装 XcodeGen 时不再重复执行 Homebrew 安装。选择器和断言没有减少：日常 iPhone／iPad core 的全部既有 App／UI 检查、会员专属和手动 full 的布局覆盖、StoreKit SDK 与真实确认页断言、独立失败传播及 `ios` 汇总门禁全部保留。最终耗时在后续 PR CI 完成后记录，不以单次本地硬件结果替代远端。
 
