@@ -347,6 +347,7 @@ private struct RecipeTextImage: View {
                 .zoomTransitionSource(id: photo.id, in: transition)
                 .accessibilityLabel(photo.accessibilityLabel)
                 .accessibilityHint("查看大图")
+                .accessibilityIdentifier("recipe.textImage.\(photo.id)")
                 .accessibilityAddTraits(.isImage)
 
                 if let caption = photo.caption {

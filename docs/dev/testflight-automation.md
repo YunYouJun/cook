@@ -2,6 +2,8 @@
 
 首批外测采用 **准备精确候选 → Apple 审核 → 完成该候选的验收 → 30 人自助加入**。当前候选为 `2.0.0 (7)`，Apple 构建 ID 为 `3f9e3992-bceb-4687-9346-875bf527fe0c`；2026-10-26 已上传并回读为 `VALID / APP_STORE_ELIGIBLE / BETA_APPROVED`，八项模拟器策略验收及维护者确认已绑定，开放门禁为零阻塞。首批外测组仅关联构建 7；公开邀请已开启并回读确认上限 30 人，自动通知关闭。真实入口为[加入 TestFlight](https://testflight.apple.com/join/KTTJNhDh)，具体可用名额以 Apple 页面为准。具体证据和未实测范围见[验收记录](./ios-candidate-7-validation.md)。
 
+2026-11-09 的 `scripts/testflight/candidate.json` 已切换到内部审阅候选 `2.0.0 (14)`，记录源码提交和 IPA 哈希，但 `buildId` 仍为待上传占位 `PENDING_UPLOAD`、`uploaded=false`、`distributionReady=false`，生产 AI 契约未部署前不得上传或开放。构建 7 的外测发布记录仍是历史实际状态，不因候选文件切换而撤回或改写；外测组后续使用新构建前，必须重新上传、绑定真实 Build ID 并完成对应验收。
+
 ## 手动发布
 
 发布入口运行在保有签名产物和 ASC 登录的 Mac 上，需要 Python 3.11+、ASC CLI 5.14.3。

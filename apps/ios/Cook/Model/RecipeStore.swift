@@ -27,6 +27,8 @@ final class RecipeStore {
     private let emojiByStuff: [String: String]
     /// 内置数据目录，图文做法正文用到时才读
     @ObservationIgnored private let dataDirectory: URL?
+    /// 仅 UI 测试用于稳定验证配图失败与恢复，不改变正常构建的图片地址。
+    @ObservationIgnored private let textImageBaseOverride: URL?
     @ObservationIgnored private lazy var textLibrary: RecipeTextLibrary? = dataDirectory.flatMap { try? RecipeTextLibrary.load(from: $0) }
     @ObservationIgnored private lazy var dietaryResult: Result<DietaryCatalog, Error> = Result {
         guard let dataDirectory else { throw DietaryCatalogError.missingData }
@@ -55,9 +57,11 @@ final class RecipeStore {
         }
     }
 
-    init(data: CookData, dataDirectory: URL? = nil, catalog: PersonalCatalogStore = PersonalCatalogStore()) {
+    init(data: CookData, dataDirectory: URL? = nil, catalog: PersonalCatalogStore = PersonalCatalogStore(),
+         textImageBaseOverride: URL? = nil) {
         self.data = data
         self.dataDirectory = dataDirectory
+        self.textImageBaseOverride = textImageBaseOverride
         recommender = Recommender(recipes: data.recipes, normalizer: data.normalizer)
         recipesById = Dictionary(data.recipes.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         recipeIdByName = Dictionary(data.recipes.map { ($0.name, $0.id) }, uniquingKeysWith: { first, _ in first })
@@ -70,7 +74,18 @@ final class RecipeStore {
         guard let url = bundle.url(forResource: "CookData", withExtension: nil) else {
             throw RecipeStoreError.missingBundledData
         }
-        return RecipeStore(data: try CookData.load(from: url), dataDirectory: url, catalog: PersonalCatalogStore(url: inMemory ? nil : PersonalCatalogStore.defaultURL))
+        #if DEBUG
+            let arguments = ProcessInfo.processInfo.arguments
+            let environment = ProcessInfo.processInfo.environment
+            let imageBaseOverride = arguments.contains("-ui-testing")
+                ? environment["COOK_UI_TEST_TEXT_IMAGE_BASE"].flatMap(URL.init(string:))
+                : nil
+        #else
+            let imageBaseOverride: URL? = nil
+        #endif
+        return RecipeStore(data: try CookData.load(from: url), dataDirectory: url,
+                           catalog: PersonalCatalogStore(url: inMemory ? nil : PersonalCatalogStore.defaultURL),
+                           textImageBaseOverride: imageBaseOverride)
     }
 
     /// 内置的图文做法正文（目前来自 HowToCook），没有时去原文网页看
@@ -84,12 +99,15 @@ final class RecipeStore {
 
     /// 图文做法配图的地址；没配置配图地址时为 nil
     func textImageURL(_ src: String) -> URL? {
-        textLibrary?.imageURL(src)
+        if let textImageBaseOverride {
+            return URL(string: src, relativeTo: textImageBaseOverride)?.absoluteURL
+        }
+        return textLibrary?.imageURL(src)
     }
 
     /// 内置数据配了配图地址，正文里能显示图片
     var showsTextImages: Bool {
-        textLibrary?.imageBase != nil
+        textImageBaseOverride != nil || textLibrary?.imageBase != nil
     }
 
     var recipes: [Recipe] {

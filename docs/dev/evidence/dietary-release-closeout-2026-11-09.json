@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-11-09T01:47:15+08:00",
+  "sourceRepository": "https://github.com/YunYouJun/cook",
+  "sourceBaseline": "f9c2171cebbe9661596236dae63941bf0d5f3531",
+  "candidate": {
+    "version": "2.0.0",
+    "buildNumber": "14",
+    "sourceCommit": "1b4560429eba5921db08296aa983479d826be187",
+    "ipaSha256": "fe7aed5916dd899eaf187773376625c0fdb3a8adbda054dc218f1d7fe90c0dfa",
+    "archivePath": "~/Library/Developer/ReleaseArtifacts/Cook/20261109-2.0.0-14-dietary-closeout/Cook.xcarchive",
+    "ipaPath": "~/Library/Developer/ReleaseArtifacts/Cook/20261109-2.0.0-14-dietary-closeout/Cook.ipa",
+    "reviewReady": true,
+    "distributionReady": false,
+    "uploaded": false
+  },
+  "asc": {
+    "appId": "6824589542",
+    "marketingVersion": "2.0.0",
+    "distributedBuild": {
+      "buildNumber": "12",
+      "buildId": "315742ed-3c67-48d3-907b-ed88dad320d4",
+      "processingState": "VALID",
+      "buildAudienceType": "INTERNAL_ONLY",
+      "internalBuildState": "IN_BETA_TESTING",
+      "externalBuildState": "NOT_APPLICABLE",
+      "expired": false
+    },
+    "build13Upload": {
+      "id": "330c89c1-715d-4a28-9161-4af5fa76a2c5",
+      "buildNumber": "13",
+      "state": "AWAITING_UPLOAD",
+      "assetTypes": [
+        "ASSET_SPI",
+        "ASSET_DESCRIPTION"
+      ],
+      "containsAppBinary": false
+    },
+    "nextBuildNumber": "14",
+    "nextBuildNumberSources": [
+      "processed_builds",
+      "build_uploads"
+    ]
+  },
+  "data": {
+    "dataVersion": "353bc8dab0ea",
+    "recipeCount": 887,
+    "dietaryVersion": "ead74d1c15c9",
+    "dietaryRecipeCount": 36,
+    "enabledGoals": [
+      "weight-aware",
+      "less-added-sugar",
+      "balanced-pairing"
+    ],
+    "assessmentCounts": {
+      "weight-aware": {
+        "pass": 10,
+        "fail": 0,
+        "unknown": 26
+      },
+      "less-added-sugar": {
+        "pass": 12,
+        "fail": 3,
+        "unknown": 21
+      },
+      "balanced-pairing": {
+        "pass": 36,
+        "fail": 0,
+        "unknown": 0
+      }
+    },
+    "institutionalLowGICount": 10,
+    "embeddedCookDataMatchesRepository": true,
+    "generatedContractSha256": "005b856c1e4e1548f7034e17079913cf89b8facf14557eaa31219239bc4e9b1a"
+  },
+  "productionAIContract": {
+    "environment": "yunlefun-8g7ybcxc7345c490",
+    "function": "cook-ai-intent",
+    "status": "Active",
+    "runtime": "Nodejs24.11",
+    "currentDataVersion": "1878cc5772dc",
+    "compatibleDataVersions": [
+      "faf919fc0041",
+      "1878cc5772dc"
+    ],
+    "supportsCandidateDataVersion": false,
+    "requiredBeforeDistribution": "deploy the current repository contract supporting 353bc8dab0ea"
+  },
+  "packageVerification": {
+    "bundleId": "fun.yunle.cook",
+    "teamId": "QT792GAY4C",
+    "internalOnly": true,
+    "encryptionExempt": true,
+    "membershipUIEnabled": false,
+    "membershipPurchasesEnabled": false,
+    "wechatLoginEnabled": false,
+    "feedbackURL": "https://api.yunle.fun/cook-feedback",
+    "aiServiceURL": "https://api.yunle.fun/cook-ai-intent",
+    "privacyManifestMatchesSource": true,
+    "debugEntitlementPresent": false,
+    "pushEnvironment": "production",
+    "iapOrStoreKitFixturePresent": false,
+    "appAndDsymUuid": "B2950AFB-2F14-3595-B7AA-8CB6145CF78A",
+    "sharedVerifierPassed": true,
+    "appleAltoolValidationPassed": true,
+    "firstExportFailure": "Homebrew rsync rejected --extended-attributes on the local copy; retried with /usr/bin first in the release subprocess PATH"
+  },
+  "tests": {
+    "device": "iPhone 16 Pro",
+    "os": "26.5",
+    "simulatorUdid": "F69F6452-D87D-4C56-ACDE-6E3E6A144CB3",
+    "parallelTestingEnabled": false,
+    "initialCombinedRun": {
+      "passed": 1,
+      "failed": 1,
+      "imageFailureAndRecoveryPassed": true,
+      "coldLaunchFailed": true,
+      "coldLaunchFailure": "five swipes did not reveal dietary.recipe.333 in the 36-item balanced-pairing list"
+    },
+    "coldLaunchRetry": {
+      "passed": 1,
+      "failed": 0,
+      "change": "bounded list search raised from five to fifteen swipes for the full cold-launch list"
+    },
+    "finalCombinedRun": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "durationSeconds": 125.454,
+      "tests": [
+        "testSavedGoalColdLaunchOpensResultsReviewedTextAndKitchen",
+        "testReviewedTextSurvivesImageFailureAndLoadsAfterRecovery"
+      ]
+    },
+    "imageFailureMethod": "DEBUG and UI-test-only image base override to http://127.0.0.1:9/cook/",
+    "supportsRealAirplaneModeAcceptance": false
+  },
+  "notVerified": [
+    "real airplane mode and physical-network recovery",
+    "human VoiceOver reading and focus order",
+    "physical-device cold launch on the candidate",
+    "maintainer approval of reviewed content and public copy",
+    "TestFlight upload, distribution, or tester notification"
+  ],
+  "localEvidence": "~/Library/Developer/ReleaseArtifacts/Cook/20261109-2.0.0-14-dietary-closeout",
+  "newTestFlightUploaded": false,
+  "newSimulatorsCreated": false,
+  "simulatorRestoredToInitialBootState": true,
+  "cleanup": {
+    "removedReleaseDerivedDataKiB": 247024,
+    "removedReleaseDirectoryBeforeMiB": 388,
+    "removedReleaseDirectoryAfterMiB": 115,
+    "actualAvailableSpaceIncreaseKiB": 490024
+  }
+}
