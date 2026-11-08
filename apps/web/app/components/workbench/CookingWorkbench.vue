@@ -21,8 +21,8 @@ const pantryExpanded = shallowRef(false)
 const filtersExpanded = shallowRef(false)
 const avoidOpen = ref(false)
 const matches = computed(() => rStore.recommendWithPantry(pantry.value))
-const toolOnly = computed(() => !rStore.selectedStuff.length && Boolean(rStore.curTool))
-const count = computed(() => toolOnly.value ? rStore.toolRecipes.length : matches.value.length)
+const browseMode = computed(() => !rStore.selectedStuff.length)
+const count = computed(() => browseMode.value ? rStore.browseRecipes.length : matches.value.length)
 const limit = ref(8)
 const resultsHeading = ref<HTMLElement>()
 const dragActive = ref(false)
@@ -36,6 +36,8 @@ const visibleItems = computed(() => {
 })
 const hasMore = computed(() => categories.value[category.value]!.items.some(item => item.more))
 const preferenceSummary = computed(() => [
+  ...(rStore.activeDietaryGoalOption ? [`饮食目标：${rStore.activeDietaryGoalOption.label}`] : []),
+  ...(rStore.activeDiscoverySceneOption ? [`专题：${rStore.activeDiscoverySceneOption.label}`] : []),
   ...rStore.methodGroups,
   ...rStore.difficulty,
   ...(rStore.noSpicy ? ['不吃辣'] : []),
@@ -131,6 +133,18 @@ function addUnlisted() {
             <span v-if="rStore.selectedStuff.includes(item.name)" class="wb-selected-mark" aria-hidden="true">✓</span>
           </button>
         </div>
+        <ReviewedRecipeFilters
+          :goal-options="rStore.reviewedGoalOptions"
+          :scene-options="rStore.reviewedSceneOptions"
+          :selected-goal="rStore.dietaryGoal"
+          :selected-scene="rStore.discoveryScene"
+          :loading="rStore.isReviewingRecipes"
+          :loaded="rStore.hasLoadedReviewedRecipes"
+          :unavailable-message="rStore.reviewedCatalogError"
+          @select-goal="rStore.toggleDietaryGoal"
+          @select-scene="rStore.toggleDiscoveryScene"
+          @load="rStore.loadReviewedRecipes()"
+        />
         <button v-if="!desktop && !query && hasMore" class="wb-text-button" type="button" :aria-expanded="expanded" @click="expanded = !expanded">
           {{ expanded ? '收起更多食材 ↑' : '展开更多食材 ↓' }}
         </button>
@@ -242,7 +256,7 @@ function addUnlisted() {
         </p>
         <div class="wb-result-filters">
           <label class="wb-search"><span>在结果里找菜名</span><input v-model="rStore.keyword" type="search" placeholder="输入菜名"></label>
-          <label v-if="!toolOnly" class="wb-search"><span>匹配范围</span><select v-model="rStore.curMode"><option value="loose">全部推荐</option><option value="strict">用上所有已选</option><option value="survival">只看已记录食材齐全</option></select></label>
+          <label v-if="!browseMode" class="wb-search"><span>匹配范围</span><select v-model="rStore.curMode"><option value="loose">全部推荐</option><option value="strict">用上所有已选</option><option value="survival">只看已记录食材齐全</option></select></label>
         </div>
         <p v-if="preferenceSummary" class="wb-hint">
           当前筛选：{{ preferenceSummary }}
@@ -255,8 +269,8 @@ function addUnlisted() {
         <div v-else-if="rStore.isSearching" class="wb-empty">
           <p>正在准备菜谱，请稍候。</p>
         </div>
-        <div v-else-if="!rStore.selectedStuff.length && !rStore.curTool" class="wb-empty">
-          <h3>先选几样食材</h3><p>选食材后，相关菜谱会出现在这里。</p><button type="button" class="wb-button" @click="example">
+        <div v-else-if="!rStore.selectedStuff.length && !rStore.curTool && !rStore.hasReviewedSelection" class="wb-empty">
+          <h3>先选几样食材</h3><p>选食材后，相关菜谱会出现在这里；也可先选饮食目标或专题。</p><button type="button" class="wb-button" @click="example">
             加入番茄、鸡蛋和炒锅
           </button>
         </div>
@@ -266,8 +280,8 @@ function addUnlisted() {
           </button>
         </div>
         <div v-else class="wb-recipe-list">
-          <template v-if="toolOnly">
-            <WorkbenchRecipeCard v-for="(recipe, index) in rStore.toolRecipes.slice(0, limit)" :key="index" :recipe="recipe" @detail="(recipe, match) => $emit('detail', recipe, match)" />
+          <template v-if="browseMode">
+            <WorkbenchRecipeCard v-for="(recipe, index) in rStore.browseRecipes.slice(0, limit)" :key="recipe.id ?? index" :recipe="recipe" @detail="(recipe, match) => $emit('detail', recipe, match)" />
           </template>
           <template v-else>
             <WorkbenchRecipeCard v-for="match in matches.slice(0, limit)" :key="match.sourceIndex" :recipe="match.recipe" :match="match" @detail="(recipe, match) => $emit('detail', recipe, match)" />

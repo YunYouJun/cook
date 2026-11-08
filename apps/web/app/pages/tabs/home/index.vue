@@ -41,7 +41,7 @@ async function changeCookingStyle(style: CookingStyle) {
 /** 结果弹层遮住的高度，留作页面底部空白 */
 const panelInset = ref(0)
 
-const hasSelection = computed(() => rStore.selectedStuff.length > 0 || Boolean(rStore.curTool))
+const hasSelection = computed(() => rStore.selectedStuff.length > 0 || Boolean(rStore.curTool) || rStore.hasReviewedSelection)
 
 function reset() {
   rStore.reset()
@@ -63,15 +63,15 @@ function openDetail(recipe: RecipeItem, match?: RecipeMatch) {
 
   // 匿名记录「这组食材下点开了第几个结果」，用来评估和调整排序
   const rank = match ? rStore.recipeMatches.indexOf(match) : -1
-  if (rank >= 0 && typeof recipe.id === 'number')
+  if (!rStore.hasReviewedSelection && rank >= 0 && typeof recipe.id === 'number')
     feedback.signal({ type: 'open', ...selection(), recipeId: recipe.id, rank })
 }
 
 // 停在一组没有结果的食材上时记一次，用来发现缺哪些菜
 watchDebounced(
-  () => [rStore.isSearching, rStore.recipesLength, rStore.selectedStuff.join('、'), rStore.curTool, rStore.curMode, rStore.keyword, rStore.recipeMatches.length],
+  () => [rStore.isSearching, rStore.recipesLength, rStore.selectedStuff.join('、'), rStore.curTool, rStore.curMode, rStore.keyword, rStore.recipeMatches.length, rStore.hasReviewedSelection],
   () => {
-    if (cookingStyle.value === 'classic' && !rStore.isSearching && rStore.recipesLength && rStore.selectedStuff.length && !rStore.keyword && !rStore.recipeMatches.length)
+    if (cookingStyle.value === 'classic' && !rStore.hasReviewedSelection && !rStore.isSearching && rStore.recipesLength && rStore.selectedStuff.length && !rStore.keyword && !rStore.recipeMatches.length)
       feedback.signal({ type: 'empty', ...selection() })
   },
   { debounce: 3000 },

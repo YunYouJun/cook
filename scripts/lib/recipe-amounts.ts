@@ -1,6 +1,6 @@
 /* eslint-disable regexp/prefer-d, regexp/prefer-character-class, regexp/no-useless-non-capturing-group, regexp/no-super-linear-backtracking -- 拼接的计量语法保留显式分组；入口限制 literal 256 / formula 4096 字符，超长式保守拒绝。 */
 import type { RecipeText, RecipeTextBlock } from '../../packages/cook/src/types/recipe-text'
-import { Buffer } from 'node:buffer'
+import { recipeTextFingerprint } from '../../packages/cook/src/utils/reviewed-data'
 
 export interface AmountAnchor { block: number, item?: number, text: string }
 export type AmountFormula
@@ -40,19 +40,7 @@ export interface AmountEntry {
 }
 export interface AmountAnnotations { schemaVersion: 1, recipes: Record<string, AmountEntry> }
 
-export function sourceFingerprint(source: RecipeText) {
-  const tokens = source.blocks.flatMap((block): string[] => {
-    switch (block.type) {
-      case 'heading': case 'paragraph': return [block.type, block.text]
-      case 'list': return ['list', String(block.ordered), String(block.start ?? 1), String(block.items.length), ...block.items]
-      case 'image': return ['image', block.src, String(block.width), String(block.height), block.alt ?? '']
-      default: return []
-    }
-  })
-  let hash = 14695981039346656037n
-  for (const byte of Buffer.from(tokens.join('\0'), 'utf8')) hash = BigInt.asUintN(64, (hash ^ BigInt(byte)) * 1099511628211n)
-  return hash.toString(16).padStart(16, '0')
-}
+export { recipeTextFingerprint as sourceFingerprint }
 
 export function sourceLines(source: RecipeText) {
   let section = '简介'

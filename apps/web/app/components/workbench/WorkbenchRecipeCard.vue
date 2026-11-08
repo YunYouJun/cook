@@ -5,8 +5,26 @@ import { uniqueStuff } from '@yunyoujun/cook/recommend'
 
 const props = defineProps<{ recipe: RecipeItem, match?: RecipeMatch }>()
 defineEmits<{ detail: [recipe: RecipeItem, match?: RecipeMatch] }>()
+const rStore = useRecipeStore()
 const recorded = computed(() => uniqueStuff(props.recipe.stuff))
 const tools = computed(() => props.recipe.tools.map(tool => tool === '一口大锅' ? '炒锅' : tool).join(' / '))
+const reviewSummary = computed(() => {
+  const goal = rStore.dietaryGoal
+  const goalReason = rStore.dietaryReviewSummary(props.recipe.id, goal)
+  if (goal && goalReason)
+    return `${rStore.dietaryGoal === goal ? rStore.activeDietaryGoalOption?.label : ''}：${goalReason}`
+  if (rStore.discoveryScene === 'institutional-low-gi') {
+    const entry = rStore.institutionalReview(props.recipe.id)
+    if (entry)
+      return `机构原方：${entry.sourceRecipeTitle}`
+  }
+  if (rStore.discoveryScene === 'next-day-lunch') {
+    const entry = rStore.lunchReview(props.recipe.id)
+    if (entry)
+      return `次日便当：按原文 ${entry.referenceServings} 人份核对`
+  }
+  return ''
+})
 </script>
 
 <template>
@@ -17,6 +35,9 @@ const tools = computed(() => props.recipe.tools.map(tool => tool === '一口大�
     </div>
     <div class="wb-recipe-body">
       <div class="wb-recipe-ingredients">
+        <p v-if="reviewSummary" class="wb-review">
+          {{ reviewSummary }}
+        </p>
         <template v-if="match">
           <p class="wb-matched">
             <span aria-hidden="true">✓</span> 已匹配：{{ match.matchedStuff.join('、') }}
@@ -79,6 +100,10 @@ const tools = computed(() => props.recipe.tools.map(tool => tool === '一口大�
 }
 .wb-matched {
   color: var(--wb-green);
+}
+.wb-review {
+  color: var(--wb-accent);
+  font-weight: 600;
 }
 .wb-missing {
   color: var(--wb-accent);

@@ -7,11 +7,12 @@ defineProps<{
   selected: boolean
   emoji?: string
   icon?: string
+  disabled?: boolean
 }>()
 </script>
 
 <template>
-  <button type="button" class="ingredient-chip" :aria-pressed="selected">
+  <button type="button" class="ingredient-chip" :aria-pressed="selected" :disabled="disabled">
     <ion-icon v-if="selected" class="ingredient-chip-mark" :icon="ioniconsCheckmark" aria-hidden="true" />
     <span v-else-if="emoji" class="ingredient-chip-mark" aria-hidden="true">{{ emoji }}</span>
     <span v-else-if="icon" class="ingredient-chip-mark ingredient-chip-icon" :class="icon" aria-hidden="true" />
@@ -59,6 +60,10 @@ defineProps<{
 .ingredient-chip:focus-visible {
   outline: 2px solid var(--ion-color-primary);
   outline-offset: 2px;
+}
+.ingredient-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 @keyframes ingredient-chip-pop {
   0% {

@@ -93,6 +93,19 @@ function clickTool(item: StuffItem) {
       @apply="rStore.applyQuery"
     />
 
+    <ReviewedRecipeFilters
+      :goal-options="rStore.reviewedGoalOptions"
+      :scene-options="rStore.reviewedSceneOptions"
+      :selected-goal="rStore.dietaryGoal"
+      :selected-scene="rStore.discoveryScene"
+      :loading="rStore.isReviewingRecipes"
+      :loaded="rStore.hasLoadedReviewedRecipes"
+      :unavailable-message="rStore.reviewedCatalogError"
+      @select-goal="rStore.toggleDietaryGoal"
+      @select-scene="rStore.toggleDiscoveryScene"
+      @load="rStore.loadReviewedRecipes()"
+    />
+
     <div class="choose-food-categories">
       <IngredientSection v-for="section in sections" :key="section.category" :title="section.title" :note="selectedNote(section.items)">
         <IngredientChip

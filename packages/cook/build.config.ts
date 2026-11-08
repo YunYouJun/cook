@@ -6,6 +6,7 @@ export default defineBuildConfig({
     'src/utils/recommend',
     'src/utils/custom-recipes',
     'src/utils/personal-catalog',
+    'src/utils/reviewed-data',
     'src/cli',
   ],
   clean: true,

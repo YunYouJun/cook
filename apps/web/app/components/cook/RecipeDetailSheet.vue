@@ -8,7 +8,8 @@ import { addRecipeHistory } from '~/composables/store/history'
 import { getEmojisFromStuff } from '~/utils'
 import { trackCookEvent } from '~/utils/analytics'
 import { isCustomRecipe } from '~/utils/customRecipe'
-import { getRecipeLink, getRecipeTextLink, openRecipe } from '~/utils/recipe'
+import { getRecipeLink, getRecipeTextLink } from '~/utils/recipe'
+import { reviewedPreparationLink } from '~/utils/reviewed-recipes'
 import { yunleHaptic } from '~/utils/yunleHost'
 
 /**
@@ -41,10 +42,32 @@ const groups = computed(() => {
 })
 
 const custom = computed(() => props.recipe && isCustomRecipe(props.recipe) ? props.recipe : undefined)
-const link = computed(() => props.recipe ? getRecipeLink(props.recipe) : '')
-const textLink = computed(() => props.recipe ? getRecipeTextLink(props.recipe) : '')
+const rStore = useRecipeStore()
+const institutionEntry = computed(() => rStore.discoveryScene === 'institutional-low-gi'
+  ? rStore.institutionalReview(props.recipe?.id)
+  : undefined)
+const dietaryEntry = computed(() => rStore.dietaryReview(props.recipe?.id))
+const lunchEntry = computed(() => rStore.discoveryScene === 'next-day-lunch'
+  ? rStore.lunchReview(props.recipe?.id)
+  : undefined)
+const reviewedTextLink = computed(() => {
+  if (institutionEntry.value)
+    return institutionEntry.value.sourceURL
+  if (props.recipe?.link && (dietaryEntry.value || lunchEntry.value))
+    return reviewedPreparationLink(rStore.reviewedCatalog, props.recipe.id)
+  return ''
+})
+const videoLink = computed(() => props.recipe?.bv ? `https://www.bilibili.com/video/${props.recipe.bv}` : '')
+const normalLink = computed(() => props.recipe ? getRecipeLink(props.recipe) : '')
+const link = computed(() => reviewedTextLink.value || normalLink.value)
+const textLink = computed(() => !reviewedTextLink.value && props.recipe ? getRecipeTextLink(props.recipe) : '')
+const primaryIsVideo = computed(() => Boolean(link.value && link.value === videoLink.value))
 const linkLabel = computed(() => {
-  if (props.recipe?.bv || link.value.includes('bilibili.com'))
+  if (institutionEntry.value)
+    return '打开机构英文原方'
+  if (reviewedTextLink.value)
+    return '看审核时的图文原文'
+  if (primaryIsVideo.value || link.value.includes('bilibili.com'))
     return '去 B 站看做法'
   // 收录的菜没有视频时，链接就是图文做法
   return custom.value ? '看做法' : '看图文做法'
@@ -60,12 +83,13 @@ function onFavorite() {
   void yunleHaptic(favorited.value ? 'success' : 'light')
 }
 
-function watchVideo() {
+function openPrimary() {
   if (!props.recipe)
     return
   addRecipeHistory(props.recipe)
   trackCookEvent('click_dish')
-  openRecipe(props.recipe)
+  if (link.value)
+    window.open(link.value, '_blank')
 }
 
 function readText() {
@@ -74,6 +98,14 @@ function readText() {
   addRecipeHistory(props.recipe)
   trackCookEvent('click_dish')
   window.open(textLink.value, '_blank')
+}
+
+function watchOtherVideo() {
+  if (!videoLink.value || !props.recipe)
+    return
+  addRecipeHistory(props.recipe)
+  trackCookEvent('click_dish')
+  window.open(videoLink.value, '_blank')
 }
 
 function onPresented() {
@@ -101,8 +133,8 @@ function onPresented() {
       </div>
 
       <div class="recipe-detail-actions">
-        <ion-button v-if="link" expand="block" class="recipe-detail-primary" @click="watchVideo">
-          <ion-icon slot="start" :icon="linkLabel === '看图文做法' ? ioniconsDocumentTextOutline : ioniconsPlayCircle" />
+        <ion-button v-if="link" expand="block" class="recipe-detail-primary" @click="openPrimary">
+          <ion-icon slot="start" :icon="primaryIsVideo ? ioniconsPlayCircle : ioniconsDocumentTextOutline" />
           {{ linkLabel }}
         </ion-button>
         <ion-button v-if="textLink" fill="clear" class="recipe-detail-fav" aria-label="看图文做法" title="看图文做法" @click="readText">
@@ -126,6 +158,11 @@ function onPresented() {
           <ion-icon slot="icon-only" :icon="favorited ? ioniconsStar : ioniconsStarOutline" color="warning" />
         </ion-button>
       </div>
+      <ion-button v-if="reviewedTextLink && videoLink" expand="block" fill="outline" class="recipe-detail-other-source" @click="watchOtherVideo">
+        其他视频做法（未核对）
+      </ion-button>
+
+      <RecipeReviewSection :recipe="recipe" />
 
       <section v-for="group in groups" :key="group.label" :aria-label="group.label">
         <h3 class="cook-group-header">
@@ -150,7 +187,7 @@ function onPresented() {
           这是你自己添加的菜谱，只保存在这台设备上。
         </template>
         <template v-else>
-          食材来自菜谱记录，用量和调味以{{ recipe.bv ? '视频' : '做法原文' }}为准。
+          食材来自菜谱记录，用量和调味以{{ reviewedTextLink || !recipe.bv ? '做法原文' : '视频' }}为准。
           <RecipeFeedbackButton :recipe="recipe" />
         </template>
       </p>
@@ -222,6 +259,12 @@ function onPresented() {
 }
 .recipe-detail-fav[aria-pressed='true'] ion-icon {
   animation: recipe-detail-pop 0.36s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.recipe-detail-other-source {
+  margin: 8px 16px 0;
+  --border-radius: 10px;
+  --border-color: var(--ion-color-step-250, #c7c7cc);
+  min-height: 44px;
 }
 .recipe-detail-chips {
   display: flex;
