@@ -2,7 +2,7 @@
 
 首批外测采用 **准备精确候选 → Apple 审核 → 完成该候选的验收 → 30 人自助加入**。当前候选为 `2.0.0 (7)`，Apple 构建 ID 为 `3f9e3992-bceb-4687-9346-875bf527fe0c`；2026-10-26 已上传并回读为 `VALID / APP_STORE_ELIGIBLE / BETA_APPROVED`，八项模拟器策略验收及维护者确认已绑定，开放门禁为零阻塞。首批外测组仅关联构建 7；公开邀请已开启并回读确认上限 30 人，自动通知关闭。真实入口为[加入 TestFlight](https://testflight.apple.com/join/KTTJNhDh)，具体可用名额以 Apple 页面为准。具体证据和未实测范围见[验收记录](./ios-candidate-7-validation.md)。
 
-2026-11-09 收尾复核将两种渠道的候选分开：`scripts/testflight/candidate.json` 继续绑定已开放外测的构建 7 和 30 人外部组；`scripts/testflight/internal-candidate.json` 单独记录仅内部审阅的 `2.0.0 (14)`、内部组、源码及 IPA 哈希。构建 14 尚未上传，`buildId=null`、`uploaded=false`、`distributionReady=false`；生产 AI 契约已下载核对支持当前及两个保留版本，内容批准、人工验收与内部上传授权仍待完成，按[内部发布流程](./ios-testflight.md)处理。
+2026-11-09 收尾复核将两种渠道的候选分开：`scripts/testflight/candidate.json` 继续绑定已开放外测的构建 7 和 30 人外部组；`scripts/testflight/internal-candidate.json` 单独记录仅内部的 `2.0.0 (14)`、内部组、源码及 IPA 哈希。维护者已批准内容和内部上传，并采用已有模拟器证据收尾；构建 14 已完成实际内部分发，`buildId=d0fe231d-350f-4dd6-9df6-8e98bb468a0e`、`uploaded=true`、`distributionReady=true`。真机项目保留未验证，详见[发布记录](./ios-testflight.md)及[分发证据](./evidence/dietary-build14-published-2026-11-09.json)。
 
 外测控制器在访问 Apple 前拒绝内部渠道、未知渠道及明确未就绪的候选，不会因为误传内部审阅文件而关闭已有外测邀请。内部候选不能用于 `beta.py --candidate`。外测组改用新构建时，仍须准备可外部分发的独立候选、真实 Build ID 和对应验收；仅内部 IPA 不能直接转成外测包。
 
