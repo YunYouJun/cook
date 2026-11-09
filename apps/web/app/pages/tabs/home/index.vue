@@ -83,8 +83,10 @@ watchDebounced(
     <ion-header :key="cookingStyle" :translucent="true" :class="{ 'workbench-header': cookingStyle === 'workbench' || desktop }">
       <ion-toolbar>
         <ion-title>做菜</ion-title>
-        <ion-buttons slot="end">
+        <ion-buttons :slot="desktop ? 'end' : 'start'">
           <CookingStyleSwitch ref="styleSwitch" :desktop="desktop" :model-value="cookingStyle" @update:model-value="changeCookingStyle" />
+        </ion-buttons>
+        <ion-buttons slot="end">
           <ReviewedRecipeFilters
             :goal-options="rStore.reviewedGoalOptions"
             :scene-options="rStore.reviewedSceneOptions"
