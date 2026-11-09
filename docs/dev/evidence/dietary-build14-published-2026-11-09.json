@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-11-09T20:43:43+08:00",
+  "app": {
+    "appId": "6824589542",
+    "bundleId": "fun.yunle.cook",
+    "version": "2.0.0",
+    "build": "14",
+    "buildId": "d0fe231d-350f-4dd6-9df6-8e98bb468a0e",
+    "groupId": "a2962c09-0f3d-4180-abef-030cf8920279",
+    "groupName": "内部测试",
+    "phase": "published",
+    "processingState": "VALID",
+    "buildAudienceType": "INTERNAL_ONLY",
+    "buildAttached": true,
+    "testerCount": 1,
+    "internalBuildState": "IN_BETA_TESTING",
+    "externalBuildState": "NOT_APPLICABLE"
+  },
+  "candidateSourceCommit": "1b4560429eba5921db08296aa983479d826be187",
+  "ipaSha256": "fe7aed5916dd899eaf187773376625c0fdb3a8adbda054dc218f1d7fe90c0dfa",
+  "uploadId": "d0fe231d-350f-4dd6-9df6-8e98bb468a0e",
+  "uploadCount": 1,
+  "merge": {
+    "pr": 211,
+    "merged": true,
+    "head": "4dc80099a5f0ca4786095dcc1bef2823548aaf95",
+    "mergeCommit": "8e0a32675fbd9e2e8dc262cf87c00bcbb5d00de2",
+    "ciRun": "42581094221",
+    "allRequiredChecksPassed": true
+  },
+  "approval": {
+    "recordedAt": "2026-11-09T20:36:32+08:00",
+    "approvedBy": "maintainer: current user",
+    "authorizationQuote": "认可本版内容，授权构建 14 内部上传，按已有模拟器证据收尾，真机项目保留未验证。CI 通过后合并 #211，完成分发验证后关闭 #174、#186。",
+    "sourceCommit": "1b4560429eba5921db08296aa983479d826be187",
+    "ipaSha256": "fe7aed5916dd899eaf187773376625c0fdb3a8adbda054dc218f1d7fe90c0dfa",
+    "build": "2.0.0 (14)",
+    "contentApproved": true,
+    "acceptancePolicy": "simulator",
+    "physicalItemsVerified": false,
+    "physicalItemsNotVerified": [
+      "human VoiceOver reading and focus order",
+      "real airplane mode and physical-network recovery",
+      "physical-device cold launch"
+    ],
+    "internalUploadAuthorized": true,
+    "mergePR": 211,
+    "closeIssuesAfterDistributionVerification": [
+      174,
+      186
+    ]
+  },
+  "testNotes": {
+    "locale": "zh-Hans",
+    "readbackMatches": true,
+    "sha256": "650a04d3d6f1f8d0782784f26cce3846513b49e14fce5bcbc337e5ed4027b29f",
+    "terminalNewlineNormalized": true
+  },
+  "productionContractEvidence": "dietary-readiness-2026-11-09.json",
+  "simulatorEvidence": "dietary-release-closeout-2026-11-09.json",
+  "physicalChecksVerified": false,
+  "physicalChecksNotVerified": [
+    "human VoiceOver reading and focus order",
+    "real airplane mode and physical-network recovery",
+    "physical-device cold launch"
+  ],
+  "externalBetaBuild7Changed": false,
+  "newTestersInvited": false,
+  "explicitTesterNotificationSent": false,
+  "phoneInstalledOrUpdated": false,
+  "productionFunctionDeployed": false,
+  "paidModelRequestMade": false,
+  "localEvidence": "~/Library/Developer/ReleaseArtifacts/Cook/20261109-dietary-readiness"
+}
