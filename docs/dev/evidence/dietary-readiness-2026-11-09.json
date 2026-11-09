@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-11-09T15:37:57+08:00",
+  "sourceCommit": "b425e923c800ad953a0cdf2111c8f77edfa450f4",
+  "productionAIContract": {
+    "environment": "yunlefun-8g7ybcxc7345c490",
+    "function": "cook-ai-intent",
+    "status": "Deployment completed",
+    "runtime": "Nodejs24.11",
+    "modificationTime": "2026-11-09 15:14:31",
+    "currentDataVersion": "353bc8dab0ea",
+    "compatibleDataVersions": [
+      "faf919fc0041",
+      "1878cc5772dc"
+    ],
+    "sourceHashes": {
+      "index.js": "d07b0d251a010f13cb440f52dbc6dc6361b2b91ab485c40484fbd10ab38e3d89",
+      "quota.js": "93be2893216d5e92e735b1636e48f8ce9fb4a05766f0d16c0d7ae142cf2dd201",
+      "package.json": "31e8e88f9ec2462a4bbb2d9fb0e99fa54dcfb18cf7c3f265736cdf50c556e69f",
+      "contract.json": "005b856c1e4e1548f7034e17079913cf89b8facf14557eaa31219239bc4e9b1a",
+      "compatible-contracts.json": "1a466dcc91e9e226449262613178ab7f10e002ad599b976e187bf3d3aee41e5b"
+    },
+    "matchesMain": true,
+    "deployedByThisTask": false,
+    "authenticatedCapabilityChecked": false,
+    "paidModelRequestMade": false,
+    "publicHTTPChecks": [
+      {
+        "method": "GET",
+        "status": 405,
+        "code": "METHOD_NOT_ALLOWED"
+      },
+      {
+        "method": "POST",
+        "status": 401,
+        "code": "LOGIN_REQUIRED"
+      }
+    ]
+  },
+  "candidate": {
+    "version": "2.0.0",
+    "buildNumber": "14",
+    "sourceCommit": "1b4560429eba5921db08296aa983479d826be187",
+    "ipaSha256": "fe7aed5916dd899eaf187773376625c0fdb3a8adbda054dc218f1d7fe90c0dfa",
+    "internalOnly": true,
+    "byteIdenticalDataFiles": {
+      "recipe.json": true,
+      "recipe-dietary.json": true,
+      "recipe-institutional-low-gi.json": true,
+      "recipe-text.json": true,
+      "recipe-amounts.json": true,
+      "aliases.json": true,
+      "food.json": true,
+      "pantry.json": true,
+      "query.json": true,
+      "shelf-life.json": true,
+      "incompatible-foods.json": true
+    },
+    "recipeMetadata": {
+      "sameExceptGenerationTimestamp": true,
+      "candidateTimestamp": 1794159569975,
+      "regeneratedTimestamp": 1794209637799,
+      "dataVersion": "353bc8dab0ea"
+    },
+    "uploaded": false,
+    "uploadSessionState": "AWAITING_UPLOAD",
+    "reviewReady": true,
+    "distributionReady": false
+  },
+  "externalBeta": {
+    "buildNumber": "7",
+    "buildId": "3f9e3992-bceb-4687-9346-875bf527fe0c",
+    "groupId": "a2e33916-bbd0-4433-8ff7-4895ae926412",
+    "buildAudienceType": "APP_STORE_ELIGIBLE",
+    "externalBuildState": "IN_BETA_TESTING",
+    "publicLinkEnabled": true,
+    "publicLinkLimit": 30,
+    "changedByThisTask": false
+  },
+  "validation": {
+    "testflightGateTests": {
+      "passed": 16,
+      "failed": 0
+    },
+    "aiContractTests": {
+      "passed": 38,
+      "failed": 0
+    },
+    "dietaryValidationPassed": true,
+    "ipaVerificationPassed": true,
+    "changedFileLintPassed": true,
+    "documentationBuildPassed": true
+  },
+  "pending": [
+    "maintainer content approval",
+    "human VoiceOver reading and focus order",
+    "real airplane mode and network recovery",
+    "physical-device cold launch on the candidate",
+    "explicit internal upload authorization and server verification"
+  ],
+  "localEvidence": "~/Library/Developer/ReleaseArtifacts/Cook/20261109-dietary-readiness",
+  "cleanup": {
+    "removedDownloadedFunctionKiB": 34568,
+    "availableBytesBefore": 106021257216,
+    "availableBytesAfter": 106059358208,
+    "actualAvailableBytesChange": 38100992,
+    "note": "Read-only download removed after all five source hashes matched the retained Git commit; no deployment needed."
+  }
+}

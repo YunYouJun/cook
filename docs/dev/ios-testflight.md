@@ -13,7 +13,15 @@
 | 隐私清单     | `apps/ios/Cook/Resources/PrivacyInfo.xcprivacy`                           |
 | 正式反馈地址 | `https://api.yunle.fun/cook-feedback`                                     |
 
+## 2026-11-09 关闭前复核
+
+生产 `cook-ai-intent` 的 5 个源文件已下载并核对与 main `b425e923` 逐字节一致，支持 `353bc8dab0ea` 以及 `faf919fc0041`、`1878cc5772dc` 两个保留版本；早间记录的生产契约阻塞已解除，本轮无需重复部署。构建 14 的原 IPA 重新通过共享验包，11 个内置内容文件逐字节一致，元数据仅重建时间戳不同。仍只有 `AWAITING_UPLOAD` 分析会话，没有已处理的构建 14；最新实际内测构建仍为 12。
+
+构建 7 的外部组仍开放且上限 30 人，外测配置继续绑定该构建；构建 14 改由 `scripts/testflight/internal-candidate.json` 单独记录，内部组为本页参数表中的既有组。当前未取得新上传授权，未修改 Apple 状态。内容批准、人工使用验收与关闭条件见[复核材料](https://github.com/YunYouJun/cook/blob/main/specs/dietary-goals/release-review.md)，[当前证据](./evidence/dietary-readiness-2026-11-09.json)优先于下方早间快照。
+
 ## 2026-11-09 饮食目标候选 14（未上传）
+
+本节保留当日早间准备候选时的状态；后续生产契约回查以本页“关闭前复核”为准。
 
 2026-11-09 只读回查 ASC：实际已处理最新构建仍是 `2.0.0 (12)`，Build ID `315742ed-3c67-48d3-907b-ed88dad320d4`，状态 `VALID / INTERNAL_ONLY / IN_BETA_TESTING`，外部 `NOT_APPLICABLE`，未过期。构建 13 仍只有 `AWAITING_UPLOAD` 分析会话 `330c89c1-715d-4a28-9161-4af5fa76a2c5`，文件为 `ASSET_SPI` 与 `ASSET_DESCRIPTION`；ASC 下一可用构建号复核为 14，因此本轮不复活或覆盖构建 13。
 
