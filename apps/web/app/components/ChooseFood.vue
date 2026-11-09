@@ -43,16 +43,16 @@ const tools = computed<StuffItem[]>(() => {
 /** 展开了「更多」的分组，记住用户的选择 */
 const expanded = useStorage<string[]>(`${namespace}:food-more-expanded`, [])
 
-/** 宽屏完整展示；窄屏保留用户的展开偏好和已选食材。 */
-function visibleItems(items: StuffItem[], category: string) {
-  if (props.desktop || expanded.value.includes(category))
-    return items
-  return items.filter(item => !item.more || selected.value.includes(item.name))
-}
-
-function hiddenCount(items: StuffItem[], category: string) {
-  return items.length - visibleItems(items, category).length
-}
+/** 常用食材先展示，已选项始终可见；保留用户主动展开的偏好。 */
+const visibleSections = computed(() => sections.value.map((section) => {
+  const isExpanded = expanded.value.includes(section.category)
+  const common = section.items.filter(item => !item.more).slice(0, props.desktop ? 12 : 6)
+  const commonNames = new Set(common.map(item => item.name))
+  const visible = isExpanded
+    ? section.items
+    : section.items.filter(item => commonNames.has(item.name) || selected.value.includes(item.name))
+  return { ...section, visible, isExpanded, hiddenCount: section.items.length - visible.length }
+}))
 
 function toggleMore(category: string) {
   expanded.value = expanded.value.includes(category)
@@ -87,44 +87,34 @@ function clickTool(item: StuffItem) {
     <IngredientInput
       :selected="selected"
       :parse="rStore.parseText"
-      placeholder="食材或一句话，如：土豆鸡蛋，不要辣"
+      placeholder="输入食材或一句话"
       @add="rStore.addStuff"
       @remove="rStore.toggleStuff"
       @apply="rStore.applyQuery"
     />
 
-    <ReviewedRecipeFilters
-      :goal-options="rStore.reviewedGoalOptions"
-      :scene-options="rStore.reviewedSceneOptions"
-      :selected-goal="rStore.dietaryGoal"
-      :selected-scene="rStore.discoveryScene"
-      :loading="rStore.isReviewingRecipes"
-      :loaded="rStore.hasLoadedReviewedRecipes"
-      :unavailable-message="rStore.reviewedCatalogError"
-      @select-goal="rStore.toggleDietaryGoal"
-      @select-scene="rStore.toggleDiscoveryScene"
-      @load="rStore.loadReviewedRecipes()"
-    />
-
     <div class="choose-food-categories">
-      <IngredientSection v-for="section in sections" :key="section.category" :title="section.title" :note="selectedNote(section.items)">
+      <IngredientSection v-for="section in visibleSections" :key="section.category" :title="section.title" :note="selectedNote(section.items)">
+        <template #actions>
+          <button
+            v-if="section.isExpanded || section.hiddenCount > 0"
+            type="button"
+            class="choose-food-more"
+            :aria-label="`${section.isExpanded ? '收起' : '展开全部'}${section.title}`"
+            :aria-expanded="section.isExpanded"
+            @click="toggleMore(section.category)"
+          >
+            {{ section.isExpanded ? '收起' : `全部 ${section.items.length}` }}
+            <ion-icon :icon="section.isExpanded ? ioniconsChevronUp : ioniconsChevronDown" aria-hidden="true" />
+          </button>
+        </template>
         <IngredientChip
-          v-for="item in visibleItems(section.items, section.category)"
+          v-for="item in section.visible"
           :key="item.name"
           :label="item.name"
           :emoji="item.emoji"
           :selected="selected.includes(item.name)"
           @click="toggleStuff(item, section.category, $event)"
-        />
-        <IngredientChip
-          v-if="!desktop && (expanded.includes(section.category) || hiddenCount(section.items, section.category) > 0)"
-          :label="expanded.includes(section.category) ? '收起' : `更多 ${hiddenCount(section.items, section.category)} 种`"
-          :icon="expanded.includes(section.category) ? 'i-ri-arrow-up-s-line' : 'i-ri-arrow-down-s-line'"
-          :selected="false"
-          :aria-pressed="undefined"
-          :aria-expanded="expanded.includes(section.category)"
-          class="choose-food-more"
-          @click="toggleMore(section.category)"
         />
       </IngredientSection>
     </div>
@@ -236,11 +226,33 @@ function clickTool(item: StuffItem) {
 
 <style scoped>
 .choose-food {
+  --ingredient-section-heading-margin: 8px 0 0;
+  --ingredient-section-heading-padding: 0 24px;
+  --ingredient-section-padding: 8px;
+  --ingredient-section-gap: 6px;
   padding-bottom: 24px;
 }
 .choose-food-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 6px;
   background: transparent;
   color: var(--ion-color-primary);
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+}
+.choose-food-more:focus-visible {
+  outline: 2px solid var(--ion-color-primary);
+  outline-offset: 2px;
+}
+.choose-food-more ion-icon {
+  width: 12px;
+  height: 12px;
 }
 .choose-food-pantry-value {
   max-width: 60vw;
@@ -254,14 +266,13 @@ function clickTool(item: StuffItem) {
   --ingredient-chip-padding: 5px 9px;
   --ingredient-chip-radius: 7px;
   --ingredient-chip-font-size: 14px;
-  --ingredient-section-heading-margin: 18px 0 0;
-  --ingredient-section-heading-padding: 0 2px 7px;
+  --ingredient-section-heading-margin: 8px 0 0;
+  --ingredient-section-heading-padding: 0 2px;
   --ingredient-section-heading-color: var(--ion-text-color);
   --ingredient-section-heading-weight: 600;
   --ingredient-section-gap: 6px;
   --ingredient-section-margin: 0;
   --ingredient-section-padding: 10px;
-  --ingredient-section-border: 1px solid var(--ion-color-step-150, rgba(0, 0, 0, 0.12));
   --ingredient-section-radius: 8px;
   padding: 0 16px 24px;
 }

@@ -85,6 +85,18 @@ watchDebounced(
         <ion-title>做菜</ion-title>
         <ion-buttons slot="end">
           <CookingStyleSwitch ref="styleSwitch" :desktop="desktop" :model-value="cookingStyle" @update:model-value="changeCookingStyle" />
+          <ReviewedRecipeFilters
+            :goal-options="rStore.reviewedGoalOptions"
+            :scene-options="rStore.reviewedSceneOptions"
+            :selected-goal="rStore.dietaryGoal"
+            :selected-scene="rStore.discoveryScene"
+            :loading="rStore.isReviewingRecipes"
+            :loaded="rStore.hasLoadedReviewedRecipes"
+            :unavailable-message="rStore.reviewedCatalogError"
+            @select-goal="rStore.toggleDietaryGoal"
+            @select-scene="rStore.toggleDiscoveryScene"
+            @load="rStore.loadReviewedRecipes()"
+          />
           <ion-button class="cooking-clear" :disabled="!hasSelection" @click="reset">
             清空
           </ion-button>

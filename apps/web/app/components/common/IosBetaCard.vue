@@ -14,15 +14,22 @@ const dismissed = useStorage(`${namespace}:ios-beta-banner-dismissed`, false, un
 </script>
 
 <template>
-  <aside v-if="!dismissible || !dismissed" class="ios-beta-card" :aria-label="`${iosAppName} iOS 内测`">
+  <aside v-if="dismissible && !dismissed" class="ios-beta-prompt" :aria-label="`${iosAppName} iOS 内测`">
+    <a class="ios-beta-prompt-link" :href="links.iosBetaGuide" target="_blank" rel="noopener noreferrer">
+      <img src="/brand/cook-app-icon.svg" alt="" width="28" height="28">
+      <span>{{ iosAppName }} iOS 内测</span>
+      <ion-icon :icon="ioniconsChevronForward" aria-hidden="true" />
+    </a>
+    <button class="ios-beta-prompt-close" type="button" aria-label="关闭 iOS 内测提示" @click="dismissed = true">
+      <ion-icon :icon="ioniconsCloseOutline" aria-hidden="true" />
+    </button>
+  </aside>
+  <aside v-else-if="!dismissible" class="ios-beta-card" :aria-label="`${iosAppName} iOS 内测`">
     <img class="ios-beta-icon" src="/brand/cook-app-icon.svg" alt="" width="44" height="44">
     <div class="ios-beta-copy">
       <h2>{{ iosAppName }} iOS 内测</h2>
       <p>iPhone / iPad · iOS 17+</p>
     </div>
-    <button v-if="dismissible" class="ios-beta-close" type="button" aria-label="关闭 iOS 内测提示" @click="dismissed = true">
-      <span aria-hidden="true">×</span>
-    </button>
     <div class="ios-beta-actions">
       <a class="ios-beta-join" :href="links.testflight" target="_blank" rel="noopener noreferrer">加入 TestFlight</a>
       <a class="ios-beta-guide" :href="links.iosBetaGuide" target="_blank" rel="noopener noreferrer">安装与反馈指南</a>
@@ -34,6 +41,49 @@ const dismissed = useStorage(`${namespace}:ios-beta-banner-dismissed`, false, un
 </template>
 
 <style scoped>
+.ios-beta-prompt {
+  display: flex;
+  align-items: center;
+  margin: 0 16px 4px;
+  border-bottom: 0.5px solid var(--ion-color-step-200, #d1d1d6);
+}
+.ios-beta-prompt-link {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 52px;
+  border: 0;
+  color: var(--ion-text-color-step-400, #636366);
+  font-size: 13px;
+  text-decoration: none;
+}
+.ios-beta-prompt-link img {
+  flex: none;
+  border-radius: 6px;
+}
+.ios-beta-prompt-link ion-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--ion-color-step-400, #aeaeb2);
+}
+.ios-beta-prompt-close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  color: var(--ion-text-color-step-400, #636366);
+  font-size: 18px;
+  cursor: pointer;
+}
+.ios-beta-prompt :focus-visible {
+  outline: 2px solid var(--ion-color-primary);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
 .ios-beta-card {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) auto;
@@ -63,18 +113,6 @@ const dismissed = useStorage(`${namespace}:ios-beta-banner-dismissed`, false, un
   font-size: 12px;
   line-height: 18px;
 }
-.ios-beta-close {
-  display: grid;
-  place-items: center;
-  align-self: start;
-  width: 44px;
-  height: 44px;
-  margin: -8px -8px 0 0;
-  border-radius: 50%;
-  color: var(--ion-text-color-step-400, #636366);
-  font-size: 26px;
-  cursor: pointer;
-}
 .ios-beta-actions {
   grid-column: 2 / -1;
   display: flex;
@@ -87,6 +125,7 @@ const dismissed = useStorage(`${namespace}:ios-beta-banner-dismissed`, false, un
   align-items: center;
   justify-content: center;
   min-height: 44px;
+  border: 0;
   color: var(--ion-color-primary);
   font-size: 14px;
   text-decoration: none;
@@ -101,7 +140,7 @@ const dismissed = useStorage(`${namespace}:ios-beta-banner-dismissed`, false, un
 .ios-beta-guide:hover {
   text-decoration: underline;
 }
-.ios-beta-close:hover {
+.ios-beta-prompt-close:hover {
   background: var(--cook-fill, #8882);
 }
 .ios-beta-card :focus-visible {

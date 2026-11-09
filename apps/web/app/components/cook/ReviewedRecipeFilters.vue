@@ -29,20 +29,57 @@ const enabledScenes = computed(() => props.sceneOptions.filter(option => option.
 const selectedGoal = computed(() => props.goalOptions.find(option => option.id === props.selectedGoal))
 const selectedScene = computed(() => props.sceneOptions.find(option => option.id === props.selectedScene))
 const hasOptions = computed(() => enabledGoals.value.length > 0 || enabledScenes.value.length > 0)
+const selectedCount = computed(() => Number(Boolean(props.selectedGoal)) + Number(Boolean(props.selectedScene)))
+
+function clearSelection() {
+  if (props.selectedGoal)
+    emit('selectGoal', props.selectedGoal)
+  if (props.selectedScene)
+    emit('selectScene', props.selectedScene)
+}
 </script>
 
 <template>
-  <div class="reviewed-filters">
-    <button type="button" class="reviewed-filters-toggle" :aria-expanded="expanded" @click="toggleExpanded">
-      饮食目标与找菜专题 <span aria-hidden="true">{{ expanded ? '−' : '＋' }}</span>
-    </button>
-    <div v-if="expanded" aria-live="polite">
+  <button
+    type="button"
+    class="reviewed-filters-toggle"
+    :aria-label="selectedCount ? `饮食与专题筛选，已选 ${selectedCount} 项` : '饮食与专题筛选'"
+    aria-haspopup="dialog"
+    :aria-expanded="expanded"
+    @click="toggleExpanded"
+  >
+    筛选 <span v-if="selectedCount" class="reviewed-filters-count" aria-hidden="true">{{ selectedCount }}</span>
+  </button>
+  <ion-modal
+    class="reviewed-filters-sheet"
+    :is-open="expanded"
+    :breakpoints="[0, 0.75, 1]"
+    :initial-breakpoint="0.75"
+    aria-label="饮食与专题筛选"
+    @did-dismiss="expanded = false"
+  >
+    <ion-header>
+      <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-button :disabled="!selectedCount" aria-label="清除饮食与专题筛选" @click="clearSelection">
+            清除
+          </ion-button>
+        </ion-buttons>
+        <ion-title>饮食与专题</ion-title>
+        <ion-buttons slot="end">
+          <ion-button :strong="true" @click="expanded = false">
+            完成
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="reviewed-filters-content">
       <p v-if="loading" class="reviewed-filters-status" role="status">
-        正在核对饮食目标与专题来源…
+        正在加载饮食与专题…
       </p>
       <p v-else-if="unavailableMessage" class="reviewed-filters-status" role="status">
         {{ unavailableMessage }}
-        <button type="button" @click="emit('load')">
+        <button type="button" class="reviewed-filters-retry" @click="emit('load')">
           重试加载
         </button>
       </p>
@@ -74,36 +111,56 @@ const hasOptions = computed(() => enabledGoals.value.length > 0 || enabledScenes
           </p>
         </div>
         <p v-else class="reviewed-filters-hint">
-          只展示审核记录仍与当前做法一致的菜谱；可与食材、厨具、忌口和做法继续取交集。
+          按饮食习惯或带饭场景找菜，还能继续选择食材、厨具和忌口。
         </p>
       </template>
       <p v-else class="reviewed-filters-status" role="status">
         已审核筛选暂不可用，普通找菜仍可继续。
       </p>
-    </div>
-  </div>
+    </ion-content>
+  </ion-modal>
 </template>
 
 <style scoped>
 .reviewed-filters-toggle {
-  display: flex;
-  justify-content: space-between;
+  display: inline-flex;
+  justify-content: center;
   align-items: center;
-  width: calc(100% - 32px);
+  gap: 4px;
+  min-width: 44px;
   min-height: 44px;
-  margin: 12px 16px 0;
-  padding: 10px 12px;
+  padding: 0 8px;
   border: 0;
   border-radius: 8px;
-  background: var(--ion-item-background, #fff);
-  color: var(--ion-text-color, #000);
+  background: transparent;
+  color: var(--ion-color-primary);
   font: inherit;
-  text-align: start;
+  font-size: 17px;
   cursor: pointer;
+}
+.reviewed-filters-count {
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+  font-size: 11px;
+  font-weight: 600;
+}
+.reviewed-filters-content {
+  --padding-bottom: calc(20px + env(safe-area-inset-bottom));
 }
 .reviewed-filters-toggle:focus-visible {
   outline: 2px solid var(--ion-color-primary);
-  outline-offset: 2px;
+  outline-offset: -2px;
+}
+.reviewed-filters-retry {
+  display: block;
+  min-height: 44px;
+  color: var(--ion-color-primary);
 }
 .reviewed-filters-status,
 .reviewed-filters-hint {
