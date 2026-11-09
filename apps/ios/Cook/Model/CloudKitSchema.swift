@@ -13,7 +13,8 @@
         /// 模型结构变了就加一，开发版下次启动会重新建一次
         // 版本 2 新增 FridgeItem，版本 3 新增 PrivateRecipeRecord。
         // 已初始化旧版本的开发设备需要重新建结构。
-        static let version = 3
+        // 版本 4 为 FridgeItem 添加日期依据、生产日期与储存建议（均可选）。
+        static let version = 4
         /// 成功后记下 version。要强制重建（比如在 Console 里 Reset 了 Development），启动参数加 `-cloudkit.schemaInitialized 0`
         static let doneKey = "cloudkit.schemaInitialized"
         /// UI 测试在真机上跑时设置这个环境变量，跳过初始化
