@@ -44,6 +44,8 @@
 
 Web 与原生应用独立发布；iOS 目前仍为测试版，尚未在 App Store 正式上架。
 
+两端的定位、功能边界与后续方向见 [Web 与 iOS 的定位](./docs/guide/web-and-ios.md)。
+
 ## 开发
 
 **开发文档**：<https://cook.yunle.fun/>
