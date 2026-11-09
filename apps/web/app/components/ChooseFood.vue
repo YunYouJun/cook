@@ -119,10 +119,12 @@ function clickTool(item: StuffItem) {
       </IngredientSection>
     </div>
 
-    <ion-button fill="clear" router-link="/catalog">
-      管理食材和厨具
-    </ion-button>
-    <IngredientSection title="厨具（可选）" :note="rStore.curTool ? '只看用它做的菜' : ''">
+    <IngredientSection title="厨具（可选）" :note="rStore.curTool ? '已选' : ''">
+      <template #actions>
+        <NuxtLink class="choose-food-manage" to="/catalog">
+          管理食材和厨具
+        </NuxtLink>
+      </template>
       <IngredientChip
         v-for="item in tools"
         :key="item.name"
@@ -233,6 +235,7 @@ function clickTool(item: StuffItem) {
   --ingredient-chip-gap: 4px;
   --ingredient-chip-surface-inset: 4px;
   --ingredient-section-heading-margin: 8px 0 0;
+  --ingredient-section-heading-min-height: 44px;
   --ingredient-section-heading-padding: 0 24px;
   --ingredient-section-padding: 8px;
   --ingredient-section-gap: 4px;
@@ -259,6 +262,25 @@ function clickTool(item: StuffItem) {
 .choose-food-more ion-icon {
   width: 12px;
   height: 12px;
+}
+.choose-food-manage {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--ion-color-primary);
+  font-size: 13px;
+  font-weight: 400;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.choose-food-manage:hover {
+  text-decoration: underline;
+}
+.choose-food-manage:focus-visible {
+  outline: 2px solid var(--ion-color-primary);
+  outline-offset: 2px;
 }
 .choose-food-pantry-value {
   max-width: 60vw;
@@ -290,13 +312,6 @@ function clickTool(item: StuffItem) {
 .choose-food-desktop .choose-food-pantry-value {
   max-width: 60%;
   font-size: 14px;
-}
-.choose-food-desktop > ion-button {
-  --padding-start: 0;
-  --padding-end: 0;
-  margin: 6px 0 0;
-  min-height: 30px;
-  font-size: 13px;
 }
 .choose-food-desktop > .cook-group-header {
   margin-top: 18px;

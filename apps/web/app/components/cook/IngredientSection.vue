@@ -29,6 +29,7 @@ defineProps<{
   display: flex;
   justify-content: space-between;
   align-items: center;
+  min-height: var(--ingredient-section-heading-min-height, 0px);
   margin: var(--ingredient-section-heading-margin, 24px 0 0);
   padding: var(--ingredient-section-heading-padding, 0 36px 6px);
   color: var(--ingredient-section-heading-color, var(--ion-text-color-step-400, #6d6d72));
