@@ -101,6 +101,8 @@ watchDebounced(
         </ion-toolbar>
       </ion-header>
 
+      <IosBetaCard dismissible />
+
       <p v-if="!canPersist" class="style-storage-note" role="status">
         浏览器暂时无法保存样式偏好，本次仍可切换使用。
       </p>
