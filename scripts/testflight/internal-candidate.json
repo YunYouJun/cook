@@ -1,0 +1,19 @@
+{
+  "appId": "6824589542",
+  "groupId": "a2962c09-0f3d-4180-abef-030cf8920279",
+  "version": "2.0.0",
+  "buildNumber": "14",
+  "buildId": null,
+  "sourceCommit": "1b4560429eba5921db08296aa983479d826be187",
+  "ipaSha256": "fe7aed5916dd899eaf187773376625c0fdb3a8adbda054dc218f1d7fe90c0dfa",
+  "reviewReady": true,
+  "distributionReady": false,
+  "uploaded": false,
+  "distributionBlockers": [
+    "human VoiceOver, airplane-mode and physical cold-launch acceptance are incomplete",
+    "maintainer content approval is incomplete",
+    "explicit internal upload authorization and server verification are pending"
+  ],
+  "distributionChannel": "internal",
+  "productionContractReady": true
+}

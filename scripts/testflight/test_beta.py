@@ -35,6 +35,18 @@ class BetaTests(unittest.TestCase):
     def controller(self):
         return beta.Controller(self.c, self.directory, {})
 
+    def test_internal_and_unready_candidates_never_reach_apple(self):
+        internal = beta.read(Path(__file__).with_name('internal-candidate.json'))
+        unready = {**self.c, 'distributionReady': False}
+        unknown = {**self.c, 'distributionChannel': 'unknown'}
+        for candidate in (internal, unready, unknown):
+            with self.subTest(channel=candidate.get('distributionChannel')):
+                with patch.object(beta.Controller, 'asc') as apple:
+                    with self.assertRaises(ValueError):
+                        beta.Controller(candidate, self.directory, {}).reconcile(True)
+                    apple.assert_not_called()
+                self.assertFalse((self.directory / 'invitation.json').exists())
+
     def test_all_gate_inputs_required(self):
         self.assertEqual(beta.gate(self.c, self.s, self.e), [])
         cases = [({}, 'acceptance.buildId')]
