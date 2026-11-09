@@ -182,10 +182,19 @@ final class FridgeIntakeTests: XCTestCase {
                 withAttributes: [.font: UIFont.systemFont(ofSize: 64), .foregroundColor: UIColor.black]
             )
         }
-        let result = try await FridgePhotoRecognition.recognize(XCTUnwrap(image.pngData()), knownNames: [])
-        XCTAssertEqual(result.productionDay, day(10, 1))
-        XCTAssertEqual(result.expiryDay, day(10, 31), result.text)
-        XCTAssertEqual(result.basis, .package)
+        // 识别结果是设备时区的当地零点；UTC runner 和上海均须比较对应的完整日期。
+        let previousTimeZone = NSTimeZone.default
+        defer { NSTimeZone.default = previousTimeZone }
+        for zone in [TimeZone(secondsFromGMT: 0)!, calendar.timeZone] {
+            NSTimeZone.default = zone
+            var local = Calendar(identifier: .gregorian)
+            local.timeZone = zone
+            let result = try await FridgePhotoRecognition.recognize(XCTUnwrap(image.pngData()), knownNames: [])
+            XCTAssertEqual(result.productionDay, local.date(from: DateComponents(year: 2026, month: 10, day: 1)), zone.identifier)
+            XCTAssertEqual(
+                result.expiryDay, local.date(from: DateComponents(year: 2026, month: 10, day: 31)), "\(zone.identifier): \(result.text)")
+            XCTAssertEqual(result.basis, .package)
+        }
     }
 
     @MainActor
@@ -197,11 +206,20 @@ final class FridgeIntakeTests: XCTestCase {
                 in: CGRect(x: 60, y: 60, width: 1280, height: 530),
                 withAttributes: [.font: UIFont.systemFont(ofSize: 64), .foregroundColor: UIColor.black])
         }
-        let result = try await FridgePhotoRecognition.recognize(XCTUnwrap(image.pngData()), knownNames: ["牛奶"])
-        XCTAssertEqual(result.names, ["牛奶"])
-        XCTAssertEqual(result.productionDay, day(10, 1), result.text)
-        XCTAssertEqual(result.expiryDay, day(10, 31), result.text)
-        XCTAssertEqual(result.basis, .calculated)
+        let previousTimeZone = NSTimeZone.default
+        defer { NSTimeZone.default = previousTimeZone }
+        for zone in [TimeZone(secondsFromGMT: 0)!, calendar.timeZone] {
+            NSTimeZone.default = zone
+            var local = Calendar(identifier: .gregorian)
+            local.timeZone = zone
+            let result = try await FridgePhotoRecognition.recognize(XCTUnwrap(image.pngData()), knownNames: ["牛奶"])
+            XCTAssertEqual(result.names, ["牛奶"])
+            XCTAssertEqual(
+                result.productionDay, local.date(from: DateComponents(year: 2026, month: 10, day: 1)), "\(zone.identifier): \(result.text)")
+            XCTAssertEqual(
+                result.expiryDay, local.date(from: DateComponents(year: 2026, month: 10, day: 31)), "\(zone.identifier): \(result.text)")
+            XCTAssertEqual(result.basis, .calculated)
+        }
     }
 
     func testUnreadableImageFailsWithoutReturningGuessedDates() async {
