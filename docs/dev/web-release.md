@@ -30,3 +30,11 @@
 - 记录最终 PR、合并 SHA、CI、EdgeOne 构建信息、Release 附件哈希与 Docker digest。
 - 记录 iOS 公开邀请的可访问状态；测试名额可能随时变化，不在首页写实时剩余人数。
 - 保留用户数据导出／导入与旧版入口，继续跟进 Android、视频来源维护及更完整的营养数据。
+
+## 现存依赖告警
+
+2026-11-09 准备时，GitHub Dependabot 在默认分支报告 125 条未关闭告警：critical 6、high 52、medium 49、low 18。告警数量为检查时的快照，正式标签前应重新核对并记录处理结果。
+
+6 条 critical 涉及锁文件内的 `simple-git@3.36.0`、`@simple-git/argv-parser@1.1.1`、`shell-quote@1.10.0` 与 `tinypool@2.1.0`；其中 `simple-git` 同时有 manifest 与 lockfile 告警。它们涉及 Git 元数据读取及构建／测试工具，当前 Web 为纯静态输出，不运行 Node 服务。这一判断不代表其他告警已排除浏览器影响，也不代表构建链风险已修复。
+
+本次入口与版本准备不升级整套依赖。正式发布前需单独完成依赖告警分流与必要修复，验证升级后的 lint、类型、构建及回归，不能把本 PR 的功能验证当作依赖安全验收。详见[仓库依赖告警](https://github.com/YunYouJun/cook/security/dependabot)。
