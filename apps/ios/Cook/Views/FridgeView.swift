@@ -13,9 +13,14 @@ struct FridgeView: View {
     @AppStorage(FridgeReminder.enabledKey) private var remindersEnabled = false
     @AppStorage(FridgeReminder.promptDismissedKey) private var promptDismissed = false
     @State private var path = NavigationPath()
-    @State private var adding = false
+    @State private var adding: AddRoute?
     @State private var editing: FridgeItem?
     @State private var now = Date()
+
+    private enum AddRoute: String, Identifiable {
+        case manual, photo
+        var id: String { rawValue }
+    }
 
     var body: some View {
         let groups = Dictionary(grouping: items) { item -> Int in
@@ -35,8 +40,9 @@ struct FridgeView: View {
                     } description: {
                         Text("把买回来的食材记在这里，快过期时提醒你，还能直接看看用它们能做什么。")
                     } actions: {
-                        Button("放点食材") { adding = true }
+                        Button("放点食材") { adding = .manual }
                             .buttonStyle(.borderedProminent)
+                        Button("拍照识别", systemImage: "camera") { adding = .photo }
                     }
                 } else {
                     List {
@@ -48,18 +54,18 @@ struct FridgeView: View {
                                 rows(soon, now: now)
                             } header: {
                                 HStack {
-                                    Text("快过期")
+                                    Text("优先食用")
                                     Spacer()
                                     Button("只用这几样做菜") { cook(soon) }
                                         .font(.footnote)
                                         .textCase(nil)
                                 }
                             } footer: {
-                                Text("今天到后天到期的，先用掉。")
+                                Text("记录日期在今天到后天之间，先安排食用。")
                             }
                         }
                         if !fresh.isEmpty {
-                            Section("还新鲜") {
+                            Section("稍后食用") {
                                 rows(fresh, now: now)
                             }
                         }
@@ -67,9 +73,9 @@ struct FridgeView: View {
                             Section {
                                 rows(expired, now: now)
                             } header: {
-                                Text("已过期")
+                                Text("已过记录日期")
                             } footer: {
-                                Text("闻一闻、看一看再决定，不确定就别吃了。左滑可以移出冰箱。")
+                                Text("请核对包装及储存情况；外观和气味不能保证食用安全。左滑可以移出冰箱。")
                             }
                         }
                         Section {
@@ -77,14 +83,14 @@ struct FridgeView: View {
                         } header: {
                             Text("临期提醒")
                         } footer: {
-                            Text("到期日按常见的冷藏保存时间估算，点开食材可以改。提醒只在这台设备上排，不经过服务器。")
+                            Text("食用建议与包装日期会分别标明，点开食材可以修改。提醒只在这台设备上排，不经过服务器。")
                         }
                     }
                     .bottomActionBar {
                         Button {
                             cook(usable)
                         } label: {
-                            Text(usable.isEmpty ? "都过期了，先清理一下" : "用冰箱里的做菜（\(uniqueStrings(usable.map(\.name)).count) 样）")
+                            Text(usable.isEmpty ? "先核对冰箱里的食材" : "用冰箱里的做菜（\(uniqueStrings(usable.map(\.name)).count) 样）")
                                 .font(.headline)
                                 .frame(maxWidth: .infinity)
                         }
@@ -96,9 +102,12 @@ struct FridgeView: View {
             }
             .navigationTitle("冰箱")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button { adding = .photo } label: {
+                        Label("拍照识别", systemImage: "camera")
+                    }
                     Button {
-                        adding = true
+                        adding = .manual
                     } label: {
                         Label("放进冰箱", systemImage: "plus")
                     }
@@ -108,8 +117,11 @@ struct FridgeView: View {
                 ResultsView()
             }
             .recipeDestinations()
-            .sheet(isPresented: $adding) {
-                AddFridgeSheet()
+            .sheet(item: $adding) { route in
+                switch route {
+                case .manual: AddFridgeSheet()
+                case .photo: FridgePhotoSheet()
+                }
             }
             .sheet(item: $editing) { item in
                 FridgeItemSheet(item: item)
@@ -121,7 +133,7 @@ struct FridgeView: View {
         // 点开临期通知：不管之前点进了哪里，都回到冰箱首页看临期列表
         .onChange(of: router.fridgeHomeRequests) {
             path = NavigationPath()
-            adding = false
+            adding = nil
             editing = nil
         }
     }
@@ -173,9 +185,12 @@ private struct FridgeRow: View {
                 Text("\(item.addedAt.formatted(.dateTime.month().day()))放入")
                     .font(.caption)
                     .foregroundStyle(Color.secondary)
+                Text(item.expiryBasis.title)
+                    .font(.caption2)
+                    .foregroundStyle(Color.secondary)
             }
             Spacer()
-            Text(freshness.label)
+            Text(freshness.label(isSuggested: item.expiryBasis.isSuggested))
                 .font(.subheadline)
                 .monospacedDigit()
                 .foregroundStyle(tint)
@@ -208,7 +223,7 @@ private struct ReminderPrompt: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("开启临期提醒")
                         .font(.headline)
-                    Text("食材到期前一天和当天各提醒一次，同一天的合成一条。")
+                    Text("在记录日期前一天和当天各提醒一次，同一天的合成一条。")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     Button("开启") {
@@ -347,8 +362,27 @@ struct AddFridgeSheet: View {
                     }
                 }
                 section("蔬菜", store.food.vegetable)
+                ChipSection(title: "水果") {
+                    ForEach(ProduceStorageAdvice.fruitNames, id: \.self) { name in
+                        Chip(title: name, isSelected: selected.contains(name)) {
+                            toggle(name)
+                        }
+                    }
+                }
                 section("肉和蛋", store.food.meat)
                 section("主食", store.food.staple)
+                if !selected.isEmpty {
+                    Section {
+                        ForEach(selected, id: \.self) { name in
+                            let days = ProduceStorageAdvice.recommendation(for: name)?.days ?? store.data.shelfLife.days(for: name)
+                            LabeledContent(name, value: "建议 \(days) 天内吃完")
+                        }
+                    } header: {
+                        Text("食用时间建议")
+                    } footer: {
+                        Text("从今天购买起算，已核对的蔬果按完整冷藏建议安排，其他条目为通用估算。包装食品以包装说明为准。拍照录入可调整购买日期和切开状态。")
+                    }
+                }
             }
             .navigationTitle("放进冰箱")
             .navigationBarTitleDisplayMode(.inline)
@@ -366,7 +400,7 @@ struct AddFridgeSheet: View {
     }
 
     private var extras: [String] {
-        selected.filter { !store.isCatalogStuff($0) }
+        selected.filter { !store.isCatalogStuff($0) && !ProduceStorageAdvice.fruitNames.contains($0) }
     }
 
     private func section(_ title: String, _ list: [StuffItem]) -> some View {
@@ -375,7 +409,7 @@ struct AddFridgeSheet: View {
                 Chip(title: item.name, emoji: item.emoji, isSelected: selected.contains(item.name)) {
                     toggle(item.name)
                 }
-                .accessibilityHint("冷藏约 \(store.data.shelfLife.days(for: item.name)) 天")
+                .accessibilityHint("建议 \(ProduceStorageAdvice.recommendation(for: item.name)?.days ?? store.data.shelfLife.days(for: item.name)) 天内吃完")
             }
         }
     }
@@ -398,8 +432,11 @@ struct AddFridgeSheet: View {
     private func save() {
         let now = Date()
         for name in selected {
-            context.addToFridge(name, days: store.data.shelfLife.days(for: name), at: now)
+            let advice = ProduceStorageAdvice.recommendation(for: name)
+            let item = context.addToFridge(name, days: advice?.days ?? store.data.shelfLife.days(for: name), at: now)
+            item.storageAdvice = advice?.condition
         }
+        try? context.save()
         dismiss()
     }
 }
@@ -411,16 +448,23 @@ private struct FridgeItemSheet: View {
     @Environment(\.dismiss) private var dismiss
     let item: FridgeItem
     @State private var expiresAt = Date()
+    @State private var basis = FridgeExpiryBasis.estimated
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
                     LabeledContent("放入日期", value: item.addedAt.formatted(.dateTime.year().month().day()))
-                    DatePicker("到期日", selection: $expiresAt, displayedComponents: .date)
-                    LabeledContent("状态", value: Freshness(expiresAt: expiresAt).label)
+                    if let production = item.productionDate {
+                        LabeledContent("生产日期", value: FridgeDay.local(production).formatted(date: .numeric, time: .omitted))
+                    }
+                    Picker("日期依据", selection: $basis) {
+                        ForEach(FridgeExpiryBasis.allCases) { Text($0.title).tag($0) }
+                    }
+                    DatePicker(basis.isSuggested ? "建议吃完日期" : "到期日", selection: $expiresAt, displayedComponents: .date)
+                    LabeledContent("状态", value: Freshness(expiresAt: expiresAt).label(isSuggested: basis.isSuggested))
                 } footer: {
-                    Text("默认按冷藏约 \(store.data.shelfLife.days(for: item.name)) 天估算，以包装上的日期和实际情况为准。")
+                    Text(item.storageAdvice ?? "食用日期仅供安排食用，请核对包装日期和储存条件。")
                 }
                 Section {
                     Button("吃完了，移出冰箱", role: .destructive) {
@@ -437,12 +481,19 @@ private struct FridgeItemSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("完成") {
+                        let changedDate = expiresAt != item.expiryDay()
+                        let editedBasis = changedDate && (basis == .estimated || basis == .calculated) ? .manual : basis
+                        if changedDate || editedBasis != item.expiryBasis { item.storageAdvice = nil }
+                        item.expiryBasisRaw = editedBasis.rawValue
                         context.setExpiry(item, to: expiresAt)
                         dismiss()
                     }
                 }
             }
-            .onAppear { expiresAt = item.expiryDay() }
+            .onAppear {
+                expiresAt = item.expiryDay()
+                basis = item.expiryBasis
+            }
         }
     }
 }

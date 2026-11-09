@@ -29,3 +29,4 @@
 | [0015](./0015-product-site-domains)                    | 官网与网页版域名分工                 | 已采纳 |
 | [0016](./0016-native-android-and-capacitor-retirement) | 原生 Android 与 Capacitor 外壳退役   | 已采纳 |
 | [0017](./0017-offline-video-checks)                    | 离线视频校验与按需复核               | 已采纳 |
+| [0018](./0018-fridge-photo-intake)                     | 冰箱拍照录入与食用时间建议           | 已实施 |
