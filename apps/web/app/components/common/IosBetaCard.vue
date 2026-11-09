@@ -18,7 +18,7 @@ const dismissed = useStorage(`${namespace}:ios-beta-banner-dismissed`, false, un
     <img class="ios-beta-icon" src="/brand/cook-app-icon.svg" alt="" width="44" height="44">
     <div class="ios-beta-copy">
       <h2>{{ iosAppName }} iOS 内测</h2>
-      <p>iPhone / iPad · iOS 17 及以上</p>
+      <p>iPhone / iPad · iOS 17+</p>
     </div>
     <button v-if="dismissible" class="ios-beta-close" type="button" aria-label="关闭 iOS 内测提示" @click="dismissed = true">
       <span aria-hidden="true">×</span>
