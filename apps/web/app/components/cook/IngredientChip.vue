@@ -22,13 +22,15 @@ defineProps<{
 
 <style scoped>
 .ingredient-chip {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--ingredient-chip-gap, 5px);
   min-height: var(--ingredient-chip-height, 44px);
   padding: var(--ingredient-chip-padding, 8px 12px);
   border-radius: var(--ingredient-chip-radius, 17px);
-  background: var(--cook-fill);
+  background: transparent;
   color: var(--ion-text-color, #000);
   font-size: var(--ingredient-chip-font-size, 15px);
   line-height: 1.4;
@@ -39,18 +41,26 @@ defineProps<{
   -webkit-user-select: none;
   user-select: none;
 }
+.ingredient-chip::before {
+  position: absolute;
+  z-index: -1;
+  inset: var(--ingredient-chip-surface-inset, 0px) 0;
+  border-radius: inherit;
+  background: var(--ingredient-chip-fill, var(--cook-fill));
+  content: '';
+}
 .ingredient-chip:active {
   transform: scale(0.94);
 }
 .ingredient-chip[aria-pressed='true'] {
-  background: var(--ion-color-primary);
+  --ingredient-chip-fill: var(--ion-color-primary);
   color: var(--ion-color-primary-contrast);
   font-weight: 500;
   animation: ingredient-chip-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .ingredient-chip-mark {
   display: inline-flex;
-  font-size: 15px;
+  font-size: var(--ingredient-chip-mark-size, 15px);
 }
 .ingredient-chip-icon {
   flex: none;

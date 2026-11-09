@@ -226,10 +226,16 @@ function clickTool(item: StuffItem) {
 
 <style scoped>
 .choose-food {
+  --ingredient-chip-font-size: 14px;
+  --ingredient-chip-mark-size: 14px;
+  --ingredient-chip-padding: 4px 10px;
+  --ingredient-chip-radius: 14px;
+  --ingredient-chip-gap: 4px;
+  --ingredient-chip-surface-inset: 4px;
   --ingredient-section-heading-margin: 8px 0 0;
   --ingredient-section-heading-padding: 0 24px;
   --ingredient-section-padding: 8px;
-  --ingredient-section-gap: 6px;
+  --ingredient-section-gap: 4px;
   padding-bottom: 24px;
 }
 .choose-food-more {
@@ -262,10 +268,12 @@ function clickTool(item: StuffItem) {
   font-size: 17px;
 }
 .choose-food-desktop {
-  --ingredient-chip-height: 32px;
-  --ingredient-chip-padding: 5px 9px;
-  --ingredient-chip-radius: 7px;
-  --ingredient-chip-font-size: 14px;
+  --ingredient-chip-height: 28px;
+  --ingredient-chip-padding: 3px 8px;
+  --ingredient-chip-radius: 6px;
+  --ingredient-chip-font-size: 13px;
+  --ingredient-chip-mark-size: 13px;
+  --ingredient-chip-surface-inset: 0px;
   --ingredient-section-heading-margin: 8px 0 0;
   --ingredient-section-heading-padding: 0 2px;
   --ingredient-section-heading-color: var(--ion-text-color);
@@ -327,7 +335,7 @@ function clickTool(item: StuffItem) {
   font-size: 13px;
 }
 .choose-food-desktop :deep(.ingredient-chip:hover:not([aria-pressed='true'])) {
-  background: var(--ion-color-step-200, rgba(118, 118, 128, 0.2));
+  --ingredient-chip-fill: var(--ion-color-step-200, rgba(118, 118, 128, 0.2));
 }
 .choose-food-pantry-actions {
   display: flex;
@@ -349,6 +357,12 @@ function clickTool(item: StuffItem) {
 }
 .choose-food-pantry-note {
   margin-top: 10px;
+}
+@media (pointer: coarse) {
+  .choose-food-desktop {
+    --ingredient-chip-height: 44px;
+    --ingredient-chip-surface-inset: 6px;
+  }
 }
 @media (min-width: 1280px) {
   .choose-food-desktop .choose-food-categories {
