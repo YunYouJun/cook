@@ -105,5 +105,6 @@
     "availableBytesAfter": 106059358208,
     "actualAvailableBytesChange": 38100992,
     "note": "Read-only download removed after all five source hashes matched the retained Git commit; no deployment needed."
-  }
+  },
+  "reviewedTextSourceCommit": "0e106eea348c734fe1586f781202994439cf98a5"
 }

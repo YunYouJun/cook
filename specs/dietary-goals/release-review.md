@@ -20,46 +20,46 @@
 
 ## 当前 36 道内容复核索引
 
-下表直接来自当前 `recipe-dietary.json`；通过／失败／未知针对各目标分别记录。油量为制作整份原方时额外加入的烹调油，未换算总脂肪、能量或人体吸收量。完整原料、未知复合配料、原文定位及复核日期见[审核数据](../../packages/data/recipe-dietary.json)，份量用油依据见[审核说明](./audit.md)，便当冷藏运输与复热条件见[指南](../../docs/guide/next-day-lunch.md)。
+下表直接来自当前 `recipe-dietary.json`，原方链接固定到内置正文的 HowToCook 提交 `0e106eea348c734fe1586f781202994439cf98a5`；通过／失败／未知针对各目标分别记录。油量为制作整份原方时额外加入的烹调油，未换算总脂肪、能量或人体吸收量。完整原料、未知复合配料、原文定位及复核日期见[审核数据](../../packages/data/recipe-dietary.json)，份量用油依据见[审核说明](./audit.md)，便当冷藏运输与复热条件见[指南](../../docs/guide/next-day-lunch.md)。
 
-| ID  | 原方                                                                                                                                | 控制体重 | 减少添加糖 | 均衡搭配 | 原方人数／整份额外用油 |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------- | -------- | ---------------------- |
-| 333 | [西葫芦炒蛋](https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/西葫芦炒鸡蛋/西葫芦炒鸡蛋.md)                | 通过     | 通过       | 通过     | 2 人／10–20ml          |
-| 489 | [罗宋汤](https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/罗宋汤.md)                                                 | 未知     | 未知       | 通过     | 未审核                 |
-| 567 | [洋葱炒鸡蛋](https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/洋葱炒鸡蛋/洋葱炒鸡蛋.md)                    | 未知     | 未知       | 通过     | 未审核                 |
-| 630 | [菠菜炒鸡蛋](https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/菠菜炒鸡蛋/菠菜炒鸡蛋.md)                    | 通过     | 通过       | 通过     | 1 人／15ml             |
-| 670 | [印度土豆花菜](https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/印度土豆花菜.md)                           | 未知     | 未知       | 通过     | 未审核                 |
-| 677 | [清炒花菜](https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/清炒花菜.md)                                   | 通过     | 通过       | 通过     | 2 人／15ml             |
-| 689 | [蒜蓉炒芹菜](https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/蒜蓉炒芹菜/蒜蓉炒芹菜.md)                    | 未知     | 通过       | 通过     | 未审核                 |
-| 693 | [金针菇日本豆腐煲](https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/金针菇日本豆腐煲.md)                   | 未知     | 失败       | 通过     | 未审核                 |
-| 696 | [韭菜炒蛋](https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/韭菜炒蛋/韭菜炒蛋.md)                          | 未知     | 通过       | 通过     | 未审核                 |
-| 701 | [冬瓜桑拿鸡](https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/冬瓜桑拿鸡.md)                                    | 通过     | 未知       | 通过     | 2 人／10ml             |
-| 702 | [冬瓜酿肉](https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/冬瓜酿肉/冬瓜酿肉.md)                               | 未知     | 未知       | 通过     | 未审核                 |
-| 731 | [澳门湿版免治牛肉饭](https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/澳门湿版免治牛肉饭/澳门湿版免治牛肉饭.md) | 未知     | 失败       | 通过     | 未审核                 |
-| 736 | [瘦肉土豆片](https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/瘦肉土豆片/瘦肉土豆片.md)                         | 通过     | 未知       | 通过     | 1 人／10–15ml          |
-| 748 | [肉饼炖蛋](https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/肉饼炖蛋.md)                                        | 未知     | 未知       | 通过     | 未审核                 |
-| 756 | [蒜苔炒肉末](https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/蒜苔炒肉末.md)                                    | 通过     | 未知       | 通过     | 1 人／10ml             |
-| 777 | [黄瓜炒肉](https://github.com/Anduin2017/HowToCook/blob/master/dishes/meat_dish/黄瓜炒肉.md)                                        | 未知     | 未知       | 通过     | 未审核                 |
-| 788 | [葱油桂鱼](https://github.com/Anduin2017/HowToCook/blob/master/dishes/aquatic/葱油桂鱼/葱油桂鱼.md)                                 | 未知     | 未知       | 通过     | 未审核                 |
-| 789 | [蒜蓉虾](https://github.com/Anduin2017/HowToCook/blob/master/dishes/aquatic/蒜蓉虾/蒜蓉虾.md)                                       | 未知     | 未知       | 通过     | 未审核                 |
-| 798 | [山药南瓜炖鸡汤](https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/山药南瓜炖鸡汤.md)                                 | 通过     | 未知       | 通过     | 2 人／0g               |
-| 799 | [排骨山药玉米汤](https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/排骨山药玉米汤/排骨山药玉米汤.md)                  | 通过     | 未知       | 通过     | 2 人／10ml             |
-| 800 | [排骨苦瓜汤](https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/排骨苦瓜汤/排骨苦瓜汤.md)                              | 通过     | 通过       | 通过     | 4 人／0g               |
-| 805 | [紫菜蛋花汤](https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/紫菜蛋花汤.md)                                         | 未知     | 通过       | 通过     | 未审核                 |
-| 809 | [黄瓜皮蛋汤](https://github.com/Anduin2017/HowToCook/blob/master/dishes/soup/黄瓜皮蛋汤.md)                                         | 未知     | 未知       | 通过     | 未审核                 |
-| 814 | [意式肉酱面](https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/意式肉酱面/意式肉酱面.md)                            | 通过     | 未知       | 通过     | 2 人／10–15ml          |
-| 829 | [电饭煲三文鱼炊饭](https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/电饭煲三文鱼炊饭/电饭煲三文鱼炊饭.md)          | 未知     | 通过       | 通过     | 未审核                 |
-| 840 | [韭菜盒子](https://github.com/Anduin2017/HowToCook/blob/master/dishes/staple/韭菜盒子.md)                                           | 未知     | 未知       | 通过     | 未审核                 |
-| 844 | [太阳蛋](https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/太阳蛋.md)                                            | 未知     | 通过       | 通过     | 未审核                 |
-| 846 | [微波炉荷包蛋](https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/微波炉荷包蛋.md)                                | 未知     | 通过       | 通过     | 未审核                 |
-| 849 | [水煮玉米](https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/水煮玉米.md)                                        | 未知     | 失败       | 通过     | 未审核                 |
-| 850 | [溏心蛋](https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/溏心蛋.md)                                            | 未知     | 通过       | 通过     | 未审核                 |
-| 851 | [燕麦鸡蛋饼](https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/燕麦鸡蛋饼.md)                                    | 未知     | 通过       | 通过     | 未审核                 |
-| 852 | [空气炸锅面包片](https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/空气炸锅面包片.md)                            | 未知     | 未知       | 通过     | 未审核                 |
-| 853 | [美式炒蛋](https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/美式炒蛋.md)                                        | 未知     | 未知       | 通过     | 未审核                 |
-| 854 | [蒸水蛋](https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/蒸水蛋.md)                                            | 未知     | 未知       | 通过     | 未审核                 |
-| 857 | [鸡蛋三明治](https://github.com/Anduin2017/HowToCook/blob/master/dishes/breakfast/鸡蛋三明治.md)                                    | 未知     | 未知       | 通过     | 未审核                 |
-| 861 | [素炒豆角](https://github.com/Anduin2017/HowToCook/blob/master/dishes/vegetable_dish/素炒豆角.md)                                   | 未知     | 未知       | 通过     | 未审核                 |
+| ID  | 原方                                                                                                                                                                  | 控制体重 | 减少添加糖 | 均衡搭配 | 原方人数／整份额外用油 |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------- | -------- | ---------------------- |
+| 333 | [西葫芦炒蛋](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/vegetable_dish/西葫芦炒鸡蛋/西葫芦炒鸡蛋.md)                | 通过     | 通过       | 通过     | 2 人／10–20ml          |
+| 489 | [罗宋汤](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/soup/罗宋汤.md)                                                 | 未知     | 未知       | 通过     | 未审核                 |
+| 567 | [洋葱炒鸡蛋](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/vegetable_dish/洋葱炒鸡蛋/洋葱炒鸡蛋.md)                    | 未知     | 未知       | 通过     | 未审核                 |
+| 630 | [菠菜炒鸡蛋](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/vegetable_dish/菠菜炒鸡蛋/菠菜炒鸡蛋.md)                    | 通过     | 通过       | 通过     | 1 人／15ml             |
+| 670 | [印度土豆花菜](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/vegetable_dish/印度土豆花菜.md)                           | 未知     | 未知       | 通过     | 未审核                 |
+| 677 | [清炒花菜](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/vegetable_dish/清炒花菜.md)                                   | 通过     | 通过       | 通过     | 2 人／15ml             |
+| 689 | [蒜蓉炒芹菜](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/vegetable_dish/蒜蓉炒芹菜/蒜蓉炒芹菜.md)                    | 未知     | 通过       | 通过     | 未审核                 |
+| 693 | [金针菇日本豆腐煲](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/vegetable_dish/金针菇日本豆腐煲.md)                   | 未知     | 失败       | 通过     | 未审核                 |
+| 696 | [韭菜炒蛋](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/vegetable_dish/韭菜炒蛋/韭菜炒蛋.md)                          | 未知     | 通过       | 通过     | 未审核                 |
+| 701 | [冬瓜桑拿鸡](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/meat_dish/冬瓜桑拿鸡.md)                                    | 通过     | 未知       | 通过     | 2 人／10ml             |
+| 702 | [冬瓜酿肉](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/meat_dish/冬瓜酿肉/冬瓜酿肉.md)                               | 未知     | 未知       | 通过     | 未审核                 |
+| 731 | [澳门湿版免治牛肉饭](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/meat_dish/澳门湿版免治牛肉饭/澳门湿版免治牛肉饭.md) | 未知     | 失败       | 通过     | 未审核                 |
+| 736 | [瘦肉土豆片](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/meat_dish/瘦肉土豆片/瘦肉土豆片.md)                         | 通过     | 未知       | 通过     | 1 人／10–15ml          |
+| 748 | [肉饼炖蛋](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/meat_dish/肉饼炖蛋.md)                                        | 未知     | 未知       | 通过     | 未审核                 |
+| 756 | [蒜苔炒肉末](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/meat_dish/蒜苔炒肉末.md)                                    | 通过     | 未知       | 通过     | 1 人／10ml             |
+| 777 | [黄瓜炒肉](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/meat_dish/黄瓜炒肉.md)                                        | 未知     | 未知       | 通过     | 未审核                 |
+| 788 | [葱油桂鱼](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/aquatic/葱油桂鱼/葱油桂鱼.md)                                 | 未知     | 未知       | 通过     | 未审核                 |
+| 789 | [蒜蓉虾](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/aquatic/蒜蓉虾/蒜蓉虾.md)                                       | 未知     | 未知       | 通过     | 未审核                 |
+| 798 | [山药南瓜炖鸡汤](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/soup/山药南瓜炖鸡汤.md)                                 | 通过     | 未知       | 通过     | 2 人／0g               |
+| 799 | [排骨山药玉米汤](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/soup/排骨山药玉米汤/排骨山药玉米汤.md)                  | 通过     | 未知       | 通过     | 2 人／10ml             |
+| 800 | [排骨苦瓜汤](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/soup/排骨苦瓜汤/排骨苦瓜汤.md)                              | 通过     | 通过       | 通过     | 4 人／0g               |
+| 805 | [紫菜蛋花汤](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/soup/紫菜蛋花汤.md)                                         | 未知     | 通过       | 通过     | 未审核                 |
+| 809 | [黄瓜皮蛋汤](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/soup/黄瓜皮蛋汤.md)                                         | 未知     | 未知       | 通过     | 未审核                 |
+| 814 | [意式肉酱面](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/staple/意式肉酱面/意式肉酱面.md)                            | 通过     | 未知       | 通过     | 2 人／10–15ml          |
+| 829 | [电饭煲三文鱼炊饭](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/staple/电饭煲三文鱼炊饭/电饭煲三文鱼炊饭.md)          | 未知     | 通过       | 通过     | 未审核                 |
+| 840 | [韭菜盒子](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/staple/韭菜盒子.md)                                           | 未知     | 未知       | 通过     | 未审核                 |
+| 844 | [太阳蛋](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/breakfast/太阳蛋.md)                                            | 未知     | 通过       | 通过     | 未审核                 |
+| 846 | [微波炉荷包蛋](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/breakfast/微波炉荷包蛋.md)                                | 未知     | 通过       | 通过     | 未审核                 |
+| 849 | [水煮玉米](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/breakfast/水煮玉米.md)                                        | 未知     | 失败       | 通过     | 未审核                 |
+| 850 | [溏心蛋](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/breakfast/溏心蛋.md)                                            | 未知     | 通过       | 通过     | 未审核                 |
+| 851 | [燕麦鸡蛋饼](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/breakfast/燕麦鸡蛋饼.md)                                    | 未知     | 通过       | 通过     | 未审核                 |
+| 852 | [空气炸锅面包片](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/breakfast/空气炸锅面包片.md)                            | 未知     | 未知       | 通过     | 未审核                 |
+| 853 | [美式炒蛋](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/breakfast/美式炒蛋.md)                                        | 未知     | 未知       | 通过     | 未审核                 |
+| 854 | [蒸水蛋](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/breakfast/蒸水蛋.md)                                            | 未知     | 未知       | 通过     | 未审核                 |
+| 857 | [鸡蛋三明治](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/breakfast/鸡蛋三明治.md)                                    | 未知     | 未知       | 通过     | 未审核                 |
+| 861 | [素炒豆角](https://github.com/Anduin2017/HowToCook/blob/0e106eea348c734fe1586f781202994439cf98a5/dishes/vegetable_dish/素炒豆角.md)                                   | 未知     | 未知       | 通过     | 未审核                 |
 
 ## 关闭条件
 
