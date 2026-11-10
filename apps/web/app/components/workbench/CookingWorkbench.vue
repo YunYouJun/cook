@@ -32,9 +32,13 @@ const visibleItems = computed(() => {
   const text = query.value.trim()
   if (text)
     return allFood.value.filter(item => item.name.includes(text) || item.alias?.includes(text))
-  return categories.value[category.value]!.items.filter(item => props.desktop || expanded.value || !item.more || rStore.selectedStuff.includes(item.name))
+  const items = categories.value[category.value]!.items
+  if (expanded.value)
+    return items
+  const common = items.filter(item => !item.more).slice(0, props.desktop ? 12 : 6)
+  return items.filter(item => common.includes(item) || rStore.selectedStuff.includes(item.name))
 })
-const hasMore = computed(() => categories.value[category.value]!.items.some(item => item.more))
+const hasMore = computed(() => expanded.value || visibleItems.value.length < categories.value[category.value]!.items.length)
 const preferenceSummary = computed(() => [
   ...(rStore.activeDietaryGoalOption ? [`饮食目标：${rStore.activeDietaryGoalOption.label}`] : []),
   ...(rStore.activeDiscoverySceneOption ? [`专题：${rStore.activeDiscoverySceneOption.label}`] : []),
@@ -133,20 +137,8 @@ function addUnlisted() {
             <span v-if="rStore.selectedStuff.includes(item.name)" class="wb-selected-mark" aria-hidden="true">✓</span>
           </button>
         </div>
-        <ReviewedRecipeFilters
-          :goal-options="rStore.reviewedGoalOptions"
-          :scene-options="rStore.reviewedSceneOptions"
-          :selected-goal="rStore.dietaryGoal"
-          :selected-scene="rStore.discoveryScene"
-          :loading="rStore.isReviewingRecipes"
-          :loaded="rStore.hasLoadedReviewedRecipes"
-          :unavailable-message="rStore.reviewedCatalogError"
-          @select-goal="rStore.toggleDietaryGoal"
-          @select-scene="rStore.toggleDiscoveryScene"
-          @load="rStore.loadReviewedRecipes()"
-        />
-        <button v-if="!desktop && !query && hasMore" class="wb-text-button" type="button" :aria-expanded="expanded" @click="expanded = !expanded">
-          {{ expanded ? '收起更多食材 ↑' : '展开更多食材 ↓' }}
+        <button v-if="!query && hasMore" class="wb-text-button" type="button" :aria-expanded="expanded" @click="expanded = !expanded">
+          {{ expanded ? '收起食材' : `全部 ${categories[category]!.items.length} 种食材` }}
         </button>
         <div v-if="query && !visibleItems.length" class="wb-empty-search">
           <p>列表中没有「{{ query }}」，加入后只查找现有菜谱。</p>

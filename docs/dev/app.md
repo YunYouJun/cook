@@ -8,6 +8,15 @@ Cook 在同一仓库维护 Web 和原生客户端，共享 `packages/data` 的�
 | 原生 iOS「云食册」 | `apps/ios`            | SwiftUI、SwiftData、CloudKit；已提供 TestFlight 外测 |
 | 原生 Android       | 规划为 `apps/android` | Kotlin、Jetpack Compose、Material 3；尚未创建工程    |
 
+## 产品分工与开发边界
+
+Web 专注即开即用的找菜，iOS 承接持续的个人厨房管理；两端首页都保持简洁。功能定位与后续方向见 [Web 与 iOS 的定位](../guide/web-and-ios)。
+
+- 共用内置菜谱、食材厨具、目标 ID 和审核依据，通过共享测试用例核对推荐规则；各客户端的 UI 组件分别适配平台。
+- 明确区分本次找菜条件与长期偏好，约定“清空本次条件”“清除筛选”“修改长期偏好”的作用范围、计数和持久化行为。当前 Web 饮食目标仅用于本次会话；iOS 会记住设备默认目标，本次目标可被清除，设备默认值在下次会话恢复。重启、清除和布局切换需要覆盖各自的策略。
+- 跨端能力不同时，按文件协议和同步边界保护数据；Web 未展示的原生字段不能因此被当作空值覆盖。新增能力先明确兼容范围，再分别实现界面。
+- Web 发布说明以 Web 已验证的功能为准；原生能力按实际分发版本标注。定位中的演进方向不作为当前版本已完成的承诺。
+
 ## 原生 iOS
 
 Bundle ID 为 `fun.yunle.cook`。构建和测试见 [iOS README](https://github.com/YunYouJun/cook/blob/main/apps/ios/README.md)，实施与验收见 [iOS App 打磨目标](./ios-roadmap)。原生云乐坊账号登录已实现，详见 [iOS 账号](./ios-account)；登录账号不等于已实现 CloudBase 跨平台数据同步。

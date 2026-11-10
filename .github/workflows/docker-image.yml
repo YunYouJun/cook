@@ -17,13 +17,12 @@ jobs:
         uses: docker/metadata-action@master
         with:
           images: ${{ secrets.DOCKER_HUB_USERNAME }}/cook
+          flavor: latest=auto
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            # set latest tag for main branch
-            type=raw,value=latest
       - name: Login to Docker Hub
         uses: docker/login-action@master
         with:

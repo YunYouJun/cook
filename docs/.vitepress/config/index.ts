@@ -76,6 +76,7 @@ export default defineConfig(withYunlefun({
           text: '使用指南',
           items: [
             { text: '快速开始', link: '/guide/getting-started' },
+            { text: 'Web 与 iOS 的定位', link: '/guide/web-and-ios' },
             { text: '一句话找菜', link: '/guide/sentence-input' },
             { text: '第二天带饭', link: '/guide/next-day-lunch' },
             { text: '网页版域名与原有数据', link: '/guide/web-domain' },

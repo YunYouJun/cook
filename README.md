@@ -39,9 +39,12 @@
 
 ### Features
 
-~~本项目支持 PWA，使用浏览器打开时，可将其添加到主屏幕以获得近原生 APP 的体验。~~
+- Web：按食材、厨具和忌口找菜，收藏常做的菜，保存私人菜谱，并按经审核的饮食目标与带饭场景筛选。
+- iPhone / iPad：原生应用「云食册」已开放 [TestFlight 测试](https://testflight.apple.com/join/KTTJNhDh)，需要 iOS 17 / iPadOS 17 或更新版本，名额与可用版本以邀请页为准。参见[安装与反馈指南](https://cook.yunle.fun/guide/ios-beta)。
 
-我们正在开发新的 APP 版本，敬请期待。
+Web 与原生应用独立发布；iOS 目前仍为测试版，尚未在 App Store 正式上架。
+
+两端的定位、功能边界与后续方向见 [Web 与 iOS 的定位](./docs/guide/web-and-ios.md)。
 
 ## 开发
 

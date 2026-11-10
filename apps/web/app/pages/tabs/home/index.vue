@@ -80,11 +80,24 @@ watchDebounced(
 
 <template>
   <ion-page class="cooking-page">
-    <ion-header :key="cookingStyle" :translucent="true" :class="{ 'workbench-header': cookingStyle === 'workbench' || desktop }">
+    <ion-header :key="cookingStyle" :translucent="true">
       <ion-toolbar>
-        <ion-title>做菜</ion-title>
-        <ion-buttons slot="end">
+        <ion-buttons :slot="desktop ? 'end' : 'start'">
           <CookingStyleSwitch ref="styleSwitch" :desktop="desktop" :model-value="cookingStyle" @update:model-value="changeCookingStyle" />
+        </ion-buttons>
+        <ion-buttons slot="end">
+          <ReviewedRecipeFilters
+            :goal-options="rStore.reviewedGoalOptions"
+            :scene-options="rStore.reviewedSceneOptions"
+            :selected-goal="rStore.dietaryGoal"
+            :selected-scene="rStore.discoveryScene"
+            :loading="rStore.isReviewingRecipes"
+            :loaded="rStore.hasLoadedReviewedRecipes"
+            :unavailable-message="rStore.reviewedCatalogError"
+            @select-goal="rStore.toggleDietaryGoal"
+            @select-scene="rStore.toggleDiscoveryScene"
+            @load="rStore.loadReviewedRecipes()"
+          />
           <ion-button class="cooking-clear" :disabled="!hasSelection" @click="reset">
             清空
           </ion-button>
@@ -92,14 +105,8 @@ watchDebounced(
       </ion-toolbar>
     </ion-header>
 
-    <ion-content ref="contentRef" :fullscreen="true" :class="{ 'workbench-content': cookingStyle === 'workbench', 'desktop-classic-content': desktop && cookingStyle === 'classic' }" :style="{ '--padding-bottom': `${cookingStyle === 'classic' && !desktop ? panelInset + 16 : 16}px` }">
-      <ion-header v-show="cookingStyle === 'classic' && !desktop" :collapse="cookingStyle === 'classic' && !desktop ? 'condense' : undefined">
-        <ion-toolbar>
-          <ion-title :size="cookingStyle === 'classic' ? 'large' : undefined">
-            做菜
-          </ion-title>
-        </ion-toolbar>
-      </ion-header>
+    <ion-content ref="contentRef" :class="{ 'workbench-content': cookingStyle === 'workbench', 'desktop-classic-content': desktop && cookingStyle === 'classic' }" :style="{ '--padding-bottom': `${cookingStyle === 'classic' && !desktop ? panelInset + 16 : 16}px` }">
+      <IosBetaCard dismissible />
 
       <p v-if="!canPersist" class="style-storage-note" role="status">
         浏览器暂时无法保存样式偏好，本次仍可切换使用。
@@ -121,13 +128,6 @@ watchDebounced(
   --padding-start: 8px;
   --padding-end: calc(var(--cook-results-width) + 32px);
   --padding-top: 8px;
-}
-.workbench-header ion-toolbar {
-  --opacity-scale: 1;
-}
-ion-header.workbench-header ion-toolbar.in-toolbar ion-title {
-  opacity: 1;
-  pointer-events: auto;
 }
 .style-storage-note {
   margin: 12px 20px;
