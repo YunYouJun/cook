@@ -14,8 +14,6 @@ trustPolicy: no-downgrade
 trustPolicyExclude:
   # Babel still pins this established pre-provenance release.
   - semver@6.3.1
-  # Google Workbox 7.4.1 pins this exact pre-release build helper.
-  - '@trickfilm400/rollup-plugin-off-main-thread@3.0.0-pre1'
 
 packages:
   - apps/*
@@ -23,16 +21,20 @@ packages:
   - packages/*
 
 overrides:
+  # Keep TypeScript 5 support; 1.6.28 requires TypeScript 6.
+  '@antfu/eslint-config@8.3.0>@vitest/eslint-plugin': 1.6.27
   # @nuxtjs/ionic's Web integration does not use native build tooling.
   # Keep Ionic UI/router while excluding the retired Capacitor shell and CLIs.
   '@nuxtjs/ionic@1.0.2>@capacitor/cli': '-'
   '@nuxtjs/ionic@1.0.2>@capacitor/core': '-'
   '@nuxtjs/ionic@1.0.2>@ionic/cli': '-'
-
-peerDependencyRules:
-  # UnoCSS exposes an optional Webpack adapter; this project builds with Vite.
-  ignoreMissing:
-    - webpack
+  # Security fixes beyond upstream ranges/pins; keep older unaffected branches.
+  brace-expansion@>=4.0.0 <5.0.12: 5.0.12
+  glob@>=9.0.0 <14.0.2: 14.0.2
+  micromark-extension-math@3.1.0>katex: 0.18.2
+  minimatch@>=7.0.0 <11.0.1: 11.0.5
+  oxfmt@0.35.0>tinypool: 2.1.2
+  serve@14.2.7>compression: 1.8.2
 
 allowBuilds:
   '@parcel/watcher': true
@@ -42,3 +44,11 @@ allowBuilds:
   simple-git-hooks: true
   unrs-resolver: true
   vue-demi: true
+
+patchedDependencies:
+  deepmerge@4.3.1: patches/deepmerge@4.3.1.patch
+
+peerDependencyRules:
+  # UnoCSS exposes an optional Webpack adapter; this project builds with Vite.
+  ignoreMissing:
+    - webpack
