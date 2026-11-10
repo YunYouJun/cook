@@ -67,6 +67,17 @@ enum Freshness: Equatable {
         }
     }
 
+    func label(isSuggested: Bool) -> String {
+        guard isSuggested else { return label }
+        switch self {
+        case let .expired(days): return "已超建议 \(days) 天"
+        case .today: return "建议今天吃完"
+        case .soon(1): return "建议明天吃完"
+        case .soon(2): return "建议后天吃完"
+        case let .soon(days), let .fresh(days): return "建议 \(days) 天内吃完"
+        }
+    }
+
     var isExpired: Bool {
         if case .expired = self {
             return true
@@ -98,6 +109,7 @@ enum FridgeReminder {
     struct Entry: Equatable {
         var name: String
         var expiresAt: Date
+        var isSuggested = false
     }
 
     struct Plan: Equatable {
@@ -109,9 +121,9 @@ enum FridgeReminder {
 
     /// 每样食材在到期前一天和到期当天各提醒一次；同一天的合成一条，已经过了提醒时间的跳过
     static func plan(_ entries: [Entry], now: Date, minutes: Int, calendar: Calendar = .current, limit: Int = limit) -> [Plan] {
-        var byExpiryDay: [Date: [String]] = [:]
+        var byExpiryDay: [Date: [Entry]] = [:]
         for entry in entries {
-            byExpiryDay[calendar.startOfDay(for: entry.expiresAt), default: []].append(entry.name)
+            byExpiryDay[calendar.startOfDay(for: entry.expiresAt), default: []].append(entry)
         }
         var days = Set<Date>()
         for expiryDay in byExpiryDay.keys {
@@ -133,19 +145,19 @@ enum FridgeReminder {
             guard let fireDate = calendar.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: day), fireDate > now else {
                 continue
             }
-            let today = uniqueStrings(byExpiryDay[day] ?? [])
-            let tomorrow = calendar.date(byAdding: .day, value: 1, to: day).flatMap { byExpiryDay[calendar.startOfDay(for: $0)] }.map(uniqueStrings) ?? []
+            let today = byExpiryDay[day] ?? []
+            let tomorrow = calendar.date(byAdding: .day, value: 1, to: day).flatMap { byExpiryDay[calendar.startOfDay(for: $0)] } ?? []
             var parts: [String] = []
-            if !today.isEmpty {
-                parts.append("\(names(today))今天到期")
-            }
-            if !tomorrow.isEmpty {
-                parts.append("\(names(tomorrow))明天到期")
+            for (entries, when) in [(today, "今天"), (tomorrow, "明天")] {
+                let packaged = uniqueStrings(entries.filter { !$0.isSuggested }.map(\.name))
+                let suggested = uniqueStrings(entries.filter(\.isSuggested).map(\.name))
+                if !packaged.isEmpty { parts.append("\(names(packaged))\(when)到期") }
+                if !suggested.isEmpty { parts.append("\(names(suggested))建议\(when)吃完") }
             }
             plans.append(Plan(
                 identifier: identifierPrefix + formatter.string(from: day),
                 fireDate: fireDate,
-                title: "冰箱里有食材快到期了",
+                title: "冰箱里有食材需要留意",
                 body: parts.joined(separator: "，") + "，看看能做什么吧。"
             ))
             if plans.count == limit {

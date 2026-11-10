@@ -101,12 +101,12 @@ struct RootView: View {
     }
 
     private var reminderEntries: [FridgeReminder.Entry] {
-        fridgeItems.map { FridgeReminder.Entry(name: $0.name, expiresAt: $0.expiryDay()) }
+        fridgeItems.map { FridgeReminder.Entry(name: $0.name, expiresAt: $0.expiryDay(), isSuggested: $0.expiryBasis.isSuggested) }
     }
 
     private var reminderSignature: String {
         let items = reminderEntries
-            .map { "\($0.name)@\(Int($0.expiresAt.timeIntervalSince1970))" }
+            .map { "\($0.name)@\(Int($0.expiresAt.timeIntervalSince1970))@\($0.isSuggested)" }
             .sorted()
         return ([remindersEnabled ? "on" : "off", String(reminderMinutes)] + items).joined(separator: "|")
     }

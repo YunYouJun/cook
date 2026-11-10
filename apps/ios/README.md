@@ -92,13 +92,19 @@ CI 的 `ios-tests` 矩阵在 iPhone 和 iPad 模拟器上分组跑单元测试�
 
 此开关目前仅预留配置，尚无原生微信按钮或 SDK 消费它；单独改成 `YES` 不会提供微信登录能力。开关不控制现有云乐坊授权网页、Universal Links 或 iCloud 同步，也不是远程开关。
 
+## 冰箱拍照录入
+
+冰箱右上角的相机按钮可拍摄包装或一份蔬果，也可通过系统照片选择器选图。Apple Vision 在本机识别，照片和识别原文不保存、不上传；不需要 AI Key 或会员。确认页可编辑食材、生产日期、到期日及日期依据；日期不完整、无法判断标签或存在冲突时需手动核对。包装到期日优先，其次按识别出的生产日期与唯一保质期推算。
+
+已核对的常见蔬果按种类给出完整冷藏与切开后的食用计划，可调整购买／切开日期；未覆盖种类明确使用既有通用天数参考。手动添加也有水果快选和食用时间建议。列表与本地提醒区分建议日期与包装日期，通知仍需主动开启。支持范围、建议来源与新字段的分发条件见[方案记录](../../docs/decisions/0018-fridge-photo-intake.md)。
+
 ## iCloud 同步的结构（CloudKit schema）
 
 私人菜谱源码以最新 main 集成后的代码检查、Web/Swift 文件往返和 iPhone/iPad 模拟器测试作为合并条件。五模型生产结构、同账户跨设备读写，以及构建 6 的离线新增和修改 / 删除冲突已有[真实生产证据](../../docs/dev/ios-production-sync-2026-10-24.md)。维护者随后决定，剩余验收改用模拟器，不再要求真机；覆盖范围和不能由本地测试证明的账号行为见[模拟器验收记录](../../docs/dev/ios-simulator-acceptance-2026-10-24.md)。文件协议见[私人菜谱与文件迁移](../../docs/dev/private-recipes.md)。
 
 收藏、浏览记录、做菜偏好、冰箱食材和私人菜谱用 SwiftData 存，登录 iCloud 时通过容器 `iCloud.fun.yunle.cook` 同步。TestFlight 和 App Store 版本用 CloudKit 的 **Production** 环境，结构要先在 Development 环境建好，再手动部署过去：
 
-1. 用 Xcode 在**真机**上跑 Debug 版（已登录 iCloud）。第一次启动会调用 `initializeCloudKitSchema()` 把 `CD_Favorite`、`CD_HistoryEntry`、`CD_Preferences`、`CD_FridgeItem`、`CD_PrivateRecipeRecord` 建到 Development，首屏会多等几秒；日志里看到「已在 Development 环境建好 CloudKit 结构」就是成功了。结构版本 2 包含冰箱食材，版本 3 加入私人菜谱，之前完成过版本 1/2 的设备也会重新初始化。模拟器和 Release 构建不会跑这一步（见 `Cook/Model/CloudKitSchema.swift`）。
+1. 用 Xcode 在**真机**上跑 Debug 版（已登录 iCloud）。第一次启动会调用 `initializeCloudKitSchema()` 把 `CD_Favorite`、`CD_HistoryEntry`、`CD_Preferences`、`CD_FridgeItem`、`CD_PrivateRecipeRecord` 建到 Development，首屏会多等几秒；日志里看到「已在 Development 环境建好 CloudKit 结构」就是成功了。结构版本 2 包含冰箱食材，版本 3 加入私人菜谱，版本 4 添加冰箱记录的可选生产日期、日期依据与储存建议；之前初始化过旧版本的设备也会重新初始化。模拟器和 Release 构建不会跑这一步（见 `Cook/Model/CloudKitSchema.swift`）。
 2. 打开 [CloudKit Console](https://icloud.developer.apple.com/dashboard/) → `iCloud.fun.yunle.cook` → Development → Record Types，确认这几个类型和字段都在。
 3. 点左下角 **Deploy Schema Changes…**，检查变更只有新增（类型、索引和对应的默认权限），再点 Deploy。Production 的字段之后只能加不能删改，部署前想清楚。
 4. 在 Production → Record Types 确认当前五个模型的结构已经同步过去，再用同一 Production 构建验证两台设备之间的收藏、历史、偏好、冰箱和私人菜谱读写，以及离线冲突、账号隔离和退出 iCloud 后的本地数据处理。记录版本、设备、环境、操作与观察结果；没有实际证据的项目保留为未验证。

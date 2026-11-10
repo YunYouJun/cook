@@ -98,9 +98,13 @@ final class FridgeItem {
     var name: String = ""
     /// 放进冰箱的那天
     var addedAt: Date = Date()
-    /// 最后一天能吃，默认按 shelf-life.json 估。只代表日期，存成那天的 UTC 0 点（见 FridgeDay），
+    /// 包装日期或建议食用日，不代表食用安全。存成那天的 UTC 0 点（见 FridgeDay），
     /// 换了时区或同步到别的时区的设备也还是同一天；用的时候取 expiryDay(in:)
     var expiresAt: Date = Date()
+    /// 日期元信息只保存确认后的字段，不保存照片或 OCR 原文；旧记录的 nil 表示估算。
+    var productionDate: Date?
+    var expiryBasisRaw: String?
+    var storageAdvice: String?
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
     var deletedAt: Date?
@@ -117,6 +121,8 @@ final class FridgeItem {
     func expiryDay(in calendar: Calendar = .current) -> Date {
         FridgeDay.local(expiresAt, calendar: calendar)
     }
+
+    var expiryBasis: FridgeExpiryBasis { FridgeExpiryBasis(rawValue: expiryBasisRaw ?? "") ?? .estimated }
 }
 
 enum Persistence {

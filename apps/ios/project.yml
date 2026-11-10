@@ -72,6 +72,7 @@ targets:
             NSUbiquitousContainerSupportedFolderLevels: ANY
         # 大图里的分享按钮可以把配图存到相册
         NSPhotoLibraryAddUsageDescription: 把菜谱配图存到相册。
+        NSCameraUsageDescription: 拍摄食品包装日期或蔬果，在本机识别后记录冰箱食材。
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: true
         UIBackgroundModes: [remote-notification]
