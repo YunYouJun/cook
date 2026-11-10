@@ -36,7 +36,7 @@ iPhone 最终 UI 测试在按钮改为辅助字号纵向排列后重新执行：
 
 ## 未执行
 
-- 未部署 `cook-ai-guidance`，未配置生产 `COOK_AI_GUIDANCE_ENABLED` / 模型能力，也未进行真实会员 HTTP 调用。
+- 初版未部署；2026-11-11 已完成关闭状态部署及真实会员 HTTP capability 验证，仍未开启独立服务或执行真实会员讲解，详见下方记录。
 - 未使用个人 DeepSeek Key 发起真实付费请求。
 - 未上传 TestFlight，未在真机执行 VoiceOver 朗读、焦点顺序或断网恢复。
 - 未验证生产模型对任意问题的事实正确性；当前检查只包括契约、引用来源和可机械识别的数值约束。
@@ -84,6 +84,16 @@ pnpm lint --fix
 
 从独立工作树冻结 `674d3b5f`，构建 `2.0.0 (15)`。归档、仅内部导出、共享签名／隐私清单检查及 Apple `altool --validate-app` 均通过。最终 IPA 中三个反馈／AI 地址与正式配置一致，12 个数据文件逐字节匹配构建输入，数据版本为 `353bc8dab0ea`，隐私正文与源码一致，App 与 dSYM UUID 匹配。IPA SHA-256 为 `57a9b7a0bda547dbef5fd0eaf92f78aad6945ee64231dcd31cc8ef3b2e42ed64`。
 
-函数 ZIP 已预打包固定版本的 `@cloudbase/node-sdk@3.18.3`，四个源文件与候选源码逐字节一致，模块加载及 GET 405 的本地检查通过，不含生产环境变量。ZIP 的存在不代表已经部署；本轮只读核对确认生产新函数仍不存在，公开路径返回 404。
+函数 ZIP 已预打包固定版本的 `@cloudbase/node-sdk@3.18.3`，四个源文件与候选源码逐字节一致，模块加载及 GET 405 的本地检查通过，不含生产环境变量。准备阶段只读核对时生产新函数尚不存在，公开路径返回 404；后续关闭状态部署见下方记录。
 
-构建和展开函数的中间目录分别回收 256,588,213 和 16,395,511 字节，合计约 260.3 MiB；归档、dSYM、IPA、函数 ZIP、必要源码输入和回执保存在仓库外。未创建、启动或清空模拟器，未修改其他任务工作树。详细状态见[准备证据](./evidence/step-guidance-release-preparation-2026-11-11.json)与[发布收尾](../../specs/ai-step-guidance/release-closeout.md)。
+构建和展开函数的中间目录分别回收 256,588,213 和 16,395,511 字节，合计约 260.3 MiB；归档、dSYM、IPA、函数 ZIP、必要源码输入和回执保存在仓库外。未创建、启动或清空模拟器，未修改其他任务工作树。详细状态见[准备证据](./evidence/step-guidance-release-preparation-2026-11-11.json)与[发布收尾](https://github.com/YunYouJun/cook/blob/main/specs/ai-step-guidance/release-closeout.md)。
+
+## 2026-11-11 生产关闭状态部署
+
+在上述准备之后，新函数已部署为 `Active`，回读 `Nodejs24.11`／256 MiB／45 秒／关闭云端依赖安装，四个源文件与候选逐字节一致。复用搜索的生产通道、配额摘要密钥与 10／3／100 限额，新函数独立开关保持关闭；搜索配置及修改时间未变。
+
+新增精确 HTTP 路径，既有根路径与 `/fc-api` 保持原值。未登录／无效令牌分别为 `401 LOGIN_REQUIRED`，GET 为 `405 METHOD_NOT_ALLOWED`。复用已有受管生产会员号，教学 capability 为 HTTP 200、会员有效且 `enabled=false`；搜索 capability 仍为 HTTP 200、`enabled=true`。本轮短期会话已注销，没有模型调用或配额预留。
+
+目标托管模型已启用；资源包查询发现有效 `pkg_tcb_credits_10000`，但当前 AI 接入技能要求有效 `pkg_tcb_tokencredits_*` 包，规则与观察到的包型不一致。尚未核实通用包的适用范围，未据此认定环境无额度，也未绕过门禁调用模型。未购买新包、切换通道、开启独立服务或上传 TestFlight。详见[部署证据](./evidence/step-guidance-disabled-deployment-2026-11-11.json)。
+
+本轮文档新增的三处 `specs/` 站外相对链接触发 CI 的 VitePress 死链检查，已修为仓库文件链接；修正后本地完整文档构建通过，约 5.9 MiB 输出随任务临时目录回收。独立发布工作树也已移除，回收约 15.1 MiB；必要归档输入和报告已保留。

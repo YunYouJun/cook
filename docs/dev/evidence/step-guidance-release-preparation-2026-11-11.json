@@ -21,7 +21,20 @@
     "privacyMatchesSource": true,
     "dsymMatches": true,
     "uploaded": false,
-    "distributed": false
+    "distributed": false,
+    "distributionEntitlementsVerified": true,
+    "exportAnalysisSession": {
+      "id": "e1dfe852-eabd-4136-9d6d-a404936f75c2",
+      "state": "AWAITING_UPLOAD",
+      "assetTypes": [
+        "ASSET_SPI",
+        "ASSET_DESCRIPTION"
+      ],
+      "containsAppBinary": false,
+      "latestProcessedBuildNumber": "14",
+      "latestObservedBuildNumber": "15",
+      "nextBuildNumberReported": "16"
+    }
   },
   "production": {
     "envId": "yunlefun-8g7ybcxc7345c490",
@@ -55,12 +68,15 @@
   "cleanup": {
     "derivedDataReclaimedBytes": 256588213,
     "expandedFunctionStagingReclaimedBytes": 16395511,
-    "simulatorsCreated": 0
+    "simulatorsCreated": 0,
+    "releaseWorktreeRemoved": true,
+    "releaseWorktreeAllocatedBytesReclaimed": 15884288,
+    "documentationOutputReclaimedBytes": 6202520
   },
   "artifactDirectory": "~/Library/Developer/ReleaseArtifacts/Cook/20261111-step-guidance-15",
   "notes": [
     "准备记录不代表生产部署、真实模型请求、TestFlight 分发或 PR 已合并。",
-    "上传前重新查询已处理和上传中构建，构建 15 当前尚未被本任务预留。",
-    "原构建 14 内部分发与外测构建 7 的记录不变。"
+    "原构建 14 内部分发与外测构建 7 的记录不变。",
+    "导出产生的构建 15 分析会话已核对无 App 二进制，不代表 IPA 上传或 TestFlight 分发。"
   ]
 }

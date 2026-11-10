@@ -50,6 +50,6 @@ node --test test/cookAiGuidance.test.mjs test/aiGuidanceSources.test.mjs
 
 无原文、无 Key、未登录、非会员、服务未部署、版本或来源不符、离线、超时、额度不足和非法响应都显示简短状态，原文与其他做菜功能继续可用。重试必须由用户再次点按，不自动重试或切换计费通道。
 
-初版完成源码、来源快照和本地验证；2026-11-11 已补齐默认关闭的单函数部署定义，并准备通过签名／隐私清单与 Apple 包校验的 `2.0.0 (15)` 仅内部候选。`cook-ai-guidance` 尚未部署生产，未执行付费模型实调，未上传 TestFlight，也未进行真机 VoiceOver 朗读；模拟器中的确定性 fixture 和注入测试不能写成线上服务或真实个人 Key 已验收。精确候选、上线／回退顺序和待执行验收见[发布收尾](../../specs/ai-step-guidance/release-closeout.md)。
+初版完成源码、来源快照和本地验证；2026-11-11 已部署默认关闭的单函数、验证真实会员 capability，并准备通过签名／隐私清单与 Apple 包校验的 `2.0.0 (15)` 仅内部候选。生产目标模型已启用，但有效通用资源包不匹配当前 AI 接入技能要求的 Token Credits 包型，等待核实额度适用范围；独立开关仍关闭，未执行计费讲解、个人 Key 实调、TestFlight 上传或真机 VoiceOver 朗读。模拟器 fixture 与 capability 验证不代表真实模型讲解已验收。精确状态、上线／回退顺序见[发布收尾](https://github.com/YunYouJun/cook/blob/main/specs/ai-step-guidance/release-closeout.md)及[部署证据](./evidence/step-guidance-disabled-deployment-2026-11-11.json)。
 
 验证范围与复现命令见[验证记录](./ios-step-guidance-validation.md)。相关边界也记录在 [0007 AI 与整句识别](../decisions/0007-ai-and-sentence-input) 和 [iOS 隐私政策](../privacy)。
