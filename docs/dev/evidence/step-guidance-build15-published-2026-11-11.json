@@ -1,0 +1,53 @@
+{
+  "date": "2026-11-11",
+  "appId": "6824589542",
+  "bundleId": "fun.yunle.cook",
+  "version": "2.0.0",
+  "buildNumber": "15",
+  "buildId": "384e4392-8703-4b68-a21b-0eaa54c6d1dc",
+  "sourceCommit": "674d3b5f56b29e3e18233c5172197a4793e368a2",
+  "ipaSha256": "57a9b7a0bda547dbef5fd0eaf92f78aad6945ee64231dcd31cc8ef3b2e42ed64",
+  "sameValidatedIPAUploaded": true,
+  "ipaUploadCount": 1,
+  "exportAnalysisSession": {
+    "id": "e1dfe852-eabd-4136-9d6d-a404936f75c2",
+    "stateBeforeRealUpload": "AWAITING_UPLOAD",
+    "containsAppBinary": false
+  },
+  "processingState": "VALID",
+  "buildAudienceType": "INTERNAL_ONLY",
+  "expired": false,
+  "groupId": "a2962c09-0f3d-4180-abef-030cf8920279",
+  "groupName": "内部测试",
+  "buildAttached": true,
+  "testerCount": 1,
+  "automaticGroupAttachmentReused": true,
+  "groupPlanReviewed": true,
+  "groupAssociationWrites": 0,
+  "internalBuildState": "IN_BETA_TESTING",
+  "externalBuildState": "NOT_APPLICABLE",
+  "noExternalGroups": true,
+  "existingExternalBuild7Preserved": true,
+  "testNotesLocale": "zh-Hans",
+  "testNotesReadbackMatched": true,
+  "readyVerificationPassed": true,
+  "publishedVerificationPassed": true,
+  "firstPublishedReadFailed": true,
+  "failedReadRecoveredWithoutReupload": true,
+  "productionGuidanceEnabled": true,
+  "productionAcceptanceEvidence": "docs/dev/evidence/step-guidance-live-acceptance-2026-11-11.json",
+  "phoneUpdated": false,
+  "personalKeyVerified": false,
+  "physicalChecksVerified": false,
+  "cleanup": {
+    "finalDocumentationAllocatedBytesReclaimed": 6918144,
+    "temporaryDocumentationOutputRemoved": true,
+    "simulatorsCreated": 0
+  },
+  "artifactDirectory": "~/Library/Developer/ReleaseArtifacts/Cook/20261111-step-guidance-15",
+  "notes": [
+    "共享服务端 published 门禁已通过；首次只读查询失败后核对同一 App 与组并复查，没有重传 IPA。",
+    "内部发布不代表个人 Key、真机 VoiceOver、焦点顺序、断网恢复或极端字号人工验收通过。",
+    "PR #210 尚未合并，#87 保持开放。"
+  ]
+}

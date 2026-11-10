@@ -36,9 +36,8 @@ iPhone 最终 UI 测试在按钮改为辅助字号纵向排列后重新执行：
 
 ## 未执行
 
-- 初版未部署；2026-11-11 已完成关闭状态部署及真实会员 HTTP capability 验证，仍未开启独立服务或执行真实会员讲解，详见下方记录。
 - 未使用个人 DeepSeek Key 发起真实付费请求。
-- 未上传 TestFlight，未在真机执行 VoiceOver 朗读、焦点顺序或断网恢复。
+- 未在真机执行 VoiceOver 朗读、焦点顺序、断网恢复或极端字号人工验收，未更新维护者手机。
 - 未验证生产模型对任意问题的事实正确性；当前检查只包括契约、引用来源和可机械识别的数值约束。
 
 ## 复现
@@ -94,6 +93,20 @@ pnpm lint --fix
 
 新增精确 HTTP 路径，既有根路径与 `/fc-api` 保持原值。未登录／无效令牌分别为 `401 LOGIN_REQUIRED`，GET 为 `405 METHOD_NOT_ALLOWED`。复用已有受管生产会员号，教学 capability 为 HTTP 200、会员有效且 `enabled=false`；搜索 capability 仍为 HTTP 200、`enabled=true`。本轮短期会话已注销，没有模型调用或配额预留。
 
-目标托管模型已启用；资源包查询发现有效 `pkg_tcb_credits_10000`，但当前 AI 接入技能要求有效 `pkg_tcb_tokencredits_*` 包，规则与观察到的包型不一致。尚未核实通用包的适用范围，未据此认定环境无额度，也未绕过门禁调用模型。未购买新包、切换通道、开启独立服务或上传 TestFlight。详见[部署证据](./evidence/step-guidance-disabled-deployment-2026-11-11.json)。
+该阶段资源包查询发现有效 `pkg_tcb_credits_10000`，与本机 AI 接入技能的旧 Token 包前缀规则不同，因此先保留关闭状态；未据此认定环境无额度，也未购买新包或切换通道。关闭状态的历史快照见[部署证据](./evidence/step-guidance-disabled-deployment-2026-11-11.json)，后续实际验收见下方。
 
 本轮文档新增的三处 `specs/` 站外相对链接触发 CI 的 VitePress 死链检查，已修为仓库文件链接；修正后本地完整文档构建通过，约 5.9 MiB 输出随任务临时目录回收。独立发布工作树也已移除，回收约 15.1 MiB；必要归档输入和报告已保留。
+
+## 2026-11-11 真实会员讲解与最终启用
+
+依据[官方计费说明](https://docs.cloudbase.net/ai/FAQ)及[资源点迁移公告](https://www.cloudbase.net/blog/2026/06/26/resource-point-token)，核实资源点可抵扣模型 Token。生产标准版为 `credits` 模式、`NORMAL`、用量状态正常、费用状态 `positive`，现用模型已启用；旧 Token 包前缀规则不适用于该资源点路径。没有购买新包、更换 provider 或模型。
+
+只调整新教学函数的独立开关，复用既有受管会员的正常登录流程，完成一次真实 HTTP 讲解。返回 200、状态 `answer`；菜谱、数据版本、原文指纹、稳定步骤 ID、请求身份及上下文 revision 均匹配。142 字回答包含 3 个合法引用，当前步骤必引和完整数值校验通过；没有自动 HTTP 重试。接口不暴露 Token 用量，因此未记录或推测具体计费 Token 数，也不把单次契约通过扩展为任意自然语言事实验收。
+
+验收后先恢复关闭；内部构建就绪后最终启用教学 capability，并再次回读真实会员 capability 与既有搜索 capability，均为启用状态。既有搜索函数配置及修改时间未变，原配额与摘要密钥保留；最终启用没有再次请求模型。两次临时会员会话均已注销。详见[真实验收证据](./evidence/step-guidance-live-acceptance-2026-11-11.json)。
+
+## 2026-11-11 构建 15 内部分发
+
+上传前重新查询 Apple 构建和上传记录，确认原构建 15 会话只有分析文件、没有 App 二进制。同一 SHA-256 的 IPA 只上传一次，实际构建 ID 为 `384e4392-8703-4b68-a21b-0eaa54c6d1dc`。共享 `ready`／`published` 门禁通过，回读 `VALID / INTERNAL_ONLY / IN_BETA_TESTING`、外部 `NOT_APPLICABLE`、未过期、无外部组。
+
+既有内部组自动关联，沿用 1 名成员，未重复写入组关联；中文测试说明已写入并回读一致，保留个人 Key 与真机人工项目未验证的说明。首次 `published` 复核的只读 ASC 查询失败，核对同一 App 与组后完整复查通过，没有重传 IPA。内部候选记录仅在分发确认后更新，外测构建 7 及其邀请保持原值。详见[分发证据](./evidence/step-guidance-build15-published-2026-11-11.json)。
