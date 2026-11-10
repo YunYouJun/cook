@@ -13,6 +13,12 @@
 | 隐私清单     | `apps/ios/Cook/Resources/PrivacyInfo.xcprivacy`                           |
 | 正式反馈地址 | `https://api.yunle.fun/cook-feedback`                                     |
 
+## 2026-11-11 步骤讲解构建 15 准备
+
+`2.0.0 (15)` 已从 PR #210 的冻结提交 `674d3b5f` 完成归档、仅内部导出、共享签名／隐私清单验包、正式资源核对和 Apple 包校验，**尚未上传或分发**。IPA SHA-256 为 `57a9b7a0bda547dbef5fd0eaf92f78aad6945ee64231dcd31cc8ef3b2e42ed64`。产物与回执保存在 `~/Library/Developer/ReleaseArtifacts/Cook/20261111-step-guidance-15`，精确状态见[准备证据](./evidence/step-guidance-release-preparation-2026-11-11.json)。
+
+当前实际内部候选仍为构建 14；不更新其发布记录或外测构建 7。上传前再次核对已处理和上传中构建号，生产步骤讲解独立 capability 及真实会员请求按[发布收尾](../../specs/ai-step-guidance/release-closeout.md)执行。个人 Key、真人 VoiceOver／焦点顺序、断网恢复与极端字号人工核对仍未验证，测试说明草稿保留这些边界。
+
 ## 2026-11-09 饮食目标构建 14 内部发布
 
 维护者已认可本版内容，明确授权构建 14 内部上传，并确认「按已有模拟器证据收尾，真机项目保留未验证」。PR #211 的最终 16 项检查通过、1 项按策略跳过后，合并为 `8e0a3267`；合并源码树与通过 CI 的 head 一致。

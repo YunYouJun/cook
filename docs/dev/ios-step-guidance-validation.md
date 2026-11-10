@@ -79,3 +79,11 @@ node --test test/cookAiIntent.test.mjs test/aiIntentContract.test.mjs \
 swift test --package-path apps/ios/CookCore --scratch-path <task-temp>
 pnpm lint --fix
 ```
+
+## 2026-11-11 发布候选准备
+
+从独立工作树冻结 `674d3b5f`，构建 `2.0.0 (15)`。归档、仅内部导出、共享签名／隐私清单检查及 Apple `altool --validate-app` 均通过。最终 IPA 中三个反馈／AI 地址与正式配置一致，12 个数据文件逐字节匹配构建输入，数据版本为 `353bc8dab0ea`，隐私正文与源码一致，App 与 dSYM UUID 匹配。IPA SHA-256 为 `57a9b7a0bda547dbef5fd0eaf92f78aad6945ee64231dcd31cc8ef3b2e42ed64`。
+
+函数 ZIP 已预打包固定版本的 `@cloudbase/node-sdk@3.18.3`，四个源文件与候选源码逐字节一致，模块加载及 GET 405 的本地检查通过，不含生产环境变量。ZIP 的存在不代表已经部署；本轮只读核对确认生产新函数仍不存在，公开路径返回 404。
+
+构建和展开函数的中间目录分别回收 256,588,213 和 16,395,511 字节，合计约 260.3 MiB；归档、dSYM、IPA、函数 ZIP、必要源码输入和回执保存在仓库外。未创建、启动或清空模拟器，未修改其他任务工作树。详细状态见[准备证据](./evidence/step-guidance-release-preparation-2026-11-11.json)与[发布收尾](../../specs/ai-step-guidance/release-closeout.md)。
