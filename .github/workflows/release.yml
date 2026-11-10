@@ -8,6 +8,9 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -27,22 +30,43 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify release version
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import { readFileSync } from 'node:fs'
+          const version = JSON.parse(readFileSync('package.json')).version
+          assert.match(version, /^\d+\.\d+\.\d+(?:-[\w.-]+)?$/)
+          assert.equal(process.env.GITHUB_REF_NAME, `v${version}`)
+          assert.equal(JSON.parse(readFileSync('apps/web/package.json')).version, version)
+          JS
+
       - name: Build
         run: pnpm build
 
       # EdgeOne builds and deploys main through its Git integration.
       # Tags publish release artifacts without replacing the production website.
 
+      - name: Package web assets
+        run: |
+          mkdir release-assets
+          tar -czf "release-assets/cook-web-${GITHUB_REF_NAME}.tar.gz" -C dist .
+          cd release-assets
+          sha256sum "cook-web-${GITHUB_REF_NAME}.tar.gz" > "cook-web-${GITHUB_REF_NAME}.tar.gz.sha256"
+
       - name: Release
         uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: dist
+          files: release-assets/*
+          fail_on_unmatched_files: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
 
       - uses: actions/upload-artifact@v7
         with:
           name: Cook Dist
-          path: dist
+          path: release-assets/*
+          if-no-files-found: error
 
       - run: npx changelogithub # or changelogithub@0.12 if ensure the stable result
         env:

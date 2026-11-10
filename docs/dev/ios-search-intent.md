@@ -4,9 +4,9 @@
 
 ## 2026-11-09 当前构建与契约占用
 
-ASC 精确回查仍是构建 `2.0.0 (12)` 在内部测试，Build ID `315742ed-3c67-48d3-907b-ed88dad320d4`；构建 13 的 `AWAITING_UPLOAD` 记录仍只有分析和描述资源，没有 App 二进制，未删除或改写。下一可用号为 14，已用于[饮食目标候选](./ios-testflight.md#2026-11-09-饮食目标候选-14未上传)的本地审阅包，该候选未上传。
+构建 `2.0.0 (14)` 已完成内部发布，Build ID `d0fe231d-350f-4dd6-9df6-8e98bb468a0e`，回读为 `VALID / INTERNAL_ONLY / IN_BETA_TESTING`，外部 `NOT_APPLICABLE`，沿用既有内部组与成员。构建 13 此前只有分析和描述资源的待上传记录，本次未删除或覆盖；构建 14 使用原已验包 IPA，仅上传一次。参见[构建 14 发布记录](./ios-testflight.md#2026-11-09-饮食目标构建-14-内部发布)。
 
-候选 14 内置的完整 AI 契约为 `353bc8dab0ea`；生产 `cook-ai-intent` 仍只提供 `1878cc5772dc` 与历史快照 `faf919fc0041`，不能接收新版 887 道目录的请求。因此构建 14 的 `distributionReady=false`，发布前必须先部署当前函数契约。此状态不改变 #181 已按模拟器范围关闭，也不把真实个人 Key 调用或新版 TestFlight 验收写成通过。
+候选 14 内置的完整 AI 契约为 `353bc8dab0ea`。当日后续只读回查已下载生产 `cook-ai-intent`：5 个源文件与 main `b425e923` 逐字节一致，当前版本 `353bc8dab0ea`，保留 `faf919fc0041`、`1878cc5772dc`；早间记录的契约部署缺口已解除，无需重复部署。维护者随后认可内容并授权内部上传，明确按已有模拟器证据收尾，真机项目保留未验证；分发核验通过后构建 14 的 `distributionReady=true`。见[分发证据](./evidence/dietary-build14-published-2026-11-09.json)和[复核记录](https://github.com/YunYouJun/cook/blob/main/specs/dietary-goals/release-review.md)。此状态不改变 #181 的原验收范围，也不把未执行的真实会员请求、个人 Key 调用或真机项目写成通过。
 
 ## 2026-11-07 按维护者确认的模拟器范围收尾
 

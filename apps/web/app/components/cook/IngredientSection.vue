@@ -4,6 +4,8 @@
  */
 defineProps<{
   title: string
+  /** Decorative symbol; the title remains the accessible category label. */
+  icon?: string
   /** 标题右侧的说明，例如「已选 2 种」 */
   note?: string
 }>()
@@ -12,8 +14,11 @@ defineProps<{
 <template>
   <section class="ingredient-section" :aria-label="title">
     <h2 class="cook-group-header ingredient-section-header">
-      <span>{{ title }}</span>
-      <span v-if="note" class="ingredient-section-note">{{ note }}</span>
+      <IngredientSectionLabel :title="title" :icon="icon" />
+      <span v-if="note || $slots.actions" class="ingredient-section-actions">
+        <span v-if="note" class="ingredient-section-note">{{ note }}</span>
+        <slot name="actions" />
+      </span>
     </h2>
     <div class="ingredient-section-card">
       <slot />
@@ -25,10 +30,17 @@ defineProps<{
 .ingredient-section-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  min-height: var(--ingredient-section-heading-min-height, 0px);
   margin: var(--ingredient-section-heading-margin, 24px 0 0);
   padding: var(--ingredient-section-heading-padding, 0 36px 6px);
   color: var(--ingredient-section-heading-color, var(--ion-text-color-step-400, #6d6d72));
   font-weight: var(--ingredient-section-heading-weight, 400);
+}
+.ingredient-section-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 .ingredient-section-note {
   color: var(--ion-color-primary);

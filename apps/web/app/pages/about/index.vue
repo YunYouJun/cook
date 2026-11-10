@@ -16,6 +16,7 @@ const appStoreUrl = appStoreId ? `https://apps.apple.com/cn/app/id${appStoreId}`
     </ion-header>
 
     <ion-content>
+      <IosBetaCard />
       <TheAboutList />
 
       <ion-list :inset="true">

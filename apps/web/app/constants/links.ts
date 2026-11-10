@@ -3,6 +3,8 @@ import sharedLinks from '../../../../packages/shared/links.json'
 export const links = {
   cook: 'https://cook.yunyoujun.cn',
   legacyCook: 'https://v1.cook.yunyoujun.cn',
+  testflight: 'https://testflight.apple.com/join/KTTJNhDh',
+  iosBetaGuide: 'https://cook.yunle.fun/guide/ios-beta',
 
   /**
    * 应用内反馈提交失败时的可选邮件兜底

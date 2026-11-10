@@ -130,6 +130,12 @@ def gate(candidate, snapshot, evidence):
 
 class Controller:
     def __init__(self, candidate, directory, config):
+        # Reject internal/review candidates before even a read can reach the
+        # external controller's failure path, which may close a public link.
+        if candidate.get('distributionChannel', 'external') != 'external':
+            raise ValueError('External beta commands require an external candidate')
+        if candidate.get('distributionReady') is False:
+            raise ValueError('Review candidates cannot control external invitations')
         self.c = candidate
         self.directory = Path(directory)
         self.config = config

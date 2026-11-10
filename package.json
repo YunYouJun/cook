@@ -1,11 +1,11 @@
 {
   "name": "cook",
   "type": "module",
-  "version": "2.0.0-beta.18",
+  "version": "2.0.0",
   "private": true,
   "packageManager": "pnpm@11.21.0",
   "engines": {
-    "node": "^24.11.0",
+    "node": "^24.15.0",
     "pnpm": "11.21.0"
   },
   "scripts": {
@@ -27,7 +27,6 @@
     "images:upload": "tsx --env-file-if-exists=.env scripts/upload-recipe-images.ts",
     "fetch": "pnpm -C packages/cook run fetch",
     "dev": "pnpm -C apps/web run dev",
-    "dev:pwa": "pnpm -C apps/web run dev:pwa",
     "docs:dev": "pnpm -C docs run docs:dev",
     "docs:build": "pnpm -C docs run docs:build",
     "generate": "node scripts/build-web-output.mjs generate",
@@ -65,7 +64,7 @@
     "simple-git-hooks": "^2.13.1",
     "tsx": "^4.23.12",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.12"
   },
   "resolutions": {
     "unplugin": "^3.0.0",

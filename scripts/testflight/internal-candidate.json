@@ -1,0 +1,19 @@
+{
+  "appId": "6824589542",
+  "groupId": "a2962c09-0f3d-4180-abef-030cf8920279",
+  "version": "2.0.0",
+  "buildNumber": "14",
+  "buildId": "d0fe231d-350f-4dd6-9df6-8e98bb468a0e",
+  "sourceCommit": "1b4560429eba5921db08296aa983479d826be187",
+  "ipaSha256": "fe7aed5916dd899eaf187773376625c0fdb3a8adbda054dc218f1d7fe90c0dfa",
+  "reviewReady": true,
+  "distributionReady": true,
+  "uploaded": true,
+  "distributionBlockers": [],
+  "distributionChannel": "internal",
+  "productionContractReady": true,
+  "acceptancePolicy": "simulator",
+  "maintainerContentApproved": true,
+  "physicalChecksVerified": false,
+  "distributionEvidence": "docs/dev/evidence/dietary-build14-published-2026-11-09.json"
+}
