@@ -270,6 +270,25 @@ test('model output must cite known sources including the current step and may no
   }
 })
 
+test('numeric expressions keep their complete value and unit in both guidance channels', async () => {
+  const cases = JSON.parse(await readFile(new URL('../packages/data/fixtures/step-guidance-numbers.json', import.meta.url), 'utf8'))
+  for (const item of cases) {
+    const sources = item.sources.map((text, index) => ({ id: `step:${index}`, text }))
+    const context = { sources, currentStepSourceID: sources[0].id }
+    const value = draft({ answer: item.answer, sourceIDs: sources.map(source => source.id) })
+    if (item.allowed) {
+      assert.deepEqual(validateDraft(value, context), value, item.name)
+    }
+    else {
+      assert.throws(
+        () => validateDraft(value, context),
+        error => error.code === 'INVALID_MODEL_RESPONSE' && error.diagnostic === 'guidance_unsafe_numbers',
+        item.name,
+      )
+    }
+  }
+})
+
 test('membership and quota failures stay fixed and never call the model', async () => {
   const inactive = fixture({ readMembership: async () => ({ isActive: false, expireAt: null }) })
   await assertCode(inactive.handler, event(), 403, 'MEMBERSHIP_REQUIRED')

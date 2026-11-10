@@ -311,31 +311,38 @@ public enum StepGuidanceValidator {
         let allowed = Set(prompt.sources.map(\.id))
         guard draft.sourceIDs.allSatisfy(allowed.contains) else { throw StepGuidanceError.unknownSource }
         guard draft.sourceIDs.contains(prompt.currentStepSourceID) else { throw StepGuidanceError.unknownSource }
-        let citedText = draft.sourceIDs.compactMap(prompt.sourceText(for:)).joined(separator: "\n")
-        guard numbersAreSupported(answer, citedText: citedText) else { throw StepGuidanceError.unsafeNumbers }
+        let citedSources = draft.sourceIDs.compactMap(prompt.sourceText(for:))
+        guard numbersAreSupported(answer, citedSources: citedSources) else { throw StepGuidanceError.unsafeNumbers }
         return StepGuidanceDraft(status: draft.status, answer: answer, sourceIDs: draft.sourceIDs)
     }
 
     /// This syntax check is deliberately conservative. It does not prove every natural-language claim.
-    private static func numbersAreSupported(_ answer: String, citedText: String) -> Bool {
-        let normalizedAnswer = answer.replacingOccurrences(of: " ", with: "")
-        let normalizedSource = citedText.replacingOccurrences(of: " ", with: "")
-        let patterns = [
-            #"\d+(?:\.\d+)?"#,
-            #"[一二两三四五六七八九十半]+\s*(?:g|kg|ml|l|克|千克|公斤|毫升|升|分钟|分|秒|小时|度|℃|°C|个|颗|只|根|瓣|片|朵|张|支|块|勺|汤匙|茶匙|把|杯|袋|包|盒|瓶|罐|枚|粒|棵|条|碗|滴|扎|圈|节|段|株|叶|卷|头|份)"#,
-        ]
-        for pattern in patterns {
-            guard let expression = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
-                return false
-            }
-            let range = NSRange(normalizedAnswer.startIndex..<normalizedAnswer.endIndex, in: normalizedAnswer)
-            for match in expression.matches(in: normalizedAnswer, range: range) {
-                guard let tokenRange = Range(match.range, in: normalizedAnswer),
-                      normalizedSource.contains(normalizedAnswer[tokenRange]) else {
-                    return false
+    private static func numbersAreSupported(_ answer: String, citedSources: [String]) -> Bool {
+        // Keep this grammar aligned with the managed service; both run the shared numeric fixtures.
+        let fraction = #"\p{Nd}+\s*[/⁄]\s*\p{Nd}+"#
+        let arabic = #"[-+−＋－]?(?:\p{Nd}+(?:\s+|\s*又\s*)\#(fraction)|\#(fraction)|\p{Nd}+(?:[.．]\p{Nd}+)?|[.．]\p{Nd}+)(?:e[-+]?\p{Nd}+)?[百千万亿萬億]?"#
+        let chineseDigit = "[零〇○一二两兩三四五六七八九十百千万亿壹贰貳叁參肆伍陆陸柒捌玖拾佰仟萬億廿卅卌半]"
+        let chinese = "(?:\(chineseDigit)+又)?(?:\(chineseDigit)+分之)?\(chineseDigit)+(?:[点點]\(chineseDigit)+)?"
+        let number = #"(?:\#(arabic)|\#(chinese)|[\p{Nl}\p{No}]+)"#
+        let range = #"(?:\s*[-–—~～至到]\s*\#(number))?"#
+        let unit = #"(?:[个個]半?\s*(?:小[时時]|[钟鐘]头|星期|月)|千克|毫克|微克|公斤|公克|毫升|公升|厘米|毫米|分[钟鐘]|小[时時]|刻钟|摄氏度|华氏度|[汤湯茶]匙|[汤茶]勺|盎司|分(?!之)|°[cf]|[磅克斤两兩升米秒度℃℉%％‰个個颗只根瓣片朵张支块勺匙撮把杯袋包盒瓶罐枚粒棵条碗滴扎圈节段株叶卷头份次成天日周月年]|[a-z]+)"#
+        let quantity = #"\#(number)\#(range)(?:[来余餘多]|左右|上下)?\s*[大小平满滿尖整薄厚]?\#(unit)(?:[半多余餘]|左右|上下)?"#
+        let pattern = #"\#(quantity)|\#(arabic)(?:\s*[-–—~～至到]\s*\#(arabic))?|\#(chineseDigit)+分之\#(chineseDigit)+|\#(chineseDigit)+[点點]\#(chineseDigit)+|\#(chineseDigit)*[百千万亿佰仟萬億]\#(chineseDigit)*(?:[点點]\#(chineseDigit)+)?|[\p{Nl}\p{No}]+"#
+        guard let expression = try? NSRegularExpression(pattern: pattern) else { return false }
+        func tokens(_ text: String) -> [String] {
+            let normalized = text.lowercased()
+            let range = NSRange(normalized.startIndex..<normalized.endIndex, in: normalized)
+            return expression.matches(in: normalized, range: range).compactMap { match in
+                Range(match.range, in: normalized).map {
+                    // Preserve the mixed-fraction boundary instead of joining adjacent digits.
+                    String(normalized[$0])
+                        .replacingOccurrences(of: #"(?<=\p{N})\s+(?=\p{N})"#, with: "|", options: .regularExpression)
+                        .replacingOccurrences(of: #"\s"#, with: "", options: .regularExpression)
                 }
             }
         }
-        return true
+        // A value must come from one citation, never from concatenated source boundaries.
+        let supported = Set(citedSources.flatMap(tokens))
+        return tokens(answer).allSatisfy(supported.contains)
     }
 }

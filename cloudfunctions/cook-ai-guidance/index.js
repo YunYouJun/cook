@@ -302,18 +302,26 @@ function modelUserMessage(context) {
   return context.request.question ?? '请讲解当前步骤，说明操作要点，但不要替我执行或勾选。'
 }
 
-function numbersAreSupported(answer, citedText) {
-  const normalizedAnswer = answer.replaceAll(' ', '')
-  const normalizedSource = citedText.replaceAll(' ', '')
-  const patterns = [
-    /\d+(?:\.\d+)?/gu,
-    /[一二两三四五六七八九十半]+\s*(?:kg|[gl克升]|ml|千克|公斤|毫升|分钟|[分秒度℃个颗只根瓣片朵张支块勺把杯袋包盒瓶罐枚粒棵条碗滴扎圈节段株叶卷头份]|小时|°C|汤匙|茶匙)/giu,
-  ]
-  for (const pattern of patterns) {
-    for (const match of normalizedAnswer.matchAll(pattern)) {
-      if (!normalizedSource.includes(match[0]))
-        return false
-    }
+function numbersAreSupported(answer, citedSources) {
+  // Keep this grammar aligned with CookCore; both validators run the shared numeric fixtures.
+  const fraction = String.raw`\p{Nd}+\s*[/⁄]\s*\p{Nd}+`
+  const arabic = String.raw`[-+−＋－]?(?:\p{Nd}+(?:\s+|\s*又\s*)${fraction}|${fraction}|\p{Nd}+(?:[.．]\p{Nd}+)?|[.．]\p{Nd}+)(?:e[-+]?\p{Nd}+)?[百千万亿萬億]?`
+  const chineseDigit = '[零〇○一二两兩三四五六七八九十百千万亿壹贰貳叁參肆伍陆陸柒捌玖拾佰仟萬億廿卅卌半]'
+  const chinese = `(?:${chineseDigit}+又)?(?:${chineseDigit}+分之)?${chineseDigit}+(?:[点點]${chineseDigit}+)?`
+  const number = String.raw`(?:${arabic}|${chinese}|[\p{Nl}\p{No}]+)`
+  const range = String.raw`(?:\s*[-–—~～至到]\s*${number})?`
+  const unit = String.raw`(?:[个個]半?\s*(?:小[时時]|[钟鐘]头|星期|月)|千克|毫克|微克|公斤|公克|毫升|公升|厘米|毫米|分[钟鐘]|小[时時]|刻钟|摄氏度|华氏度|[汤湯茶]匙|[汤茶]勺|盎司|分(?!之)|°[cf]|[磅克斤两兩升米秒度℃℉%％‰个個颗只根瓣片朵张支块勺匙撮把杯袋包盒瓶罐枚粒棵条碗滴扎圈节段株叶卷头份次成天日周月年]|[a-z]+)`
+  const quantity = String.raw`${number}${range}(?:[来余餘多]|左右|上下)?\s*[大小平满滿尖整薄厚]?${unit}(?:[半多余餘]|左右|上下)?`
+  const pattern = new RegExp(String.raw`${quantity}|${arabic}(?:\s*[-–—~～至到]\s*${arabic})?|${chineseDigit}+分之${chineseDigit}+|${chineseDigit}+[点點]${chineseDigit}+|${chineseDigit}*[百千万亿佰仟萬億]${chineseDigit}*(?:[点點]${chineseDigit}+)?|[\p{Nl}\p{No}]+`, 'gu')
+  const tokens = text => [...text.toLowerCase().matchAll(pattern)].map(match =>
+    // Keep the whole/fraction boundary in "1 1/2" distinct from the value "11/2".
+    match[0].replace(/(?<=\p{N})\s+(?=\p{N})/gu, '|').replace(/\s/gu, ''),
+  )
+  // Tokenize each citation separately so adjacent sources cannot manufacture a value or unit.
+  const supported = new Set(citedSources.flatMap(tokens))
+  for (const token of tokens(answer)) {
+    if (!supported.has(token))
+      return false
   }
   return true
 }
@@ -337,10 +345,9 @@ function validateDraft(value, context) {
     throw new GuidanceServiceError('INVALID_MODEL_RESPONSE', 'guidance_unknown_source')
   if (!value.sourceIDs.includes(context.currentStepSourceID))
     throw new GuidanceServiceError('INVALID_MODEL_RESPONSE', 'guidance_missing_current_source')
-  const citedText = value.sourceIDs
+  const citedSources = value.sourceIDs
     .map(id => context.sources.find(source => source.id === id).text)
-    .join('\n')
-  if (!numbersAreSupported(answer, citedText))
+  if (!numbersAreSupported(answer, citedSources))
     throw new GuidanceServiceError('INVALID_MODEL_RESPONSE', 'guidance_unsafe_numbers')
   return { status: value.status, answer, sourceIDs: value.sourceIDs }
 }

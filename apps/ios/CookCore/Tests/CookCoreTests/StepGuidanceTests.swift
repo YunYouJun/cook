@@ -128,6 +128,40 @@ final class StepGuidanceTests: XCTestCase {
         XCTAssertNoThrow(try StepGuidanceValidator.validate(answer, for: prompt))
     }
 
+    func testNumericExpressionsKeepTheirCompleteValueAndUnit() throws {
+        struct NumericCase: Decodable {
+            let name: String
+            let sources: [String]
+            let answer: String
+            let allowed: Bool
+        }
+        let url = SharedFixtureTests.dataDirectory.appendingPathComponent("fixtures/step-guidance-numbers.json")
+        let cases = try JSONDecoder().decode([NumericCase].self, from: Data(contentsOf: url))
+        for item in cases {
+            let text = RecipeText(blocks: [
+                .heading("操作"),
+                .list(ordered: true, start: 1, items: item.sources),
+            ])
+            let presentation = RecipePresentation(text: text)
+            let prompt = try StepGuidancePrompt(
+                recipe: recipe, text: text, dataVersion: "fixture-v1",
+                step: XCTUnwrap(presentation.steps.first),
+                servings: 2, kind: .explain, question: nil
+            )
+            let draft = StepGuidanceDraft(
+                status: .answer, answer: item.answer,
+                sourceIDs: presentation.steps.map { "step:\($0.id)" }
+            )
+            if item.allowed {
+                XCTAssertNoThrow(try StepGuidanceValidator.validate(draft, for: prompt), item.name)
+            } else {
+                XCTAssertThrowsError(try StepGuidanceValidator.validate(draft, for: prompt), item.name) {
+                    XCTAssertEqual($0 as? StepGuidanceError, .unsafeNumbers, item.name)
+                }
+            }
+        }
+    }
+
     func testStrictDraftDecodingRejectsUnknownFieldsAndMalformedCitations() throws {
         let prompt = try prompt()
         let current = prompt.currentStepSourceID

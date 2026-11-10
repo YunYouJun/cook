@@ -58,3 +58,24 @@ xcodebuild -project apps/ios/Cook.xcodeproj -scheme Cook \
 ```
 
 上述 `/tmp` xcresult 是清理前的人工核对路径。任务结束后回收 `/tmp/cook-ai-step-guidance-derived` 等本轮可重建产物；源码、来源生成输入和本报告保留。
+
+## 2026-11-11 数值校验修复
+
+同步最新 `main`，解决隐私政策更新日期冲突，保留步骤讲解和冰箱照片识别两边的隐私说明。
+
+- 修复前先运行新增回归测试，确认「4ml 食用油 → 加热 4 分钟」会错误通过。修复后，Swift 与 Node 均从每条引用独立提取完整数值表达式，再精确匹配；不再以数字子串判断来源支持。
+- 两端共用 `packages/data/fixtures/step-guidance-numbers.json` 的 57 个案例，覆盖单位置换、整数/小数子串、中文百千、大小勺、约数、复合时间单位、分数/带分数、符号/范围、Unicode 数字及跨引用拼接；同时保留原文数值和合法空白、单位大小写的正例。
+- Node 定向检查 50 通过，0 失败；CookCore 全量测试通过，包含运行上述共享案例的 `StepGuidanceTests`。来源快照与旧 intent 契约生成检查均通过；`pnpm lint --fix` 通过。
+- 规范与规格增量复核均通过。语法检查仍不证明全部自然语言事实，不将这些案例的通过描述为任意数值表达或生产模型已验收。
+- 本轮 Swift 构建使用任务独占临时目录并在退出时回收，两次构建共回收约 287 MiB；未新建或运行模拟器。未重复执行 UI、真实模型调用、生产部署、TestFlight 或真机无障碍验收。
+
+本轮命令：
+
+```bash
+node scripts/generate-ai-intent-contract.mjs --check
+node scripts/generate-ai-guidance-sources.mjs --check
+node --test test/cookAiIntent.test.mjs test/aiIntentContract.test.mjs \
+  test/cookAiGuidance.test.mjs test/aiGuidanceSources.test.mjs
+swift test --package-path apps/ios/CookCore --scratch-path <task-temp>
+pnpm lint --fix
+```
