@@ -4,6 +4,8 @@
  */
 defineProps<{
   title: string
+  /** Decorative symbol; the title remains the accessible category label. */
+  icon?: string
   /** 标题右侧的说明，例如「已选 2 种」 */
   note?: string
 }>()
@@ -12,7 +14,7 @@ defineProps<{
 <template>
   <section class="ingredient-section" :aria-label="title">
     <h2 class="cook-group-header ingredient-section-header">
-      <span>{{ title }}</span>
+      <IngredientSectionLabel :title="title" :icon="icon" />
       <span v-if="note || $slots.actions" class="ingredient-section-actions">
         <span v-if="note" class="ingredient-section-note">{{ note }}</span>
         <slot name="actions" />

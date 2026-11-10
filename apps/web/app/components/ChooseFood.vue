@@ -6,6 +6,7 @@ import { DIFFICULTY_LEVELS, METHOD_GROUPS } from '@yunyoujun/cook/recommend'
 import { useEmojiAnimation } from '~/composables/animation'
 import { useIncompatibleFoods } from '~/composables/incompatible-foods'
 import { namespace } from '~/constants'
+import { categoryIcons } from '~/data/categoryIcons'
 import { methodIcons, toolIcons } from '~/data/cookingIcons'
 import { pantryOptions } from '~/data/pantry'
 import { trackCookEvent } from '~/utils/analytics'
@@ -94,7 +95,7 @@ function clickTool(item: StuffItem) {
     />
 
     <div class="choose-food-categories">
-      <IngredientSection v-for="section in visibleSections" :key="section.category" :title="section.title" :note="selectedNote(section.items)">
+      <IngredientSection v-for="section in visibleSections" :key="section.category" :title="section.title" :icon="categoryIcons[section.category]" :note="selectedNote(section.items)">
         <template #actions>
           <button
             v-if="section.isExpanded || section.hiddenCount > 0"
@@ -119,7 +120,7 @@ function clickTool(item: StuffItem) {
       </IngredientSection>
     </div>
 
-    <IngredientSection title="厨具（可选）" :note="rStore.curTool ? '已选' : ''">
+    <IngredientSection title="厨具（可选）" :icon="categoryIcons.tools" :note="rStore.curTool ? '已选' : ''">
       <template #actions>
         <NuxtLink class="choose-food-manage" to="/catalog">
           管理食材和厨具
@@ -135,7 +136,7 @@ function clickTool(item: StuffItem) {
       />
     </IngredientSection>
 
-    <IngredientSection title="做法（可选）" :note="rStore.methodGroups.length ? '只看这些做法' : ''">
+    <IngredientSection title="做法（可选）" :icon="categoryIcons.method" :note="rStore.methodGroups.length ? '只看这些做法' : ''">
       <IngredientChip
         v-for="group in METHOD_GROUPS"
         :key="group.label"
@@ -146,7 +147,7 @@ function clickTool(item: StuffItem) {
       />
     </IngredientSection>
 
-    <IngredientSection title="难度（可选）" :note="rStore.difficulty.length ? '没标难度的菜会被隐藏' : ''">
+    <IngredientSection title="难度（可选）" :icon="categoryIcons.difficulty" :note="rStore.difficulty.length ? '没标难度的菜会被隐藏' : ''">
       <IngredientChip
         v-for="level in DIFFICULTY_LEVELS"
         :key="level"
@@ -156,7 +157,7 @@ function clickTool(item: StuffItem) {
       />
     </IngredientSection>
 
-    <IngredientSection v-if="desktop" title="家里常备" :note="`已选 ${rStore.selectedPantry.length} 种调料`">
+    <IngredientSection v-if="desktop" title="家里常备" :icon="categoryIcons.pantry" :note="`已选 ${rStore.selectedPantry.length} 种调料`">
       <IngredientChip
         v-for="name in pantryOptions"
         :key="name"
@@ -177,8 +178,8 @@ function clickTool(item: StuffItem) {
       只在菜谱明确列出时算作已有，不会额外增加必需的材料。
     </p>
 
-    <h2 class="cook-group-header">
-      {{ desktop ? '忌口' : '调料和忌口' }}
+    <h2 class="cook-group-header choose-food-preferences-heading">
+      <IngredientSectionLabel :title="desktop ? '忌口' : '调料和忌口'" :icon="desktop ? categoryIcons.avoid : categoryIcons.pantry" />
     </h2>
     <ion-list :inset="true" class="choose-food-pantry">
       <ion-item v-if="!desktop" :button="true" @click="pantryOpen = true">
@@ -227,6 +228,10 @@ function clickTool(item: StuffItem) {
 </template>
 
 <style scoped>
+.choose-food-preferences-heading {
+  display: flex;
+  align-items: center;
+}
 .choose-food {
   --ingredient-chip-font-size: 14px;
   --ingredient-chip-mark-size: 14px;
