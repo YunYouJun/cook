@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url'
 
 import { defineNuxtConfig } from 'nuxt/config'
 import { simpleGit } from 'simple-git'
-// import { pwa } from './app/config/pwa'
 import { appStoreId } from './app/constants/index'
 import { applyCookRouteSeo, cookDocumentHead } from './app/constants/seo'
 
@@ -58,7 +57,6 @@ export default defineNuxtConfig({
     '@unocss/nuxt',
     '@pinia/nuxt',
     '@nuxtjs/color-mode',
-    // '@vite-pwa/nuxt',
     '@nuxt/eslint',
     '@nuxt/test-utils/module',
     // fix QQ in iOS, Done

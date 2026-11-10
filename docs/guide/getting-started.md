@@ -8,8 +8,8 @@
 
 ### 系统要求
 
-- Node.js >= 22
-- pnpm >= 11.21
+- Node.js 24 LTS（最低 24.15，按 `.nvmrc` 使用 24.22.2）
+- pnpm 11.21.0（与 `packageManager` 保持一致）
 
 ### 安装依赖
 
