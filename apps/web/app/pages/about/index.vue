@@ -17,6 +17,16 @@ const appStoreUrl = appStoreId ? `https://apps.apple.com/cn/app/id${appStoreId}`
 
     <ion-content>
       <IosBetaCard />
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title class="text-base">
+            AI 功能集中在 App
+          </ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <AiAvailabilityNotice />
+        </ion-card-content>
+      </ion-card>
       <TheAboutList />
 
       <ion-list :inset="true">
