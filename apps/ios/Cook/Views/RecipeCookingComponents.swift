@@ -259,6 +259,7 @@ private struct RecipeStepButtonStyle: ButtonStyle {
 
 struct RecipeStepProgress: View {
     @Environment(KitchenWorkbench.self) private var workbench
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var confirmingReset = false
     let recipeID: Int
     let steps: [RecipePresentation.Step]
@@ -269,8 +270,12 @@ struct RecipeStepProgress: View {
     private var next: RecipePresentation.Step? { steps.first { !completed.contains($0.id) } }
 
     var body: some View {
+        let accessibility = dynamicTypeSize.isAccessibilitySize
+        let layout = accessibility
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 12))
         VStack(spacing: 8) {
-            HStack(spacing: 12) {
+            layout {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(count == steps.count ? "做好了，开饭吧" : "烹饪进度")
                         .font(.subheadline.weight(.semibold))
@@ -278,7 +283,7 @@ struct RecipeStepProgress: View {
                         .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                         .accessibilityIdentifier("recipe.stepProgress")
                 }
-                Spacer(minLength: 0)
+                if !accessibility { Spacer(minLength: 0) }
                 if let next {
                     Button("第 \(next.number) 步", systemImage: "arrow.down") { jump(next) }
                         .font(.subheadline)
@@ -301,12 +306,13 @@ struct RecipeStepProgress: View {
             }
             // 重置按钮出现前后保留相同高度，避免步骤在完成或撤销时上下跳动。
             .frame(minHeight: 44)
+            .frame(maxWidth: .infinity, alignment: .leading)
             ProgressView(value: Double(count), total: Double(max(steps.count, 1)))
                 .tint(count == steps.count ? .green : .accentColor)
                 .accessibilityLabel("烹饪进度")
                 .accessibilityValue("已完成 \(count) 步，共 \(steps.count) 步")
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, accessibility ? 0 : 20)
         .padding(.vertical, 12)
         .accessibilityElement(children: .contain)
         .confirmationDialog("重新记录操作步骤？", isPresented: $confirmingReset, titleVisibility: .visible) {

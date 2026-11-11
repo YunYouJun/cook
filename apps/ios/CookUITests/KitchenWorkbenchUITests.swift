@@ -499,6 +499,13 @@ final class KitchenWorkbenchUITests: XCTestCase {
         app.launch()
         openKitchen(app)
 
+        let progress = app.staticTexts["recipe.stepProgress"]
+        XCTAssertTrue(progress.waitForExistence(timeout: 10))
+        let initialProgressY = progress.frame.minY
+        let continueStep = app.buttons["recipe.continueStep"]
+        XCTAssertTrue(continueStep.isHittable)
+        continueStep.tap()
+
         let panel = app.otherElements["recipe.guidance.panel"]
         XCTAssertTrue(panel.waitForExistence(timeout: 10))
         let explain = app.buttons["recipe.guidance.explain"]
@@ -513,9 +520,32 @@ final class KitchenWorkbenchUITests: XCTestCase {
         explain.tap()
         let answer = app.staticTexts["recipe.guidance.answer"]
         XCTAssertTrue(answer.waitForExistence(timeout: 10))
-        scrollAboveTimer(answer, in: app)
+        scrollToHittable(answer, in: app)
         XCTAssertGreaterThanOrEqual(answer.frame.height, 44)
+        XCTAssertTrue(!progress.exists || progress.frame.minY < initialProgressY - 44,
+                      "Progress must scroll away from the answer at accessibility text sizes.")
+        XCTAssertFalse(app.buttons["kitchen.timerShortcut"].exists)
         capture(app, "recipe-step-guidance-accessibility-dark")
+
+        let sources = panel.buttons["recipe.guidance.sources"]
+        XCTAssertTrue(sources.waitForExistence(timeout: 5))
+        scrollToHittable(sources, in: app)
+        sources.tap()
+        let citedStep = panel.staticTexts.matching(NSPredicate(format: "label == %@", "西红柿洗净")).firstMatch
+        XCTAssertTrue(citedStep.waitForExistence(timeout: 5))
+        scrollToHittable(citedStep, in: app)
+        XCTAssertEqual(app.buttons["recipe.step.1"].value as? String, "未完成")
+        capture(app, "recipe-step-guidance-accessibility-citation")
+
+        let preparation = app.segmentedControls.buttons["备料与计时"]
+        if preparation.exists {
+            preparation.tap()
+        }
+        XCTAssertTrue(app.staticTexts["kitchen.countdown"].waitForExistence(timeout: 10))
+        if preparation.exists {
+            app.segmentedControls.buttons["做法"].tap()
+            XCTAssertTrue(citedStep.isHittable, "Opening the timer must preserve the reading position.")
+        }
     }
 
     @MainActor
@@ -560,23 +590,6 @@ final class KitchenWorkbenchUITests: XCTestCase {
             scrollView.swipeUp(velocity: .slow)
         }
         XCTAssertTrue(element.isHittable)
-    }
-
-    @MainActor
-    private func scrollAboveTimer(_ element: XCUIElement, in app: XCUIApplication) {
-        let scrollView = app.scrollViews["kitchen.instructions"].firstMatch
-        XCTAssertTrue(scrollView.waitForExistence(timeout: 5))
-        let timer = app.buttons["kitchen.timerShortcut"]
-        for _ in 0..<20 {
-            if element.isHittable, !timer.exists || element.frame.maxY <= timer.frame.minY - 8 {
-                break
-            }
-            scrollView.swipeUp(velocity: .slow)
-        }
-        XCTAssertTrue(element.isHittable)
-        if timer.exists {
-            XCTAssertLessThanOrEqual(element.frame.maxY, timer.frame.minY - 8)
-        }
     }
 
     @MainActor

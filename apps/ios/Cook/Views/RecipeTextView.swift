@@ -30,6 +30,7 @@ struct RecipeTextContent: View {
     @Environment(CookAISettings.self) private var ai
     @Environment(YunlefunAccountStore.self) private var accounts
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let recipe: Recipe
     let text: RecipeText
     let preparationInSidebar: Bool
@@ -99,6 +100,9 @@ struct RecipeTextContent: View {
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    if dynamicTypeSize.isAccessibilitySize {
+                        stepProgress(jump: jump)
+                    }
                     if let dietaryGoal, let entry = store.dietaryCatalog?.entry(for: recipe, goal: dietaryGoal) {
                         DietaryReviewSummary(goal: dietaryGoal, entry: entry)
                     }
@@ -129,10 +133,10 @@ struct RecipeTextContent: View {
             }
             .accessibilityIdentifier("recipe.textContent")
             .background(Color(uiColor: .systemGroupedBackground))
-            .softScrollEdges(enabled: preparationInSidebar)
+            .softScrollEdges(enabled: preparationInSidebar && !dynamicTypeSize.isAccessibilitySize)
             .scrollEdgeBar(edge: .top) {
-                if !presentation.steps.isEmpty {
-                    RecipeStepProgress(recipeID: recipe.id, steps: presentation.steps, jump: jump)
+                if !dynamicTypeSize.isAccessibilitySize {
+                    stepProgress(jump: jump)
                 }
             }
             // 大图里翻到别的图时，正文跟着滚过去，收起时缩回那张图的位置
@@ -159,6 +163,13 @@ struct RecipeTextContent: View {
         .fullScreenCover(isPresented: $showsPhotos) {
             RecipeImageViewer(photos: photos, selection: $photoSelection)
                 .zoomTransition(sourceID: photoSelection, in: photoTransition)
+        }
+    }
+
+    @ViewBuilder
+    private func stepProgress(jump: @escaping (RecipePresentation.Step) -> Void) -> some View {
+        if !presentation.steps.isEmpty {
+            RecipeStepProgress(recipeID: recipe.id, steps: presentation.steps, jump: jump)
         }
     }
 
