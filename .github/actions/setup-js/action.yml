@@ -1,0 +1,17 @@
+name: Prepare JavaScript workspace
+description: Install repository-pinned Node.js, pnpm and frozen workspace dependencies
+inputs:
+  registry-url:
+    description: Optional npm registry configuration for jobs that also invoke npm
+    default: ''
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+        registry-url: ${{ inputs.registry-url }}
+    - shell: bash
+      run: pnpm install --frozen-lockfile

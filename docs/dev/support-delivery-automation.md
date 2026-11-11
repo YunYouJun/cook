@@ -80,7 +80,7 @@ GitHub 中现有 `Production – cook` 部署记录来自 Vercel，不作为 Edg
 node scripts/cook-support-sync.mjs --allow-initialize
 ```
 
-GitHub 运行使用 Node action 获取官方 artifact 运行时；浏览器只在需要新的生产验收时安装，已验收版本的送达核对复用既有验收证明。CI 会用独立的合成加密数据执行真实 artifact 上传、下载与摘要验收，不访问 Support，不使用工单检查点命名空间。
+GitHub 运行使用 Node action 获取官方 artifact 运行时；浏览器只在需要新的生产验收时安装，已验收版本的送达核对复用既有验收证明。CI 在 Support／artifact 工具、依赖、工作流或未知输入改变时，用独立的合成加密数据执行真实 artifact 上传、下载与摘要验收，不访问 Support，不使用工单检查点命名空间。明确无关的产品或文档改动可免除该联网步骤；本地账本与 artifact 测试始终执行。分类不可用或前一条 push 的 CI 未通过时保留联网检查，手动 CI 也执行该检查。
 
 环境变量使用 `COOK_SUPPORT_AGENT_CONFIG`、`COOK_SUPPORT_BINDINGS_FILE` 指向仓库外 0600 JSON，`COOK_SUPPORT_STATE_DIR` 指向 0700 私密目录；另设置加密密钥、只读 GitHub token、EdgeOne token 和绝对路径 `COOK_PLAYWRIGHT_MODULE`。只有显式 `--apply` 才执行工单命令。不要在命令或公开日志中写入凭据值。
 

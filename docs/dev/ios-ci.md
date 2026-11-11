@@ -1,5 +1,15 @@
 # iOS CI
 
+## 2026-11-12 无关触发与重复配置精简
+
+Node.js、pnpm、缓存和冻结依赖安装统一由 `.github/actions/setup-js` 定义，Web／Swift 任务和 iOS 环境共用；每个 runner 仍独立安装，Web build 继续从全新检出执行。去掉只有 Ubuntu 一项的 test 矩阵，保留 `test (ubuntu-latest)` 和现有汇总检查名称。
+
+独立 Support 同步、账本、artifact 工具及已列出的测试不再触发模拟器／Swift；混入原生、共享协议、工程或未知输入仍按原计划执行。artifact 真实联网往返只对明确不相关的文档、浏览器 UI、原生 Swift／StoreKit／测试计划以及菜谱 CSV／JSON 免除；Support、artifact 脚本、依赖、CI 配置和未知文件仍执行。所有本地 artifact／账本单元测试始终运行。
+
+两种免除都要求非空、完整的变更比较；push 还要求同分支精确前一提交的 CI 已成功，避免后续无关提交取消并掩盖前一项检查。比较失败、计划失败、手动运行均保留完整检查，fork PR 仍不访问需要权限的真实 artifact 运行时。原生核心／会员／full 的用例、StoreKit 断言、限时和结果复用条件不变。
+
+[基线 PR CI](https://github.com/YunYouJun/cook/actions/runs/43047563706) 的 iPad 为 28.8 分钟、iPhone 17.1 分钟、StoreKit 15.7 分钟，Web 测试 1.4 分钟。这次主要减少无关修改的触发，不能据此宣称 iOS 功能改动自身会编译或执行得更快。
+
 ## 2026-11-08 原生检查启动开销
 
 [PR #205 的成功 CI](https://github.com/YunYouJun/cook/actions/runs/42458399313) 中，iPhone core 任务耗时 18 分 04 秒，iPad core 耗时 22 分 35 秒，StoreKit 耗时 10 分 12 秒。日志显示原生构建同时编译 `arm64` 与 `x86_64`，但每台 runner 只使用宿主架构的模拟器；StoreKit 在服务已经运行时仍强制 `kickstart`，冷服务控制及等待可占数分钟。

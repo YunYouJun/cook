@@ -38,6 +38,7 @@ jobs:
       core_key: ${{ steps.pr_core.outputs.key }}
       core_run: ${{ steps.pr_core.outputs.run_id }}
       skip_native: ${{ steps.changes.outputs.skip_native }}
+      skip_artifact: ${{ steps.changes.outputs.skip_artifact }}
       ios_suites: ${{ steps.changes.outputs.ios_suites }}
       ios_max_parallel: ${{ steps.changes.outputs.ios_max_parallel }}
       ios_storekit_devices: ${{ steps.changes.outputs.ios_storekit_devices }}
@@ -53,7 +54,7 @@ jobs:
       - name: Test isolated iOS infrastructure recovery
         run: node --test test/iosTestInfrastructure.test.mjs test/iosStoreKitInfrastructure.test.mjs
       - run: node --test test/iosCoreReuse.test.mjs
-      - name: Plan native CI coverage
+      - name: Plan CI coverage
         id: changes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -70,17 +71,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Set node
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-js
 
       - name: Lint
         run: pnpm run lint
@@ -90,17 +81,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Set node
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-js
 
       - name: Convert CSV to JSON
         run: pnpm run convert
@@ -114,12 +95,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-js
       - run: pnpm run build
       - name: Build documentation
         run: pnpm run docs:build
@@ -129,27 +105,20 @@ jobs:
           node scripts/compose-product-site.mjs
 
   test:
+    name: test (ubuntu-latest)
+    needs: changes
+    if: ${{ !cancelled() }}
     permissions:
       contents: read
       actions: read
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-      fail-fast: false
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - name: Use repository Node.js version
-        uses: actions/setup-node@v7
+      - uses: ./.github/actions/setup-js
         with:
-          node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org/
-          cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
       - run: pnpm run convert
       - name: Verify managed AI services and trusted source contracts
         run: |
@@ -167,10 +136,10 @@ jobs:
         run: node --test --test-reporter=dot test/webBuildInfo.test.mjs test/productSiteBuild.test.mjs test/supportAgentHttp.test.mjs test/cookGithubChanges.test.mjs test/cookDeliverySync.test.mjs test/supportLedger.test.mjs test/supportArtifacts.test.mjs test/edgeoneRelease.test.mjs test/cookSupportRunner.test.mjs
       - run: pnpm run test
       - name: Install pinned artifact SDK for runtime contract verification
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (needs.changes.result != 'success' || needs.changes.outputs.skip_artifact != 'true')
         run: npm install --prefix "$RUNNER_TEMP/cook-artifact-contract" --ignore-scripts --no-audit --no-fund @actions/artifact@6.3.1 @azure/core-xml@1.6.0
       - name: Verify finalized checkpoints with the real Actions artifact runtime
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (needs.changes.result != 'success' || needs.changes.outputs.skip_artifact != 'true')
         uses: actions/github-script@v9
         env:
           GH_TOKEN: ${{ github.token }}
@@ -187,7 +156,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions: {}
     steps:
-      - name: Require all Web jobs and every matrix entry to succeed
+      - name: Require all Web jobs to succeed
         env:
           RESULTS: ${{ toJSON(needs) }}
         run: node -e 'if (Object.values(JSON.parse(process.env.RESULTS)).some(job => job.result !== "success")) process.exit(1)'
@@ -199,14 +168,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - name: Set node
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-js
       - run: pnpm run convert
       - name: Import Swift release signing keys
         run: gpg --batch --import .github/keys/swift-release-keys.asc

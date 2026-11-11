@@ -63,6 +63,32 @@ function isWebOnly(path) {
     || webTestFiles.has(path)
 }
 
+// These standalone Support tools never generate native resources or contracts.
+// Keep an explicit list so new automation inputs still get full coverage.
+const supportOnlyFiles = new Set([
+  '.github/workflows/support-sync.yml',
+  'scripts/cook-support-sync.mjs',
+  'scripts/prepare-support-feedback.mjs',
+  'scripts/support-artifact-worker.mjs',
+  'scripts/test-support-artifact-runtime.mjs',
+  'scripts/lib/cook-support-runner.mjs',
+  'scripts/lib/support-agent-http.mjs',
+  'scripts/lib/support-artifacts.mjs',
+  'scripts/lib/support-ledger.mjs',
+  'test/cookSupportRunner.test.mjs',
+  'test/supportAgentHttp.test.mjs',
+  'test/supportArtifacts.test.mjs',
+  'test/supportLedger.test.mjs',
+])
+
+function needsNoArtifactRuntime(path) {
+  // The live contract uses synthetic ledger bytes, not App sources or recipes.
+  // Its scripts, dependencies, workflow and unknown inputs always run it.
+  return isDocumentation(path) || isWebOnly(path)
+    || /^apps\/ios\/.+\.(?:swift|storekit|xctestplan)$/.test(path)
+    || /^packages\/data\/.+\.(?:csv|json)$/.test(path)
+}
+
 function isMembershipInput(path) {
   return /^apps\/ios\/(?:Cook\/(?:Model\/(?:NativeMembershipStoreKit|Membership\w*)|Views\/Membership\w*)|CookCore\/(?:Sources\/CookCore|Tests\/CookCoreTests)\/Membership\w*|Cook(?:UI)?Tests\/Membership\w*)\.swift$/.test(path)
     || path.startsWith('apps/ios/StoreKitValidation/')
@@ -125,15 +151,16 @@ export function detectNativeChanges(eventName, event, cwd = process.cwd()) {
     })
     const paths = diff.split('\0').filter(Boolean)
     return {
-      skipNative: paths.length > 0 && paths.every(path => isDocumentation(path) || isWebOnly(path) || path === '.github/workflows/support-sync.yml'),
-      scope: paths.some(isMembershipInput) && paths.every(path => isMembershipInput(path) || isDocumentation(path) || isWebOnly(path)) ? 'membership' : 'core',
+      skipNative: paths.length > 0 && paths.every(path => isDocumentation(path) || isWebOnly(path) || supportOnlyFiles.has(path)),
+      skipArtifact: paths.length > 0 && paths.every(needsNoArtifactRuntime),
+      scope: paths.some(isMembershipInput) && paths.every(path => isMembershipInput(path) || isDocumentation(path) || isWebOnly(path) || supportOnlyFiles.has(path)) ? 'membership' : 'core',
       changedFiles: paths.length,
       comparison: `${base}${separator}${head}`,
     }
   }
   catch {
     // An unavailable base (including a force push/new branch) must never skip tests.
-    return { skipNative: false, changedFiles: null, comparison: 'unavailable' }
+    return { skipNative: false, skipArtifact: false, changedFiles: null, comparison: 'unavailable' }
   }
 }
 
@@ -144,8 +171,8 @@ function previousPushPassed(event) {
 
   const branch = event.ref.slice('refs/heads/'.length)
   try {
-    // A Web/docs/Support push can cancel the only run that covers the previous
-    // native change. Carry its coverage forward only from a successful push.
+    // A new push can cancel the only run that covers an earlier native or
+    // artifact change. Carry coverage forward only from a successful push.
     const output = execFileSync('gh', [
       'api',
       `repos/${repo}/actions/workflows/ci.yml/runs`,
@@ -180,14 +207,18 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     event = {}
   }
   const result = detectNativeChanges(process.env.GITHUB_EVENT_NAME, event)
-  if (result.skipNative && process.env.GITHUB_EVENT_NAME === 'push') {
+  if ((result.skipNative || result.skipArtifact) && process.env.GITHUB_EVENT_NAME === 'push') {
     result.previousPushPassed = previousPushPassed(event)
-    result.skipNative = result.previousPushPassed
+    if (!result.previousPushPassed) {
+      result.skipNative = false
+      result.skipArtifact = false
+    }
   }
   const ios = planIosTests(process.env.GITHUB_EVENT_NAME, event?.inputs?.ios_coverage, result.scope)
   if (process.env.GITHUB_OUTPUT) {
     appendFileSync(process.env.GITHUB_OUTPUT, [
       `skip_native=${result.skipNative}`,
+      `skip_artifact=${result.skipArtifact}`,
       `ios_suites=${JSON.stringify(ios.suites)}`,
       `ios_max_parallel=${ios.maxParallel}`,
       `ios_storekit_devices=${JSON.stringify(ios.storekitDevices)}`,
@@ -196,7 +227,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   }
   if (process.env.GITHUB_STEP_SUMMARY) {
     const reason = result.previousPushPassed === false ? ' Previous push did not have a verified successful CI run.' : ''
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Native CI: ${result.skipNative ? 'not required (only browser-owned inputs, documentation or the Support sync workflow changed)' : ios.suites.join(', ')}. StoreKit devices: ${ios.storekitDevices.join(', ')}.${reason} Changed paths: ${result.changedFiles ?? 'unknown'}. Comparison: ${result.comparison}.\n`)
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Native CI: ${result.skipNative ? 'not required (only browser-owned inputs, documentation or standalone Support tools changed)' : ios.suites.join(', ')}. StoreKit devices: ${ios.storekitDevices.join(', ')}. Live artifact contract: ${result.skipArtifact ? 'not required' : 'required'}.${reason} Changed paths: ${result.changedFiles ?? 'unknown'}. Comparison: ${result.comparison}.\n`)
   }
   console.log(JSON.stringify({ ...result, ios }))
 }
