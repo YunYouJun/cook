@@ -3,8 +3,9 @@ import { join } from 'node:path'
 import process from 'node:process'
 import { pathToFileURL } from 'node:url'
 
+let config
 try {
-  const config = JSON.parse(await readFile(process.argv[2], 'utf8'))
+  config = JSON.parse(await readFile(process.argv[2], 'utf8'))
   const { DefaultArtifactClient } = await import(pathToFileURL(config.modulePath).href)
   const client = new DefaultArtifactClient()
   let result
@@ -28,6 +29,12 @@ try {
   }
   await writeFile(config.resultPath, JSON.stringify(result), { mode: 0o600, flag: 'wx' })
 }
-catch {
+catch (error) {
+  if (config?.diagnostics === true) {
+    // Never serialize SDK messages, request URLs, headers, or response bodies.
+    const status = error?.status ?? error?.response?.status ?? error?.statusCode
+    const code = ['EAI_AGAIN', 'ENOTFOUND', 'ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED', 'ENOENT'].includes(error?.code) ? error.code : undefined
+    await writeFile(config.resultPath, JSON.stringify({ failure: { status: Number.isInteger(status) && status >= 100 && status <= 599 ? status : undefined, code } }), { mode: 0o600, flag: 'wx' }).catch(() => {})
+  }
   process.exitCode = 1
 }

@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict'
 import { Buffer } from 'node:buffer'
+import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import process from 'node:process'
 // eslint-disable-next-line test/no-import-node-test -- Artifact workers are standalone Node automation without app dependencies.
 import { test } from 'node:test'
+import { promisify } from 'node:util'
 import { createSupportArtifactStore } from '../scripts/lib/support-artifacts.mjs'
 
 const encrypted = Buffer.from('COOKLDGR-synthetic-encrypted-checkpoint')
@@ -89,6 +92,34 @@ test('SDK warnings and thrown transport payloads never escape the sanitized work
       return true
     })
   })
+})
+
+test('runtime contract reports only the failed stage and allowlisted transport diagnostics', async () => {
+  for (const [behavior, expected] of [
+    [`throw Object.assign(new Error('SYNTHETIC_PRIVATE_TOKEN'), { status: 404, code: 'SYNTHETIC_PRIVATE_TOKEN' })`, 'download; HTTP 404'],
+    [`throw Object.assign(new Error('SYNTHETIC_PRIVATE_TOKEN'), { status: 'SYNTHETIC_PRIVATE_TOKEN', code: 'ENOTFOUND' })`, 'download; ENOTFOUND'],
+    [`return { digestMismatch: true }`, 'verify-digest'],
+    [`return { digestMismatch: false }`, 'read-download'],
+  ]) {
+    await fixture(`async uploadArtifact(name, files) {
+      const bytes = await readFile(files[0])
+      return { id: 77, size: bytes.length, digest: createHash('sha256').update(bytes).digest('hex') }
+    }
+    async downloadArtifact() {
+      console.warn('SYNTHETIC_PRIVATE_TOKEN https://example.invalid/?sig=SYNTHETIC_PRIVATE_TOKEN')
+      ${behavior}
+    }`, async ({ temporary }) => {
+      await assert.rejects(promisify(execFile)(process.execPath, ['scripts/test-support-artifact-runtime.mjs'], {
+        env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_RUN_ID: '41', GITHUB_RUN_ATTEMPT: '2', RUNNER_TEMP: temporary, COOK_ARTIFACT_MODULE: join(temporary, 'fake-sdk.mjs') },
+      }), (error) => {
+        assert.equal(error.code, 1)
+        assert.equal(error.stdout, '')
+        assert.equal(error.stderr, `Actions artifact contract verification failed at ${expected}; provider payloads are suppressed.\n`)
+        return true
+      })
+      assert(!(await readdir(temporary)).some(name => name.startsWith('cook-artifact-contract-')))
+    })
+  }
 })
 
 test('incomplete uploads and wrong finalized digests never return success', async () => {
