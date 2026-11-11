@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { cookDocumentHead, publicPages } from '~/constants'
+import { cookDocumentHead, links, publicPages } from '~/constants'
 
 useHead(cookDocumentHead(publicPages.help))
 </script>
@@ -39,6 +39,10 @@ useHead(cookDocumentHead(publicPages.help))
           识别结果会合进当前的选择，输入框下方会说明按什么筛选；识别在本地完成，不会上传你输入的内容。
         </FAQItem>
 
+        <FAQItem title="网页版会接入 AI 模型吗？">
+          <AiAvailabilityNotice />
+        </FAQItem>
+
         <FAQItem title="如何快速清空所选食材和工具?">
           <div inline-flex items-center justify-center>
             点击顶部 <div i-mdi-pot-steam-outline mx-1 inline-block /> 图标即可。
@@ -54,7 +58,8 @@ useHead(cookDocumentHead(publicPages.help))
         </FAQItem>
 
         <FAQItem title="是否有 APP?">
-          <b>正在开发中，尽请期待。</b>
+          云食册是原生 iPhone / iPad App，目前通过 TestFlight 小范围测试，尚未在 App Store 正式上架。
+          <a :href="links.iosBetaGuide" target="_blank" rel="noopener noreferrer">查看安装与反馈指南</a>。
         </FAQItem>
 
         <FAQItem title="未来是否会收费？">

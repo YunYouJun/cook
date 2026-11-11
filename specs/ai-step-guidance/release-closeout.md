@@ -1,6 +1,6 @@
 # 步骤讲解合并与发布收尾
 
-2026-11-11。关联 [PR #210](https://github.com/YunYouJun/cook/pull/210) 和 [#87](https://github.com/YunYouJun/cook/issues/87)；本功能不覆盖整个 #87，不自动关闭该 issue。
+2026-11-11。关联 [PR #210](https://github.com/YunYouJun/cook/pull/210) 和 [#87](https://github.com/YunYouJun/cook/issues/87)。维护者已明确“Web 不接入模型，模型功能留给 App”，并授权完成合并、里程碑验收和 issue 收尾；#87 以 App 的可选模型与原文逐步教学为关闭范围，不含 Gemini、免费模型承诺或生成新菜谱／配图。
 
 ## 合并条件
 
@@ -8,7 +8,14 @@
 - 数值校验修复的 `f30a63b4` 已通过全部必需 CI；规范与规格增量复核通过，无未解决的 GitHub 审查线程。
 - 发布准备补充 `cloudbaserc.json` 的 `cook-ai-guidance` 单函数定义，并将 iOS 下一候选固定为 `2.0.0 (15)`。默认 `COOK_AI_GUIDANCE_ENABLED=false`，不把仓库默认值当作生产配置。
 - 合并前以 PR 当前 head 的检查状态为准；发布准备后的提交也须通过必需检查。
-- PR 尚未合并。生产教学已完成真实会员讲解验收并启用；内部构建和人工验收按下方实际状态记录。
+- PR #210 已合并为 `773a777402893471629aed0326d9eb8530b0b081`。最终 head `fea1e5c7` 的[必需 CI](https://github.com/YunYouJun/cook/actions/runs/42885645361/attempts/2) 全部通过；规范／规格审查均通过，GitHub 未解决审查线程为 0。
+- 最终 head 首轮的 StoreKit 超时和 iPad 同步确认弹层用例失败，经日志／画面核对后仅重跑失败任务，均原样通过；没有修改产品、断言、测试范围或时限，间歇失败根因尚未证明。生产教学已完成真实会员讲解验收并启用；内部构建和人工验收按下方实际状态记录。
+
+## 首版验收与 #87 关闭范围
+
+本次按维护者的最新收尾指令，采用已有定向测试、iPhone／iPad 模拟器闭环、一次真实生产会员讲解和构建 15 内部分发证据接受首版。Web「帮助」「关于」及官网补充 App 专属模型能力说明；说明合并并核验线上后关闭 #87。新增模型、免费服务、照片生成菜谱及配图是独立扩展，不作为本 issue 关闭前提，也不记作本次完成。
+
+这项里程碑验收不代表维护者已确认每条模型回答事实，不代签个人 Key、真机 VoiceOver、断网或极端字号体验。以下人工待办已转入 [#216](https://github.com/YunYouJun/cook/issues/216) 继续跟踪；`internal-candidate.json` 的 `maintainerContentApproved=false`、`physicalChecksVerified=false`、`acceptancePolicy=pending-physical` 不变，不因此扩大到外部测试。当前公开邀请仍为构建 7。
 
 ## 生产核对与执行顺序
 
@@ -54,4 +61,4 @@
 | 真机 VoiceOver 与断网恢复    | 未验证           | 实际朗读、焦点遍历、离线操作和恢复核对                       |
 | 最大辅助字号                 | 模拟器可滚动触达 | 人工核对固定进度／计时栏与长回答，保留已知覆盖现象           |
 
-真机 VoiceOver 听读不能由标签、截图或自动化断言代签。上述项目保持明确状态，不作为整个 #87 已完成的依据。
+真机 VoiceOver 听读不能由标签、截图或自动化断言代签。上述未验证项目作为首版之后的人工验收待办继续跟踪；#87 按上文确认的功能范围收尾，不把这些检查记作通过。
