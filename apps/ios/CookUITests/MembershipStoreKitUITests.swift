@@ -51,6 +51,10 @@ final class MembershipStoreKitUITests: XCTestCase {
     }
 
     @MainActor func testCancelledRenewalRestoresFinishedHistoryAfterProcessRestart() async throws {
+        // This case launches twice. CI can finish the verified restore checks
+        // after 103 seconds, leaving too little of the default 120 for XCTest
+        // to terminate the App before clearing the StoreKit session.
+        executionTimeAllowance = 180
         let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "MembershipProducts", withExtension: "storekit"))
         let session = try SKTestSession(contentsOf: url)
         session.resetToDefaultState(); session.clearTransactions(); session.disableDialogs = true

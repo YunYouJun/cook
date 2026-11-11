@@ -161,17 +161,9 @@ import XCTest
         commerce.syncAction = {}
         _ = try await commerce.products()
         let token = UUID()
-        let revokedUpdate = expectation(description: "Refunded transaction update")
-        var deliveredRevocation: MembershipTransaction?
-        let stream = commerce.updates()
-        let listener = Task {
-            for await event in stream {
-                if case .transaction(let value) = event, value.revoked {
-                    deliveredRevocation = value; revokedUpdate.fulfill(); break
-                }
-            }
-        }
-        defer { listener.cancel() }
+        // Recovery must also work without a live observer (for example after
+        // process restart). The external-refund UI case separately requires
+        // the running App to handle Transaction.updates without a refresh.
         let fixture = try await session.buyProduct(
             identifier: Self.productID,
             options: [.appAccountToken(token)]
@@ -179,12 +171,24 @@ import XCTest
         XCTAssertEqual(fixture.environment, .xcode)
         XCTAssertEqual(fixture.appAccountToken, token)
         try await commerce.finish(transactionID: String(fixture.id))
+        let beforeRefund = try await commerce.restore()
+        let paid = try XCTUnwrap(beforeRefund.first { $0.id == String(fixture.id) })
+        XCTAssertFalse(paid.revoked)
+        XCTAssertEqual(paid.accountToken, token)
+        XCTAssertEqual(paid.environment, .xcode)
         try session.refundTransaction(identifier: try XCTUnwrap(UInt(fixture.id)))
-        await fulfillment(of: [revokedUpdate], timeout: 10)
-        XCTAssertEqual(deliveredRevocation?.id, String(fixture.id))
-        let history = try await commerce.restore()
+        // The mutation can return before Transaction.all reflects it. Wait
+        // for the verified history itself, not an unrelated notification.
+        // Read-only polling never repeats the refund or bypasses verification.
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(10))
+        var history = try await commerce.restore()
+        while !history.contains(where: { $0.id == String(fixture.id) && $0.revoked }), clock.now < deadline {
+            try await Task.sleep(for: .milliseconds(100))
+            history = try await commerce.restore()
+        }
         let refunded = try XCTUnwrap(history.first { $0.id == String(fixture.id) })
-        XCTAssertTrue(refunded.revoked)
+        XCTAssertTrue(refunded.revoked, "Verified history must reflect the refund within 10 seconds")
         XCTAssertEqual(refunded.accountToken, token)
         XCTAssertEqual(refunded.environment, .xcode)
     }
