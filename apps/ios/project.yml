@@ -17,7 +17,7 @@ settings:
   base:
     SWIFT_VERSION: '5.0'
     MARKETING_VERSION: 2.0.0
-    CURRENT_PROJECT_VERSION: '14'
+    CURRENT_PROJECT_VERSION: '15'
     DEVELOPMENT_TEAM: ${APPLE_DEVELOPMENT_TEAM}
     CODE_SIGN_STYLE: Automatic
 targets:
@@ -60,6 +60,8 @@ targets:
         CookFeedbackURL: ${COOK_FEEDBACK_URL}
         # Override the build setting with an empty value to disable managed AI in a build.
         CookAIServiceURL: $(COOK_AI_SERVICE_URL)
+        # Guidance has its own capability and deployment gate; never infer it from search.
+        CookAIGuidanceServiceURL: $(COOK_AI_GUIDANCE_SERVICE_URL)
         # 预留给原生微信入口；只在 SDK、账号绑定与审核均就绪后开启。
         CookWeChatLoginEnabled: $(COOK_WECHAT_LOGIN_ENABLED)
         CookMembershipUIEnabled: $(COOK_MEMBERSHIP_UI_ENABLED)
@@ -107,6 +109,7 @@ targets:
         COOK_MEMBERSHIP_UI_ENABLED: NO
         COOK_MEMBERSHIP_PURCHASES_ENABLED: NO
         COOK_AI_SERVICE_URL: https://api.yunle.fun/cook-ai-intent
+        COOK_AI_GUIDANCE_SERVICE_URL: https://api.yunle.fun/cook-ai-guidance
         TARGETED_DEVICE_FAMILY: '1,2'
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # 构建脚本要读仓库里的 packages/data

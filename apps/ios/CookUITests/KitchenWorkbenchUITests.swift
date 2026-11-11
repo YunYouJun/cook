@@ -378,6 +378,147 @@ final class KitchenWorkbenchUITests: XCTestCase {
     }
 
     @MainActor
+    func testStepGuidanceUsesCurrentSourceAndLeavesManualCookingStateUnchanged() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + [
+            "-ui-testing-reset-consent", "-ui-testing-reset-kitchen", "-ui-testing-step-guidance",
+            "-ui-testing-disable-animations",
+        ]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launch()
+        openKitchen(app)
+
+        let progress = app.staticTexts["recipe.stepProgress"]
+        XCTAssertTrue(progress.waitForExistence(timeout: 10))
+        XCTAssertEqual(progress.label, "已完成 0 / 11 步")
+        let servings = app.steppers["recipe.servings"]
+        XCTAssertTrue(servings.waitForExistence(timeout: 10))
+        let initialServings = servings.value as? String
+
+        let compact = app.segmentedControls.buttons["备料与计时"].exists
+        if compact {
+            app.segmentedControls.buttons["备料与计时"].tap()
+        }
+        let egg = app.buttons["kitchen.ingredient.鸡蛋"]
+        XCTAssertTrue(egg.waitForExistence(timeout: 10))
+        egg.tap()
+        XCTAssertEqual(egg.value as? String, "已备好")
+        app.buttons["开始计时"].tap()
+        XCTAssertTrue(app.buttons["暂停"].waitForExistence(timeout: 10))
+        app.buttons["暂停"].tap()
+        XCTAssertTrue(app.staticTexts["已暂停"].waitForExistence(timeout: 10))
+        let pausedTimer = app.staticTexts["kitchen.countdown"].label
+        if compact {
+            app.segmentedControls.buttons["做法"].tap()
+        }
+
+        let panel = app.otherElements["recipe.guidance.panel"]
+        XCTAssertTrue(panel.waitForExistence(timeout: 10))
+        let explain = app.buttons["recipe.guidance.explain"]
+        let ask = app.buttons["recipe.guidance.question"]
+        scrollToHittable(explain, in: app)
+        XCTAssertGreaterThanOrEqual(explain.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(ask.frame.height, 44)
+        XCTAssertEqual(progress.label, "已完成 0 / 11 步")
+        XCTAssertEqual(app.buttons["recipe.step.1"].value as? String, "未完成")
+
+        explain.tap()
+        let firstAnswer = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "先把锅烧热")).firstMatch
+        XCTAssertTrue(firstAnswer.waitForExistence(timeout: 10))
+        scrollToHittable(firstAnswer, in: app)
+        XCTAssertEqual(progress.label, "已完成 0 / 11 步", "讲解不得勾选或推进步骤")
+        XCTAssertEqual(app.buttons["recipe.step.1"].value as? String, "未完成")
+        XCTAssertEqual(servings.value as? String, initialServings)
+        capture(app, "recipe-step-guidance-answer")
+
+        let sources = app.descendants(matching: .any).matching(identifier: "recipe.guidance.sources").firstMatch
+        XCTAssertTrue(sources.waitForExistence(timeout: 5))
+        scrollToHittable(sources, in: app)
+        sources.tap()
+        let citedStep = app.staticTexts.matching(NSPredicate(format: "label == %@", "西红柿洗净")).firstMatch
+        XCTAssertTrue(citedStep.waitForExistence(timeout: 5))
+        capture(app, "recipe-step-guidance-sources")
+        sources.tap()
+
+        scrollToHittable(ask, in: app)
+        ask.tap()
+        let input = app.textFields["recipe.guidance.questionInput"]
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        scrollToHittable(input, in: app)
+        input.tap()
+        input.typeText("怎样判断油温？")
+        let finishEditing = app.buttons["recipe.guidance.finishEditing"]
+        if finishEditing.waitForExistence(timeout: 2) {
+            finishEditing.tap()
+        }
+        let send = app.buttons["recipe.guidance.ask"]
+        XCTAssertTrue(send.waitForExistence(timeout: 5))
+        scrollToHittable(send, in: app)
+        send.tap()
+        let questionAnswer = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "你的问题")).firstMatch
+        XCTAssertTrue(questionAnswer.waitForExistence(timeout: 10))
+        XCTAssertEqual(progress.label, "已完成 0 / 11 步")
+        XCTAssertEqual(app.buttons["recipe.step.1"].value as? String, "未完成")
+        XCTAssertEqual(servings.value as? String, initialServings)
+        capture(app, "recipe-step-guidance-question")
+
+        if compact {
+            app.segmentedControls.buttons["备料与计时"].tap()
+        }
+        XCTAssertEqual(egg.value as? String, "已备好", "讲解和提问不得改动备料")
+        XCTAssertEqual(app.staticTexts["kitchen.countdown"].label, pausedTimer, "讲解和提问不得启停或重置计时器")
+        if compact {
+            app.segmentedControls.buttons["做法"].tap()
+        }
+        XCTAssertEqual(servings.value as? String, initialServings)
+        app.buttons["recipe.continueStep"].tap()
+        let firstStep = app.buttons["recipe.step.1"]
+        waitForVisibleStep(firstStep, in: app)
+        firstStep.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5)).tap()
+        XCTAssertEqual(progress.label, "已完成 1 / 11 步")
+        XCTAssertEqual(app.buttons["recipe.continueStep"].label, "继续第 2 步")
+        XCTAssertFalse(app.staticTexts["recipe.guidance.answer"].exists, "当前步骤变化后旧回答不得继续显示")
+        capture(app, "recipe-step-guidance-manual-completion")
+    }
+
+    @MainActor
+    func testStepGuidanceRemainsUsableAtAccessibilityTextSizeInDarkMode() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        var arguments = XCUIApplication.standardCookingLaunchArguments.filter {
+            $0 != "-UIPreferredContentSizeCategoryName" && $0 != UIContentSizeCategory.large.rawValue
+        }
+        arguments += [
+            "-UIPreferredContentSizeCategoryName", UIContentSizeCategory.accessibilityExtraExtraExtraLarge.rawValue,
+            "-ui-testing-dark", "-ui-testing-reset-consent", "-ui-testing-reset-kitchen",
+            "-ui-testing-step-guidance", "-ui-testing-disable-animations",
+        ]
+        app.launchArguments = arguments
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launch()
+        openKitchen(app)
+
+        let panel = app.otherElements["recipe.guidance.panel"]
+        XCTAssertTrue(panel.waitForExistence(timeout: 10))
+        let explain = app.buttons["recipe.guidance.explain"]
+        let ask = app.buttons["recipe.guidance.question"]
+        scrollToHittable(explain, in: app)
+        XCTAssertGreaterThanOrEqual(explain.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(ask.frame.height, 44)
+        XCTAssertGreaterThan(ask.frame.minY, explain.frame.maxY,
+                             "最大辅助字号下按钮纵向排列，避免逐字换行")
+        XCTAssertEqual(explain.label, "本步讲解")
+        XCTAssertEqual(ask.label, "问这一步")
+        explain.tap()
+        let answer = app.staticTexts["recipe.guidance.answer"]
+        XCTAssertTrue(answer.waitForExistence(timeout: 10))
+        scrollAboveTimer(answer, in: app)
+        XCTAssertGreaterThanOrEqual(answer.frame.height, 44)
+        capture(app, "recipe-step-guidance-accessibility-dark")
+    }
+
+    @MainActor
     private func openKitchen(_ app: XCUIApplication, recipeName: String = "番茄炒蛋") {
         let library = app.buttons.matching(NSPredicate(format: "label == %@", "菜谱")).firstMatch
         XCTAssertTrue(library.waitForExistence(timeout: 20))
@@ -409,6 +550,33 @@ final class KitchenWorkbenchUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [hittable], timeout: 10), .completed)
         open.tap()
         XCTAssertTrue(app.buttons["kitchen.close"].waitForExistence(timeout: 10))
+    }
+
+    @MainActor
+    private func scrollToHittable(_ element: XCUIElement, in app: XCUIApplication) {
+        let scrollView = app.scrollViews["kitchen.instructions"].firstMatch
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 5))
+        for _ in 0..<20 where !element.isHittable {
+            scrollView.swipeUp(velocity: .slow)
+        }
+        XCTAssertTrue(element.isHittable)
+    }
+
+    @MainActor
+    private func scrollAboveTimer(_ element: XCUIElement, in app: XCUIApplication) {
+        let scrollView = app.scrollViews["kitchen.instructions"].firstMatch
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 5))
+        let timer = app.buttons["kitchen.timerShortcut"]
+        for _ in 0..<20 {
+            if element.isHittable, !timer.exists || element.frame.maxY <= timer.frame.minY - 8 {
+                break
+            }
+            scrollView.swipeUp(velocity: .slow)
+        }
+        XCTAssertTrue(element.isHittable)
+        if timer.exists {
+            XCTAssertLessThanOrEqual(element.frame.maxY, timer.frame.minY - 8)
+        }
     }
 
     @MainActor

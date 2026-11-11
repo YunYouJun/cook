@@ -102,7 +102,8 @@ struct KitchenWorkbenchView: View {
     @ViewBuilder
     private var instructions: some View {
         if let text = store.text(for: recipe) {
-            RecipeTextContent(recipe: recipe, text: text, preparationInSidebar: true, dietaryGoal: dietaryGoal)
+            RecipeTextContent(recipe: recipe, text: text, preparationInSidebar: true,
+                              showsStepGuidance: true, dietaryGoal: dietaryGoal)
                 .accessibilityIdentifier("kitchen.instructions")
         } else {
             ContentUnavailableView {

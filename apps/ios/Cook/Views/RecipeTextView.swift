@@ -27,17 +27,22 @@ struct RecipeTextView: View {
 struct RecipeTextContent: View {
     @Environment(RecipeStore.self) private var store
     @Environment(KitchenWorkbench.self) private var workbench
+    @Environment(CookAISettings.self) private var ai
+    @Environment(YunlefunAccountStore.self) private var accounts
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let recipe: Recipe
     let text: RecipeText
     let preparationInSidebar: Bool
+    let showsStepGuidance: Bool
     let dietaryGoal: DietaryGoal?
     private let presentation: RecipePresentation
 
-    init(recipe: Recipe, text: RecipeText, preparationInSidebar: Bool = false, dietaryGoal: DietaryGoal? = nil) {
+    init(recipe: Recipe, text: RecipeText, preparationInSidebar: Bool = false,
+         showsStepGuidance: Bool = false, dietaryGoal: DietaryGoal? = nil) {
         self.recipe = recipe
         self.text = text
         self.preparationInSidebar = preparationInSidebar
+        self.showsStepGuidance = showsStepGuidance
         self.dietaryGoal = dietaryGoal
         presentation = RecipePresentation(text: text)
     }
@@ -55,7 +60,19 @@ struct RecipeTextContent: View {
     @State private var showsPhotos = false
     @State private var photoSelection = 0
     @State private var stepLocation: StepLocation?
+    @State private var guidance = KitchenStepGuidanceModel()
     @Namespace private var photoTransition
+
+    private var guidanceScope: String {
+        [
+            String(recipe.id),
+            RecipeAmountAnnotations.fingerprint(text),
+            nextStep ?? "finished",
+            String(amounts.servings),
+            ai.provider.rawValue,
+            accounts.sessionRevision.uuidString,
+        ].joined(separator: "|")
+    }
 
     private var originalURL: URL? {
         guard let link = recipe.link, !link.isEmpty else { return nil }
@@ -133,9 +150,83 @@ struct RecipeTextContent: View {
             }
         }
         .sensoryFeedback(.selection, trigger: completed)
+        .onChange(of: guidanceScope) {
+            guidance.invalidate()
+        }
+        .onDisappear {
+            guidance.invalidate()
+        }
         .fullScreenCover(isPresented: $showsPhotos) {
             RecipeImageViewer(photos: photos, selection: $photoSelection)
                 .zoomTransition(sourceID: photoSelection, in: photoTransition)
+        }
+    }
+
+    private func startGuidance(step: RecipePresentation.Step, kind: StepGuidanceKind, question: String?) {
+        let prompt: StepGuidancePrompt
+        do {
+            prompt = try StepGuidancePrompt(
+                recipe: recipe,
+                text: text,
+                dataVersion: store.data.meta.dataVersion,
+                step: step,
+                servings: amounts.servings,
+                kind: kind,
+                question: question
+            )
+        } catch let error as StepGuidanceError {
+            guidance.fail(error)
+            return
+        } catch {
+            guidance.fail(.missingSource)
+            return
+        }
+        guidance.submit(prompt, perform: performGuidance)
+    }
+
+    private func performGuidance(_ prompt: StepGuidancePrompt) async throws -> StepGuidanceResponse {
+        let provider = ai.provider
+        let revision = accounts.sessionRevision
+        let runtime = StepGuidanceRuntime.current
+        do {
+            let response: StepGuidanceResponse
+            switch provider {
+            case .local:
+                throw StepGuidanceError.notConfigured
+            case .ownDeepSeek:
+                let key = try ai.apiKeyForRequest()
+                response = try await runtime.personal.complete(prompt, key: key)
+            case .managedDeepSeek:
+                let credential = try await accounts.credentialForAIRequest()
+                guard ai.provider == provider, accounts.sessionRevision == revision else {
+                    throw CancellationError()
+                }
+                let capability = try await runtime.managed.capabilities(credential: credential)
+                guard capability.enabled else {
+                    throw capability.membershipIsActive ? StepGuidanceError.notDeployed : .membershipRequired
+                }
+                guard ai.provider == provider, accounts.sessionRevision == revision else {
+                    throw CancellationError()
+                }
+                response = try await runtime.managed.complete(prompt, credential: credential)
+            }
+            guard ai.provider == provider, accounts.sessionRevision == revision else {
+                throw CancellationError()
+            }
+            return response
+        } catch let error as CookAISettingsError {
+            switch error {
+            case .missingKey, .notEnabled, .managedUnavailable: throw StepGuidanceError.notConfigured
+            case .invalidKey: throw StepGuidanceError.authentication
+            case .secureStorage: throw StepGuidanceError.unavailable
+            }
+        } catch let error as YunlefunAccountError {
+            switch error {
+            case .expiredSession: throw StepGuidanceError.loginRequired
+            case .unavailable, .invalidResponse, .authorizationFailed, .invalidCallback,
+                 .secureStorage, .requiresUpdate:
+                throw StepGuidanceError.unavailable
+            }
         }
     }
 
@@ -149,13 +240,24 @@ struct RecipeTextContent: View {
             }
             VStack(spacing: 10) {
                 ForEach(steps) { step in
-                    RecipeStepCard(step: step, instruction: usage.instruction(for: step), servings: amounts.servings,
-                                   highlighted: stepLocation?.id == step.id,
-                                   completed: completed.contains(step.id), current: nextStep == step.id) {
-                        let advances = nextStep == step.id
-                        workbench.toggleStep(step.id, recipeID: recipe.id)
-                        if advances, let next = presentation.steps.first(where: { !completed.contains($0.id) }) {
-                            jump(next)
+                    VStack(spacing: 10) {
+                        RecipeStepCard(step: step, instruction: usage.instruction(for: step), servings: amounts.servings,
+                                       highlighted: stepLocation?.id == step.id,
+                                       completed: completed.contains(step.id), current: nextStep == step.id) {
+                            let advances = nextStep == step.id
+                            workbench.toggleStep(step.id, recipeID: recipe.id)
+                            if advances, let next = presentation.steps.first(where: { !completed.contains($0.id) }) {
+                                jump(next)
+                            }
+                        }
+                        if showsStepGuidance, nextStep == step.id {
+                            RecipeStepGuidancePanel(
+                                step: step,
+                                guidance: guidance,
+                                explain: { startGuidance(step: step, kind: .explain, question: nil) },
+                                ask: { question in startGuidance(step: step, kind: .question, question: question) },
+                                retry: { kind, question in startGuidance(step: step, kind: kind, question: question) }
+                            )
                         }
                     }
                     .id(StepAnchor(id: step.id))

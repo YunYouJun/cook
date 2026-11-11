@@ -13,6 +13,14 @@
 | 隐私清单     | `apps/ios/Cook/Resources/PrivacyInfo.xcprivacy`                           |
 | 正式反馈地址 | `https://api.yunle.fun/cook-feedback`                                     |
 
+## 2026-11-11 步骤讲解构建 15 内部发布
+
+`2.0.0 (15)` 已从 PR #210 的冻结提交 `674d3b5f` 完成归档、仅内部导出、共享签名／隐私清单验包、正式资源核对和 Apple 包校验；同一 IPA 仅上传一次，并已完成内部组分发。IPA SHA-256 为 `57a9b7a0bda547dbef5fd0eaf92f78aad6945ee64231dcd31cc8ef3b2e42ed64`，实际 Build ID 为 `384e4392-8703-4b68-a21b-0eaa54c6d1dc`。上传前已再次确认 Xcode 导出的构建 15 分析会话没有 App 二进制，未将其误当作已上传，也未自动更换构建号。
+
+共享服务端 `ready`／`published` 门禁均通过：`VALID / INTERNAL_ONLY / IN_BETA_TESTING`，外部 `NOT_APPLICABLE`、未过期、无外部组。既有「内部测试」组自动关联并沿用 1 名成员，精确组预演已审查，未重复写入关联。中文测试说明已写入并回读一致；首次复核的单条只读 ASC 查询失败后，核对同一 App 与组并完整复查通过，没有重传 IPA。实际内部候选记录已更新为 15，构建 14 的历史证据和外测构建 7／30 人邀请保持原记录。
+
+生产会员步骤讲解已完成一次真实 HTTP 验收并启用独立 capability，搜索服务配置及共享配额保持原值。个人 Key、真人 VoiceOver／焦点顺序、断网恢复与极端字号人工核对仍未验证，测试说明保留这些边界；未安装或更新维护者手机，也未自动合并 PR 或关闭 #87。精确状态见[真实请求证据](./evidence/step-guidance-live-acceptance-2026-11-11.json)、[分发证据](./evidence/step-guidance-build15-published-2026-11-11.json)及[发布收尾](https://github.com/YunYouJun/cook/blob/main/specs/ai-step-guidance/release-closeout.md)。产物、归档／dSYM、必要源码输入与私密回执保存在 `~/Library/Developer/ReleaseArtifacts/Cook/20261111-step-guidance-15`。
+
 ## 2026-11-09 饮食目标构建 14 内部发布
 
 维护者已认可本版内容，明确授权构建 14 内部上传，并确认「按已有模拟器证据收尾，真机项目保留未验证」。PR #211 的最终 16 项检查通过、1 项按策略跳过后，合并为 `8e0a3267`；合并源码树与通过 CI 的 head 一致。

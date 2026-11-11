@@ -1,0 +1,67 @@
+{
+  "date": "2026-11-11",
+  "sourceCommit": "674d3b5f56b29e3e18233c5172197a4793e368a2",
+  "envId": "yunlefun-8g7ybcxc7345c490",
+  "billing": {
+    "mode": "credits",
+    "plan": "baas_pf_standard",
+    "planStatus": "NORMAL",
+    "usageStatus": "normal",
+    "feeStatus": "positive",
+    "activeResourcePointPackage": "pkg_tcb_credits_10000",
+    "packageStatus": 0,
+    "managedGroup": "cloudbase",
+    "model": "deepseek-v4.1-flash-1017",
+    "modelEnabled": true,
+    "newPackagePurchased": false,
+    "providerChanged": false,
+    "legacyTokenPackagePrefixRuleApplicable": false,
+    "eligibilityBasis": [
+      "https://docs.cloudbase.net/ai/FAQ",
+      "https://www.cloudbase.net/blog/2026/06/26/resource-point-token"
+    ]
+  },
+  "memberGuidance": {
+    "identityType": "existing-managed-production-member",
+    "httpRequests": 1,
+    "automaticHTTPRetries": 0,
+    "httpStatus": 200,
+    "recipeID": 237,
+    "dataVersion": "353bc8dab0ea",
+    "responseStatus": "answer",
+    "answerCharacters": 142,
+    "answerSha256": "e55c96d119b182ed0320a58421015bae1046000fa2a6a610cbe95dbb38f14bd8",
+    "sourceCount": 3,
+    "currentStepCited": true,
+    "requestBindingVerified": true,
+    "localContractVerified": true,
+    "completeNumericExpressionsVerified": true,
+    "tokenUsageExposedByHTTPContract": false,
+    "sessionSignedOut": true
+  },
+  "production": {
+    "functionStatus": "Active",
+    "guidanceEnabled": true,
+    "enabledDuringVerification": true,
+    "initialAcceptanceReturnedToDisabled": true,
+    "activatedAfterInternalReadiness": true,
+    "memberCapabilityEnabled": true,
+    "additionalModelRequestsDuringActivation": 0,
+    "finalSessionSignedOut": true,
+    "onlyGuidanceGateChanged": true,
+    "existingIntentConfigurationPreserved": true,
+    "existingSearchCapabilityEnabled": true
+  },
+  "personalKeyVerified": false,
+  "physicalAcceptance": {
+    "voiceOverVerified": false,
+    "focusOrderVerified": false,
+    "offlineRecoveryVerified": false,
+    "maximumDynamicTypeHumanAcceptanceVerified": false
+  },
+  "artifactDirectory": "~/Library/Developer/ReleaseArtifacts/Cook/20261111-step-guidance-15",
+  "notes": [
+    "资源点适用范围按当前官方计费说明及生产 credits 模式核实，未购买新包或切换模型。",
+    "一次真实 HTTP 讲解通过不等于任意自然语言事实已验收；接口不暴露 Token 用量，未编造计费 Token 数。"
+  ]
+}

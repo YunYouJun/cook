@@ -1,0 +1,77 @@
+{
+  "date": "2026-11-11",
+  "sourceCommit": "674d3b5f56b29e3e18233c5172197a4793e368a2",
+  "envId": "yunlefun-8g7ybcxc7345c490",
+  "region": "ap-shanghai",
+  "function": {
+    "name": "cook-ai-guidance",
+    "status": "Active",
+    "runtime": "Nodejs24.11",
+    "memoryMiB": 256,
+    "timeoutSeconds": 45,
+    "installDependency": false,
+    "enabled": false,
+    "productionVariablesMatched": true,
+    "quotaSaltReused": true,
+    "sourceHashes": {
+      "index.js": "66471daccc312053c0d80a519519ee0d271a594b13348d79927c7d04080834fd",
+      "quota.js": "595aea01e84e2c338157382c9c6874a1907db7236abda907d17b4c30f38bf2df",
+      "sources.json": "9ab59bb36742fcd80a87cb378b2282212c1b4348e4e3b926223b63aa0aa9ea97",
+      "package.json": "0e032ed6bbdfa299cbfe92a09e0fbb3fe7f5d88bd22d07d7b663c543d352b41a"
+    },
+    "allFourSourcesMatch": true
+  },
+  "gateway": {
+    "domain": "api.yunle.fun",
+    "newPath": "/cook-ai-guidance",
+    "upstreamType": "SCF",
+    "upstreamName": "cook-ai-guidance",
+    "functionGateEnabled": false,
+    "checks": [
+      {
+        "name": "anonymous",
+        "status": 401,
+        "code": "LOGIN_REQUIRED"
+      },
+      {
+        "name": "invalid-bearer",
+        "status": 401,
+        "code": "LOGIN_REQUIRED"
+      },
+      {
+        "name": "get",
+        "status": 405,
+        "code": "METHOD_NOT_ALLOWED"
+      }
+    ],
+    "memberCapabilityVerified": true
+  },
+  "member": {
+    "identityType": "existing-managed-production-member",
+    "capabilityHTTPStatus": 200,
+    "membershipActive": true,
+    "guidanceEnabled": false,
+    "existingSearchEnabled": true,
+    "sessionSignedOut": true
+  },
+  "existingIntentBaselinePreserved": true,
+  "existingGatewayRoutesPreserved": true,
+  "modelPreflight": {
+    "managedGroup": "cloudbase",
+    "groupEnabled": true,
+    "model": "deepseek-v4.1-flash-1017",
+    "modelEnabled": true,
+    "requiredPackageIdPrefix": "pkg_tcb_tokencredits_",
+    "matchingActivePackageFound": false,
+    "observedActiveGeneralPackageId": "pkg_tcb_credits_10000",
+    "observedActiveGeneralPackageStatus": 0,
+    "newPackagePurchased": false,
+    "providerChanged": false,
+    "gatePassed": false,
+    "note": "当前 AI 接入技能的资源包规则未覆盖观察到的通用包型；未据此认定该包不能消费模型，也未绕过门禁发起计费请求。"
+  },
+  "modelRequests": 0,
+  "quotaReservations": 0,
+  "realGuidanceVerified": false,
+  "artifactDirectory": "~/Library/Developer/ReleaseArtifacts/Cook/20261111-step-guidance-15"
+}

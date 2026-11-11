@@ -1,0 +1,82 @@
+{
+  "date": "2026-11-11",
+  "pullRequest": "https://github.com/YunYouJun/cook/pull/210",
+  "sourceCommit": "674d3b5f56b29e3e18233c5172197a4793e368a2",
+  "baseCommit": "a03e02662b87a68adb4fb1c6c09626896a0cbe1d",
+  "candidate": {
+    "appId": "6824589542",
+    "bundleId": "fun.yunle.cook",
+    "version": "2.0.0",
+    "buildNumber": "15",
+    "distributionChannel": "internal",
+    "groupId": "a2962c09-0f3d-4180-abef-030cf8920279",
+    "ipaSha256": "57a9b7a0bda547dbef5fd0eaf92f78aad6945ee64231dcd31cc8ef3b2e42ed64",
+    "archivePassed": true,
+    "exportPassed": true,
+    "ipaVerificationPassed": true,
+    "appleValidationPassed": true,
+    "productVerificationPassed": true,
+    "dataVersion": "353bc8dab0ea",
+    "bundledDataFiles": 12,
+    "privacyMatchesSource": true,
+    "dsymMatches": true,
+    "uploaded": false,
+    "distributed": false,
+    "distributionEntitlementsVerified": true,
+    "exportAnalysisSession": {
+      "id": "e1dfe852-eabd-4136-9d6d-a404936f75c2",
+      "state": "AWAITING_UPLOAD",
+      "assetTypes": [
+        "ASSET_SPI",
+        "ASSET_DESCRIPTION"
+      ],
+      "containsAppBinary": false,
+      "latestProcessedBuildNumber": "14",
+      "latestObservedBuildNumber": "15",
+      "nextBuildNumberReported": "16"
+    }
+  },
+  "production": {
+    "envId": "yunlefun-8g7ybcxc7345c490",
+    "region": "ap-shanghai",
+    "functionName": "cook-ai-guidance",
+    "functionExists": false,
+    "publicEndpoint": "https://api.yunle.fun/cook-ai-guidance",
+    "unauthenticatedPostStatus": 404,
+    "deployed": false,
+    "enabled": false,
+    "existingIntentProvider": "cloudbase",
+    "existingIntentModel": "deepseek-v4.1-flash-1017",
+    "existingLimits": {
+      "userDaily": 10,
+      "userMinute": 3,
+      "serviceDaily": 100
+    },
+    "quotaSaltPresent": true,
+    "functionZipSha256": "1b66cd7947fd600e887b202d84ef35aa729583da1de65aa6e32f796aa2ac30d0",
+    "packagedSDKVersion": "3.18.3",
+    "packagedFunctionSmokeCheckPassed": true,
+    "managedMemberCallVerified": false,
+    "personalKeyCallVerified": false
+  },
+  "physicalAcceptance": {
+    "voiceOverVerified": false,
+    "focusOrderVerified": false,
+    "offlineRecoveryVerified": false,
+    "maximumDynamicTypeHumanAcceptanceVerified": false
+  },
+  "cleanup": {
+    "derivedDataReclaimedBytes": 256588213,
+    "expandedFunctionStagingReclaimedBytes": 16395511,
+    "simulatorsCreated": 0,
+    "releaseWorktreeRemoved": true,
+    "releaseWorktreeAllocatedBytesReclaimed": 15884288,
+    "documentationOutputReclaimedBytes": 6202520
+  },
+  "artifactDirectory": "~/Library/Developer/ReleaseArtifacts/Cook/20261111-step-guidance-15",
+  "notes": [
+    "准备记录不代表生产部署、真实模型请求、TestFlight 分发或 PR 已合并。",
+    "原构建 14 内部分发与外测构建 7 的记录不变。",
+    "导出产生的构建 15 分析会话已核对无 App 二进制，不代表 IPA 上传或 TestFlight 分发。"
+  ]
+}

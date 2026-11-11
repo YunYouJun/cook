@@ -15,6 +15,16 @@
       "ignore": ["*.local"]
     },
     {
+      "name": "cook-ai-guidance",
+      "timeout": 45,
+      "runtime": "Nodejs24.11",
+      "memorySize": 256,
+      "installDependency": false,
+      "handler": "index.main",
+      "envVariables": { "COOK_AI_GUIDANCE_ENABLED": "false" },
+      "ignore": ["*.local"]
+    },
+    {
       "name": "cook-user-data",
       "timeout": 10,
       "runtime": "Nodejs24.11",
