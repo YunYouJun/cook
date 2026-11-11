@@ -36,7 +36,7 @@ import XCTest
         let fixture = try await session.buyProduct(identifier: Self.productID, options: [.appAccountToken(token)])
         XCTAssertEqual(fixture.environment, .xcode)
         XCTAssertEqual(fixture.appAccountToken, token)
-        let unfinished = try await commerce.unfinished()
+        let unfinished = try await waitForUnfinishedFixture(fixture, in: commerce)
         XCTAssertTrue(unfinished.contains { $0.id == String(fixture.id) })
         try await commerce.finish(transactionID: String(fixture.id))
         let restored = try await commerce.restore()
@@ -55,6 +55,7 @@ import XCTest
         )
         XCTAssertEqual(fixture.environment, .xcode)
         XCTAssertEqual(fixture.appAccountToken, owner.accountToken)
+        _ = try await waitForUnfinishedFixture(fixture, in: commerce)
         func coordinator() -> MembershipPurchaseCoordinator {
             MembershipPurchaseCoordinator(commerce: commerce, settlement: settlement, productIDs: [Self.productID], identity: { owner })
         }
@@ -134,8 +135,8 @@ import XCTest
         let stream = commerce.updates()
         let listener = Task {
             for await event in stream {
-                if case .transaction(let value) = event, value.accountToken == token {
-                    delivered = value; approved.fulfill(); break
+                if case .transaction(let value) = event, value.accountToken == token, delivered == nil {
+                    delivered = value; approved.fulfill()
                 }
             }
         }
@@ -147,6 +148,10 @@ import XCTest
         XCTAssertEqual(fixture.environment, .xcode)
         XCTAssertEqual(fixture.appAccountToken, token)
         await fulfillment(of: [approved], timeout: 10)
+        // Cancel while the stream is still being consumed so onTermination
+        // stops its underlying observer before the next session reset.
+        listener.cancel()
+        await listener.value
         XCTAssertEqual(delivered?.accountToken, token)
         XCTAssertEqual(delivered?.environment, .xcode)
         try await commerce.finish(transactionID: try XCTUnwrap(delivered?.id))
@@ -161,32 +166,60 @@ import XCTest
         commerce.syncAction = {}
         _ = try await commerce.products()
         let token = UUID()
-        let revokedUpdate = expectation(description: "Refunded transaction update")
-        var deliveredRevocation: MembershipTransaction?
-        let stream = commerce.updates()
-        let listener = Task {
-            for await event in stream {
-                if case .transaction(let value) = event, value.revoked {
-                    deliveredRevocation = value; revokedUpdate.fulfill(); break
-                }
-            }
-        }
-        defer { listener.cancel() }
+        // Recovery must also work without a live observer (for example after
+        // process restart). The external-refund UI case separately requires
+        // the running App to handle Transaction.updates without a refresh.
         let fixture = try await session.buyProduct(
             identifier: Self.productID,
             options: [.appAccountToken(token)]
         )
         XCTAssertEqual(fixture.environment, .xcode)
         XCTAssertEqual(fixture.appAccountToken, token)
+        _ = try await waitForUnfinishedFixture(fixture, in: commerce)
         try await commerce.finish(transactionID: String(fixture.id))
+        let beforeRefund = try await commerce.restore()
+        let paid = try XCTUnwrap(beforeRefund.first { $0.id == String(fixture.id) })
+        XCTAssertFalse(paid.revoked)
+        XCTAssertEqual(paid.accountToken, token)
+        XCTAssertEqual(paid.environment, .xcode)
         try session.refundTransaction(identifier: try XCTUnwrap(UInt(fixture.id)))
-        await fulfillment(of: [revokedUpdate], timeout: 10)
-        XCTAssertEqual(deliveredRevocation?.id, String(fixture.id))
-        let history = try await commerce.restore()
+        // The mutation can return before Transaction.all reflects it. Wait
+        // for the verified history itself, not an unrelated notification.
+        // Read-only polling never repeats the refund or bypasses verification.
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(10))
+        var history = try await commerce.restore()
+        while !history.contains(where: { $0.id == String(fixture.id) && $0.revoked }), clock.now < deadline {
+            try await Task.sleep(for: .milliseconds(100))
+            history = try await commerce.restore()
+        }
         let refunded = try XCTUnwrap(history.first { $0.id == String(fixture.id) })
-        XCTAssertTrue(refunded.revoked)
+        XCTAssertTrue(refunded.revoked, "Verified history must reflect the refund within 10 seconds")
         XCTAssertEqual(refunded.accountToken, token)
         XCTAssertEqual(refunded.environment, .xcode)
+    }
+
+    private func waitForUnfinishedFixture(_ fixture: StoreKit.Transaction, in commerce: NativeMembershipStoreKit,
+                                          file: StaticString = #filePath, line: UInt = #line) async throws -> [MembershipTransaction] {
+        // SKTestSession can return before the App's unfinished snapshot sees
+        // the external purchase. Establish this input before testing recovery
+        // or finish; never retry a purchase or coordinator operation. IDs can
+        // be reused after reset, so also require this fixture's account token.
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(10))
+        let matches: (MembershipTransaction) -> Bool = {
+            $0.id == String(fixture.id) && $0.accountToken == fixture.appAccountToken
+        }
+        var queue = try await commerce.unfinished()
+        while !queue.contains(where: matches), clock.now < deadline {
+            try await Task.sleep(for: .milliseconds(100))
+            queue = try await commerce.unfinished()
+        }
+        let pending = try XCTUnwrap(queue.first(where: matches),
+                                   "StoreKit must publish the unfinished fixture within 10 seconds", file: file, line: line)
+        XCTAssertEqual(pending.environment, .xcode, file: file, line: line)
+        XCTAssertFalse(pending.revoked, file: file, line: line)
+        return queue
     }
 
     private func listen(to commerce: NativeMembershipStoreKit) -> Task<Void, Never> {

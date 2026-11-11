@@ -9,6 +9,8 @@ import { decryptLedger, encryptLedger } from './lib/support-ledger.mjs'
 
 const execute = promisify(execFile)
 let directory
+let stage = 'setup'
+let diagnostic = ''
 try {
   assert.equal(process.env.GITHUB_ACTIONS, 'true')
   directory = await mkdtemp(join(process.env.RUNNER_TEMP, 'cook-artifact-contract-'))
@@ -21,22 +23,39 @@ try {
   async function operate(config) {
     const resultPath = join(directory, `${config.operation}-result.json`)
     const configPath = join(directory, `${config.operation}-input.json`)
-    await writeFile(configPath, JSON.stringify({ ...config, directory, resultPath, modulePath: process.env.COOK_ARTIFACT_MODULE }), { mode: 0o600 })
-    await execute(process.execPath, ['scripts/support-artifact-worker.mjs', configPath], { timeout: 120_000, maxBuffer: 64 * 1024 })
+    await writeFile(configPath, JSON.stringify({ ...config, directory, resultPath, diagnostics: true, modulePath: process.env.COOK_ARTIFACT_MODULE }), { mode: 0o600 })
+    stage = config.operation
+    try {
+      await execute(process.execPath, ['scripts/support-artifact-worker.mjs', configPath], { timeout: 120_000, maxBuffer: 64 * 1024 })
+    }
+    catch {
+      const failure = await readFile(resultPath, 'utf8').then(value => JSON.parse(value).failure).catch(() => undefined)
+      if (Number.isInteger(failure?.status) && failure.status >= 100 && failure.status <= 599)
+        diagnostic += `; HTTP ${failure.status}`
+      if (['EAI_AGAIN', 'ENOTFOUND', 'ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED', 'ENOENT'].includes(failure?.code))
+        diagnostic += `; ${failure.code}`
+      throw new Error('Artifact worker failed')
+    }
+    stage = `${config.operation}-result`
     return JSON.parse(await readFile(resultPath, 'utf8'))
   }
   const uploaded = await operate({ operation: 'upload', name, payloadPath })
+  stage = 'verify-upload'
   assert(Number.isSafeInteger(uploaded.id) && uploaded.id > 0)
   assert.equal(uploaded.size, bytes.length)
   const downloaded = await operate({ operation: 'download', artifact: { ...uploaded, name, workflow_run: { id: Number(process.env.GITHUB_RUN_ID) } } })
+  stage = 'verify-digest'
   assert.equal(downloaded.digestMismatch, false)
+  stage = 'read-download'
   const received = await readFile(join(directory, 'download', name))
+  stage = 'verify-bytes'
   assert.deepEqual(received, bytes)
+  stage = 'decrypt'
   assert.deepEqual(decryptLedger(received, secret), ledger)
   process.stdout.write('Real Actions artifact upload, digest verification and encrypted restore passed.\n')
 }
 catch {
-  process.stderr.write('Actions artifact contract verification failed; provider payloads are suppressed.\n')
+  process.stderr.write(`Actions artifact contract verification failed at ${stage}${diagnostic}; provider payloads are suppressed.\n`)
   process.exitCode = 1
 }
 finally {

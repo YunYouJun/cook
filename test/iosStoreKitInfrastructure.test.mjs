@@ -159,7 +159,8 @@ process.exit(args[0] === 'build-for-testing' ? Number(process.env.BUILD_EXIT) : 
         for (const args of calls.slice(1)) {
           assert.equal(args[args.indexOf('-destination') + 1], 'id=existing-phone')
           assert.ok(args.includes('-resultBundlePath'))
-          assert.equal(args[args.indexOf('-maximum-test-execution-time-allowance') + 1], '120')
+          assert.equal(args[args.indexOf('-default-test-execution-time-allowance') + 1], '120')
+          assert.equal(args[args.indexOf('-maximum-test-execution-time-allowance') + 1], '180')
         }
         assert.ok(calls[1].includes('-only-testing:CookStoreKitTests'))
         assert.ok(calls[1].indexOf('-only-testing:CookStoreKitTests') < calls[1].indexOf('-only-testing:CookUITests/MembershipStoreKitUITests'))
