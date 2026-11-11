@@ -7,6 +7,7 @@ import process from 'node:process'
 // eslint-disable-next-line test/no-import-node-test -- This bootstrap check runs before installing Vitest or workspace dependencies.
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
+import { runInNewContext } from 'node:vm'
 import { detectNativeChanges, planIosTests } from '../scripts/ci-changes.mjs'
 
 function repository(run) {
@@ -76,6 +77,59 @@ test('the standalone Support workflow and its docs can skip native jobs, but mix
     write('packages/data/recipe.csv')
     const head = commit()
     assert.equal(detectNativeChanges('pull_request', { pull_request: { base: { sha: base }, head: { sha: head } } }, cwd).skipNative, false)
+  })
+})
+
+test('standalone Support and artifact edits require live artifact checks without native jobs', () => {
+  repository(({ cwd, write, commit, base }) => {
+    for (const path of [
+      'scripts/cook-support-sync.mjs',
+      'scripts/prepare-support-feedback.mjs',
+      'scripts/support-artifact-worker.mjs',
+      'scripts/test-support-artifact-runtime.mjs',
+      'scripts/lib/cook-support-runner.mjs',
+      'scripts/lib/support-agent-http.mjs',
+      'scripts/lib/support-artifacts.mjs',
+      'scripts/lib/support-ledger.mjs',
+      'test/cookSupportRunner.test.mjs',
+      'test/supportAgentHttp.test.mjs',
+      'test/supportArtifacts.test.mjs',
+      'test/supportLedger.test.mjs',
+    ]) write(path)
+    const support = commit()
+    const result = detectNativeChanges('pull_request', { pull_request: { base: { sha: base }, head: { sha: support } } }, cwd)
+    assert.equal(result.skipNative, true)
+    assert.equal(result.skipArtifact, false)
+    write('apps/ios/Cook/App.swift', 'changed')
+    const mixed = detectNativeChanges('push', { before: base, after: commit() }, cwd)
+    assert.equal(mixed.skipNative, false)
+    assert.equal(mixed.skipArtifact, false)
+  })
+})
+
+test('App and recipe edits omit the synthetic artifact roundtrip while retaining native coverage', () => {
+  for (const path of ['apps/ios/Cook/App.swift', 'apps/ios/StoreKitValidation/Products.storekit', 'apps/ios/Tests.xctestplan', 'packages/data/recipes.csv', 'packages/data/recipe-amounts.json']) {
+    repository(({ cwd, write, commit, base }) => {
+      write(path, 'changed')
+      const result = detectNativeChanges('push', { before: base, after: commit() }, cwd)
+      assert.equal(result.skipNative, false, path)
+      assert.equal(result.skipArtifact, true, path)
+    })
+  }
+})
+
+test('artifact tooling, installation inputs, unknown paths and moved tooling retain the live contract', () => {
+  for (const path of ['.github/workflows/ci.yml', '.github/workflows/support-sync.yml', '.github/actions/setup-js/action.yml', '.nvmrc', '.npmrc', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'scripts/ci-changes.mjs', 'scripts/lib/new-artifact-input.mjs']) {
+    repository(({ cwd, write, commit, base }) => {
+      write(path)
+      assert.equal(detectNativeChanges('push', { before: base, after: commit() }, cwd).skipArtifact, false, path)
+    })
+  }
+  repository(({ cwd, write, commit }) => {
+    write('scripts/support-artifact-worker.mjs')
+    const base = commit()
+    renameSync(join(cwd, 'scripts/support-artifact-worker.mjs'), join(cwd, 'docs/dev/worker.md'))
+    assert.equal(detectNativeChanges('push', { before: base, after: commit() }, cwd).skipArtifact, false)
   })
 })
 
@@ -187,51 +241,58 @@ test('the workflow entry point writes job outputs and defaults to native on inva
     writeFileSync(eventPath, JSON.stringify({ pull_request: { base: { sha: base }, head: { sha: after } } }))
     execFileSync(process.execPath, [entry], { cwd, env })
     const corePlan = 'ios_suites=["core-regression"]\nios_max_parallel=2\nios_storekit_devices=["iphone"]\n'
-    assert.equal(readFileSync(outputPath, 'utf8'), `skip_native=true\n${corePlan}`)
-    assert.match(readFileSync(summaryPath, 'utf8'), /not required \(only browser-owned inputs, documentation or the Support sync workflow changed\)/)
+    assert.equal(readFileSync(outputPath, 'utf8'), `skip_native=true\nskip_artifact=true\n${corePlan}`)
+    assert.match(readFileSync(summaryPath, 'utf8'), /not required \(only browser-owned inputs, documentation or standalone Support tools changed\)/)
     for (const invalidEvent of ['{ invalid JSON', 'null']) {
       writeFileSync(eventPath, invalidEvent)
       execFileSync(process.execPath, [entry], { cwd, env })
     }
-    assert.equal(readFileSync(outputPath, 'utf8'), `skip_native=true\n${corePlan}${`skip_native=false\n${corePlan}`.repeat(2)}`)
+    assert.equal(readFileSync(outputPath, 'utf8'), `skip_native=true\nskip_artifact=true\n${corePlan}${`skip_native=false\nskip_artifact=false\n${corePlan}`.repeat(2)}`)
   })
 })
 
-test('a support-only push carries coverage only from a green push at the exact previous branch head', () => {
-  repository(({ cwd, write, commit, base }) => {
-    write('.github/workflows/support-sync.yml')
-    const after = commit()
-    const eventPath = join(cwd, 'event.json')
-    writeFileSync(eventPath, JSON.stringify({ before: base, after, ref: 'refs/heads/main' }))
-    const bin = join(cwd, 'bin')
-    mkdirSync(bin)
-    writeFileSync(join(bin, 'gh'), `#!/usr/bin/env node
+test('push skips require a green CI run at the exact previous branch head', () => {
+  for (const [path, skipNative, skipArtifact] of [
+    ['.github/workflows/support-sync.yml', true, false],
+    ['apps/ios/Cook/App.swift', false, true],
+    ['docs/dev/ci.md', true, true],
+  ]) {
+    repository(({ cwd, write, commit, base }) => {
+      write(path, 'changed')
+      const after = commit()
+      const eventPath = join(cwd, 'event.json')
+      writeFileSync(eventPath, JSON.stringify({ before: base, after, ref: 'refs/heads/main' }))
+      const bin = join(cwd, 'bin')
+      mkdirSync(bin)
+      writeFileSync(join(bin, 'gh'), `#!/usr/bin/env node
 if (process.env.FAKE_GH_OUTPUT === 'error') process.exit(1)
 process.stdout.write(process.env.FAKE_GH_OUTPUT)
 `, { mode: 0o755 })
-    const entry = fileURLToPath(new URL('../scripts/ci-changes.mjs', import.meta.url))
-    const passed = { head_sha: base, head_branch: 'main', event: 'push', conclusion: 'success' }
-    for (const [response, expected] of [
-      [{ workflow_runs: [passed] }, true],
-      [{ workflow_runs: [] }, false],
-      ...[{ conclusion: 'cancelled' }, { conclusion: 'failure' }, { conclusion: null }, { head_sha: after }, { head_branch: 'dev' }, { event: 'pull_request' }]
-        .map(change => [{ workflow_runs: [{ ...passed, ...change }] }, false]),
-      ['error', false],
-    ]) {
-      const env = {
-        ...process.env,
-        PATH: `${bin}:${process.env.PATH}`,
-        GITHUB_REPOSITORY: 'example/cook',
-        GITHUB_OUTPUT: join(cwd, 'push-output.txt'),
-        GITHUB_STEP_SUMMARY: join(cwd, 'push-summary.md'),
-        GITHUB_EVENT_NAME: 'push',
-        GITHUB_EVENT_PATH: eventPath,
-        FAKE_GH_OUTPUT: response === 'error' ? response : JSON.stringify(response),
+      const entry = fileURLToPath(new URL('../scripts/ci-changes.mjs', import.meta.url))
+      const passed = { head_sha: base, head_branch: 'main', event: 'push', conclusion: 'success' }
+      for (const [response, verified] of [
+        [{ workflow_runs: [passed] }, true],
+        [{ workflow_runs: [] }, false],
+        ...[{ conclusion: 'cancelled' }, { conclusion: 'failure' }, { conclusion: null }, { head_sha: after }, { head_branch: 'dev' }, { event: 'pull_request' }]
+          .map(change => [{ workflow_runs: [{ ...passed, ...change }] }, false]),
+        ['error', false],
+      ]) {
+        const env = {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH}`,
+          GITHUB_REPOSITORY: 'example/cook',
+          GITHUB_OUTPUT: join(cwd, 'push-output.txt'),
+          GITHUB_STEP_SUMMARY: join(cwd, 'push-summary.md'),
+          GITHUB_EVENT_NAME: 'push',
+          GITHUB_EVENT_PATH: eventPath,
+          FAKE_GH_OUTPUT: response === 'error' ? response : JSON.stringify(response),
+        }
+        const result = JSON.parse(execFileSync(process.execPath, [entry], { cwd, env, encoding: 'utf8' }))
+        assert.equal(result.skipNative, verified && skipNative, path)
+        assert.equal(result.skipArtifact, verified && skipArtifact, path)
       }
-      const result = JSON.parse(execFileSync(process.execPath, [entry], { cwd, env, encoding: 'utf8' }))
-      assert.equal(result.skipNative, expected)
-    }
-  })
+    })
+  }
 })
 
 test('empty diffs, missing objects, zero SHAs, malformed events and unsupported events require native jobs', () => {
@@ -244,7 +305,30 @@ test('empty diffs, missing objects, zero SHAs, malformed events and unsupported 
       ['push', null],
       ['workflow_dispatch', {}],
     ]) {
-      assert.equal(detectNativeChanges(name, event, cwd).skipNative, false)
+      const result = detectNativeChanges(name, event, cwd)
+      assert.equal(result.skipNative, false)
+      assert.equal(result.skipArtifact, false)
     }
   })
+})
+
+test('live artifact steps fail closed on missing or failed plans and preserve fork restrictions', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
+  const testJob = workflow.split('\n  test:\n')[1].split('\n  web-acceptance:\n')[0]
+  assert.match(testJob, /needs: changes\n {4}if: \$\{\{ !cancelled\(\) \}\}/)
+  const conditions = [...testJob.matchAll(/ {8}if: (.+needs\.changes\.outputs\.skip_artifact.+)/g)].map(match => match[1])
+  assert.equal(conditions.length, 2, 'installation and execution share the guarded decision')
+  for (const condition of conditions) {
+    for (const [result, skip, expected] of [['success', 'true', false], ['success', 'false', true], ['success', undefined, true], ['failure', 'true', true], ['skipped', undefined, true]]) {
+      for (const eventName of ['push', 'pull_request', 'workflow_dispatch']) {
+        const github = { event_name: eventName, repository: 'owner/cook', event: { pull_request: { head: { repo: { full_name: 'owner/cook' } } } } }
+        const needs = { changes: { result, outputs: { skip_artifact: skip } } }
+        assert.equal(runInNewContext(condition, { github, needs }), expected)
+        if (eventName === 'pull_request') {
+          github.event.pull_request.head.repo.full_name = 'fork/cook'
+          assert.equal(runInNewContext(condition, { github, needs }), false)
+        }
+      }
+    }
+  }
 })

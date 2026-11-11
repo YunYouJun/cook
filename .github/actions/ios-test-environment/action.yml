@@ -10,14 +10,9 @@ outputs:
 runs:
   using: composite
   steps:
-    - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
-    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-      with:
-        node-version-file: .nvmrc
-        cache: pnpm
+    - uses: ./.github/actions/setup-js
     - shell: bash
       run: |
-        pnpm install --frozen-lockfile
         pnpm run convert
         if ! command -v xcodegen >/dev/null 2>&1; then
           brew install xcodegen
