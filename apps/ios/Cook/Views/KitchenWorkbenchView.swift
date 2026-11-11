@@ -35,7 +35,7 @@ struct KitchenWorkbenchView: View {
                     KitchenPaneLayout(frames: frames) {
                         instructions
                             .scrollEdgeBar(edge: .bottom) {
-                                if compact { timerShortcut }
+                                if compact, !dynamicTypeSize.isAccessibilitySize { timerShortcut }
                             }
                             .clipped()
                             .opacity(!compact || pane == .recipe ? 1 : 0)

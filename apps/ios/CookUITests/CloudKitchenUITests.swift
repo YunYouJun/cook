@@ -278,14 +278,8 @@ final class CloudKitchenUITests: XCTestCase {
     func testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled() {
         // Includes scene replacement, camera gestures and foreground restoration.
         executionTimeAllowance = 600
-        let app = XCUIApplication()
-        app.launchArguments = XCUIApplication.standardCookingLaunchArguments
-        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
-        app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
-        terminateAppAfterTest(app)
-        app.launch()
-        let presentation = app.cookingToolbarButton("cook.presentation")
-        XCTAssertTrue(presentation.waitForExistence(timeout: 20))
+        // Keep the camera interactions live without waiting for UIKit transition animations.
+        let app = launchMenuFixture(disablesUIKitAnimations: true)
         app.selectCookingPresentation("云厨房")
 
         // Selection and camera changes replace projected accessibility snapshots.

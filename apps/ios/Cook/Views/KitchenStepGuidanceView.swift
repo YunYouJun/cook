@@ -91,10 +91,15 @@ struct RecipeStepGuidancePanel: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("recipe.guidance.message")
                     HStack {
-                        Button("重试") { retry(lastKind, lastQuestion) }
-                            .buttonStyle(.bordered)
-                            .frame(minHeight: 44)
-                            .accessibilityIdentifier("recipe.guidance.retry")
+                        Button {
+                            retry(lastKind, lastQuestion)
+                        } label: {
+                            Text("重试")
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.bordered)
+                        .accessibilityIdentifier("recipe.guidance.retry")
                         if !ai.canUseRemote {
                             NavigationLink("AI 设置") { AISettingsView() }
                                 .frame(minHeight: 44)
