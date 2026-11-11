@@ -104,6 +104,7 @@ struct KitchenWorkbenchView: View {
         if let text = store.text(for: recipe) {
             RecipeTextContent(recipe: recipe, text: text, preparationInSidebar: true,
                               showsStepGuidance: true, dietaryGoal: dietaryGoal)
+                .accessibilityLabel("菜谱做法")
                 .accessibilityIdentifier("kitchen.instructions")
         } else {
             ContentUnavailableView {
