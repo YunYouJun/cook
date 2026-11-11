@@ -210,12 +210,12 @@ jobs:
       - run: pnpm run convert
       - name: Import Swift release signing keys
         run: gpg --batch --import .github/keys/swift-release-keys.asc
-      - name: Add Ubuntu archive fallback
+      - name: Prefer independent Ubuntu archive mirror
         run: |
-          # Keep the runner's signed Ubuntu sources and existing mirrors. The
-          # independent host provides a fallback if ubuntu.com fails to resolve.
+          # Keep signed Ubuntu sources and the runner's existing fallback mirrors.
+          # Priority 0 precedes the runner's 1/2/3 mirrors for every index/file.
           test -f /etc/apt/apt-mirrors.txt
-          printf '%s\n' 'https://mirrors.edge.kernel.org/ubuntu' | sudo tee -a /etc/apt/apt-mirrors.txt
+          printf '%s\tpriority:0\n' 'https://mirrors.edge.kernel.org/ubuntu' | sudo tee -a /etc/apt/apt-mirrors.txt
       - name: Install Swift
         uses: swift-actions/setup-swift@364295d9c23900ce04d4e5cc708387921b4e50f9 # v3
         with:
