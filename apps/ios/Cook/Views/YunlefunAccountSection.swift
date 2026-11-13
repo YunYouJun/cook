@@ -27,6 +27,7 @@ struct YunlefunAccountSection: View {
             } else {
                 AccountSignInButton()
                 WeChatSignInButton()
+                WeChatSignupLink()
             }
             AccountSessionStatus()
         }
@@ -80,6 +81,7 @@ struct YunlefunAccountView: View {
                 Section {
                     AccountSignInButton()
                     WeChatSignInButton()
+                    WeChatSignupLink()
                 }
             }
             if accounts.message != nil || accounts.canRetry {

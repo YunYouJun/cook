@@ -71,6 +71,7 @@ targets:
         CookAIGuidanceServiceURL: $(COOK_AI_GUIDANCE_SERVICE_URL)
         # 只在 SDK、账号绑定与审核均就绪后开启。
         CookWeChatLoginEnabled: $(COOK_WECHAT_LOGIN_ENABLED)
+        CookWeChatSignupEnabled: $(COOK_WECHAT_SIGNUP_ENABLED)
         CookMembershipUIEnabled: $(COOK_MEMBERSHIP_UI_ENABLED)
         CookMembershipPurchasesEnabled: $(COOK_MEMBERSHIP_PURCHASES_ENABLED)
         LSApplicationQueriesSchemes: [bilibili, weixin, weixinULAPI, weixinURLParamsAPI]
@@ -117,6 +118,7 @@ targets:
         PRODUCT_NAME: Cook
         PRODUCT_BUNDLE_IDENTIFIER: fun.yunle.cook
         COOK_WECHAT_LOGIN_ENABLED: NO
+        COOK_WECHAT_SIGNUP_ENABLED: NO
         SWIFT_OBJC_BRIDGING_HEADER: Cook/WeChat/CookWeChatBridge.h
         # The vendor arm64 slice is for iPhoneOS, not Apple Silicon Simulator.
         'GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*]': $(inherited) $(COOK_WECHAT_DEFINITIONS_$(COOK_WECHAT_LOGIN_ENABLED))

@@ -99,6 +99,23 @@ final class YunlefunAccountStore {
         }
     }
 
+    func registerWithWeChat(proof: String, deviceID: String) async throws {
+        guard account == nil, credential == nil, !isBusy, canUseWeChat, CookFeatures.weChatSignupEnabled else {
+            throw WeChatAccountError.unavailable
+        }
+        isBusy = true
+        defer { isBusy = false }
+        message = nil
+        let code = try await weChat.authorize()
+        try Task.checkCancellation()
+        let next = try await YunlefunAccountService().registerWithWeChat(proof: proof, code: code, deviceID: deviceID)
+        do { try await establishSession(next) }
+        catch {
+            try? await service.signOut(next)
+            throw WeChatSignupError.accountCreated
+        }
+    }
+
     func handleWeChat(_ url: URL) -> Bool { weChat.handle(url) }
     func handleWeChat(_ activity: NSUserActivity) -> Bool { weChat.handle(activity) }
 
@@ -135,13 +152,7 @@ final class YunlefunAccountStore {
         defer { isBusy = false }
         do {
             let next = try await nextCredential()
-            let user = try await service.account(next)
-            try Task.checkCancellation()
-            try vault.save(next)
-            credential = next
-            offlineSubject = next.subject
-            account = user
-            sessionRevision = UUID()
+            try await establishSession(next)
         } catch is CancellationError {
             // 用户取消授权后回到原状态。
             canRetry = previousCanRetry
@@ -149,6 +160,17 @@ final class YunlefunAccountStore {
             canRetry = previousCanRetry
             message = errorMessage(error)
         }
+    }
+
+    private func establishSession(_ next: YunlefunCredential) async throws {
+        let user = try await service.account(next)
+        try Task.checkCancellation()
+        try vault.save(next)
+        credential = next
+        offlineSubject = next.subject
+        account = user
+        sessionRevision = UUID()
+        canRetry = false
     }
 
     func handleYunlefunCallback(_ url: URL) -> Bool { appAuthorization.handle(url) }
