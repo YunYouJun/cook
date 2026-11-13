@@ -46,6 +46,7 @@ struct RootView: View {
         .minimizesTabBarOnScroll()
         .environment(router)
         .onOpenURL { url in
+            if accounts.handleWeChat(url) { return }
             if accounts.handleYunlefunCallback(url) { return }
             if router.openUniversalLink(url) {
                 // Never log query parameters, which may contain authorization codes.
@@ -53,7 +54,9 @@ struct RootView: View {
             }
         }
         .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
-            if let url = activity.webpageURL { _ = accounts.handleYunlefunCallback(url) }
+            if accounts.handleWeChat(activity) { return }
+            guard let url = activity.webpageURL, !accounts.handleYunlefunCallback(url) else { return }
+            router.openUniversalLink(url)
         }
         .modifier(PrivateRecipeDeletionSync())
         .onChange(of: preferenceRecords.map(\.snapshot), initial: true) {

@@ -10,9 +10,11 @@ final class YunlefunAccountStore {
     private(set) var canRetry = false
     private(set) var sessionRevision = UUID()
     private(set) var offlineSubject: String?
+    private(set) var weChatBindingMessage: String?
     @ObservationIgnored private let service: YunlefunAccountServing
     @ObservationIgnored private let vault: YunlefunAccountVault
     @ObservationIgnored private let authorization: YunlefunAuthorizing
+    @ObservationIgnored private let weChat: WeChatAuthorizing
     @ObservationIgnored private let appAuthorization: YunlefunAppAuthorization
     @ObservationIgnored private var credential: YunlefunCredential?
     @ObservationIgnored private var didRestore = false
@@ -20,15 +22,18 @@ final class YunlefunAccountStore {
     /// A previously verified session may keep its own offline library visible.
     /// Sign-out/invalid credentials clear this identity before any async work.
     var dataAccountID: String? { account?.id ?? offlineSubject }
+    var canUseWeChat: Bool { weChat.isAvailable }
     var isAwaitingYunlefunApp: Bool { appAuthorization.isWaiting }
 
     init(service: YunlefunAccountServing? = nil,
          vault: YunlefunAccountVault? = nil,
          authorization: YunlefunAuthorizing? = nil,
+         weChat: WeChatAuthorizing? = nil,
          appAuthorization: YunlefunAppAuthorization? = nil) {
         self.service = service ?? YunlefunAccountService()
         self.vault = vault ?? KeychainYunlefunAccountVault()
         self.authorization = authorization ?? SystemYunlefunAuthorization()
+        self.weChat = weChat ?? WeChatAuthorization(enabled: CookFeatures.weChatLoginEnabled)
         // Tests that provide their own browser must never launch another app.
         self.appAuthorization = appAuthorization ?? (authorization == nil
             ? YunlefunAppAuthorization()
@@ -69,26 +74,67 @@ final class YunlefunAccountStore {
     }
 
     func signIn() async {
-        guard !isBusy else { return }
-        isBusy = true
-        message = nil
-        let previousCanRetry = canRetry
-        canRetry = false
-        defer { isBusy = false }
-        do {
+        await completeSignIn {
             let fields: [String: String]
             switch try await appAuthorization.authorize(YunlefunSSO()) {
             case .authorized(let approvedFields):
                 fields = approvedFields
             case .useWeb:
-                // Invalidate the app attempt before going to the web, even when the app opened.
+                // Start a new transaction after the app attempt has been invalidated.
                 try Task.checkCancellation()
                 let transaction = try YunlefunSSO()
                 let callback = try await authorization.authorize(transaction)
                 fields = try transaction.exchangeFields(callback: callback)
             }
             try Task.checkCancellation()
-            let next = try await service.signIn(fields: fields, deviceID: UUID().uuidString)
+            return try await self.service.signIn(fields: fields, deviceID: UUID().uuidString)
+        }
+    }
+
+    func signInWithWeChat() async {
+        await completeSignIn {
+            let code = try await self.weChat.authorize()
+            try Task.checkCancellation()
+            return try await self.service.signInWithWeChat(code: code, deviceID: UUID().uuidString)
+        }
+    }
+
+    func handleWeChat(_ url: URL) -> Bool { weChat.handle(url) }
+    func handleWeChat(_ activity: NSUserActivity) -> Bool { weChat.handle(activity) }
+
+    func bindWeChat() async {
+        guard !isBusy, let current = credential, account?.id == current.subject else { return }
+        isBusy = true
+        message = nil
+        weChatBindingMessage = nil
+        defer { isBusy = false }
+        do {
+            guard current.expiresAt.timeIntervalSinceNow > 60 else {
+                throw YunlefunAccountError.expiredSession
+            }
+            let code = try await weChat.authorize()
+            try Task.checkCancellation()
+            guard current.expiresAt > Date() else { throw YunlefunAccountError.expiredSession }
+            // Yunlefun atomically checks both sides of the binding against the current session.
+            try await service.bindWeChat(code: code, credential: current)
+            weChatBindingMessage = "已将微信绑定到当前云乐坊账号。"
+        } catch is CancellationError {
+            // Closing WeChat leaves the active account intact.
+        } catch {
+            message = errorMessage(error)
+        }
+    }
+
+    private func completeSignIn(_ nextCredential: () async throws -> YunlefunCredential) async {
+        guard !isBusy else { return }
+        isBusy = true
+        message = nil
+        weChatBindingMessage = nil
+        let previousCanRetry = canRetry
+        canRetry = false
+        defer { isBusy = false }
+        do {
+            let next = try await nextCredential()
             let user = try await service.account(next)
             try Task.checkCancellation()
             try vault.save(next)
@@ -123,6 +169,7 @@ final class YunlefunAccountStore {
             account = nil
             sessionRevision = UUID()
             message = nil
+            weChatBindingMessage = nil
             canRetry = false
             if let previous {
                 do { try await service.signOut(previous) }
@@ -181,6 +228,8 @@ final class YunlefunAccountStore {
     }
 
     private func errorMessage(_ error: Error) -> String {
-        (error as? YunlefunAccountError)?.localizedDescription ?? "暂时无法连接云乐坊，请检查网络后重试。"
+        (error as? WeChatAccountError)?.localizedDescription
+            ?? (error as? YunlefunAccountError)?.localizedDescription
+            ?? "暂时无法连接云乐坊，请检查网络后重试。"
     }
 }

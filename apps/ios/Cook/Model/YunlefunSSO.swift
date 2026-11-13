@@ -84,7 +84,7 @@ struct YunlefunSSO {
         }
     }
 
-    private static func randomToken() throws -> String {
+    static func randomToken() throws -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
         guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else {
             throw YunlefunAccountError.secureStorage

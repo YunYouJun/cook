@@ -45,6 +45,13 @@ targets:
         product: YunleSupportUI
       - package: CookCore
     preBuildScripts:
+      - name: Prepare WeChat OpenSDK for enabled device builds
+        script: bash "$SRCROOT/scripts/prepare-wechat-sdk.sh"
+        basedOnDependencyAnalysis: false
+        outputFiles:
+          - $(TARGET_TEMP_DIR)/CookWeChatSDK/libWechatOpenSDK.a
+          - $(TARGET_TEMP_DIR)/CookWeChatSDK/WXApi.h
+          - $(TARGET_TEMP_DIR)/CookWeChatSDK/WXApiObject.h
       - name: 拷贝共享数据
         script: bash "$SRCROOT/scripts/copy-data.sh"
         basedOnDependencyAnalysis: false
@@ -62,11 +69,15 @@ targets:
         CookAIServiceURL: $(COOK_AI_SERVICE_URL)
         # Guidance has its own capability and deployment gate; never infer it from search.
         CookAIGuidanceServiceURL: $(COOK_AI_GUIDANCE_SERVICE_URL)
-        # 预留给原生微信入口；只在 SDK、账号绑定与审核均就绪后开启。
+        # 只在 SDK、账号绑定与审核均就绪后开启。
         CookWeChatLoginEnabled: $(COOK_WECHAT_LOGIN_ENABLED)
         CookMembershipUIEnabled: $(COOK_MEMBERSHIP_UI_ENABLED)
         CookMembershipPurchasesEnabled: $(COOK_MEMBERSHIP_PURCHASES_ENABLED)
-        LSApplicationQueriesSchemes: [bilibili]
+        LSApplicationQueriesSchemes: [bilibili, weixin, weixinULAPI, weixinURLParamsAPI]
+        CFBundleURLTypes:
+          - CFBundleURLName: fun.yunle.cook.wechat
+            CFBundleTypeRole: Editor
+            CFBundleURLSchemes: [wxce6c7405dd756b9d]
         NSUbiquitousContainers:
           iCloud.fun.yunle.cook:
             NSUbiquitousContainerIsDocumentScopePublic: true
@@ -106,6 +117,13 @@ targets:
         PRODUCT_NAME: Cook
         PRODUCT_BUNDLE_IDENTIFIER: fun.yunle.cook
         COOK_WECHAT_LOGIN_ENABLED: NO
+        SWIFT_OBJC_BRIDGING_HEADER: Cook/WeChat/CookWeChatBridge.h
+        # The vendor arm64 slice is for iPhoneOS, not Apple Silicon Simulator.
+        'GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*]': $(inherited) $(COOK_WECHAT_DEFINITIONS_$(COOK_WECHAT_LOGIN_ENABLED))
+        'HEADER_SEARCH_PATHS[sdk=iphoneos*]': $(inherited) "$(TARGET_TEMP_DIR)/CookWeChatSDK"
+        'OTHER_LDFLAGS[sdk=iphoneos*]': $(inherited) $(COOK_WECHAT_LDFLAGS_$(COOK_WECHAT_LOGIN_ENABLED))
+        COOK_WECHAT_DEFINITIONS_YES: COOK_HAS_WECHAT_SDK=1
+        COOK_WECHAT_LDFLAGS_YES: -force_load "$(TARGET_TEMP_DIR)/CookWeChatSDK/libWechatOpenSDK.a" -framework Security -framework UIKit -framework CoreGraphics -framework WebKit -lz -lsqlite3 -lc++
         COOK_MEMBERSHIP_UI_ENABLED: NO
         COOK_MEMBERSHIP_PURCHASES_ENABLED: NO
         COOK_AI_SERVICE_URL: https://api.yunle.fun/cook-ai-intent
