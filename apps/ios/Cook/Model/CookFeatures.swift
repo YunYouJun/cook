@@ -15,4 +15,7 @@ enum CookFeatures {
     static var weChatLoginEnabled: Bool {
         Bundle.main.object(forInfoDictionaryKey: "CookWeChatLoginEnabled") as? String == "YES"
     }
+    static var weChatSignupEnabled: Bool {
+        weChatLoginEnabled && Bundle.main.object(forInfoDictionaryKey: "CookWeChatSignupEnabled") as? String == "YES"
+    }
 }

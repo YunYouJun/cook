@@ -426,6 +426,35 @@ private actor AccountTransportStub {
 
 @MainActor
 final class YunlefunAccountServiceTests: XCTestCase {
+    func testWeChatSignupPhoneVerificationDoesNotCreateAnExistingAccount() async throws {
+        let transport = AccountTransportStub([
+            (200, #"{"ok":true,"challenge":"sms-challenge"}"#),
+            (200, #"{"ok":true,"next":"existing"}"#),
+        ])
+        let service = YunlefunAccountService(transport: { try await transport.send($0) })
+        let challenge = try await service.sendWeChatSignupSMS(phone: "13900000000", captcha: nil, deviceID: "device")
+        let next = try await service.verifyWeChatSignupSMS(challenge: challenge, otp: "123456", deviceID: "device")
+        guard case .existingAccount = next else { return XCTFail("Existing phone reached registration") }
+        let requests = await transport.requests
+        XCTAssertEqual(requests.count, 2)
+        XCTAssertTrue(requests.allSatisfy { $0.value(forHTTPHeaderField: "x-device-id") == "device" })
+    }
+
+    func testExplicitWeChatSignupExchangesOnlyTheNewAccountTicket() async throws {
+        let transport = AccountTransportStub([
+            (200, #"{"ok":true,"ticket":"new-ticket","subject":"new-user"}"#),
+            (200, #"{"access_token":"access","refresh_token":"refresh","sub":"new-user","expires_in":7200}"#),
+        ])
+        let service = YunlefunAccountService(transport: { try await transport.send($0) })
+        let credential = try await service.registerWithWeChat(proof: "phone-proof", code: "wechat-code", deviceID: "device")
+        XCTAssertEqual(credential.subject, "new-user")
+        let requests = await transport.requests
+        let body = try XCTUnwrap(requests[0].httpBody)
+        let fields = try JSONDecoder().decode([String: String].self, from: body)
+        XCTAssertEqual(fields, ["action": "registerCookWeChat", "clientId": "cook-mobile", "proof": "phone-proof", "code": "wechat-code"])
+        XCTAssertEqual(requests[1].url?.path, "/auth/v1/signin/custom")
+    }
+
     func testWeChatExchangesCodeWithYunlefunAndUsesExistingUIDTicket() async throws {
         let transport = AccountTransportStub([
             (200, #"{"ok":true,"ticket":"sso-ticket","subject":"user-1"}"#),
