@@ -13,19 +13,26 @@ final class YunlefunAccountStore {
     @ObservationIgnored private let service: YunlefunAccountServing
     @ObservationIgnored private let vault: YunlefunAccountVault
     @ObservationIgnored private let authorization: YunlefunAuthorizing
+    @ObservationIgnored private let appAuthorization: YunlefunAppAuthorization
     @ObservationIgnored private var credential: YunlefunCredential?
     @ObservationIgnored private var didRestore = false
 
     /// A previously verified session may keep its own offline library visible.
     /// Sign-out/invalid credentials clear this identity before any async work.
     var dataAccountID: String? { account?.id ?? offlineSubject }
+    var isAwaitingYunlefunApp: Bool { appAuthorization.isWaiting }
 
     init(service: YunlefunAccountServing? = nil,
          vault: YunlefunAccountVault? = nil,
-         authorization: YunlefunAuthorizing? = nil) {
+         authorization: YunlefunAuthorizing? = nil,
+         appAuthorization: YunlefunAppAuthorization? = nil) {
         self.service = service ?? YunlefunAccountService()
         self.vault = vault ?? KeychainYunlefunAccountVault()
         self.authorization = authorization ?? SystemYunlefunAuthorization()
+        // Tests that provide their own browser must never launch another app.
+        self.appAuthorization = appAuthorization ?? (authorization == nil
+            ? YunlefunAppAuthorization()
+            : YunlefunAppAuthorization(openApp: { _ in false }))
     }
 
     func restore() async {
@@ -69,10 +76,18 @@ final class YunlefunAccountStore {
         canRetry = false
         defer { isBusy = false }
         do {
-            let transaction = try YunlefunSSO()
-            let callback = try await authorization.authorize(transaction)
+            let fields: [String: String]
+            switch try await appAuthorization.authorize(YunlefunSSO()) {
+            case .authorized(let approvedFields):
+                fields = approvedFields
+            case .useWeb:
+                // Invalidate the app attempt before going to the web, even when the app opened.
+                try Task.checkCancellation()
+                let transaction = try YunlefunSSO()
+                let callback = try await authorization.authorize(transaction)
+                fields = try transaction.exchangeFields(callback: callback)
+            }
             try Task.checkCancellation()
-            let fields = try transaction.exchangeFields(callback: callback)
             let next = try await service.signIn(fields: fields, deviceID: UUID().uuidString)
             let user = try await service.account(next)
             try Task.checkCancellation()
@@ -89,6 +104,10 @@ final class YunlefunAccountStore {
             message = errorMessage(error)
         }
     }
+
+    func handleYunlefunCallback(_ url: URL) -> Bool { appAuthorization.handle(url) }
+    func continueYunlefunOnWeb() { appAuthorization.useWeb() }
+    func cancelYunlefunAppAuthorization() { appAuthorization.cancel() }
 
     func retry() async { await refreshSession() }
 

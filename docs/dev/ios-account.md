@@ -4,7 +4,7 @@
 
 ## 页面层级
 
-「我的」首页只保留账号摘要，以及我的菜谱、食材和厨具、做菜偏好、提醒、数据与同步、隐私、帮助与反馈、关于云食册等入口。做菜偏好与提醒开关在各自二级页；iCloud 说明和网页数据导入导出集中在「数据与同步」；账号管理、注销与退出移入账号详情页。密码和验证码继续使用系统认证窗口访问云乐坊统一登录，客户端不新增一套密码表单。
+「我的」首页只保留账号摘要，以及我的菜谱、食材和厨具、做菜偏好、提醒、数据与同步、隐私、帮助与反馈、关于云食册等入口。做菜偏好与提醒开关在各自二级页；iCloud 说明和网页数据导入导出集中在「数据与同步」；账号管理、注销与退出移入账号详情页。登录优先通过 `https://www.yunle.fun/auth/app` 打开云乐坊 App 确认；系统无法打开时继续使用现有系统网页授权。用户可取消等待或改用网页；在云乐坊选择「使用其他账号」也会用新事务打开网页。云食册不收集密码和验证码。
 
 ## 客户端登记
 
@@ -32,7 +32,7 @@
 1. 在 Apple Developer 的 `fun.yunle.cook` 标识符开启 Associated Domains，并更新签名描述文件。
 2. 将 `apps/web/public/.well-known/apple-app-site-association` 发布到 `https://cook.yunyoujun.cn/.well-known/apple-app-site-association`。保留 `webcredentials.apps` 的 `QT792GAY4C.fun.yunle.cook` 和原生 `/auth/wechat/*` applinks；2026-10-26 按 [0016](../decisions/0016-native-android-and-capacitor-retirement) 从源码移除旧 Capacitor 应用关联。`/auth/callback?platform=native` 仍供当前系统授权会话使用，不能随旧外壳一并删除。
 3. 用正确的 `APPLE_DEVELOPMENT_TEAM` 生成工程。`project.yml` 已声明 `webcredentials:cook.yunyoujun.cn`，并为后续微信登录声明 `applinks:cook.yunyoujun.cn`；如果改签名团队，必须同步修改站点 AASA。
-4. 等 Apple 的关联域名缓存更新后，真机验证系统授权窗口和 HTTPS 回调。模拟器编译、协议测试均不能替代此步骤。
+4. 跨 App 回跳复用已登记的 `/auth/callback?platform=native`，AASA 仅关联包含 `ylf_sso=` 结果片段的原生回调。部署 Cook 的 AASA 后，核对 Apple CDN，并真机验证已安装云乐坊时的切换与回跳、未安装或系统无法打开时的网页授权，以及「使用其他账号」的网页回跳。网页流程的回调仍由系统认证窗口接收；未完成这些验证前不要将功能视为已上线。
 
 2026-10-24 已将 AASA 发布到 EdgeOne 生产项目 `yunyoujun-cook`（部署 `dpwz3nca44ld`）。生产域名与 Apple CDN 均返回 HTTP 200、`application/json`，内容一致且包含原生 `webcredentials`。Apple App ID `JJLY23S94L` 已回读确认开启 Associated Domains，Xcode 自动更新了开发描述文件。
 
