@@ -201,7 +201,6 @@ struct YunlefunAccountService: YunlefunAccountServing {
             if weChat {
                 switch failure?.reason {
                 case "wechat_binding_required": throw WeChatAccountError.bindingRequired
-                case "wechat_website_binding_required": throw WeChatAccountError.websiteBindingRequired
                 case "binding_conflict": throw WeChatAccountError.alreadyBound
                 case "account_restricted": throw WeChatAccountError.accountRestricted
                 case "phone_verification_required": throw WeChatAccountError.phoneVerificationRequired
