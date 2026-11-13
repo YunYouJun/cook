@@ -113,8 +113,21 @@ private struct AccountSignInButton: View {
             .disabled(accounts.isBusy)
             .accessibilityValue(accounts.isBusy ? "正在处理账号" : "")
             .accessibilityIdentifier("account.signIn")
+            YunlefunAppAuthorizationStatus()
         } else {
             Text("升级至 iOS 17.4 后可登录云乐坊账号").foregroundStyle(.secondary)
+        }
+    }
+}
+
+struct YunlefunAppAuthorizationStatus: View {
+    @Environment(YunlefunAccountStore.self) private var accounts
+
+    var body: some View {
+        if accounts.isAwaitingYunlefunApp {
+            Text("请在云乐坊 App 中确认授权").font(.footnote).foregroundStyle(.secondary)
+            Button("改用网页登录") { accounts.continueYunlefunOnWeb() }
+            Button("取消登录", role: .cancel) { accounts.cancelYunlefunAppAuthorization() }
         }
     }
 }

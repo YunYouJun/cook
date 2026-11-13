@@ -58,6 +58,7 @@ struct MembershipView: View {
                     Button("登录云乐坊账号") { Task { await accounts.signIn() } }
                         .disabled(accounts.isBusy)
                         .accessibilityIdentifier("membership.signIn")
+                    YunlefunAppAuthorizationStatus()
                 }
             } else if !membership.purchasesEnabled {
                 Section { Text("App 内购买暂未开放。已购会员可在登录后核对现有权益。") }
