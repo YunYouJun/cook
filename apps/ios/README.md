@@ -88,7 +88,7 @@ CI 的 `ios-tests` 矩阵在 iPhone 和 iPad 模拟器上分组跑单元测试�
 
 原生云乐坊登录的客户端登记、HTTPS 回调发布条件和会话验证见 [账号接入](../../docs/dev/ios-account.md)。原生微信登录的配置和验收见 [微信登录联调](../../docs/dev/ios-wechat-login.md)。登录与 iCloud 数据同步相互独立。
 
-原生微信入口由 `COOK_WECHAT_LOGIN_ENABLED` 控制，Debug / Release 默认 `NO`。仅在显式启用的 iPhoneOS 构建中下载和链接微信 OpenSDK，安装了微信才显示入口。启用前须确认微信开放平台权限和独立 CloudBase 身份源；开关不控制现有云乐坊授权网页或 iCloud 同步。
+原生微信入口由 `COOK_WECHAT_LOGIN_ENABLED` 控制，Debug / Release 默认 `NO`。仅在显式启用的 iPhoneOS 构建中下载和链接微信 OpenSDK，安装了微信才显示入口。启用前须验证微信开放平台权限和云乐坊统一登录服务；开关不控制现有云乐坊授权网页或 iCloud 同步。
 
 ## 冰箱拍照录入
 

@@ -94,22 +94,13 @@ final class YunlefunAccountStore {
         weChatBindingMessage = nil
         defer { isBusy = false }
         do {
-            // Do not write over an existing binding. The provider enforces uniqueness on the write.
             guard current.expiresAt.timeIntervalSinceNow > 60 else {
                 throw YunlefunAccountError.expiredSession
-            }
-            guard try await service.hasWeChatBinding(current) == false else {
-                weChatBindingMessage = "当前云乐坊账号已绑定微信。"
-                return
             }
             let code = try await weChat.authorize()
             try Task.checkCancellation()
             guard current.expiresAt > Date() else { throw YunlefunAccountError.expiredSession }
-            guard try await service.hasWeChatBinding(current) == false else {
-                weChatBindingMessage = "当前云乐坊账号已绑定微信。"
-                return
-            }
-            try Task.checkCancellation()
+            // Yunlefun atomically checks both sides of the binding against the current session.
             try await service.bindWeChat(code: code, credential: current)
             weChatBindingMessage = "已将微信绑定到当前云乐坊账号。"
         } catch is CancellationError {

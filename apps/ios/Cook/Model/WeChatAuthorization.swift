@@ -2,15 +2,20 @@ import Foundation
 import UIKit
 
 enum WeChatAccountError: LocalizedError {
-    case unavailable, authorizationFailed, bindingRequired, alreadyBound, accountRestricted
+    case unavailable, authorizationFailed, bindingRequired, websiteBindingRequired, alreadyBound, accountRestricted
+    case phoneVerificationRequired, identityUnverified, rateLimited
 
     var errorDescription: String? {
         switch self {
         case .unavailable: return "微信登录暂不可用，请使用云乐坊账号登录。"
         case .authorizationFailed: return "微信授权未完成，请重试。"
         case .bindingRequired: return "此微信尚未关联云食册。请先登录原来的云乐坊账号，再到账号详情绑定。"
+        case .websiteBindingRequired: return "请先在云乐坊网站的安全设置中确认当前账号绑定了同一个微信，再回到云食册重试。"
         case .alreadyBound: return "当前账号已绑定微信，或此微信已被绑定。请检查账号绑定状态。"
         case .accountRestricted: return "此云乐坊账号暂不可用，请在云乐坊网站检查账号状态。"
+        case .phoneVerificationRequired: return "请先在云乐坊网站验证手机号，再使用微信登录。"
+        case .identityUnverified: return "无法确认此微信与云乐坊账号的关联，请使用原来的登录方式。"
+        case .rateLimited: return "操作过于频繁，请稍后重新发起微信授权。"
         }
     }
 }

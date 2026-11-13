@@ -73,7 +73,7 @@ struct YunlefunAccountView: View {
                             Text(message).font(.footnote).foregroundStyle(.secondary)
                         }
                     } footer: {
-                        Text("绑定后可以用微信登录同一个云乐坊账号。")
+                        Text("请使用已在云乐坊网站绑定的微信。绑定后可用它登录同一个云乐坊账号。")
                     }
                 }
             } else {
