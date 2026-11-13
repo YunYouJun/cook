@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <title>云食册 · 食用手册</title>
   <defs>
-    <linearGradient id="cook-sky" x1="32" y1="0" x2="32" y2="64" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#55AAFF"/>
-      <stop offset="1" stop-color="#2563EB"/>
+    <linearGradient id="cook-leaf" x1="32" y1="0" x2="32" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#438453"/>
+      <stop offset="1" stop-color="#2F6B45"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" fill="url(#cook-sky)"/>
+  <rect width="64" height="64" fill="url(#cook-leaf)"/>
   <path d="M39 34 49.5 13.5" fill="none" stroke="#FACC15" stroke-width="3.6" stroke-linecap="round"/>
   <circle cx="49.8" cy="12.9" r="3" fill="#FACC15"/>
   <g fill="#FFFFFF">
-    <path d="M15.94 23.5C12.94 23.5 10.5 21.06 10.5 18.06S12.94 12.62 15.94 12.62C16.86 12.62 17.72 12.85 18.48 13.25C19.32 9.94 22.32 7.5 25.86 7.5S32.4 9.94 33.24 13.25C34 12.85 34.86 12.62 35.78 12.62C38.78 12.62 41.22 15.06 41.22 18.06S38.78 23.5 35.78 23.5Z"/>
-    <rect x="9" y="32" width="46" height="4.6" rx="2.3"/>
+    <path d="M18.75 28C16.35 28 14.4 26.05 14.4 23.65S16.35 19.3 18.75 19.3C19.49 19.3 20.18 19.48 20.78 19.8C21.46 17.15 23.86 15.2 26.69 15.2S31.92 17.15 32.59 19.8C33.2 19.48 33.89 19.3 34.62 19.3C37.02 19.3 38.98 21.25 38.98 23.65S37.02 28 34.62 28Z"/>
+    <rect x="9" y="32.4" width="46" height="3.4" rx="1.7"/>
     <path d="M14.5 38.6h35v7.4a8 8 0 0 1-8 8h-19a8 8 0 0 1-8-8Z"/>
   </g>
 </svg>
