@@ -15,6 +15,7 @@ final class YunlefunAccountStore {
     @ObservationIgnored private let vault: YunlefunAccountVault
     @ObservationIgnored private let authorization: YunlefunAuthorizing
     @ObservationIgnored private let weChat: WeChatAuthorizing
+    @ObservationIgnored private let appAuthorization: YunlefunAppAuthorization
     @ObservationIgnored private var credential: YunlefunCredential?
     @ObservationIgnored private var didRestore = false
 
@@ -22,15 +23,21 @@ final class YunlefunAccountStore {
     /// Sign-out/invalid credentials clear this identity before any async work.
     var dataAccountID: String? { account?.id ?? offlineSubject }
     var canUseWeChat: Bool { weChat.isAvailable }
+    var isAwaitingYunlefunApp: Bool { appAuthorization.isWaiting }
 
     init(service: YunlefunAccountServing? = nil,
          vault: YunlefunAccountVault? = nil,
          authorization: YunlefunAuthorizing? = nil,
-         weChat: WeChatAuthorizing? = nil) {
+         weChat: WeChatAuthorizing? = nil,
+         appAuthorization: YunlefunAppAuthorization? = nil) {
         self.service = service ?? YunlefunAccountService()
         self.vault = vault ?? KeychainYunlefunAccountVault()
         self.authorization = authorization ?? SystemYunlefunAuthorization()
         self.weChat = weChat ?? WeChatAuthorization(enabled: CookFeatures.weChatLoginEnabled)
+        // Tests that provide their own browser must never launch another app.
+        self.appAuthorization = appAuthorization ?? (authorization == nil
+            ? YunlefunAppAuthorization()
+            : YunlefunAppAuthorization(openApp: { _ in false }))
     }
 
     func restore() async {
@@ -68,10 +75,18 @@ final class YunlefunAccountStore {
 
     func signIn() async {
         await completeSignIn {
-            let transaction = try YunlefunSSO()
-            let callback = try await self.authorization.authorize(transaction)
+            let fields: [String: String]
+            switch try await appAuthorization.authorize(YunlefunSSO()) {
+            case .authorized(let approvedFields):
+                fields = approvedFields
+            case .useWeb:
+                // Start a new transaction after the app attempt has been invalidated.
+                try Task.checkCancellation()
+                let transaction = try YunlefunSSO()
+                let callback = try await authorization.authorize(transaction)
+                fields = try transaction.exchangeFields(callback: callback)
+            }
             try Task.checkCancellation()
-            let fields = try transaction.exchangeFields(callback: callback)
             return try await self.service.signIn(fields: fields, deviceID: UUID().uuidString)
         }
     }
@@ -135,6 +150,10 @@ final class YunlefunAccountStore {
             message = errorMessage(error)
         }
     }
+
+    func handleYunlefunCallback(_ url: URL) -> Bool { appAuthorization.handle(url) }
+    func continueYunlefunOnWeb() { appAuthorization.useWeb() }
+    func cancelYunlefunAppAuthorization() { appAuthorization.cancel() }
 
     func retry() async { await refreshSession() }
 

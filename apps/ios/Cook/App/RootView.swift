@@ -47,6 +47,7 @@ struct RootView: View {
         .environment(router)
         .onOpenURL { url in
             if accounts.handleWeChat(url) { return }
+            if accounts.handleYunlefunCallback(url) { return }
             if router.openUniversalLink(url) {
                 // Never log query parameters, which may contain authorization codes.
                 Logger(subsystem: "fun.yunle.cook", category: "UniversalLink").notice("Opened account area from WeChat universal link")
@@ -54,7 +55,8 @@ struct RootView: View {
         }
         .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
             if accounts.handleWeChat(activity) { return }
-            if let url = activity.webpageURL { router.openUniversalLink(url) }
+            guard let url = activity.webpageURL, !accounts.handleYunlefunCallback(url) else { return }
+            router.openUniversalLink(url)
         }
         .modifier(PrivateRecipeDeletionSync())
         .onChange(of: preferenceRecords.map(\.snapshot), initial: true) {

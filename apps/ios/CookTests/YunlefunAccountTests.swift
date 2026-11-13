@@ -7,6 +7,9 @@ private func callback(_ transaction: YunlefunSSO, changes: [String: Any] = [:], 
     var payload: [String: Any] = ["nonce": transaction.nonce, "iss": YunlefunSSO.issuer, "ok": true,
                                   "code": String(repeating: "a", count: 43)]
     payload.merge(changes) { _, new in new }
+    if payload["ok"] as? Bool == false, changes["code"] == nil {
+        payload.removeValue(forKey: "code")
+    }
     let encoded = try JSONSerialization.data(withJSONObject: payload).base64EncodedString()
         .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
     return URL(string: redirect + "#ylf_sso=" + encoded)!
@@ -19,6 +22,11 @@ final class YunlefunSSOTests: XCTestCase {
         let query = Dictionary(uniqueKeysWithValues: url.queryItems!.map { ($0.name, $0.value!) })
         XCTAssertEqual(url.scheme, "https")
         XCTAssertEqual(url.host, "www.yunle.fun")
+        XCTAssertEqual(url.path, "/auth/sso")
+        let app = URLComponents(url: transaction.appAuthorizationURL, resolvingAgainstBaseURL: false)!
+        XCTAssertEqual(app.host, url.host)
+        XCTAssertEqual(app.path, "/auth/app")
+        XCTAssertEqual(app.queryItems, url.queryItems)
         XCTAssertEqual(query["client_id"], "cook-mobile")
         XCTAssertEqual(query["redirect_uri"], YunlefunSSO.redirectURI)
         XCTAssertEqual(query["scope"], "identity:bootstrap")
@@ -134,11 +142,122 @@ private final class WeChatAuthorizationStub: WeChatAuthorizing {
 private final class AuthorizationStub: YunlefunAuthorizing {
     var cancelled = false
     var invalid = false
+    var transactions: [YunlefunSSO] = []
     func authorize(_ transaction: YunlefunSSO) async throws -> URL {
+        transactions.append(transaction)
         if cancelled { throw CancellationError() }
         return try callback(transaction, changes: invalid ? ["nonce": "forged"] : [:])
     }
     func cancel() { cancelled = true }
+}
+
+@MainActor
+final class YunlefunAppAuthorizationTests: XCTestCase {
+    func testUnavailableAppFallsBackToExistingWebAuthorization() async throws {
+        let service = AccountServiceStub()
+        let browser = AuthorizationStub()
+        var launchedURL: URL?
+        let app = YunlefunAppAuthorization(openApp: { launchedURL = $0; return false })
+        let store = YunlefunAccountStore(service: service, vault: MemoryYunlefunAccountVault(),
+                                         authorization: browser, appAuthorization: app)
+
+        await store.signIn()
+
+        let launch = try XCTUnwrap(launchedURL)
+        let web = try XCTUnwrap(browser.transactions.first)
+        XCTAssertEqual(launch.path, "/auth/app")
+        XCTAssertFalse(launch.absoluteString.contains(web.nonce))
+        XCTAssertEqual(browser.transactions.count, 1)
+        XCTAssertEqual(service.signInCount, 1)
+        XCTAssertEqual(store.account?.id, service.credential.subject)
+        XCTAssertFalse(store.isAwaitingYunlefunApp)
+    }
+
+    func testAppCallbackMustMatchTheActiveAttemptAndExchangesOnlyOnce() async throws {
+        let service = AccountServiceStub()
+        let browser = AuthorizationStub()
+        let launched = expectation(description: "Opened Yunlefun app")
+        var nonce: String?
+        let app = YunlefunAppAuthorization(openApp: {
+            nonce = URLComponents(url: $0, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "nonce" }?.value
+            launched.fulfill()
+            return true
+        })
+        let store = YunlefunAccountStore(service: service, vault: MemoryYunlefunAccountVault(),
+                                         authorization: browser, appAuthorization: app)
+        let fixture = try YunlefunSSO()
+        let valid = try callback(fixture, changes: ["nonce": "replace"])
+        XCTAssertTrue(store.handleYunlefunCallback(valid)) // No attempt yet.
+        let task = Task { await store.signIn() }
+        defer { task.cancel() }
+        await fulfillment(of: [launched], timeout: 2)
+        XCTAssertTrue(store.isAwaitingYunlefunApp)
+        XCTAssertTrue(store.handleYunlefunCallback(valid))
+        XCTAssertTrue(store.isAwaitingYunlefunApp)
+        XCTAssertEqual(service.signInCount, 0)
+        let response = try callback(fixture, changes: ["nonce": XCTUnwrap(nonce)])
+        XCTAssertTrue(store.handleYunlefunCallback(response))
+        await task.value
+        XCTAssertTrue(store.handleYunlefunCallback(response))
+        XCTAssertEqual(service.signInCount, 1)
+        XCTAssertTrue(browser.transactions.isEmpty)
+        XCTAssertEqual(store.account?.id, service.credential.subject)
+        XCTAssertFalse(store.isAwaitingYunlefunApp)
+    }
+
+    func testSelectAnotherAccountUsesFreshWebAttemptWhileDenialDoesNot() async throws {
+        for reason in ["account_selection_required", "access_denied"] {
+            let service = AccountServiceStub()
+            let browser = AuthorizationStub()
+            let launched = expectation(description: "Opened app for \(reason)")
+            var nonce: String?
+            let app = YunlefunAppAuthorization(openApp: {
+                nonce = URLComponents(url: $0, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "nonce" }?.value
+                launched.fulfill()
+                return true
+            })
+            let store = YunlefunAccountStore(service: service, vault: MemoryYunlefunAccountVault(),
+                                             authorization: browser, appAuthorization: app)
+            let fixture = try YunlefunSSO()
+            let task = Task { await store.signIn() }
+            defer { task.cancel() }
+            await fulfillment(of: [launched], timeout: 2)
+            let currentNonce = try XCTUnwrap(nonce)
+            let result = try callback(fixture, changes: ["nonce": currentNonce, "ok": false, "reason": reason])
+            XCTAssertTrue(store.handleYunlefunCallback(result))
+            await task.value
+            let usedBrowser = reason == "account_selection_required"
+            XCTAssertEqual(browser.transactions.count, usedBrowser ? 1 : 0)
+            XCTAssertEqual(service.signInCount, usedBrowser ? 1 : 0)
+            if usedBrowser { XCTAssertNotEqual(browser.transactions.first?.nonce, currentNonce) }
+        }
+    }
+
+    func testManuallySwitchingToWebInvalidatesThePendingAppCallback() async throws {
+        let service = AccountServiceStub()
+        let browser = AuthorizationStub()
+        let launched = expectation(description: "Opened app before switching to web")
+        var appNonce: String?
+        let app = YunlefunAppAuthorization(openApp: {
+            appNonce = URLComponents(url: $0, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "nonce" }?.value
+            launched.fulfill()
+            return true
+        })
+        let store = YunlefunAccountStore(service: service, vault: MemoryYunlefunAccountVault(),
+                                         authorization: browser, appAuthorization: app)
+        let task = Task { await store.signIn() }
+        defer { task.cancel() }
+        await fulfillment(of: [launched], timeout: 2)
+        XCTAssertTrue(store.isAwaitingYunlefunApp)
+        let staleCallback = try callback(YunlefunSSO(), changes: ["nonce": XCTUnwrap(appNonce)])
+        store.continueYunlefunOnWeb()
+        XCTAssertTrue(store.handleYunlefunCallback(staleCallback))
+        await task.value
+        XCTAssertFalse(store.isAwaitingYunlefunApp)
+        XCTAssertEqual(browser.transactions.count, 1)
+        XCTAssertNotEqual(browser.transactions.first?.nonce, appNonce)
+        XCTAssertEqual(service.signInCount, 1)
+    }
 }
 
 @MainActor

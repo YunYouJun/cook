@@ -19,9 +19,12 @@ final class SystemYunlefunAuthorization: NSObject, YunlefunAuthorizing, ASWebAut
 
     func authorize(_ transaction: YunlefunSSO) async throws -> URL {
         guard #available(iOS 17.4, *) else { throw YunlefunAccountError.requiresUpdate }
-        guard session == nil,
-              let window = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
-                .filter({ $0.activationState == .foregroundActive }).flatMap(\.windows).first(where: \.isKeyWindow) else {
+        guard session == nil else { throw YunlefunAccountError.unavailable }
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        // A return link can arrive just before the scene finishes becoming active.
+        let window = scenes.first { $0.activationState == .foregroundActive && $0.keyWindow != nil }?.keyWindow
+            ?? scenes.first { $0.activationState == .foregroundInactive && $0.keyWindow != nil }?.keyWindow
+        guard let window else {
             throw YunlefunAccountError.unavailable
         }
         anchor = window

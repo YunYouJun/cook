@@ -20,8 +20,11 @@ struct YunlefunSSO {
         createdAt = now
     }
 
-    var authorizationURL: URL {
-        var url = URLComponents(string: "\(Self.issuer)/auth/sso")!
+    var authorizationURL: URL { authorizationURL(path: "/auth/sso") }
+    var appAuthorizationURL: URL { authorizationURL(path: "/auth/app") }
+
+    private func authorizationURL(path: String) -> URL {
+        var url = URLComponents(string: Self.issuer + path)!
         url.queryItems = [
             URLQueryItem(name: "client_id", value: Self.clientID),
             URLQueryItem(name: "redirect_uri", value: Self.redirectURI),
@@ -34,14 +37,24 @@ struct YunlefunSSO {
         return url.url!
     }
 
-    func exchangeFields(callback: URL, now: Date = Date()) throws -> [String: String] {
+    static func isCallback(_ url: URL) -> Bool {
+        guard var parts = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return false }
+        parts.fragment = nil
+        return parts.string == redirectURI
+    }
+
+    enum Callback {
+        case authorized([String: String])
+        case denied
+        case selectAccountOnWeb
+    }
+
+    func callbackResult(_ callback: URL, now: Date = Date()) throws -> Callback {
         guard now >= createdAt, now.timeIntervalSince(createdAt) < Self.lifetime,
-              var url = URLComponents(url: callback, resolvingAgainstBaseURL: false),
-              let fragment = url.fragment, fragment.hasPrefix("ylf_sso="), fragment.count < 4096 else {
+              Self.isCallback(callback), let fragment = callback.fragment,
+              fragment.hasPrefix("ylf_sso="), fragment.count < 4096 else {
             throw YunlefunAccountError.invalidCallback
         }
-        url.fragment = nil
-        guard url.string == Self.redirectURI else { throw YunlefunAccountError.invalidCallback }
         let encoded = String(fragment.dropFirst("ylf_sso=".count))
         guard let data = Data(base64URL: encoded),
               let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -49,16 +62,26 @@ struct YunlefunSSO {
               payload["nonce"] as? String == nonce, payload["iss"] as? String == Self.issuer,
               let ok = payload["ok"] as? Bool else { throw YunlefunAccountError.invalidCallback }
         guard ok else {
-            if payload["reason"] as? String == "access_denied" { throw CancellationError() }
+            guard payload["code"] == nil else { throw YunlefunAccountError.invalidCallback }
+            if payload["reason"] as? String == "access_denied" { return .denied }
+            if payload["reason"] as? String == "account_selection_required" { return .selectAccountOnWeb }
             throw YunlefunAccountError.authorizationFailed
         }
-        guard let code = payload["code"] as? String,
+        guard payload["reason"] == nil, let code = payload["code"] as? String,
               code.range(of: "^[A-Za-z0-9_-]{43}$", options: .regularExpression) != nil else {
             throw YunlefunAccountError.invalidCallback
         }
-        return ["action": "exchangeSsoCode", "clientId": Self.clientID,
-                "redirectUri": Self.redirectURI, "scope": Self.scope,
-                "code": code, "nonce": nonce, "codeVerifier": verifier]
+        return .authorized(["action": "exchangeSsoCode", "clientId": Self.clientID,
+                            "redirectUri": Self.redirectURI, "scope": Self.scope,
+                            "code": code, "nonce": nonce, "codeVerifier": verifier])
+    }
+
+    func exchangeFields(callback: URL, now: Date = Date()) throws -> [String: String] {
+        switch try callbackResult(callback, now: now) {
+        case .authorized(let fields): return fields
+        case .denied: throw CancellationError()
+        case .selectAccountOnWeb: throw YunlefunAccountError.authorizationFailed
+        }
     }
 
     static func randomToken() throws -> String {
