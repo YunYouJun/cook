@@ -33,11 +33,11 @@ describe('native app metadata', () => {
       'utf8',
     ))
 
-    // 晴空蓝渐变底板 + 白色锅与云 + 明黄长勺，见 docs/decisions/0005-app-icon.md
+    // 菜叶绿渐变底板 + 白色锅与云 + 明黄长勺，见 docs/decisions/0005-app-icon.md
     expect(appIcon).toContain('viewBox="0 0 64 64"')
-    expect(appIcon).toContain('<stop stop-color="#55AAFF"/>')
-    expect(appIcon).toContain('<stop offset="1" stop-color="#2563EB"/>')
-    expect(appIcon).toContain('<rect width="64" height="64" fill="url(#cook-sky)"/>')
+    expect(appIcon).toContain('<stop stop-color="#438453"/>')
+    expect(appIcon).toContain('<stop offset="1" stop-color="#2F6B45"/>')
+    expect(appIcon).toContain('<rect width="64" height="64" fill="url(#cook-leaf)"/>')
     expect(appIcon).not.toContain('rx="14"')
     expect(mark).not.toContain('<rect width="64" height="64"')
     expect(mark).toContain('#FACC15')

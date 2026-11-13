@@ -1,8 +1,8 @@
 {
   "fill": {
     "linear-gradient": [
-      "srgb:0.33333,0.66667,1.00000,1.00000",
-      "srgb:0.14510,0.38824,0.92157,1.00000"
+      "srgb:0.26275,0.51765,0.32549,1.00000",
+      "srgb:0.18431,0.41961,0.27059,1.00000"
     ],
     "orientation": {
       "start": {
@@ -19,8 +19,32 @@
     {
       "layers": [
         {
-          "image-name": "pot-cloud.svg",
-          "name": "pot-cloud"
+          "image-name": "pot-cloud-gloss.svg",
+          "name": "pot-cloud",
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            }
+          ],
+          "glass-specializations": [
+            {
+              "appearance": "dark",
+              "value": false
+            }
+          ],
+          "image-name-specializations": [
+            {
+              "appearance": "dark",
+              "value": "pot-cloud.svg"
+            },
+            {
+              "appearance": "tinted",
+              "value": "pot-cloud.svg"
+            }
+          ]
         }
       ],
       "shadow": {
@@ -28,15 +52,45 @@
         "opacity": 0.5
       },
       "translucency": {
-        "enabled": false,
-        "value": 0.5
-      }
+        "enabled": true,
+        "value": 0.36
+      },
+      "specular-highlight-placement": "outside",
+      "refractivity": {
+        "enabled": true,
+        "strength": 0.48,
+        "depth": 0.32
+      },
+      "refractivity-specializations": [
+        {
+          "appearance": "dark",
+          "value": {
+            "enabled": false,
+            "strength": 0,
+            "depth": 0
+          }
+        }
+      ],
+      "specular-highlight-placement-specializations": [
+        {
+          "appearance": "dark",
+          "value": "automatic"
+        }
+      ]
     },
     {
       "layers": [
         {
           "image-name": "ladle.svg",
-          "name": "ladle"
+          "name": "ladle",
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            }
+          ]
         }
       ],
       "shadow": {
@@ -46,10 +100,25 @@
       "translucency": {
         "enabled": false,
         "value": 0.5
-      }
+      },
+      "specular-highlight-placement": "outside",
+      "specular-highlight-placement-specializations": [
+        {
+          "appearance": "dark",
+          "value": "automatic"
+        }
+      ]
     }
   ],
   "supported-platforms": {
     "squares": "shared"
-  }
+  },
+  "fill-specializations": [
+    {
+      "appearance": "dark",
+      "value": {
+        "solid": "srgb:0.06667,0.06667,0.06667,1.00000"
+      }
+    }
+  ]
 }

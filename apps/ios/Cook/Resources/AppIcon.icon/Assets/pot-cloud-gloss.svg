@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="steam-gloss" x1="0" y1="15.2" x2="0" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset=".46" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#D9EBE0"/>
+    </linearGradient>
+  </defs>
+  <g fill="#FFFFFF">
+    <path fill="url(#steam-gloss)" d="M18.75 28C16.35 28 14.4 26.05 14.4 23.65S16.35 19.3 18.75 19.3C19.49 19.3 20.18 19.48 20.78 19.8C21.46 17.15 23.86 15.2 26.69 15.2S31.92 17.15 32.59 19.8C33.2 19.48 33.89 19.3 34.62 19.3C37.02 19.3 38.98 21.25 38.98 23.65S37.02 28 34.62 28Z"/>
+    <rect x="9" y="32.4" width="46" height="3.4" rx="1.7"/>
+    <path d="M14.5 38.6h35v7.4a8 8 0 0 1-8 8h-19a8 8 0 0 1-8-8Z"/>
+  </g>
+</svg>
