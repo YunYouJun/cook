@@ -7,6 +7,7 @@ import SwiftUI
 /// 宽屏（iPad、iPhone Duo 展开、大屏 iPhone 横屏）左边选食材，右边的推荐结果跟着实时更新
 struct CookView: View {
     @Environment(RecipeStore.self) private var store
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.scenePhase) private var scenePhase
@@ -32,6 +33,16 @@ struct CookView: View {
     @State private var decideRequest: CookDecideRequest?
     @State private var lastDecidedID: Int?
     @State private var inspirationVisible = false
+
+    private var ingredientSelectionColors: Chip.SelectionColors {
+        if colorScheme == .dark {
+            // #9BCB88 with #132010
+            return .init(fill: Color(red: 155.0 / 255, green: 203.0 / 255, blue: 136.0 / 255),
+                         foreground: Color(red: 19.0 / 255, green: 32.0 / 255, blue: 16.0 / 255))
+        }
+        // #2F6B45 with white
+        return .init(fill: Color(red: 47.0 / 255, green: 107.0 / 255, blue: 69.0 / 255))
+    }
 
     var body: some View {
         let matchCount = session.candidates(in: store).count
@@ -109,7 +120,7 @@ struct CookView: View {
             if !extras.isEmpty {
                 ChipSection(title: "输入的食材", note: "词典里没有，按名字找菜") {
                     ForEach(extras, id: \.self) { name in
-                        Chip(title: name, isSelected: true) {
+                        Chip(title: name, isSelected: true, selectionColors: ingredientSelectionColors) {
                             withAnimation(.snappy) { session.toggleStuff(name) }
                         }
                     }
@@ -240,6 +251,7 @@ struct CookView: View {
             HStack(spacing: 10) {
                 BasketStack(items: basketItems)
                 Text("查看全部 \(matchCount) 道菜")
+                    .foregroundStyle(matchCount > 0 ? ingredientSelectionColors.foreground : Color.secondary)
                     .contentTransition(.numericText(value: Double(matchCount)))
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -247,6 +259,7 @@ struct CookView: View {
             .frame(maxWidth: .infinity)
         }
         .prominentButtonStyle()
+        .tint(ingredientSelectionColors.fill)
         .controlSize(.large)
         .accessibilityIdentifier("cook.showResults")
         .disabled(matchCount == 0)
@@ -339,6 +352,7 @@ struct CookView: View {
                     title: item.name,
                     emoji: item.emoji,
                     isSelected: session.selectedStuff.contains(item.name),
+                    selectionColors: ingredientSelectionColors,
                     onTap: { launchFlight(item, from: $0) }
                 ) {
                     session.toggleStuff(item.name)

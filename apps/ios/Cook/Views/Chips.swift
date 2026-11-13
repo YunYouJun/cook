@@ -3,10 +3,16 @@ import SwiftUI
 
 /// 可多选的小标签；在 List 里用 plain 样式，避免点一个标签触发整行
 struct Chip: View {
+    struct SelectionColors {
+        var fill: Color = .accentColor
+        var foreground: Color = .white
+    }
+
     let title: String
     var emoji: String? = nil
     var imageName: String? = nil
     let isSelected: Bool
+    var selectionColors = SelectionColors()
     @ScaledMetric(relativeTo: .subheadline) var iconSize: CGFloat = 18
     /// 点击时报告标签在屏幕上的位置，做「入篮」动画用；不需要时不传
     var onTap: ((CGRect) -> Void)? = nil
@@ -41,8 +47,8 @@ struct Chip: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, minHeight: 44)
-            .foregroundStyle(isSelected ? Color.white : Color.primary)
-            .background(isSelected ? Color.accentColor : Color(uiColor: .secondarySystemFill), in: Capsule())
+            .foregroundStyle(isSelected ? selectionColors.foreground : Color.primary)
+            .background(isSelected ? selectionColors.fill : Color(uiColor: .secondarySystemFill), in: Capsule())
             .contentShape(Capsule())
             // Animate the visual label, keeping the native Button and its accessibility node stable.
             .modifier(SelectBounce(isSelected: isSelected, enabled: !reduceMotion))
