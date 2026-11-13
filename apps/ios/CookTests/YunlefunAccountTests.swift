@@ -83,6 +83,10 @@ private final class AccountServiceStub: YunlefunAccountServing {
     var signOutCount = 0
     var failure: Error?
     var profileFailure: Error?
+    var weChatSignInCount = 0
+    var weChatBindingCount = 0
+    var weChatBindingExists = false
+    var boundSubject: String?
     func signIn(fields: [String: String], deviceID: String) async throws -> YunlefunCredential {
         signInCount += 1
         if let failure { throw failure }
@@ -102,6 +106,31 @@ private final class AccountServiceStub: YunlefunAccountServing {
         signOutCount += 1
         if let failure { throw failure }
     }
+    func signInWithWeChat(code: String, deviceID: String) async throws -> YunlefunCredential {
+        weChatSignInCount += 1
+        if let failure { throw failure }
+        return credential
+    }
+    func hasWeChatBinding(_ credential: YunlefunCredential) async throws -> Bool { weChatBindingExists }
+    func bindWeChat(code: String, credential: YunlefunCredential) async throws {
+        weChatBindingCount += 1
+        boundSubject = credential.subject
+        weChatBindingExists = true
+    }
+}
+
+@MainActor
+private final class WeChatAuthorizationStub: WeChatAuthorizing {
+    var isAvailable = true
+    var cancelled = false
+    var count = 0
+    func authorize() async throws -> String {
+        count += 1
+        if cancelled { throw CancellationError() }
+        return "wechat-code"
+    }
+    func handle(_ url: URL) -> Bool { false }
+    func handle(_ activity: NSUserActivity) -> Bool { false }
 }
 
 @MainActor
@@ -133,6 +162,46 @@ private final class FailingAccountVault: YunlefunAccountVault {
 
 @MainActor
 final class YunlefunAccountStoreTests: XCTestCase {
+    func testWeChatBindingRequiresCurrentAccountAndNeverReplacesExistingBinding() async {
+        let service = AccountServiceStub()
+        let weChat = WeChatAuthorizationStub()
+        let store = YunlefunAccountStore(service: service, vault: MemoryYunlefunAccountVault(),
+                                         authorization: AuthorizationStub(), weChat: weChat)
+        await store.bindWeChat()
+        XCTAssertEqual(weChat.count, 0)
+        await store.signIn()
+        await store.bindWeChat()
+        await store.bindWeChat()
+        XCTAssertEqual(service.weChatBindingCount, 1)
+        XCTAssertEqual(service.boundSubject, "user-1")
+        XCTAssertEqual(weChat.count, 1)
+        XCTAssertEqual(store.account?.id, "user-1")
+        await store.signOut()
+        await store.signInWithWeChat()
+        XCTAssertEqual(store.account?.id, "user-1")
+        XCTAssertEqual(service.weChatSignInCount, 1)
+    }
+
+    func testUnlinkedWeChatAndCancelledBindingDoNotReplaceSession() async {
+        let service = AccountServiceStub()
+        let weChat = WeChatAuthorizationStub()
+        let vault = MemoryYunlefunAccountVault()
+        let store = YunlefunAccountStore(service: service, vault: vault,
+                                         authorization: AuthorizationStub(), weChat: weChat)
+        service.failure = WeChatAccountError.bindingRequired
+        await store.signInWithWeChat()
+        XCTAssertNil(vault.credential)
+        XCTAssertEqual(store.message, WeChatAccountError.bindingRequired.errorDescription)
+        service.failure = nil
+        await store.signIn()
+        weChat.cancelled = true
+        let revision = store.sessionRevision
+        await store.bindWeChat()
+        XCTAssertEqual(store.sessionRevision, revision)
+        XCTAssertEqual(vault.credential, service.credential)
+        XCTAssertEqual(service.weChatBindingCount, 0)
+        XCTAssertNil(store.message)
+    }
     func testKeychainFailuresDoNotReportSuccessfulLoginOrLogout() async {
         let service = AccountServiceStub()
         let vault = FailingAccountVault()
@@ -242,6 +311,95 @@ private actor AccountTransportStub {
 
 @MainActor
 final class YunlefunAccountServiceTests: XCTestCase {
+    func testWeChatCodeUsesMobileProviderAndDisablesSignupAndProfileOverwrite() async throws {
+        let transport = AccountTransportStub([
+            (200, #"{"provider_token":"single-use","provider_profile":{"provider_id":"cookwechatios","sub":"wechat-id"}}"#),
+            (200, #"{"access_token":"access","refresh_token":"refresh","sub":"user-1","expires_in":7200}"#),
+            (200, #"{"state":"active","restricted":false}"#),
+        ])
+        let service = YunlefunAccountService(transport: { try await transport.send($0) })
+        let credential = try await service.signInWithWeChat(code: "wechat-code", deviceID: "installation")
+        XCTAssertEqual(credential.subject, "user-1")
+        let requests = await transport.requests
+        XCTAssertEqual(requests.map { $0.url?.path }, ["/auth/v1/provider/token", "/auth/v1/signin/with/provider", "/v1/functions/account-api"])
+        XCTAssertEqual(requests.last?.value(forHTTPHeaderField: "Authorization"), "Bearer access")
+        XCTAssertEqual(requests[0].value(forHTTPHeaderField: "x-device-id"), "installation")
+        let exchange = try JSONSerialization.jsonObject(with: requests[0].httpBody!) as? [String: String]
+        XCTAssertEqual(exchange, ["provider_id": "cookwechatios", "provider_code": "wechat-code"])
+        let signIn = try JSONSerialization.jsonObject(with: requests[1].httpBody!) as? [String: Any]
+        XCTAssertEqual(signIn?["provider_token"] as? String, "single-use")
+        XCTAssertEqual(signIn?["force_disable_sign_up"] as? Bool, true)
+        XCTAssertEqual(signIn?["sync_profile"] as? Bool, false)
+    }
+
+    func testWeChatBindingSendsOnlyMobileProviderTokenWithExistingBearer() async throws {
+        let transport = AccountTransportStub([
+            (200, #"{"total":2,"data":[{"id":"wx_open","bind":true},{"id":"cookwechatios","bind":false}]}"#),
+            (200, #"{"state":"active","restricted":false}"#),
+            (200, #"{"provider_token":"single-use","provider_profile":{"provider_id":"cookwechatios","sub":"wechat-id"}}"#),
+            (200, "{}"),
+        ])
+        let service = YunlefunAccountService(transport: { try await transport.send($0) })
+        let credential = AccountServiceStub().credential
+        let isBound = try await service.hasWeChatBinding(credential)
+        XCTAssertFalse(isBound, "Website binding is not proof of a native provider binding")
+        try await service.bindWeChat(code: "wechat-code", credential: credential)
+        let requests = await transport.requests
+        XCTAssertEqual(requests.last?.url?.path, "/auth/v1/user/provider/bind")
+        XCTAssertEqual(requests.last?.value(forHTTPHeaderField: "Authorization"), "Bearer access")
+        XCTAssertNil(requests[2].value(forHTTPHeaderField: "Authorization"))
+        let body = try JSONSerialization.jsonObject(with: requests[3].httpBody!) as? [String: String]
+        XCTAssertEqual(body, ["provider_token": "single-use"])
+    }
+
+    func testRestrictedAccountCannotSignInOrBindThroughWeChat() async throws {
+        let restricted = #"{"state":"deletion_pending","restricted":true}"#
+        let transport = AccountTransportStub([
+            (200, #"{"provider_token":"single-use","provider_profile":{"provider_id":"cookwechatios","sub":"wechat-id"}}"#),
+            (200, #"{"access_token":"access","refresh_token":"refresh","sub":"user-1","expires_in":7200}"#),
+            (200, restricted),
+            (200, "{}"),
+            (200, restricted),
+        ])
+        let service = YunlefunAccountService(transport: { try await transport.send($0) })
+        do {
+            _ = try await service.signInWithWeChat(code: "wechat-code", deviceID: "installation")
+            XCTFail("Restricted login returned a session")
+        } catch WeChatAccountError.accountRestricted {}
+        do {
+            try await service.bindWeChat(code: "wechat-code", credential: AccountServiceStub().credential)
+            XCTFail("Restricted account bound an identity")
+        } catch WeChatAccountError.accountRestricted {}
+        let requests = await transport.requests
+        XCTAssertEqual(requests.map { $0.url?.path }, [
+            "/auth/v1/provider/token", "/auth/v1/signin/with/provider", "/v1/functions/account-api",
+            "/auth/v1/user/signout", "/v1/functions/account-api",
+        ])
+    }
+
+    func testWeChatRejectsWrongProviderAndDoesNotRetryUnlinkedLogin() async throws {
+        for wrongProvider in [true, false] {
+            let providerID = wrongProvider ? "wx_open" : "cookwechatios"
+            let transport = AccountTransportStub([
+                (200, """
+                 {"provider_token":"test","provider_profile":{"provider_id":"\(providerID)","sub":"wechat-id"}}
+                 """),
+                (404, #"{"error":"not_found"}"#),
+            ])
+            let service = YunlefunAccountService(transport: { try await transport.send($0) })
+            do {
+                _ = try await service.signInWithWeChat(code: "wechat-code", deviceID: "installation")
+                XCTFail("Unexpected sign-in")
+            } catch YunlefunAccountError.invalidResponse {
+                XCTAssertTrue(wrongProvider)
+            } catch WeChatAccountError.bindingRequired {
+                XCTAssertFalse(wrongProvider)
+            }
+            let requests = await transport.requests
+            XCTAssertEqual(requests.count, wrongProvider ? 1 : 2)
+        }
+    }
+
     func testProfileDecodesAvatarWithoutRequiringItForLogin() throws {
         let profile = try JSONDecoder().decode(YunlefunAccount.self, from: Data(#"{"sub":"user-1","name":"云游君","picture":"https://images.example/avatar.png"}"#.utf8))
         XCTAssertEqual(profile.avatarURL?.absoluteString, "https://images.example/avatar.png")

@@ -17,6 +17,7 @@ struct RootView: View {
     @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }) private var fridgeItems: [FridgeItem]
     @Query private var preferenceRecords: [Preferences]
     @Environment(CookSession.self) private var session
+    @Environment(YunlefunAccountStore.self) private var accounts
     @AppStorage(FridgeReminder.enabledKey) private var remindersEnabled = false
     @AppStorage(FridgeReminder.timeKey) private var reminderMinutes = FridgeReminder.defaultMinutes
     @Environment(FeedbackClient.self) private var feedback
@@ -45,10 +46,15 @@ struct RootView: View {
         .minimizesTabBarOnScroll()
         .environment(router)
         .onOpenURL { url in
+            if accounts.handleWeChat(url) { return }
             if router.openUniversalLink(url) {
                 // Never log query parameters, which may contain authorization codes.
                 Logger(subsystem: "fun.yunle.cook", category: "UniversalLink").notice("Opened account area from WeChat universal link")
             }
+        }
+        .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+            if accounts.handleWeChat(activity) { return }
+            if let url = activity.webpageURL { router.openUniversalLink(url) }
         }
         .modifier(PrivateRecipeDeletionSync())
         .onChange(of: preferenceRecords.map(\.snapshot), initial: true) {

@@ -1,8 +1,8 @@
 import Foundation
 
 enum CookUniversalLink {
-    /// The registered WeChat link namespace only opens the account area for now.
-    /// SDK callbacks must later be verified by OpenSDK and the server before changing a session.
+    /// The registered WeChat link namespace is also used by the account-area fallback.
+    /// A link without a matching OpenSDK response never changes a session.
     static func isWeChatLink(_ url: URL) -> Bool {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               components.scheme?.lowercased() == "https",

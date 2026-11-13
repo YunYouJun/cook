@@ -26,6 +26,7 @@ struct YunlefunAccountSection: View {
                 .accessibilityIdentifier("account.profile")
             } else {
                 AccountSignInButton()
+                WeChatSignInButton()
             }
             AccountSessionStatus()
         }
@@ -65,8 +66,21 @@ struct YunlefunAccountView: View {
                 } footer: {
                     Text("在云乐坊网站管理个人资料、登录方式与账号注销。")
                 }
+                if accounts.canUseWeChat {
+                    Section {
+                        WeChatAuthorizationButton(binding: true)
+                        if let message = accounts.weChatBindingMessage {
+                            Text(message).font(.footnote).foregroundStyle(.secondary)
+                        }
+                    } footer: {
+                        Text("绑定后可以用微信登录同一个云乐坊账号。")
+                    }
+                }
             } else {
-                Section { AccountSignInButton() }
+                Section {
+                    AccountSignInButton()
+                    WeChatSignInButton()
+                }
             }
             if accounts.message != nil || accounts.canRetry {
                 Section { AccountSessionStatus() }
@@ -90,6 +104,47 @@ struct YunlefunAccountView: View {
         }
         .navigationTitle("云乐坊账号")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct WeChatSignInButton: View {
+    @Environment(YunlefunAccountStore.self) private var accounts
+
+    var body: some View {
+        if accounts.canUseWeChat {
+            WeChatAuthorizationButton(binding: false)
+        }
+    }
+}
+
+private struct WeChatAuthorizationButton: View {
+    @Environment(YunlefunAccountStore.self) private var accounts
+    @Environment(\.openURL) private var openURL
+    @State private var confirming = false
+    let binding: Bool
+
+    private var title: String { binding ? "绑定微信到当前账号" : "使用微信登录" }
+
+    var body: some View {
+        Button { confirming = true } label: {
+            Label(title, systemImage: "bubble.left.and.bubble.right")
+        }
+        .disabled(accounts.isBusy)
+        .accessibilityIdentifier(binding ? "account.bindWeChat" : "account.signInWithWeChat")
+        .confirmationDialog(title, isPresented: $confirming, titleVisibility: .visible) {
+            Button("同意并继续") {
+                Task {
+                    if binding { await accounts.bindWeChat() }
+                    else { await accounts.signInWithWeChat() }
+                }
+            }
+            Button("查看微信 OpenSDK 个人信息处理规则") {
+                openURL(URL(string: "https://weixin.qq.com/cgi-bin/readtemplate?t=opensdk_agreement&lang=zh_CN")!)
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("继续会打开微信。云食册仅使用微信授权信息来验证身份并登录或绑定云乐坊账号。")
+        }
     }
 }
 

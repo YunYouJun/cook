@@ -10,7 +10,7 @@ enum CookFeatures {
     static var membershipPurchasesEnabled: Bool {
         Bundle.main.object(forInfoDictionaryKey: "CookMembershipPurchasesEnabled") as? String == "YES"
     }
-    /// Reserved for the future native WeChat entry, not Yunlefun web sign-in or link handling.
+    /// Controls the native WeChat entry; the existing Yunlefun login remains available.
     /// Only an explicit YES enables it; missing or unresolved build settings stay disabled.
     static var weChatLoginEnabled: Bool {
         Bundle.main.object(forInfoDictionaryKey: "CookWeChatLoginEnabled") as? String == "YES"
