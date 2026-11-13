@@ -5,12 +5,12 @@
     ]
   },
   "applinks": {
-    "apps": [],
     "details": [
       {
-        "appID": "QT792GAY4C.fun.yunle.cook",
-        "paths": [
-          "/auth/wechat/*"
+        "appIDs": ["QT792GAY4C.fun.yunle.cook"],
+        "components": [
+          { "/": "/auth/wechat/*" },
+          { "/": "/auth/callback", "?": { "platform": "native" }, "#": "ylf_sso=*" }
         ]
       }
     ]
