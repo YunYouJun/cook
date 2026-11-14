@@ -87,26 +87,19 @@ final class MembershipStoreKitUITests: XCTestCase {
     }
 
     @MainActor func testUserCancelsLocalAppleConfirmationWithoutGrantingMembership() throws {
+        // CI reached the cancelled and inactive assertions at 119 seconds.
+        // Keep the original UI deadlines and leave bounded room for teardown.
+        executionTimeAllowance = 180
         let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "MembershipProducts", withExtension: "storekit"))
         let session = try SKTestSession(contentsOf: url)
         session.resetToDefaultState(); session.clearTransactions(); session.disableDialogs = false
         clearSessionAfterAppTeardown(session)
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-ui-testing-membership", "-ui-testing-membership-storekit", "-ui-testing-reset-membership",
-                               "-ui-testing-reset-consent", "-ui-testing-disable-animations"]
-        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
-        app.launchEnvironment["COOK_MEMBERSHIP_FIXTURE_SETTLEMENT"] = "confirmed"
-        terminateAppAfterTest(app)
-        app.launch()
-        let mine = app.buttons.matching(NSPredicate(format: "label == %@", "我的")).firstMatch
-        XCTAssertTrue(mine.waitForExistence(timeout: 15)); mine.tap()
-        let entry = app.buttons.matching(identifier: "settings.membership").element
-        XCTAssertTrue(entry.waitForExistence(timeout: 10)); entry.tap()
+        let app = launchScene(reset: true)
         let list = app.collectionViews.matching(identifier: "membership.content").element
         let buy = list.buttons.matching(identifier: "membership.buy.fun.yunle.cook.local.nonrenewing").element
         XCTAssertTrue(buy.waitForExistence(timeout: 10))
-        for _ in 0..<8 where !buy.isHittable { list.swipeUp() }
-        XCTAssertTrue(buy.isHittable); buy.tap()
+        reveal(buy, in: list, maxSwipes: 8)
+        buy.tap()
         let system = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let confirmation = system.otherElements.matching(identifier: "payment-sheet").element
         XCTAssertTrue(confirmation.waitForExistence(timeout: 15), "The real local Apple confirmation must appear")
@@ -118,7 +111,7 @@ final class MembershipStoreKitUITests: XCTestCase {
         cancel.tap()
         XCTAssertTrue(confirmation.waitForNonExistence(timeout: 10))
         let message = list.staticTexts.matching(identifier: "membership.message").element
-        for _ in 0..<8 where !message.exists || !message.isHittable { list.swipeUp() }
+        reveal(message, in: list, maxSwipes: 8)
         XCTAssertEqual(message.waitForState("label CONTAINS %@", timeout: 10, argument: "已取消购买"), .completed)
         let inactive = list.staticTexts.matching(identifier: "membership.inactive").element
         reveal(inactive, in: list, upwards: false)
@@ -130,6 +123,9 @@ final class MembershipStoreKitUITests: XCTestCase {
     }
 
     @MainActor func testRefundFromOutsideAppDeliversVerifiedRevocationWithoutManualRefresh() async throws {
+        // The live update and the subsequent restore both passed in CI, but
+        // XCTest timed out while shutting down the App and test session.
+        executionTimeAllowance = 180
         let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "MembershipProducts", withExtension: "storekit"))
         let session = try SKTestSession(contentsOf: url)
         session.resetToDefaultState(); session.clearTransactions(); session.disableDialogs = true
@@ -165,7 +161,8 @@ final class MembershipStoreKitUITests: XCTestCase {
         app.launchEnvironment["COOK_MEMBERSHIP_FIXTURE_SETTLEMENT"] = "confirmed"
         app.launchEnvironment["COOK_MEMBERSHIP_FIXTURE_OWNER"] = owner
         terminateAppAfterTest(app); app.launch()
-        let mine = app.buttons.matching(NSPredicate(format: "label == %@", "我的")).firstMatch
+        let tab = app.tabBars.buttons["我的"].firstMatch
+        let mine = tab.exists ? tab : app.buttons.matching(NSPredicate(format: "label == %@", "我的")).firstMatch
         XCTAssertTrue(mine.waitForExistence(timeout: 15)); mine.tap()
         let entry = app.buttons.matching(identifier: "settings.membership").element
         XCTAssertTrue(entry.waitForExistence(timeout: 10)); entry.tap()
@@ -210,11 +207,12 @@ final class MembershipStoreKitUITests: XCTestCase {
         }
     }
 
-    @MainActor private func reveal(_ element: XCUIElement, in list: XCUIElement, upwards: Bool = true) {
-        for _ in 0..<12 {
-            if element.exists && element.isHittable { return }
+    @MainActor private func reveal(_ element: XCUIElement, in list: XCUIElement, upwards: Bool = true, maxSwipes: Int = 12,
+                                  file: StaticString = #filePath, line: UInt = #line) {
+        for _ in 0..<maxSwipes {
+            if element.isHittable { return }
             if upwards { list.swipeUp() } else { list.swipeDown() }
         }
-        XCTAssertTrue(element.exists && element.isHittable)
+        XCTAssertTrue(element.isHittable, file: file, line: line)
     }
 }
