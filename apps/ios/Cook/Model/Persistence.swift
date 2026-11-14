@@ -105,6 +105,8 @@ final class FridgeItem {
     var productionDate: Date?
     var expiryBasisRaw: String?
     var storageAdvice: String?
+    /// nil 表示按食材自动归类；也用于没有分类字段的旧记录。
+    var categoryKey: String?
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
     var deletedAt: Date?
@@ -117,6 +119,12 @@ final class FridgeItem {
         updatedAt = addedAt
     }
 
+    convenience init(name: String, days: Int, at date: Date, calendar: Calendar = .current) {
+        let today = calendar.startOfDay(for: date)
+        let expiryDay = calendar.date(byAdding: .day, value: days, to: today) ?? today
+        self.init(name: name, addedAt: date, expiresAt: FridgeDay.stored(expiryDay, calendar: calendar))
+    }
+
     /// 到期那天在当前时区的 0 点，算剩几天、排提醒和选日期都用它
     func expiryDay(in calendar: Calendar = .current) -> Date {
         FridgeDay.local(expiresAt, calendar: calendar)
@@ -126,7 +134,7 @@ final class FridgeItem {
 }
 
 enum Persistence {
-    static let models: [any PersistentModel.Type] = [Favorite.self, HistoryEntry.self, Preferences.self, FridgeItem.self, PrivateRecipeRecord.self]
+    static let models: [any PersistentModel.Type] = [Favorite.self, HistoryEntry.self, Preferences.self, FridgeItem.self, PrivateRecipeRecord.self, FridgeCategory.self]
 
     /// 软删除的记录保留多久，过期后真正删掉
     static let tombstoneLifetime: TimeInterval = 30 * 24 * 60 * 60
@@ -187,7 +195,7 @@ extension ModelContext {
 
     /// 先保存已有修改，确保失败回滚只撤销本次操作，不抹掉其他页面的待保存数据。
     /// 读取和保存错误均交给调用方显示；不得把读取失败当成「没有收藏」。
-    private func saveUserChange<T>(save: (ModelContext) throws -> Void, _ change: () throws -> T) throws -> T {
+    func saveUserChange<T>(save: (ModelContext) throws -> Void = { try $0.save() }, _ change: () throws -> T) throws -> T {
         if hasChanges { try save(self) }
         do {
             let result = try change()
@@ -331,9 +339,7 @@ extension ModelContext {
     /// 放进冰箱，到期日按放入那天加上默认天数
     @discardableResult
     func addToFridge(_ name: String, days: Int, at date: Date = Date(), calendar: Calendar = .current) -> FridgeItem {
-        let today = calendar.startOfDay(for: date)
-        let expiryDay = calendar.date(byAdding: .day, value: days, to: today) ?? today
-        let item = FridgeItem(name: name, addedAt: date, expiresAt: FridgeDay.stored(expiryDay, calendar: calendar))
+        let item = FridgeItem(name: name, days: days, at: date, calendar: calendar)
         insert(item)
         try? save()
         return item
@@ -346,12 +352,6 @@ extension ModelContext {
             item.updatedAt = date
         }
         purgeFridgeTombstones(now: date)
-        try? save()
-    }
-
-    func setExpiry(_ item: FridgeItem, to date: Date, calendar: Calendar = .current) {
-        item.expiresAt = FridgeDay.stored(date, calendar: calendar)
-        item.updatedAt = Date()
         try? save()
     }
 

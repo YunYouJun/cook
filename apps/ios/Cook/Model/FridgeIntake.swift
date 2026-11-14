@@ -23,14 +23,13 @@ struct ProduceStorageAdvice: Equatable {
     let source: URL
 
     static let source = URL(string: "https://extension.umaine.edu/food-health/2025/05/29/storing-and-washing-fresh-fruits-and-vegetables/")!
-    static let fruitNames = ["草莓", "蓝莓", "树莓", "黑莓", "桃", "油桃", "梨", "苹果"]
-    static let names = fruitNames + ["西兰花", "胡萝卜", "白萝卜", "玉米", "黄瓜", "茄子", "生菜", "菠菜", "青菜", "青椒", "西葫芦", "豆角", "荷兰豆"]
+    static let names = FridgeFruit.allCases.map(\.rawValue) + ["西兰花", "胡萝卜", "白萝卜", "玉米", "黄瓜", "茄子", "生菜", "菠菜", "青菜", "青椒", "西葫芦", "豆角", "荷兰豆"]
 
     /// 取公开储存建议区间的较短端，完整蔬果与切开蔬果分别计算。
     /// 不覆盖既有通用 shelf-life 数据；没有已核对条目的种类返回 nil。
     static func recommendation(for name: String, cut: Bool = false) -> Self? {
         if cut {
-            guard names.contains(name) || ["番茄", "香蕉", "葡萄", "橙子", "菠萝", "西瓜", "土豆", "洋葱", "菌菇"].contains(name) else { return nil }
+            guard names.contains(name) || ["番茄", "土豆", "洋葱", "菌菇"].contains(name) else { return nil }
             // 切开不会延长完整食材的建议时间，例如蓝莓原本只建议 2 天。
             let days = min(name == "番茄" ? 2 : 3, recommendation(for: name)?.days ?? 3)
             return Self(days: days, condition: "切开后及时密封冷藏，保持 4℃ 或以下；从切开当天起算。", source: source)

@@ -122,6 +122,35 @@ final class FridgeIntakeTests: XCTestCase {
     }
 
     @MainActor
+    func testCustomCategoryRenameAndRemovalKeepTheSameFridgeItem() throws {
+        let container = Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let food = try RecipeStore.loadBundled(inMemory: true).food
+        let category = FridgeCategory(name: "早餐")
+        let item = FridgeItem(name: "苹果", days: 28, at: day(11, 1), calendar: calendar)
+        item.categoryKey = FridgeCategoryChoice.custom(category.identifier).storedKey
+        context.insert(category)
+        context.insert(item)
+        try context.save()
+
+        let reopened = ModelContext(container)
+        let savedCategory = try XCTUnwrap(reopened.fetch(FetchDescriptor<FridgeCategory>()).first)
+        let savedItem = try XCTUnwrap(reopened.fetch(FetchDescriptor<FridgeItem>()).first)
+        savedCategory.name = "明日早餐"
+        try reopened.save()
+        let choice = FridgeCategoryChoice(storedKey: savedItem.categoryKey)
+        XCTAssertEqual(choice.resolved(for: savedItem.name, in: food, custom: [savedCategory]), .custom(savedCategory.identifier))
+
+        reopened.delete(savedCategory)
+        try reopened.save()
+        let remaining = try XCTUnwrap(reopened.fetch(FetchDescriptor<FridgeItem>()).first)
+        let categories = try reopened.fetch(FetchDescriptor<FridgeCategory>())
+        XCTAssertTrue(categories.isEmpty)
+        XCTAssertEqual(choice.resolved(for: remaining.name, in: food, custom: categories), .builtIn(.fruit))
+        XCTAssertEqual(remaining.expiryDay(in: calendar), day(11, 29))
+    }
+
+    @MainActor
     func testExistingFridgeStoreMigratesWithoutLosingItems() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -134,8 +163,10 @@ final class FridgeIntakeTests: XCTestCase {
             let container = try ModelContainer(
                 for: schema, configurations: ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none))
             let old = LegacyFridge.FridgeItem()
-            old.name = "鸡蛋"
+            old.name = "西瓜"
             old.expiresAt = FridgeDay.stored(day(11, 20), calendar: calendar)
+            old.productionDate = FridgeDay.stored(day(11, 1), calendar: calendar)
+            old.expiryBasisRaw = FridgeExpiryBasis.manual.rawValue
             container.mainContext.insert(old)
             try container.mainContext.save()
         }
@@ -144,19 +175,23 @@ final class FridgeIntakeTests: XCTestCase {
             let container = try ModelContainer(
                 for: schema, configurations: ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none))
             let saved = try XCTUnwrap(container.mainContext.fetch(FetchDescriptor<FridgeItem>()).first)
-            XCTAssertEqual(saved.name, "鸡蛋")
+            XCTAssertEqual(saved.name, "西瓜")
             XCTAssertEqual(saved.expiryDay(in: calendar), day(11, 20))
-            XCTAssertEqual(saved.expiryBasis, .estimated)
-            XCTAssertNil(saved.productionDate)
-            saved.productionDate = FridgeDay.stored(day(11, 1), calendar: calendar)
-            saved.expiryBasisRaw = FridgeExpiryBasis.package.rawValue
+            XCTAssertEqual(saved.expiryBasis, .manual)
+            XCTAssertEqual(saved.productionDate, FridgeDay.stored(day(11, 1), calendar: calendar))
+            XCTAssertNil(saved.categoryKey)
+            let choice = FridgeCategoryChoice(storedKey: saved.categoryKey)
+            let food = try RecipeStore.loadBundled(inMemory: true).food
+            XCTAssertEqual(choice.resolved(for: saved.name, in: food, custom: []), .builtIn(.fruit))
+            saved.categoryKey = FridgeCategoryChoice.builtIn(.uncategorized).storedKey
             try container.mainContext.save()
         }
         let schema = Schema(Persistence.models)
         let container = try ModelContainer(
             for: schema, configurations: ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none))
         let saved = try XCTUnwrap(container.mainContext.fetch(FetchDescriptor<FridgeItem>()).first)
-        XCTAssertEqual(saved.expiryBasis, .package)
+        XCTAssertEqual(saved.categoryKey, FridgeBuiltInCategory.uncategorized.rawValue)
+        XCTAssertEqual(saved.expiryBasis, .manual)
         XCTAssertEqual(saved.productionDate, FridgeDay.stored(day(11, 1), calendar: calendar))
     }
 
@@ -238,6 +273,9 @@ private enum LegacyFridge {
         var name: String = ""
         var addedAt: Date = Date()
         var expiresAt: Date = Date()
+        var productionDate: Date?
+        var expiryBasisRaw: String?
+        var storageAdvice: String?
         var createdAt: Date = Date()
         var updatedAt: Date = Date()
         var deletedAt: Date?

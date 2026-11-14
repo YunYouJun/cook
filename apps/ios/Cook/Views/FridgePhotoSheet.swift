@@ -202,6 +202,7 @@ private struct FridgePhotoReview: View {
     @State private var hasProductionDate: Bool
     @State private var productionDay: Date
     @State private var saveError = false
+    @State private var category = FridgeCategoryChoice.automatic
 
     init(scan: FridgeLabelScan, onRetake: @escaping () -> Void) {
         self.scan = scan
@@ -218,7 +219,6 @@ private struct FridgePhotoReview: View {
     private var advice: ProduceStorageAdvice? { ProduceStorageAdvice.recommendation(for: cleanName, cut: cut) }
     private var isProduce: Bool {
         ProduceStorageAdvice.names.contains(cleanName) || store.food.vegetable.contains { $0.name == cleanName }
-            || ["番茄", "香蕉", "葡萄", "橙子", "菠萝", "西瓜"].contains(cleanName)
     }
 
     var body: some View {
@@ -233,6 +233,11 @@ private struct FridgePhotoReview: View {
                 }
                 Text("图像识别可能出错，请核对食材种类和包装原文。")
                     .font(.footnote).foregroundStyle(.secondary)
+            }
+            Section {
+                FridgeCategoryPicker(
+                    selection: $category,
+                    automaticTitle: cleanName.isEmpty ? nil : FridgeBuiltInCategory.automatic(for: cleanName, in: store.food).title)
             }
             Section {
                 ForEach(scan.messages, id: \.self) { Text($0).font(.footnote).foregroundStyle(.secondary) }
@@ -366,6 +371,7 @@ private struct FridgePhotoReview: View {
         let item = FridgeItem(name: cleanName, addedAt: Date(), expiresAt: FridgeDay.stored(expiresAt))
         item.productionDate = hasProductionDate ? FridgeDay.stored(productionDay) : nil
         item.expiryBasisRaw = basis.rawValue
+        item.categoryKey = category.storedKey
         if basis == .estimated {
             let starting = "\(startDay.formatted(date: .numeric, time: .omitted))\(cut ? "切开" : "购买")。"
             item.storageAdvice = starting + (advice.map { "\($0.condition) 建议 \($0.days) 天内吃完。" } ?? "通用天数估算，请自行核对。")
