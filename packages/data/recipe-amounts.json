@@ -1109,7 +1109,32 @@
       ],
       "quantities": [],
       "stepSections": [],
-      "usages": [],
+      "usages": [
+        {
+          "anchor": {
+            "block": 10,
+            "item": 3,
+            "text": "将鸡蛋打入碗中，加入 `1g * 份数` 的盐，搅匀，即为 `鸡蛋液`\n• 可以考虑向鸡蛋中加入 1ml 醋，这可以去除腥味，令鸡蛋更蓬松"
+          },
+          "ingredient": "醋",
+          "kind": "amount",
+          "target": "1ml 醋",
+          "formula": {
+            "op": "literal",
+            "lower": 1,
+            "unit": "ml"
+          },
+          "display": false,
+          "conditional": true,
+          "evidence": [
+            {
+              "block": 10,
+              "item": 3,
+              "text": "将鸡蛋打入碗中，加入 `1g * 份数` 的盐，搅匀，即为 `鸡蛋液`\n• 可以考虑向鸡蛋中加入 1ml 醋，这可以去除腥味，令鸡蛋更蓬松"
+            }
+          ]
+        }
+      ],
       "blockedIngredients": [],
       "servingDescription": "每次制作前需要确定计划做几份。一份正好够 1 个人食用"
     },
