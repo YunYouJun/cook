@@ -90,6 +90,67 @@ final class FridgePhotoUITests: XCTestCase {
     }
 
     @MainActor
+    func testFruitCanMoveFromCustomCategoryBackToAutomaticGrouping() {
+        let categoryName = "零食"
+        let renamedCategoryName = "零食盒"
+        let app = openFridge()
+        app.buttons["放点食材"].tap()
+        app.buttons["新建分类"].tap()
+        let name = app.textFields["fridge.category.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 10))
+        name.tap()
+        name.typeText(categoryName)
+        app.buttons["保存"].tap()
+
+        for fruit in ["蓝莓", "西瓜", "苹果"] {
+            let chip = app.buttons[fruit]
+            for _ in 0..<4 where !chip.isHittable { app.swipeUp() }
+            XCTAssertTrue(chip.isHittable, fruit)
+            chip.tap()
+        }
+        app.buttons["放进去（3）"].tap()
+        let grouped = app.buttons["按分类"]
+        XCTAssertTrue(grouped.waitForExistence(timeout: 10))
+        grouped.tap()
+        XCTAssertTrue(app.staticTexts[categoryName].exists)
+        XCTAssertFalse(app.staticTexts["水果"].exists)
+        let apple = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "苹果")).firstMatch
+        XCTAssertTrue(apple.exists)
+        XCTAssertTrue(apple.label.contains("建议 28 天内吃完"), apple.label)
+        capture(app, "fridge-custom-category")
+
+        apple.tap()
+        let picker = app.buttons["fridge.category.picker"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 10))
+        picker.tap()
+        app.buttons["自动归类（水果）"].tap()
+        app.buttons["完成"].tap()
+        XCTAssertTrue(app.staticTexts["水果"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts[categoryName].exists)
+        XCTAssertTrue(apple.label.contains("建议 28 天内吃完"), apple.label)
+
+        app.buttons["管理分类"].tap()
+        let category = app.buttons[categoryName]
+        XCTAssertTrue(category.waitForExistence(timeout: 10))
+        category.tap()
+        XCTAssertTrue(name.waitForExistence(timeout: 10))
+        name.tap()
+        name.typeText("盒")
+        app.buttons["保存"].tap()
+        let renamed = app.buttons[renamedCategoryName]
+        XCTAssertTrue(renamed.waitForExistence(timeout: 10))
+        renamed.swipeLeft()
+        app.buttons["删除"].tap()
+        app.alerts.buttons["删除分类"].tap()
+        XCTAssertTrue(renamed.waitForNonExistence(timeout: 10))
+        app.buttons["完成"].tap()
+        let watermelon = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "西瓜")).firstMatch
+        XCTAssertTrue(watermelon.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts[categoryName].exists)
+        XCTAssertFalse(app.staticTexts[renamedCategoryName].exists)
+    }
+
+    @MainActor
     private func openFridge(label: String? = nil) -> XCUIApplication {
         continueAfterFailure = false
         let app = XCUIApplication()

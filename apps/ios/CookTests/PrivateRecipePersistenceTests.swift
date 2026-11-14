@@ -270,7 +270,7 @@ final class PrivateRecipePersistenceTests: XCTestCase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("migration.store")
-        // Exact models already shipped before custom recipes, including schema 2's FridgeItem.
+        // Exercise opening a store that predates the standalone recipe and category tables.
         try autoreleasepool {
             let schema = Schema([Favorite.self, HistoryEntry.self, Preferences.self, FridgeItem.self])
             let config = ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)
@@ -287,7 +287,7 @@ final class PrivateRecipePersistenceTests: XCTestCase {
             // Exercise that extra migration/unload path without contacting iCloud.
             try autoreleasepool {
                 let model = try XCTUnwrap(NSManagedObjectModel.makeManagedObjectModel(for: Persistence.models))
-                XCTAssertEqual(Set(model.entities.compactMap(\.name)), ["Favorite", "HistoryEntry", "Preferences", "FridgeItem", "PrivateRecipeRecord"])
+                XCTAssertEqual(Set(model.entities.compactMap(\.name)), ["Favorite", "HistoryEntry", "Preferences", "FridgeItem", "PrivateRecipeRecord", "FridgeCategory"])
                 let description = NSPersistentStoreDescription(url: url)
                 description.shouldAddStoreAsynchronously = false
                 description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)

@@ -10,16 +10,29 @@ struct FridgeView: View {
     @Environment(\.modelContext) private var context
     @Environment(AppRouter.self) private var router
     @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }, sort: \FridgeItem.expiresAt) private var items: [FridgeItem]
+    @Query(sort: \FridgeCategory.name) private var categories: [FridgeCategory]
     @AppStorage(FridgeReminder.enabledKey) private var remindersEnabled = false
     @AppStorage(FridgeReminder.promptDismissedKey) private var promptDismissed = false
     @State private var path = NavigationPath()
-    @State private var adding: AddRoute?
-    @State private var editing: FridgeItem?
+    @State private var sheet: Sheet?
+    @State private var grouping = Grouping.expiry
     @State private var now = Date()
 
-    private enum AddRoute: String, Identifiable {
-        case manual, photo
-        var id: String { rawValue }
+    private enum Grouping { case expiry, category }
+
+    private enum Sheet: Identifiable {
+        case manual, photo, categories, edit(FridgeItem)
+
+        enum ID: Hashable { case manual, photo, categories, edit(PersistentIdentifier) }
+
+        var id: ID {
+            switch self {
+            case .manual: return .manual
+            case .photo: return .photo
+            case .categories: return .categories
+            case let .edit(item): return .edit(item.persistentModelID)
+            }
+        }
     }
 
     var body: some View {
@@ -40,43 +53,24 @@ struct FridgeView: View {
                     } description: {
                         Text("把买回来的食材记在这里，快过期时提醒你，还能直接看看用它们能做什么。")
                     } actions: {
-                        Button("放点食材") { adding = .manual }
+                        Button("放点食材") { sheet = .manual }
                             .buttonStyle(.borderedProminent)
-                        Button("拍照识别", systemImage: "camera") { adding = .photo }
+                        Button("拍照识别", systemImage: "camera") { sheet = .photo }
                     }
                 } else {
                     List {
                         if !remindersEnabled, !promptDismissed {
                             ReminderPrompt(onDismiss: { promptDismissed = true })
                         }
-                        if !soon.isEmpty {
-                            Section {
-                                rows(soon, now: now)
-                            } header: {
-                                HStack {
-                                    Text("优先食用")
-                                    Spacer()
-                                    Button("只用这几样做菜") { cook(soon) }
-                                        .font(.footnote)
-                                        .textCase(nil)
-                                }
-                            } footer: {
-                                Text("记录日期在今天到后天之间，先安排食用。")
-                            }
+                        Picker("冰箱分组", selection: $grouping) {
+                            Text("按临期").tag(Grouping.expiry)
+                            Text("按分类").tag(Grouping.category)
                         }
-                        if !fresh.isEmpty {
-                            Section("稍后食用") {
-                                rows(fresh, now: now)
-                            }
-                        }
-                        if !expired.isEmpty {
-                            Section {
-                                rows(expired, now: now)
-                            } header: {
-                                Text("已过记录日期")
-                            } footer: {
-                                Text("请核对包装及储存情况；外观和气味不能保证食用安全。左滑可以移出冰箱。")
-                            }
+                        .pickerStyle(.segmented)
+                        if grouping == .expiry {
+                            expirySections(soon: soon, fresh: fresh, expired: expired)
+                        } else {
+                            categorySections
                         }
                         Section {
                             FridgeReminderRows()
@@ -103,11 +97,12 @@ struct FridgeView: View {
             .navigationTitle("冰箱")
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button { adding = .photo } label: {
+                    Button("管理分类", systemImage: "folder") { sheet = .categories }
+                    Button { sheet = .photo } label: {
                         Label("拍照识别", systemImage: "camera")
                     }
                     Button {
-                        adding = .manual
+                        sheet = .manual
                     } label: {
                         Label("放进冰箱", systemImage: "plus")
                     }
@@ -117,15 +112,13 @@ struct FridgeView: View {
                 ResultsView()
             }
             .recipeDestinations()
-            .sheet(item: $adding) { route in
+            .sheet(item: $sheet) { route in
                 switch route {
                 case .manual: AddFridgeSheet()
                 case .photo: FridgePhotoSheet()
+                case .categories: FridgeCategoryManager()
+                case let .edit(item): FridgeItemSheet(item: item)
                 }
-            }
-            .sheet(item: $editing) { item in
-                FridgeItemSheet(item: item)
-                    .presentationDetents([.medium, .large])
             }
         }
         .sensoryFeedback(.success, trigger: items.count) { old, new in new > old }
@@ -133,15 +126,67 @@ struct FridgeView: View {
         // 点开临期通知：不管之前点进了哪里，都回到冰箱首页看临期列表
         .onChange(of: router.fridgeHomeRequests) {
             path = NavigationPath()
-            adding = nil
-            editing = nil
+            sheet = nil
+            grouping = .expiry
         }
     }
 
-    private func rows(_ list: [FridgeItem], now: Date) -> some View {
+    @ViewBuilder
+    private func expirySections(soon: [FridgeItem], fresh: [FridgeItem], expired: [FridgeItem]) -> some View {
+        if !soon.isEmpty {
+            Section {
+                rows(soon)
+            } header: {
+                HStack {
+                    Text("优先食用")
+                    Spacer()
+                    Button("只用这几样做菜") { cook(soon) }
+                        .font(.footnote)
+                        .textCase(nil)
+                }
+            } footer: {
+                Text("记录日期在今天到后天之间，先安排食用。")
+            }
+        }
+        if !fresh.isEmpty {
+            Section("稍后食用") { rows(fresh) }
+        }
+        if !expired.isEmpty {
+            Section {
+                rows(expired)
+            } header: {
+                Text("已过记录日期")
+            } footer: {
+                Text("请核对包装及储存情况；外观和气味不能保证食用安全。左滑可以移出冰箱。")
+            }
+        }
+    }
+
+    private var categorySections: some View {
+        let food = store.food
+        let groups = Dictionary(grouping: items) { item in
+            FridgeCategoryChoice(storedKey: item.categoryKey).resolved(for: item.name, in: food, custom: categories)
+        }
+        return Group {
+            ForEach(FridgeBuiltInCategory.allCases.filter { $0 != .uncategorized }, id: \.self) { category in
+                categorySection(category.title, items: groups[.builtIn(category)])
+            }
+            ForEach(categories) { category in
+                categorySection(category.name, items: groups[.custom(category.identifier)])
+            }
+            categorySection(FridgeBuiltInCategory.uncategorized.title, items: groups[.builtIn(.uncategorized)])
+        }
+    }
+
+    @ViewBuilder
+    private func categorySection(_ title: String, items: [FridgeItem]?) -> some View {
+        if let items { Section(title) { rows(items) } }
+    }
+
+    private func rows(_ list: [FridgeItem]) -> some View {
         ForEach(list) { item in
             Button {
-                editing = item
+                sheet = .edit(item)
             } label: {
                 FridgeRow(item: item, emoji: emoji(for: item.name), freshness: Freshness(expiresAt: item.expiryDay(), now: now))
             }
@@ -155,7 +200,7 @@ struct FridgeView: View {
     }
 
     private func emoji(for name: String) -> String {
-        store.emoji(forStuff: name) ?? "🥡"
+        FridgeFruit(rawValue: name)?.emoji ?? store.emoji(forStuff: name) ?? "🥡"
     }
 
     /// 把这几样食材带去找菜，在冰箱页里直接打开推荐结果
@@ -196,7 +241,7 @@ private struct FridgeRow: View {
                 .foregroundStyle(tint)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityHint("点开修改到期日")
+        .accessibilityHint("点开修改日期或分类")
     }
 
     private var tint: Color {
@@ -337,6 +382,8 @@ struct AddFridgeSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selected: [String] = []
     @State private var input = ""
+    @State private var category = FridgeCategoryChoice.automatic
+    @State private var saveError = false
 
     var body: some View {
         NavigationStack {
@@ -349,10 +396,11 @@ struct AddFridgeSheet: View {
                         Button("添加", action: addInput)
                             .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
+                }
+                Section {
+                    FridgeCategoryPicker(selection: $category)
                 } footer: {
-                    if !extras.isEmpty {
-                        Text("自己输入的按 \(store.data.shelfLife.defaultDays) 天估到期日。")
-                    }
+                    Text("自动归类会按每种食材分别归类。指定分类后，本次选中的食材会放进同一分类。")
                 }
                 if !extras.isEmpty {
                     ChipSection(title: "输入的食材") {
@@ -361,21 +409,24 @@ struct AddFridgeSheet: View {
                         }
                     }
                 }
-                section("蔬菜", store.food.vegetable)
                 ChipSection(title: "水果") {
-                    ForEach(ProduceStorageAdvice.fruitNames, id: \.self) { name in
-                        Chip(title: name, isSelected: selected.contains(name)) {
-                            toggle(name)
+                    ForEach(FridgeFruit.allCases) { fruit in
+                        Chip(title: fruit.rawValue, emoji: fruit.emoji, isSelected: selected.contains(fruit.rawValue)) {
+                            toggle(fruit.rawValue)
                         }
                     }
                 }
+                section("蔬菜", store.food.vegetable)
                 section("肉和蛋", store.food.meat)
                 section("主食", store.food.staple)
                 if !selected.isEmpty {
                     Section {
                         ForEach(selected, id: \.self) { name in
-                            let days = ProduceStorageAdvice.recommendation(for: name)?.days ?? store.data.shelfLife.days(for: name)
-                            LabeledContent(name, value: "建议 \(days) 天内吃完")
+                            if let advice = ProduceStorageAdvice.recommendation(for: name) {
+                                LabeledContent(name, value: "建议 \(advice.days) 天内吃完")
+                            } else {
+                                LabeledContent(name, value: "通用参考：\(store.data.shelfLife.days(for: name)) 天")
+                            }
                         }
                     } header: {
                         Text("食用时间建议")
@@ -386,6 +437,7 @@ struct AddFridgeSheet: View {
             }
             .navigationTitle("放进冰箱")
             .navigationBarTitleDisplayMode(.inline)
+            .fridgeSaveError(isPresented: $saveError)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }
@@ -400,12 +452,12 @@ struct AddFridgeSheet: View {
     }
 
     private var extras: [String] {
-        selected.filter { !store.isCatalogStuff($0) && !ProduceStorageAdvice.fruitNames.contains($0) }
+        selected.filter { !store.isCatalogStuff($0) && FridgeFruit(rawValue: $0) == nil }
     }
 
     private func section(_ title: String, _ list: [StuffItem]) -> some View {
         ChipSection(title: title) {
-            ForEach(list, id: \.name) { item in
+            ForEach(list.filter { FridgeFruit(rawValue: $0.name) == nil }, id: \.name) { item in
                 Chip(title: item.name, emoji: item.emoji, isSelected: selected.contains(item.name)) {
                     toggle(item.name)
                 }
@@ -431,13 +483,20 @@ struct AddFridgeSheet: View {
 
     private func save() {
         let now = Date()
-        for name in selected {
-            let advice = ProduceStorageAdvice.recommendation(for: name)
-            let item = context.addToFridge(name, days: advice?.days ?? store.data.shelfLife.days(for: name), at: now)
-            item.storageAdvice = advice?.condition
+        do {
+            try context.saveUserChange {
+                for name in selected {
+                    let advice = ProduceStorageAdvice.recommendation(for: name)
+                    let item = FridgeItem(name: name, days: advice?.days ?? store.data.shelfLife.days(for: name), at: now)
+                    item.categoryKey = category.storedKey
+                    item.storageAdvice = advice?.condition
+                    context.insert(item)
+                }
+            }
+            dismiss()
+        } catch {
+            saveError = true
         }
-        try? context.save()
-        dismiss()
     }
 }
 
@@ -447,12 +506,24 @@ private struct FridgeItemSheet: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     let item: FridgeItem
-    @State private var expiresAt = Date()
-    @State private var basis = FridgeExpiryBasis.estimated
+    @State private var expiresAt: Date
+    @State private var basis: FridgeExpiryBasis
+    @State private var category: FridgeCategoryChoice
+    @State private var saveError = false
+
+    init(item: FridgeItem) {
+        self.item = item
+        _expiresAt = State(initialValue: item.expiryDay())
+        _basis = State(initialValue: item.expiryBasis)
+        _category = State(initialValue: FridgeCategoryChoice(storedKey: item.categoryKey))
+    }
 
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    FridgeCategoryPicker(selection: $category, automaticTitle: FridgeBuiltInCategory.automatic(for: item.name, in: store.food).title)
+                }
                 Section {
                     LabeledContent("放入日期", value: item.addedAt.formatted(.dateTime.year().month().day()))
                     if let production = item.productionDate {
@@ -475,25 +546,33 @@ private struct FridgeItemSheet: View {
             }
             .navigationTitle(item.name)
             .navigationBarTitleDisplayMode(.inline)
+            .fridgeSaveError(isPresented: $saveError)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") {
-                        let changedDate = expiresAt != item.expiryDay()
-                        let editedBasis = changedDate && (basis == .estimated || basis == .calculated) ? .manual : basis
-                        if changedDate || editedBasis != item.expiryBasis { item.storageAdvice = nil }
-                        item.expiryBasisRaw = editedBasis.rawValue
-                        context.setExpiry(item, to: expiresAt)
-                        dismiss()
-                    }
+                    Button("完成", action: save)
                 }
             }
-            .onAppear {
-                expiresAt = item.expiryDay()
-                basis = item.expiryBasis
+        }
+    }
+
+    private func save() {
+        do {
+            try context.saveUserChange {
+                let expiresDay = FridgeDay.stored(expiresAt)
+                let changedDate = expiresDay != item.expiresAt
+                let editedBasis = changedDate && (basis == .estimated || basis == .calculated) ? .manual : basis
+                if changedDate || editedBasis != item.expiryBasis { item.storageAdvice = nil }
+                item.expiryBasisRaw = editedBasis.rawValue
+                item.expiresAt = expiresDay
+                item.categoryKey = category.storedKey
+                item.updatedAt = Date()
             }
+            dismiss()
+        } catch {
+            saveError = true
         }
     }
 }
