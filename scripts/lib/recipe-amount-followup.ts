@@ -4,6 +4,7 @@ import { anchorOf, divide, literal, multiply, scalar, servings, sourceFingerprin
 
 /** 第二轮逐篇复核；冻结整篇依据，来源变化时必须重新核对，不能自动重签这些分配。 */
 const reviewedFingerprints: Record<string, string> = {
+  250: '12257c0baaf2700b',
   489: 'dd5acaa67ca1fac7',
   598: '21e127f00de96f6b',
   641: '40862bd6ba4d71a7',
@@ -68,8 +69,10 @@ export function applyReviewedAmountAllocations(source: RecipeTextData, data: Amo
     })
     entry.usages = entry.usages.filter(u => u.ingredient !== ingredient)
     entry.usages.push(...usages)
-    reviews.push({ id, ingredient, complete, explanation, evidence, usages })
+    reviews.push({ id, ingredient, complete, explanation, evidence: evidence.length ? evidence : usages.map(usage => usage.anchor), usages })
   }
+
+  bind(250, '醋', [{ ...amount([10, 3], '1ml 醋', literal(1, 'ml'), true), display: false }], [], '仅在打蛋时可选加入 1ml 醋；原文未给份数依据，保留字面量，不追加到备料总量。')
 
   // 固定配方没有份数基准，只分解 3g / 10g，不把它们乘人数。
   bind(598, '食盐', [amount([9, 3], '一半的食盐', part('食盐', 1, 2)), { at: [9, 9], target: '剩下的食盐', kind: 'remaining' }], [[7, 8], [9, 3], [9, 9]], '固定批次食盐 3g：腌肉一半，豆腐阶段使用剩余一半。')

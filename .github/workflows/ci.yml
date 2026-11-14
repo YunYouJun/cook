@@ -340,7 +340,11 @@ jobs:
         run: |
           for bundle in "$RUNNER_TEMP"/xcresult/*.xcresult; do
             [ -d "$bundle" ] || continue
-            xcrun xcresulttool get test-results summary --path "$bundle" | python3 -c '
+            if [ ! -f "$bundle/Info.plist" ] || ! summary=$(xcrun xcresulttool get test-results summary --path "$bundle"); then
+              echo "::warning::StoreKit did not finish writing $(basename "$bundle"); see the archived test logs."
+              continue
+            fi
+            printf '%s\n' "$summary" | python3 -c '
           import json, sys
           for failure in json.load(sys.stdin).get("testFailures", []):
               name = failure.get("testName", "")

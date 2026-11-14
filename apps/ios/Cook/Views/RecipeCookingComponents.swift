@@ -180,6 +180,7 @@ struct RecipeStepCard: View {
     let toggle: () -> Void
 
     var body: some View {
+        let stepText = recipeStepMarkdown(instruction?.text ?? step.text)
         VStack(spacing: 0) {
             Button(action: toggle) {
                 HStack(alignment: .top, spacing: 12) {
@@ -198,7 +199,7 @@ struct RecipeStepCard: View {
                     .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(recipeMarkdown(instruction?.text ?? step.text))
+                        Text(stepText)
                             .font(.body)
                             .foregroundStyle(completed ? Color.secondary : Color.primary)
                             .lineSpacing(3)
@@ -235,7 +236,7 @@ struct RecipeStepCard: View {
                 .contentShape(RoundedRectangle(cornerRadius: 16))
             }
             .buttonStyle(RecipeStepButtonStyle())
-            .accessibilityLabel(Text("第 \(step.number) 步，") + Text(recipeMarkdown(instruction?.text ?? step.text)))
+            .accessibilityLabel(Text("第 \(step.number) 步，") + Text(stepText))
             .accessibilityValue(completed ? "已完成" : "未完成")
             .accessibilityHint(completed ? "轻点撤销完成" : current ? "轻点完成并前往下一步" : "轻点标记完成")
             .accessibilityIdentifier("recipe.step.\(step.number)")
@@ -326,6 +327,33 @@ struct RecipeStepProgress: View {
 func recipeMarkdown(_ text: String) -> AttributedString {
     let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
     return (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
+}
+
+private func recipeStepMarkdown(_ text: String) -> AttributedString {
+    let quantity = #"(?<![A-Za-z0-9.])([0-9]+(?:\.[0-9]+)?(?:[–～/-][0-9]+(?:\.[0-9]+)?)?)[ \u00A0\u202F]*(kg|g|mL|ml|L|cm|mm)(?![A-Za-z0-9])"#
+    let parsed = recipeMarkdown(text)
+    var display = AttributedString()
+    for run in parsed.runs {
+        let segment = parsed[run.range]
+        guard run.link == nil else {
+            display += AttributedString(segment)
+            continue
+        }
+        let original = String(segment.characters)
+        var attributes = run.attributes
+        if var intent = run.inlinePresentationIntent, intent.contains(.code) {
+            // 换算后只剩数值和单位时，用正文字体；未换算的公式仍按原文显示。
+            guard original.range(of: "\\A\(quantity)\\z", options: .regularExpression) != nil else {
+                display += AttributedString(segment)
+                continue
+            }
+            intent.remove(.code)
+            attributes.inlinePresentationIntent = intent.isEmpty ? nil : intent
+        }
+        let formatted = original.replacingOccurrences(of: quantity, with: "$1\u{202F}$2", options: .regularExpression)
+        display += AttributedString(formatted, attributes: attributes)
+    }
+    return display
 }
 
 private struct RecipeStepCardsPreview: View {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "policyVersion": 2,
-  "amountsFingerprint": "5eacea8726d04b968f561cb3a75af5a014e8225975d87f126f2ece063f968859",
+  "amountsFingerprint": "5722a6aca355ccdc9194341c3e469c0c68f49cd2eaeafb5be853684c53810c3e",
   "enabledGoals": [
     "weight-aware",
     "less-added-sugar",
@@ -7224,5 +7224,5 @@
       }
     }
   },
-  "dataVersion": "ead74d1c15c9"
+  "dataVersion": "1b4d2de65e43"
 }

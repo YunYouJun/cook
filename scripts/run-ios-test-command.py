@@ -17,6 +17,38 @@ def interrupt(signum, _frame):
     raise Interrupted(signum)
 
 
+def signal_command(process, sig):
+    try:
+        os.killpg(process.pid, sig)
+    except ProcessLookupError:
+        pass
+    except PermissionError:
+        # Some simctl children can make signaling the entire group fail.
+        # Fall back to the direct child without assuming we own other PIDs.
+        try:
+            process.send_signal(sig)
+        except ProcessLookupError:
+            pass
+        except PermissionError:
+            print(f'Could not signal iOS command PID {process.pid} with {sig.name}', file=sys.stderr)
+
+
+def stop_command(process, sig, grace):
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    signal_command(process, sig)
+    try:
+        process.wait(timeout=grace)
+    except subprocess.TimeoutExpired:
+        pass
+    # The parent can exit while a descendant still holds a result bundle open.
+    signal_command(process, signal.SIGKILL)
+    try:
+        process.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        print(f'iOS command PID {process.pid} did not exit after cleanup', file=sys.stderr)
+
+
 def main():
     log = Path(sys.argv[1])
     timeout_value = os.environ.get('COOK_IOS_COMMAND_TIMEOUT_SECONDS')
@@ -33,43 +65,11 @@ def main():
             try:
                 result = process.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
-                # A second termination signal must not interrupt owned cleanup.
-                signal.signal(signal.SIGINT, signal.SIG_IGN)
-                signal.signal(signal.SIGTERM, signal.SIG_IGN)
-                try:
-                    os.killpg(process.pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
-                try:
-                    process.wait(timeout=2)
-                except subprocess.TimeoutExpired:
-                    pass
-                try:
-                    os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-                process.wait()
+                stop_command(process, signal.SIGTERM, grace=2)
                 print(f"IOS command timed out after {timeout:g} seconds: {' '.join(sys.argv[2:])}", file=sys.stderr)
                 result = 124
             except Interrupted as error:
-                # A second termination signal must not interrupt owned cleanup.
-                signal.signal(signal.SIGINT, signal.SIG_IGN)
-                signal.signal(signal.SIGTERM, signal.SIG_IGN)
-                try:
-                    os.killpg(process.pid, signal.SIGINT)
-                except ProcessLookupError:
-                    pass
-                try:
-                    process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    pass
-                # The parent may exit while a descendant still holds the log
-                # or result bundle open. Stop the whole owned group either way.
-                try:
-                    os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-                process.wait()
+                stop_command(process, signal.SIGINT, grace=10)
                 result = 128 + error.signum
     finally:
         # Replay even a partial startup log, after its writer has stopped.

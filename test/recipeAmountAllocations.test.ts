@@ -15,8 +15,8 @@ describe('reviewed source allocations', () => {
     const reviews = applyReviewedAmountAllocations(texts, copy)
     expect(copy).toEqual(data)
     expect(JSON.stringify(texts)).toBe(before)
-    expect(reviews).toHaveLength(50)
-    expect(new Set(reviews.map(r => r.id)).size).toBe(18)
+    expect(reviews).toHaveLength(51)
+    expect(new Set(reviews.map(r => r.id)).size).toBe(19)
     for (const review of reviews) {
       expect(review.evidence.length).toBeGreaterThan(0)
       for (const evidence of review.evidence)
@@ -24,6 +24,18 @@ describe('reviewed source allocations', () => {
       for (const use of review.usages)
         expect(data.recipes[review.id]!.usages).toContainEqual(use)
     }
+  })
+
+  it('preserves the optional fixed vinegar amount without adding it to preparation', () => {
+    const tomato = data.recipes['250']!
+    expect(tomato.usages).toContainEqual(expect.objectContaining({
+      ingredient: '醋',
+      target: '1ml 醋',
+      formula: { op: 'literal', lower: 1, unit: 'ml' },
+      display: false,
+      conditional: true,
+    }))
+    expect(tomato.quantities.some(quantity => quantity.name === '醋')).toBe(false)
   })
 
   it('rejects changes elsewhere in a reviewed source instead of automatically signing again', () => {

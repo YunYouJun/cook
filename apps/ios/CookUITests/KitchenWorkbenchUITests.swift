@@ -144,6 +144,9 @@ final class KitchenWorkbenchUITests: XCTestCase {
     @MainActor
     func testServingsSynchronizeQuantitiesPreparationAndRestore() {
         continueAfterFailure = false
+        func visibleText(_ element: XCUIElement) -> String {
+            element.label.replacingOccurrences(of: "\u{202F}", with: " ")
+        }
         let app = XCUIApplication()
         app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent", "-ui-testing-reset-kitchen"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
@@ -153,26 +156,26 @@ final class KitchenWorkbenchUITests: XCTestCase {
         XCTAssertTrue(recipeServings.waitForExistence(timeout: 10))
         XCTAssertEqual(app.staticTexts["recipe.amount.鸡蛋"].label, "2 个")
         let stepText = app.staticTexts["recipe.stepText.4"]
-        XCTAssertTrue(stepText.label.contains("1 g 的盐"))
+        XCTAssertTrue(visibleText(stepText).contains("1 g 的盐"))
         let oilStep = app.staticTexts["recipe.stepText.5"]
         let remainingSalt = app.staticTexts["recipe.stepText.10"]
-        XCTAssertTrue(oilStep.label.contains("食用油（8 ml）"))
-        XCTAssertTrue(remainingSalt.label.contains("剩余的盐（0.5–1 g）"))
+        XCTAssertTrue(visibleText(oilStep).contains("食用油（8 ml）"))
+        XCTAssertTrue(visibleText(remainingSalt).contains("剩余的盐（0.5–1 g）"))
         recipeServings.buttons.element(boundBy: 1).tap()
         recipeServings.buttons.element(boundBy: 1).tap()
         XCTAssertEqual(app.staticTexts["recipe.amount.鸡蛋"].label, "5 个")
         XCTAssertEqual(app.staticTexts["recipe.amount.食用油"].label, "20 ml")
         XCTAssertEqual(app.staticTexts["recipe.amount.盐"].label, "4.5–6 g")
-        XCTAssertTrue(stepText.label.contains("3 g 的盐"), "步骤中的分次用量独立于整菜总量")
+        XCTAssertTrue(visibleText(stepText).contains("3 g 的盐"), "步骤中的分次用量独立于整菜总量")
         XCTAssertFalse(stepText.label.contains("份数"))
-        XCTAssertTrue(stepText.label.contains("1ml 醋"), "原文固定的可选用量保留")
-        XCTAssertTrue(oilStep.label.contains("食用油（20 ml）"))
-        XCTAssertTrue(remainingSalt.label.contains("剩余的盐（1.5–3 g）"))
+        XCTAssertTrue(visibleText(stepText).contains("1 ml 醋"), "原文固定的可选用量保留")
+        XCTAssertTrue(visibleText(oilStep).contains("食用油（20 ml）"))
+        XCTAssertTrue(visibleText(remainingSalt).contains("剩余的盐（1.5–3 g）"))
         app.buttons["recipe.continueStep"].tap()
         let step = app.buttons["recipe.step.4"]
         step.tap()
         XCTAssertEqual(step.value as? String, "已完成")
-        XCTAssertTrue(remainingSalt.label.contains("剩余的盐（1.5–3 g）"), "勾选不重复扣减用量")
+        XCTAssertTrue(visibleText(remainingSalt).contains("剩余的盐（1.5–3 g）"), "勾选不重复扣减用量")
         capture(app, "recipe-step-three-servings")
         let left = app.windows.firstMatch
         left.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.85))
@@ -195,9 +198,9 @@ final class KitchenWorkbenchUITests: XCTestCase {
         if app.segmentedControls.buttons["做法"].exists { app.segmentedControls.buttons["做法"].tap() }
         XCTAssertEqual(recipeServings.value as? String, "2 份")
         XCTAssertEqual(app.staticTexts["recipe.amount.鸡蛋"].label, "3 个")
-        XCTAssertTrue(stepText.label.contains("2 g 的盐"))
-        XCTAssertTrue(oilStep.label.contains("食用油（12 ml）"))
-        XCTAssertTrue(remainingSalt.label.contains("剩余的盐（1–2 g）"))
+        XCTAssertTrue(visibleText(stepText).contains("2 g 的盐"))
+        XCTAssertTrue(visibleText(oilStep).contains("食用油（12 ml）"))
+        XCTAssertTrue(visibleText(remainingSalt).contains("剩余的盐（1–2 g）"))
         XCTAssertEqual(step.value as? String, "已完成", "份数变化不改变步骤身份或完成记录")
         app.buttons["kitchen.close"].tap()
         app.terminate()
@@ -206,9 +209,9 @@ final class KitchenWorkbenchUITests: XCTestCase {
         openKitchen(app)
         XCTAssertEqual(recipeServings.value as? String, "2 份")
         XCTAssertEqual(app.staticTexts["recipe.amount.食用油"].label, "12 ml")
-        XCTAssertTrue(stepText.label.contains("2 g 的盐"))
+        XCTAssertTrue(visibleText(stepText).contains("2 g 的盐"))
         XCTAssertEqual(step.value as? String, "已完成")
-        XCTAssertTrue(remainingSalt.label.contains("剩余的盐（1–2 g）"))
+        XCTAssertTrue(visibleText(remainingSalt).contains("剩余的盐（1–2 g）"))
         capture(app, "recipe-servings-restored")
     }
 
