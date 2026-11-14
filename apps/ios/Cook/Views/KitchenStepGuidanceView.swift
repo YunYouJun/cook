@@ -4,6 +4,7 @@ import SwiftUI
 /// Local guidance surface attached below the current step and outside its completion button.
 struct RecipeStepGuidancePanel: View {
     @Environment(CookAISettings.self) private var ai
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let step: RecipePresentation.Step
     let guidance: KitchenStepGuidanceModel
@@ -14,6 +15,7 @@ struct RecipeStepGuidancePanel: View {
     @State private var question = ""
     @State private var lastKind: StepGuidanceKind = .explain
     @State private var lastQuestion: String?
+    @State private var panBounce = false
     @FocusState private var questionFocused: Bool
 
     private var response: StepGuidanceResponse? {
@@ -30,18 +32,7 @@ struct RecipeStepGuidancePanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Group {
-                if dynamicTypeSize.isAccessibilitySize {
-                    VStack(alignment: .leading, spacing: 10) {
-                        guidanceActionButtons
-                    }
-                } else {
-                    HStack(spacing: 10) {
-                        guidanceActionButtons
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
-                }
-            }
+            guidanceActions
 
             if asking {
                 VStack(alignment: .leading, spacing: 8) {
@@ -122,12 +113,14 @@ struct RecipeStepGuidancePanel: View {
                 }
             }
         }
-        .padding(14)
-        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(Color.accentColor.opacity(0.18), lineWidth: 1)
-                .accessibilityHidden(true)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            if showsDetails {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
+            }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("recipe.guidance.panel")
@@ -183,21 +176,52 @@ struct RecipeStepGuidancePanel: View {
         return !trimmed.isEmpty && trimmed.count <= StepGuidanceRequest.maximumQuestionLength && !guidance.isLoading
     }
 
+    private var showsDetails: Bool {
+        asking || guidance.isLoading || guidance.phase == .error || response != nil || !ai.canUseRemote
+    }
+
+    @ViewBuilder
+    private var guidanceActions: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            stackedGuidanceActions
+        } else {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    guidanceActionButtons
+                }
+                stackedGuidanceActions
+            }
+        }
+    }
+
+    private var stackedGuidanceActions: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            guidanceActionButtons
+        }
+    }
+
     @ViewBuilder
     private var guidanceActionButtons: some View {
-        guidanceButton("本步讲解", systemImage: "sparkles", identifier: "recipe.guidance.explain") {
+        guidanceButton("本步讲解", identifier: "recipe.guidance.explain") {
+            Image(systemName: "frying.pan")
+                .foregroundStyle(.orange)
+                .symbolEffect(.bounce, options: .nonRepeating, value: panBounce)
+        } action: {
+            if !reduceMotion { panBounce.toggle() }
             lastKind = .explain
             lastQuestion = nil
             explain()
         }
-        guidanceButton(asking ? "收起提问" : "问这一步",
-                       systemImage: asking ? "chevron.up" : "questionmark.bubble",
-                       identifier: "recipe.guidance.question") {
+        .buttonStyle(.bordered)
+        guidanceButton(asking ? "收起提问" : "问这一步", identifier: "recipe.guidance.question") {
+            Image(systemName: asking ? "chevron.up" : "questionmark.bubble")
+        } action: {
             withAnimation(.easeInOut(duration: 0.2)) {
                 asking.toggle()
             }
             if !asking { questionFocused = false }
         }
+        .buttonStyle(.borderless)
     }
 
     private func sendQuestion() {
@@ -209,16 +233,15 @@ struct RecipeStepGuidancePanel: View {
         ask(trimmed)
     }
 
-    private func guidanceButton(_ title: String, systemImage: String, identifier: String,
-                                action: @escaping () -> Void) -> some View {
+    private func guidanceButton<Icon: View>(_ title: String, identifier: String, @ViewBuilder icon: () -> Icon,
+                                            action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(title, systemImage: systemImage)
+            Label { Text(title) } icon: { icon().accessibilityHidden(true) }
                 .font(.subheadline.weight(.medium))
-                .frame(minHeight: 44)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.bordered)
-        .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil, alignment: .leading)
         .disabled(guidance.isLoading)
         .accessibilityIdentifier(identifier)
     }

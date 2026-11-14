@@ -33,15 +33,19 @@ struct KitchenWorkbenchView: View {
                 ZStack(alignment: .top) {
                     // 紧凑模式的两块面板重叠以保留阅读位置；可见面板也需位于无障碍命中层级最上方。
                     KitchenPaneLayout(frames: frames) {
-                        instructions
-                            .scrollEdgeBar(edge: .bottom) {
-                                if compact, !dynamicTypeSize.isAccessibilitySize { timerShortcut }
+                        VStack(spacing: 0) {
+                            instructions
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .clipped()
+                            if compact, !dynamicTypeSize.isAccessibilitySize {
+                                Divider()
+                                timerShortcut
                             }
-                            .clipped()
-                            .opacity(!compact || pane == .recipe ? 1 : 0)
-                            .allowsHitTesting(!compact || pane == .recipe)
-                            .accessibilityHidden(compact && pane != .recipe)
-                            .zIndex(!compact || pane == .recipe ? 1 : 0)
+                        }
+                        .opacity(!compact || pane == .recipe ? 1 : 0)
+                        .allowsHitTesting(!compact || pane == .recipe)
+                        .accessibilityHidden(compact && pane != .recipe)
+                        .zIndex(!compact || pane == .recipe ? 1 : 0)
                         preparation(tabletop: frames.mode == .tabletop)
                             .clipped()
                             .opacity(!compact || pane == .preparation ? 1 : 0)
@@ -104,8 +108,6 @@ struct KitchenWorkbenchView: View {
         if let text = store.text(for: recipe) {
             RecipeTextContent(recipe: recipe, text: text, preparationInSidebar: true,
                               showsStepGuidance: true, dietaryGoal: dietaryGoal)
-                .accessibilityLabel("菜谱做法")
-                .accessibilityIdentifier("kitchen.instructions")
         } else {
             ContentUnavailableView {
                 Label("暂未收录图文做法", systemImage: "book.closed")
@@ -132,15 +134,22 @@ struct KitchenWorkbenchView: View {
                 HStack {
                     Label(timer.phase(at: context.date) == .finished ? "计时结束" : "计时器", systemImage: "timer")
                     Spacer()
-                    Text(timer.display(at: context.date)).monospacedDigit()
-                    Image(systemName: "chevron.right").font(.caption)
+                    Text(timer.display(at: context.date))
+                        .font(.body.weight(.semibold).monospacedDigit())
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
                 }
-                .padding()
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .frame(minHeight: 52)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("kitchen.timerShortcut")
         }
+        .background(Color(uiColor: .secondarySystemGroupedBackground), ignoresSafeAreaEdges: .bottom)
     }
 }
 

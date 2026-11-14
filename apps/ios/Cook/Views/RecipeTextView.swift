@@ -98,47 +98,48 @@ struct RecipeTextContent: View {
                     proxy.scrollTo(StepAnchor(id: step.id), anchor: .top)
                 }
             }
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    if dynamicTypeSize.isAccessibilitySize {
-                        stepProgress(jump: jump)
-                    }
-                    if let dietaryGoal, let entry = store.dietaryCatalog?.entry(for: recipe, goal: dietaryGoal) {
-                        DietaryReviewSummary(goal: dietaryGoal, entry: entry)
-                    }
-                    RecipeMetricsView(presentation: presentation, difficulty: recipe.difficulty, showsCalories: dietaryGoal == nil)
-                    if let description = presentation.servingDescription {
-                        Text(description).font(.footnote).foregroundStyle(.secondary)
-                    }
-                    if !presentation.supplementalQuantities.isEmpty {
-                        if canAdjustServings {
-                            RecipeServingControl(recipeID: recipe.id, rows: presentation.allQuantities, identifier: "recipe.servings")
-                        }
-                        Text("按原文整理的用量").font(.headline)
-                        RecipeQuantityTable(rows: presentation.supplementalQuantities, amounts: amounts)
-                    }
-                    ForEach(Array(text.blocks.enumerated()), id: \.offset) { offset, block in
-                        if !presentation.metadataBlocks.contains(offset),
-                           !(preparationInSidebar && presentation.ingredientBlocks.contains(offset)) {
-                            presentedBlock(block, at: offset, amounts: amounts, usage: usage, jump: jump)
-                        }
-                    }
-                    footer
-                        .padding(.top, 12)
-                }
-                .padding()
-                // iPad 上行太长不好读
-                .frame(maxWidth: 680, alignment: .leading)
-                .frame(maxWidth: .infinity)
-            }
-            .accessibilityIdentifier("recipe.textContent")
-            .background(Color(uiColor: .systemGroupedBackground))
-            .softScrollEdges(enabled: preparationInSidebar && !dynamicTypeSize.isAccessibilitySize)
-            .scrollEdgeBar(edge: .top) {
-                if !dynamicTypeSize.isAccessibilitySize {
+            VStack(spacing: 0) {
+                if !dynamicTypeSize.isAccessibilitySize, !presentation.steps.isEmpty {
                     stepProgress(jump: jump)
+                    Divider()
                 }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        if dynamicTypeSize.isAccessibilitySize {
+                            stepProgress(jump: jump)
+                        }
+                        if let dietaryGoal, let entry = store.dietaryCatalog?.entry(for: recipe, goal: dietaryGoal) {
+                            DietaryReviewSummary(goal: dietaryGoal, entry: entry)
+                        }
+                        RecipeMetricsView(presentation: presentation, difficulty: recipe.difficulty, showsCalories: dietaryGoal == nil)
+                        if let description = presentation.servingDescription {
+                            Text(description).font(.footnote).foregroundStyle(.secondary)
+                        }
+                        if !presentation.supplementalQuantities.isEmpty {
+                            if canAdjustServings {
+                                RecipeServingControl(recipeID: recipe.id, rows: presentation.allQuantities, identifier: "recipe.servings")
+                            }
+                            Text("按原文整理的用量").font(.headline)
+                            RecipeQuantityTable(rows: presentation.supplementalQuantities, amounts: amounts)
+                        }
+                        ForEach(Array(text.blocks.enumerated()), id: \.offset) { offset, block in
+                            if !presentation.metadataBlocks.contains(offset),
+                               !(preparationInSidebar && presentation.ingredientBlocks.contains(offset)) {
+                                presentedBlock(block, at: offset, amounts: amounts, usage: usage, jump: jump)
+                            }
+                        }
+                        footer
+                            .padding(.top, 12)
+                    }
+                    .padding()
+                    // iPad 上行太长不好读
+                    .frame(maxWidth: 680, alignment: .leading)
+                    .frame(maxWidth: .infinity)
+                }
+                .accessibilityLabel("菜谱做法")
+                .accessibilityIdentifier(preparationInSidebar ? "kitchen.instructions" : "recipe.textContent")
             }
+            .background(Color(uiColor: .systemGroupedBackground))
             // 大图里翻到别的图时，正文跟着滚过去，收起时缩回那张图的位置
             .onChange(of: photoSelection) { _, id in
                 if showsPhotos {
