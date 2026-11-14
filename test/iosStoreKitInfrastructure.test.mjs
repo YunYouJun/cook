@@ -12,6 +12,40 @@ import { planIosTests } from '../scripts/ci-changes.mjs'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const hostArchitecture = spawnSync('uname', ['-m'], { encoding: 'utf8' }).stdout.trim()
 
+test('a denied process-group kill still stops the timed-out command and preserves its log', () => {
+  const task = mkdtempSync(join(tmpdir(), 'cook-storekit-denied-signal-'))
+  try {
+    const log = join(task, 'restart.log')
+    const run = spawnSync('python3', ['-c', `
+import errno, os, runpy, signal, sys
+path, log = sys.argv[1:]
+killpg = os.killpg
+def deny_group_kill(pid, sig):
+    if sig == signal.SIGKILL:
+        raise PermissionError(errno.EPERM, 'simulated process-group denial')
+    killpg(pid, sig)
+os.killpg = deny_group_kill
+command = 'import os, signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); print(os.getpid(), flush=True); time.sleep(60)'
+sys.argv = [path, log, sys.executable, '-c', command]
+runpy.run_path(path, run_name='__main__')
+`, 'scripts/run-ios-test-command.py', log], {
+      cwd: root,
+      encoding: 'utf8',
+      timeout: 10_000,
+      env: { ...process.env, COOK_IOS_COMMAND_TIMEOUT_SECONDS: '1' },
+    })
+    assert.equal(run.error, undefined)
+    assert.equal(run.status, 124)
+    assert.match(run.stderr, /IOS command timed out after 1 seconds/)
+    assert.doesNotMatch(run.stderr, /Traceback/)
+    const pid = Number(readFileSync(log, 'utf8').trim())
+    assert.ok(Number.isInteger(pid) && pid > 0)
+    assert.equal(run.stdout.trim(), String(pid))
+    assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' })
+  }
+  finally { rmSync(task, { recursive: true, force: true }) }
+})
+
 test('a cancelled financial step stops its writer and replays partial logs before exit', { timeout: 20_000 }, async () => {
   for (const ignoresInterrupt of ['0', '1'])
     await checkCancellation(ignoresInterrupt)
