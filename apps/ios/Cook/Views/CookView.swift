@@ -66,7 +66,7 @@ struct CookView: View {
             } else {
                 NavigationStack(path: $cookPath) {
                     chooser(warnings: warnings, extras: extras, emptySignal: emptySignal)
-                        .bottomActionBar(background: Color(uiColor: .systemGroupedBackground)) {
+                        .cookHomeActionBar(background: Color(uiColor: .systemGroupedBackground), isSearchPresented: isSearching) {
                             resultsButton(matchCount: matchCount)
                         }
                         .cookSearch(isPresented: $isSearching, onApplied: show)

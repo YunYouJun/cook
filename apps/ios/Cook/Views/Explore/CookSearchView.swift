@@ -56,12 +56,7 @@ struct CookSearchView: View {
         }) { request in
             SearchIntentSheet(text: request.text) { previewApplied = true }
         }
-        .task {
-            // Wait for the navigation transition before asking the new field to focus.
-            try? await Task.sleep(for: .milliseconds(250))
-            guard !Task.isCancelled else { return }
-            focused = true
-        }
+        .onAppear { focused = true }
     }
 
     private func submit(_ text: String) {
@@ -102,6 +97,55 @@ extension View {
     /// Search is pushed on compact screens and presented as a focused task on wide screens.
     func cookSearch(isPresented: Binding<Bool>, onApplied: @escaping (InputNotice) -> Void) -> some View {
         modifier(CookSearchPresentation(isPresented: isPresented, onApplied: onApplied))
+    }
+
+    func cookHomeActionBar<Bar: View>(background: Color, isSearchPresented: Bool, @ViewBuilder _ bar: @escaping () -> Bar) -> some View {
+        modifier(CookHomeActionBar(background: background, isSearchPresented: isSearchPresented, bar: bar))
+    }
+}
+
+private struct CookHomeActionBar<Bar: View>: ViewModifier {
+    let background: Color
+    let isSearchPresented: Bool
+    let bar: () -> Bar
+    @State private var restingLayout: Layout?
+    @State private var returningFromSearch = false
+
+    func body(content: Content) -> some View {
+        GeometryReader { geometry in
+            let layout = Layout(width: geometry.size.width, bottomInset: geometry.safeAreaInsets.bottom)
+            let hasRestoredInset = restingLayout.map {
+                abs(layout.width - $0.width) > 1 || layout.bottomInset >= $0.bottomInset - 0.5
+            } ?? true
+            // SwiftUI can start showing home before the native tab bar is restored.
+            // Reserve the button's space and reveal it at its resting position.
+            let showsAction = !(isSearchPresented || returningFromSearch) || hasRestoredInset
+            content.bottomActionBar(background: background) {
+                bar()
+                    .opacity(showsAction ? 1 : 0)
+                    .allowsHitTesting(showsAction)
+                    .accessibilityHidden(!showsAction)
+            }
+            .onChange(of: Observation(layout: layout, isSearchPresented: isSearchPresented), initial: true) {
+                if isSearchPresented {
+                    returningFromSearch = true
+                } else if showsAction {
+                    restingLayout = layout
+                    returningFromSearch = false
+                }
+            }
+        }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+
+    private struct Layout: Equatable {
+        let width: CGFloat
+        let bottomInset: CGFloat
+    }
+
+    private struct Observation: Equatable {
+        let layout: Layout
+        let isSearchPresented: Bool
     }
 }
 

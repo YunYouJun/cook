@@ -89,7 +89,7 @@ struct CloudKitchenView: View {
         }
         .navigationTitle("找菜")
         .navigationBarTitleDisplayMode(.inline)
-        .bottomActionBar(background: background) {
+        .cookHomeActionBar(background: background, isSearchPresented: isSearchPresented) {
             Button(action: cook) {
                 HStack(spacing: CookLayout.Spacing.small) {
                     Image(systemName: "frying.pan.fill")
