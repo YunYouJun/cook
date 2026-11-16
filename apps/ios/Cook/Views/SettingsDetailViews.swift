@@ -75,11 +75,26 @@ struct AboutSettingsView: View {
                 Link("网页版：食用手册", destination: URL(string: "https://cook.yunyoujun.cn")!)
             }
             Section("开源项目") {
-                Link("在 GitHub 上反馈", destination: URL(string: "https://github.com/YunYouJun/cook/issues")!)
-                Link("参与讨论", destination: URL(string: "https://github.com/YunYouJun/cook/discussions")!)
+                githubLink("在 GitHub 上反馈", destination: URL(string: "https://github.com/YunYouJun/cook/issues")!)
+                githubLink("参与讨论", destination: URL(string: "https://github.com/YunYouJun/cook/discussions")!)
             }
         }
         .navigationTitle("关于云食册")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func githubLink(_ title: String, destination: URL) -> some View {
+        Link(destination: destination) {
+            HStack(spacing: 12) {
+                SettingsRowLabel(title, image: Image("github"), color: Color(white: 0.12))
+                Image(systemName: "arrow.up.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("打开 GitHub")
     }
 }

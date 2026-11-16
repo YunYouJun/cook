@@ -11,4 +11,6 @@
 
 微信 SVG 来自 [Simple Icons](https://github.com/simple-icons/simple-icons/blob/develop/icons/wechat.svg)，采用 [CC0 1.0](https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md)。两端各自控制尺寸、颜色、间距及点击行为。
 
+`Assets.xcassets/github.imageset/icon.svg` 来自 [GitHub Brand Toolkit](https://brand.github.com/foundations/logo)，使用白色 Invertocat 标识 GitHub 外链。
+
 做法及厨具图标为本仓库维护的 SVG，沿用仓库 MIT 许可，不是 Apple SF Symbols 的导出资源。
