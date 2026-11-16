@@ -5,6 +5,7 @@ import SwiftUI
 struct SearchIntentSheet: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
+    @Environment(CookSearchHistory.self) private var searchHistory
     @Environment(CookAISettings.self) private var ai
     @Environment(YunlefunAccountStore.self) private var accounts
     @Environment(\.dismiss) private var dismiss
@@ -12,8 +13,12 @@ struct SearchIntentSheet: View {
     @State private var confirmsSending = false
     @State private var applyError: String?
     @FocusState private var editingText: Bool
+    private let onApplied: () -> Void
 
-    init(text: String) { _draft = State(initialValue: SearchIntentDraft(text: text)) }
+    init(text: String, onApplied: @escaping () -> Void = {}) {
+        _draft = State(initialValue: SearchIntentDraft(text: text))
+        self.onApplied = onApplied
+    }
 
     var body: some View {
         NavigationStack {
@@ -215,7 +220,12 @@ struct SearchIntentSheet: View {
 
     private func apply() {
         guard draft.canApply, let intent = draft.intent else { return }
-        do { try session.applySearchIntent(intent, in: store); dismiss() }
+        do {
+            try session.applySearchIntent(intent, in: store)
+            searchHistory.record(draft.text)
+            onApplied()
+            dismiss()
+        }
         catch { applyError = (error as? SearchIntentApplicationError)?.localizedDescription ?? "条件已失效，请重新识别并确认。原有选择保持不变。" }
     }
 }

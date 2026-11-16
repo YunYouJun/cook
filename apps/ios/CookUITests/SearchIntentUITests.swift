@@ -18,14 +18,14 @@ final class SearchIntentUITests: XCTestCase {
 
     @MainActor
     private func preview(_ app: XCUIApplication, text: String) {
-        let search = app.textFields["cook.query"]
+        let search = app.openCookingSearch()
         XCTAssertTrue(search.waitForExistence(timeout: 10))
         XCTAssertTrue(search.isHittable)
         search.tap()
         search.typeText(text)
         XCTAssertTrue(app.buttons["intent.preview"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["intent.preview"].isHittable)
-        app.buttons["intent.preview"].tap()
+        app.previewCookingSearch()
         XCTAssertTrue(app.buttons["intent.apply"].waitForExistence(timeout: 10))
         let screen = XCTAttachment(screenshot: app.screenshot())
         screen.name = "intent-preview-layout"
@@ -114,6 +114,7 @@ final class SearchIntentUITests: XCTestCase {
             XCTAssertTrue(form.frame.intersection(app.frame).contains(tomato.frame))
         }
         app.buttons["intent.cancel"].tap()
+        app.closeCookingSearch()
         if largestText {
             XCTAssertTrue(form.waitForNonExistence(timeout: 10))
             let chooser = app.collectionViews["cook.chooser"]
@@ -173,16 +174,17 @@ final class SearchIntentUITests: XCTestCase {
         image.lifetime = .keepAlways
         add(image)
         app.buttons["intent.cancel"].tap()
+        app.closeCookingSearch()
         XCTAssertTrue(app.buttons["鸡蛋"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["鸡蛋"].isSelected)
-        let search = app.textFields["cook.query"]
+        let search = app.openCookingSearch()
         XCTAssertTrue(search.waitForExistence(timeout: 10))
         XCTAssertTrue(search.isHittable)
         search.tap()
         search.typeText("鸡蛋，不要辣")
         XCTAssertTrue(app.buttons["intent.preview"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["intent.preview"].isHittable)
-        app.buttons["intent.preview"].tap()
+        app.previewCookingSearch()
         XCTAssertTrue(app.buttons["intent.apply"].waitForExistence(timeout: 10))
         app.buttons["intent.apply"].tap()
         XCTAssertTrue(app.buttons["鸡蛋"].waitForExistence(timeout: 10))
@@ -205,6 +207,7 @@ final class SearchIntentUITests: XCTestCase {
         image.lifetime = .keepAlways
         add(image)
         app.buttons["intent.cancel"].tap()
+        app.closeCookingSearch()
         app.buttons["我的"].firstMatch.tap()
         let settings = app.buttons["settings.ai"]
         for _ in 0..<5 where !settings.isHittable { app.swipeUp() }

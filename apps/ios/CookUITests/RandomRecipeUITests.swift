@@ -36,11 +36,14 @@ final class RandomRecipeUITests: XCTestCase {
     @MainActor
     func testRandomIgnoresNameSearchAndKeepsIngredientAndAvoidanceMatches() {
         let app = launch()
-        let query = app.textFields["cook.query"]
+        let query = app.openCookingSearch()
         query.tap()
         query.typeText("鸡蛋，不要辣，不要牛肉\n")
+        XCTAssertTrue(query.waitForNonExistence(timeout: 10))
+        app.openCookingSearch()
         query.tap()
         query.typeText("没有这道菜的搜索词\n")
+        XCTAssertTrue(query.waitForNonExistence(timeout: 10))
         app.buttons["菜谱"].firstMatch.tap()
         openRandom(in: app)
         let context = app.staticTexts["cook.decide.context"]
@@ -92,10 +95,10 @@ final class RandomRecipeUITests: XCTestCase {
             wait(app.buttons["library.random"], "isHittable == true")
         }
         selectTab("找菜", current: "菜谱", in: app)
-        let query = app.textFields["cook.query"]
-        reveal(query, in: app)
+        let query = app.openCookingSearch()
         query.tap()
         query.typeText("牛肉\n")
+        XCTAssertTrue(query.waitForNonExistence(timeout: 10))
         selectTab("菜谱", current: "找菜", in: app)
         openRandom(in: app)
         wait(app.staticTexts["cook.decide.empty"], "exists == true")

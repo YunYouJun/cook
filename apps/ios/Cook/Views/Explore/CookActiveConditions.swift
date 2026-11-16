@@ -7,12 +7,16 @@ struct CookActiveConditions: View {
     var body: some View {
         if session.discoveryScene != nil || session.dietaryGoal != nil || !session.keyword.isEmpty {
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) { conditions }
-                VStack(alignment: .leading, spacing: 4) { conditions }
+                HStack(spacing: CookLayout.Spacing.small) { conditions }
+                VStack(alignment: .leading, spacing: CookLayout.Spacing.xSmall) { conditions }
             }
             .font(.subheadline)
             .buttonStyle(.plain)
             .foregroundStyle(.tint)
+            .listRowInsets(EdgeInsets(
+                top: 0, leading: CookLayout.Spacing.medium,
+                bottom: 0, trailing: CookLayout.Spacing.medium
+            ))
         }
     }
 
@@ -39,7 +43,7 @@ struct CookActiveConditions: View {
         Button(action: action) {
             Label(title, systemImage: "xmark.circle")
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(minHeight: 44, alignment: .leading)
+                .frame(minHeight: CookLayout.minimumHitSize, alignment: .leading)
                 .contentShape(Rectangle())
         }
     }

@@ -7,7 +7,6 @@ import SwiftUI
 /// 宽屏（iPad、iPhone Duo 展开、大屏 iPhone 横屏）左边选食材，右边的推荐结果跟着实时更新
 struct CookView: View {
     @Environment(RecipeStore.self) private var store
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.scenePhase) private var scenePhase
@@ -20,9 +19,8 @@ struct CookView: View {
     @State private var now = Date()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var basket = BasketAnimator()
-    @State private var input = ""
     @State private var notice: InputNotice?
-    @State private var searchIntent: SearchIntentInput?
+    @State private var isSearching = false
     /// 宽屏时一打开就并排显示两栏，不等用户点开侧栏
     @State private var columns: NavigationSplitViewVisibility = .all
     /// 展开了「更多」的分组标题，用逗号连起来存，下次打开保持原样
@@ -35,13 +33,7 @@ struct CookView: View {
     @State private var inspirationVisible = false
 
     private var ingredientSelectionColors: Chip.SelectionColors {
-        if colorScheme == .dark {
-            // #9BCB88 with #132010
-            return .init(fill: Color(red: 155.0 / 255, green: 203.0 / 255, blue: 136.0 / 255),
-                         foreground: Color(red: 19.0 / 255, green: 32.0 / 255, blue: 16.0 / 255))
-        }
-        // #2F6B45 with white
-        return .init(fill: Color(red: 47.0 / 255, green: 107.0 / 255, blue: 69.0 / 255))
+        .init(fill: CookPalette.primaryAction, foreground: CookPalette.onPrimaryAction)
     }
 
     var body: some View {
@@ -53,7 +45,8 @@ struct CookView: View {
         Group {
             if presentation == .kitchen {
                 NavigationStack(path: $cookPath) {
-                    CloudKitchenView(presentation: $presentation, input: $input, inputMessage: notice?.message, submitInput: applySentence, previewInput: previewSentence, decide: openRecipe, showResults: { cookPath.append(ResultsRoute()) }, isDetailPresented: !cookPath.isEmpty, isSearchPresented: searchIntent != nil)
+                    CloudKitchenView(presentation: $presentation, inputMessage: notice?.message, openSearch: { isSearching = true }, decide: openRecipe, showResults: { cookPath.append(ResultsRoute()) }, isDetailPresented: !cookPath.isEmpty, isSearchPresented: isSearching)
+                        .cookSearch(isPresented: $isSearching, onApplied: show)
                         .navigationDestination(for: ResultsRoute.self) { _ in ResultsView() }
                         .recipeDestinations()
                 }
@@ -69,12 +62,14 @@ struct CookView: View {
                 }
                 // 竖着拿的 iPad 和展开的折叠屏也并排显示两栏，不把选食材的一栏收起来
                 .navigationSplitViewStyle(.balanced)
+                .cookSearch(isPresented: $isSearching, onApplied: show)
             } else {
                 NavigationStack(path: $cookPath) {
                     chooser(warnings: warnings, extras: extras, emptySignal: emptySignal)
                         .bottomActionBar(background: Color(uiColor: .systemGroupedBackground)) {
                             resultsButton(matchCount: matchCount)
                         }
+                        .cookSearch(isPresented: $isSearching, onApplied: show)
                         .navigationDestination(for: ResultsRoute.self) { _ in
                             ResultsView()
                         }
@@ -82,13 +77,17 @@ struct CookView: View {
                 }
             }
         }
-        .sheet(item: $searchIntent, onDismiss: { input = "" }) {
-            SearchIntentSheet(text: $0.text)
-        }
         .overlay {
             BasketFlightLayer(animator: basket)
         }
         .refreshesAtMidnight($now)
+        // Both presentations share the same transient feedback lifetime.
+        .task(id: notice) {
+            guard notice != nil else { return }
+            try? await Task.sleep(for: .seconds(5))
+            guard !Task.isCancelled else { return }
+            notice = nil
+        }
         .sensoryFeedback(.selection, trigger: session.selectedStuff)
         .sensoryFeedback(trigger: notice) { _, notice in
             switch notice?.kind {
@@ -104,13 +103,8 @@ struct CookView: View {
         @Bindable var session = session
         return List {
             Section {
-                CookQueryField(text: $input, message: notice?.message, submit: applySentence, preview: previewSentence)
+                CookSearchEntry(message: notice?.message) { isSearching = true }
                 CookActiveConditions()
-                if !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    ForEach(store.stuffSuggestions(for: input, excluding: session.selectedStuff).prefix(3), id: \.name) { item in
-                        Button("添加\(item.name)") { addSuggestion(item.name) }
-                    }
-                }
             }
             if !warnings.isEmpty {
                 IncompatibleWarning(rules: warnings)
@@ -143,7 +137,7 @@ struct CookView: View {
             CookInspirationSection(
                 decide: openRecipe,
                 isDetailPresented: sizeClass == .regular ? !detailPath.isEmpty : !cookPath.isEmpty,
-                suppressesShake: decideRequest != nil || showingFilters || searchIntent != nil,
+                suppressesShake: decideRequest != nil || showingFilters || isSearching,
                 isVisible: $inspirationVisible,
                 presentRandom: { decideRequest = CookDecideRequest(batchIDs: $0) }
             )
@@ -151,7 +145,7 @@ struct CookView: View {
         }
         .accessibilityIdentifier("cook.chooser")
         .listSectionSpacing(.compact)
-        .contentMargins(.top, 8, for: .scrollContent)
+        .contentMargins(.top, CookLayout.Spacing.small, for: .scrollContent)
         .navigationTitle("找菜")
         .navigationBarTitleDisplayMode(.inline)
         .scrollDismissesKeyboard(.interactively)
@@ -184,7 +178,7 @@ struct CookView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
             let detailShown = sizeClass == .regular ? !detailPath.isEmpty : !cookPath.isEmpty
-            guard scenePhase == .active, router.tab == .cook, decideRequest == nil, !showingFilters, searchIntent == nil, !inspirationVisible, !detailShown else { return }
+            guard scenePhase == .active, router.tab == .cook, decideRequest == nil, !showingFilters, !isSearching, !inspirationVisible, !detailShown else { return }
             decideRequest = CookDecideRequest(batchIDs: nil)
         }
         // 选了食材却一道菜都没有，停留 3 秒后匿名记一次，用来发现缺哪些菜；条件一变就重新计时
@@ -197,17 +191,6 @@ struct CookView: View {
                 return
             }
             feedback.signalEmpty(stuff: session.selectedStuff, tool: session.tool, mode: session.mode)
-        }
-        // 识别提示看过就收起；新的提示会重新计时
-        .task(id: notice) {
-            guard notice != nil else {
-                return
-            }
-            try? await Task.sleep(for: .seconds(5))
-            guard !Task.isCancelled else {
-                return
-            }
-            notice = nil
         }
         .sheet(isPresented: $showingFilters) {
             FilterSheet()
@@ -248,7 +231,7 @@ struct CookView: View {
     /// 底部「查看全部」按钮，只在窄屏显示
     private func resultsButton(matchCount: Int) -> some View {
         NavigationLink(value: ResultsRoute()) {
-            HStack(spacing: 10) {
+            HStack(spacing: CookLayout.Spacing.small) {
                 BasketStack(items: basketItems)
                 Text("查看全部 \(matchCount) 道菜")
                     .foregroundStyle(matchCount > 0 ? ingredientSelectionColors.foreground : Color.secondary)
@@ -284,7 +267,7 @@ struct CookView: View {
     /// 选中（不是取消）食材时，从标签飞一个 emoji 到底部按钮；减弱动态效果或宽屏时不飞
     private func launchFlight(_ item: StuffItem, from frame: CGRect) {
         // 宽屏没有底部按钮，结果直接出现在右栏
-        guard sizeClass != .regular, !reduceMotion, !session.selectedStuff.contains(item.name) else {
+        guard sizeClass != .regular, !isSearching, !reduceMotion, !session.selectedStuff.contains(item.name) else {
             return
         }
         basket.launch(label: item.emoji.isEmpty ? item.name : item.emoji, isEmoji: !item.emoji.isEmpty, from: frame)
@@ -298,16 +281,6 @@ struct CookView: View {
         return ([session.tool ?? "", session.mode.rawValue] + session.selectedStuff.sorted()).joined(separator: "|")
     }
 
-    private func addSuggestion(_ name: String) {
-        let clearedKeyword = !session.keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        withAnimation(.snappy) {
-            session.keyword = ""
-            session.addStuff(name)
-        }
-        input = ""
-        show(InputNotice(kind: .applied, message: "已添加\(name)。" + (clearedKeyword ? "已清除上次菜名搜索。" : "")))
-    }
-
     private func openRecipe(_ route: RecipeRoute) {
         if presentation == .list, sizeClass == .regular {
             // 左侧选择区一直可操作，明确点选另一道菜时直接更新右侧详情。
@@ -316,22 +289,6 @@ struct CookView: View {
             guard cookPath.isEmpty else { return }
             cookPath.append(route)
         }
-    }
-
-    /// 一个输入框承接菜名、已有食材和口语条件，识别结果交给共享会话处理。
-    private func applySentence() {
-        guard searchIntent == nil else { return }
-        let result = session.applyDiscoveryInput(input, in: store)
-        guard result.kind != .empty else { return }
-        input = ""
-        show(InputNotice(kind: .applied, message: result.message))
-    }
-
-    /// 预览由用户主动打开；普通提交继续使用本地规则，远程识别仍在预览中单独确认。
-    private func previewSentence() {
-        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
-        searchIntent = SearchIntentInput(text: text)
     }
 
     private func show(_ notice: InputNotice) {
@@ -378,11 +335,6 @@ struct CookView: View {
             moreExpanded = groups.joined(separator: ",")
         }
     }
-}
-
-private struct SearchIntentInput: Identifiable {
-    let id = UUID()
-    let text: String
 }
 
 /// 输入框下方的一行提示：识别出了什么、没认出来，或者已经选过
