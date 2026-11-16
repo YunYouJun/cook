@@ -64,6 +64,13 @@ struct AboutSettingsView: View {
 
     var body: some View {
         List {
+            Section("App 备案") {
+                Text("苏ICP备2023020936号-2A")
+                    .textSelection(.enabled)
+                Link(destination: URL(string: "https://beian.miit.gov.cn/")!) {
+                    Label("工信部备案查询", systemImage: "arrow.up.right.square")
+                }
+            }
             Section {
                 LabeledContent("版本", value: appVersion)
                 LabeledContent("菜谱", value: "\(store.recipes.count) 道")
