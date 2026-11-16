@@ -1,74 +1,86 @@
 import SwiftUI
 
-/// 列表和厨房布局共用的行内输入，不需要先选择搜索方式。
+/// A single input surface pinned above the search page’s scrollable assistance.
 struct CookQueryField: View {
+    private typealias Space = CookLayout.Spacing
+
     @Binding var text: String
-    var message: String? = nil
+    @FocusState.Binding var focused: Bool
     let submit: () -> Void
-    var preview: (() -> Void)? = nil
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @FocusState private var focused: Bool
+
+    private var canSearch: Bool {
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        searchSurface
+    }
+
+    private var searchSurface: some View {
+        let shape = RoundedRectangle(cornerRadius: CookLayout.fieldCornerRadius, style: .continuous)
+        return Group {
             if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Space.xSmall) {
                     query
                     submitButton
                 }
+                .padding(.vertical, Space.small)
             } else {
-                HStack(spacing: 8) {
+                HStack(spacing: Space.xSmall) {
                     query
                     submitButton
                 }
-            }
-            if let preview, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Button {
-                    focused = false
-                    preview()
-                } label: {
-                    Label("预览条件", systemImage: "slider.horizontal.3")
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(minHeight: 44, alignment: .leading)
-                        .contentShape(Rectangle())
-                }
-                .font(.subheadline)
-                .labelStyle(.titleAndIcon)
-                .buttonStyle(.borderless)
-                .accessibilityHint("先确认识别的条件，也可以在预览里选择智能识别")
-                .accessibilityIdentifier("intent.preview")
-            }
-            if let message, !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text(message)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .listRowInsets(EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12))
+        .padding(.horizontal, Space.medium)
+        .frame(minHeight: CookLayout.searchFieldHeight)
+        .background(CookPalette.inputBackground, in: shape)
+        .overlay {
+            if focused {
+                shape.strokeBorder(CookPalette.primaryAction.opacity(0.6))
+                    .allowsHitTesting(false)
+            }
+        }
     }
 
     private var query: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Space.small) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
-            TextField("菜名、食材，或说一句话", text: $text)
+            TextField("菜名、食材或一句话", text: $text)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .submitLabel(.search)
                 .focused($focused)
                 .onSubmit(performSearch)
+                .tint(CookPalette.primaryAction)
                 .accessibilityLabel("输入菜名或食材")
                 .accessibilityHint("也可以用一句话描述想吃什么")
                 .accessibilityIdentifier("cook.query")
+                .frame(minHeight: CookLayout.minimumHitSize)
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                    focused = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: CookLayout.minimumHitSize, minHeight: CookLayout.minimumHitSize)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("清除输入")
+                .accessibilityIdentifier("cook.clearInput")
+            }
         }
-        .frame(minHeight: 44)
+        .font(.body)
     }
 
     private var submitButton: some View {
         Button(action: performSearch) {
-            HStack(spacing: 8) {
+            HStack(spacing: Space.small) {
                 Image(systemName: "arrow.right.circle.fill")
                 if dynamicTypeSize.isAccessibilitySize {
                     Text("查找")
@@ -76,17 +88,18 @@ struct CookQueryField: View {
                 }
             }
             .font(dynamicTypeSize.isAccessibilitySize ? .body : .title2)
-            .frame(minWidth: 44, minHeight: 44)
+            .foregroundStyle(canSearch ? CookPalette.primaryAction : Color.secondary)
+            .frame(minWidth: CookLayout.minimumHitSize, minHeight: CookLayout.minimumHitSize)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        .disabled(!canSearch)
         .accessibilityLabel("查找")
         .accessibilityIdentifier("cook.submitQuery")
     }
 
     private func performSearch() {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard canSearch else { return }
         submit()
         focused = false
     }

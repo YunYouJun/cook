@@ -13,6 +13,7 @@ struct CookApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var loadResult: Result<RecipeStore, Error>
     @State private var session: CookSession
+    @State private var searchHistory: CookSearchHistory
     @State private var feedback = FeedbackClient()
     @State private var favoriteActions: FavoriteActions
     @State private var accounts: YunlefunAccountStore
@@ -46,6 +47,7 @@ struct CookApp: App {
         let defaultPantry = (try? result.get())?.data.pantry.defaults ?? []
         _loadResult = State(initialValue: result)
         _session = State(initialValue: CookSession(defaultPantry: defaultPantry, context: container.mainContext, dietaryDefaults: inMemory ? nil : .standard))
+        _searchHistory = State(initialValue: CookSearchHistory(defaults: inMemory ? nil : .standard))
         let accounts = YunlefunAccountStore(vault: inMemory ? MemoryYunlefunAccountVault() : KeychainYunlefunAccountVault())
         _accounts = State(initialValue: accounts)
         #if DEBUG
@@ -91,6 +93,11 @@ struct CookApp: App {
         _ai = State(initialValue: ai)
         #if DEBUG
             if uiTesting {
+                let historyDefaults = UserDefaults(suiteName: "cook.search.ui-tests")!
+                if !ProcessInfo.processInfo.arguments.contains("-ui-testing-keep-search-history") {
+                    historyDefaults.removePersistentDomain(forName: "cook.search.ui-tests")
+                }
+                _searchHistory = State(initialValue: CookSearchHistory(defaults: historyDefaults))
                 // Functional tests exercise controls, validation and draft retention.
                 // Avoid XCTest waiting indefinitely for keyboard/menu/layout animation completion.
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-disable-animations") {
@@ -162,6 +169,7 @@ struct CookApp: App {
                 RootView()
                     .environment(store)
                     .environment(session)
+                    .environment(searchHistory)
                     .environment(feedback)
                     .environment(favoriteActions)
                     .environment(workbench)

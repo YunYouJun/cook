@@ -37,8 +37,7 @@ final class CookDiscoveryUITests: XCTestCase {
         reveal(clearKeyword, in: app, towardTop: true)
         XCTAssertTrue(clearKeyword.exists)
 
-        let query = app.textFields["cook.query"]
-        reveal(query, in: app, towardTop: true)
+        let query = app.openCookingSearch()
         query.tap()
         query.typeText("西红柿")
         let suggestion = app.buttons["添加番茄"]
@@ -76,7 +75,7 @@ final class CookDiscoveryUITests: XCTestCase {
         assertObsoleteControlAbsent("discovery.mode", in: app)
         assertObsoleteControlAbsent("cook.discovery", in: app)
         assertObsoleteControlAbsent("discovery.scene.easy", in: app)
-        XCTAssertTrue(app.textFields["cook.query"].isHittable)
+        XCTAssertTrue(app.buttons["cook.search.open"].isHittable)
         let potato = ingredientButton("土豆", in: app)
         XCTAssertTrue(potato.isHittable, "常用食材必须无需滚动就能点选")
         XCTAssertTrue(cookingContent(in: app).staticTexts.matching(NSPredicate(format: "label == %@", "蔬菜")).firstMatch.isHittable, "蔬菜快选应回到首屏")
@@ -135,7 +134,7 @@ final class CookDiscoveryUITests: XCTestCase {
         wait(app.buttons["kitchen.cook"], "exists == true")
         assertObsoleteControlAbsent("cook.discovery", in: app)
         assertObsoleteControlAbsent("discovery.mode", in: app)
-        XCTAssertTrue(app.textFields["cook.query"].exists)
+        XCTAssertTrue(app.buttons["cook.search.open"].exists)
         openFilters(in: app)
         XCTAssertTrue(filterButton("discovery.scene.soup", in: app).isSelected)
         closeFilters(in: app)
@@ -466,10 +465,10 @@ final class CookDiscoveryUITests: XCTestCase {
 
     @MainActor
     private func submit(_ text: String, in app: XCUIApplication) {
-        let query = app.textFields["cook.query"]
-        reveal(query, in: app, towardTop: true)
+        let query = app.openCookingSearch()
         query.tap()
         query.typeText(text + "\n")
+        XCTAssertTrue(query.waitForNonExistence(timeout: 10))
     }
 
     @MainActor

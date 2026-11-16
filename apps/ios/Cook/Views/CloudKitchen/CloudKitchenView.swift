@@ -5,10 +5,8 @@ import SwiftUI
 /// are the same ones used by the ingredient list.
 struct CloudKitchenView: View {
     @Binding var presentation: CookPresentation
-    @Binding var input: String
     let inputMessage: String?
-    let submitInput: () -> Void
-    var previewInput: (() -> Void)? = nil
+    let openSearch: () -> Void
     let decide: (RecipeRoute) -> Void
     let showResults: () -> Void
     var isDetailPresented = false
@@ -47,7 +45,7 @@ struct CloudKitchenView: View {
         GeometryReader { geometry in
             List {
                 Section {
-                    CookQueryField(text: $input, message: inputMessage, submit: submitInput, preview: previewInput)
+                    CookSearchEntry(message: inputMessage, openSearch: openSearch)
                     CookActiveConditions()
                     if needsIngredients {
                         Text("这些条件暂时没找到菜，调整一下再试试。")
@@ -84,7 +82,7 @@ struct CloudKitchenView: View {
             }
             .accessibilityIdentifier("kitchen.content")
             .listSectionSpacing(.compact)
-            .contentMargins(.top, 8, for: .scrollContent)
+            .contentMargins(.top, CookLayout.Spacing.small, for: .scrollContent)
             .scrollDismissesKeyboard(.interactively)
             .scrollContentBackground(.hidden)
             .background(background)
@@ -93,7 +91,7 @@ struct CloudKitchenView: View {
         .navigationBarTitleDisplayMode(.inline)
         .bottomActionBar(background: background) {
             Button(action: cook) {
-                HStack(spacing: 8) {
+                HStack(spacing: CookLayout.Spacing.small) {
                     Image(systemName: "frying.pan.fill")
                     Text(cooking ? "咕嘟咕嘟，菜单出炉…" : "查看全部 \(count) 道菜")
                         .contentTransition(.numericText())
@@ -102,6 +100,7 @@ struct CloudKitchenView: View {
                 .frame(maxWidth: .infinity)
             }
             .prominentButtonStyle()
+            .tint(CookPalette.primaryAction)
             .controlSize(.large)
             .disabled(count == 0 || cooking)
             .accessibilityIdentifier("kitchen.cook")
