@@ -16,14 +16,20 @@ struct CookSearchView: View {
 
     var body: some View {
         ScrollView {
-            CookSearchSupport(text: $input, focused: $focused, preview: previewConditions, addIngredient: addIngredient)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(CookLayout.Spacing.large)
+            CookSearchSupport(
+                text: $input,
+                focused: $focused,
+                submitExample: submit,
+                preview: previewConditions,
+                addIngredient: addIngredient
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(CookLayout.Spacing.large)
         }
         .accessibilityIdentifier("cook.search.content")
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .top, spacing: 0) {
-            CookQueryField(text: $input, focused: $focused, submit: submit)
+            CookQueryField(text: $input, focused: $focused) { submit(input) }
                 .padding(.horizontal, CookLayout.Spacing.large)
                 .padding(.top, CookLayout.Spacing.small)
                 .padding(.bottom, CookLayout.Spacing.medium)
@@ -58,11 +64,11 @@ struct CookSearchView: View {
         }
     }
 
-    private func submit() {
+    private func submit(_ text: String) {
         guard preview == nil else { return }
-        let result = session.applyDiscoveryInput(input, in: store)
+        let result = session.applyDiscoveryInput(text, in: store)
         guard result.kind != .empty else { return }
-        history.record(input)
+        history.record(text)
         finish(result.message)
     }
 

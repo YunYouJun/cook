@@ -3,8 +3,11 @@ import SwiftUI
 
 /// Only show the assistance relevant to the current editing state.
 struct CookSearchSupport: View {
+    private static let exampleQueries = ["番茄炒蛋", "鸡蛋", "冰箱里有土豆和鸡蛋"]
+
     @Binding var text: String
     @FocusState.Binding var focused: Bool
+    let submitExample: (String) -> Void
     let preview: (() -> Void)?
     let addIngredient: (String) -> Void
     @Environment(RecipeStore.self) private var store
@@ -32,10 +35,11 @@ struct CookSearchSupport: View {
                     .accessibilityHint("先确认识别的条件，也可以在预览里选择智能识别")
                     .accessibilityIdentifier("intent.preview")
                 }
-            } else if history.entries.isEmpty {
-                example
             } else {
-                recentSearches
+                examples
+                if !history.entries.isEmpty {
+                    recentSearches.padding(.top, CookLayout.Spacing.small)
+                }
             }
         }
         .font(.subheadline)
@@ -45,12 +49,28 @@ struct CookSearchSupport: View {
         }
     }
 
-    private var example: some View {
-        Text("试试：有土豆和鸡蛋，不要辣")
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityIdentifier("cook.searchExample")
+    private var examples: some View {
+        VStack(alignment: .leading, spacing: CookLayout.Spacing.xSmall) {
+            Text("试试")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .accessibilityAddTraits(.isHeader)
+            CookSearchChipFlow(spacing: CookLayout.Spacing.xSmall) {
+                ForEach(Self.exampleQueries, id: \.self) { example in
+                    Button {
+                        submitExample(example)
+                    } label: {
+                        Label(example, systemImage: "magnifyingglass")
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .foregroundStyle(CookPalette.primaryAction)
+                    .buttonStyle(CookSearchChipStyle(tint: CookPalette.primaryAction))
+                    .accessibilityHint("直接查找并应用这条示例")
+                    .accessibilityIdentifier("cook.search.example.\(example)")
+                }
+            }
+        }
     }
 
     private var recentSearches: some View {

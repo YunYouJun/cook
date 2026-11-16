@@ -112,7 +112,7 @@ struct SearchIntentSheet: View {
         Group {
             if let intent = draft.intent, !intent.isEmpty {
                 Section {
-                    SearchIntentTagFlow {
+                    CookSearchChipFlow {
                         ForEach(intent.query.stuff, id: \.self) { name in
                             SearchIntentTag(title: name, removalLabel: "移除食材\(name)", action: { query.wrappedValue.stuff.removeAll { $0 == name } }) {
                                 if let emoji = store.emoji(forStuff: name) { Text(emoji) }

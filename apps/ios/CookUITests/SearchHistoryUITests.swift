@@ -36,8 +36,41 @@ final class SearchHistoryUITests: XCTestCase {
         app.terminate()
         app.launch()
         app.openCookingSearch()
-        XCTAssertTrue(app.staticTexts["cook.searchExample"].waitForExistence(timeout: 5))
         XCTAssertFalse(oldest.exists)
+        XCTAssertFalse(app.buttons["cook.history.clear"].exists)
+        XCTAssertTrue(app.buttons["cook.search.example.番茄炒蛋"].isHittable)
+    }
+
+    @MainActor
+    func testExamplesSubmitDirectlyAndRemainAvailableWithHistory() {
+        let app = launch()
+        let query = app.openCookingSearch()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        capture(app, "search-page-examples")
+
+        app.buttons["cook.search.example.番茄炒蛋"].tap()
+        XCTAssertTrue(query.waitForNonExistence(timeout: 10))
+        let keyword = app.buttons["cook.clearKeyword"]
+        XCTAssertTrue(keyword.waitForExistence(timeout: 5))
+        XCTAssertEqual(keyword.label, "清除菜名：番茄炒蛋")
+
+        app.openCookingSearch()
+        XCTAssertTrue(app.buttons["cook.history.entry.番茄炒蛋"].waitForExistence(timeout: 5))
+        let sentence = "冰箱里有土豆和鸡蛋"
+        let example = app.buttons["cook.search.example.\(sentence)"]
+        XCTAssertTrue(example.isHittable)
+        example.tap()
+        XCTAssertTrue(query.waitForNonExistence(timeout: 10))
+        XCTAssertFalse(keyword.exists)
+        let chooser = app.collectionViews["cook.chooser"]
+        for name in ["土豆", "鸡蛋"] {
+            let ingredient = chooser.buttons[name]
+            XCTAssertTrue(ingredient.waitForExistence(timeout: 5))
+            XCTAssertTrue(ingredient.isSelected)
+        }
+
+        app.openCookingSearch()
+        XCTAssertTrue(app.buttons["cook.history.entry.\(sentence)"].waitForExistence(timeout: 5))
     }
 
     @MainActor

@@ -24,14 +24,14 @@ struct SearchIntentTag<Icon: View>: View {
             .font(.subheadline)
             .foregroundStyle(tint)
         }
-        .buttonStyle(SearchIntentTagStyle(tint: tint))
+        .buttonStyle(CookSearchChipStyle(tint: tint))
         .tint(tint)
         .accessibilityLabel(removalLabel)
         .accessibilityHint("仅从本次草稿移除")
     }
 }
 
-private struct SearchIntentTagStyle: ButtonStyle {
+struct CookSearchChipStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     let tint: Color
 
@@ -42,15 +42,15 @@ private struct SearchIntentTagStyle: ButtonStyle {
             .frame(minWidth: 44, minHeight: 36)
             .background(tint.opacity(configuration.isPressed ? 0.22 : 0.12), in: Capsule())
             // Keep the compact background inside the full native button hit region.
-            .frame(minWidth: 44, minHeight: 44)
+            .frame(minWidth: CookLayout.minimumHitSize, minHeight: CookLayout.minimumHitSize)
             .contentShape(Rectangle())
             .opacity(isEnabled ? (configuration.isPressed ? 0.7 : 1) : 0.45)
     }
 }
 
 /// Tags keep their natural width and wrap before a long label would be squeezed.
-struct SearchIntentTagFlow: Layout {
-    var spacing: CGFloat = 8
+struct CookSearchChipFlow: Layout {
+    var spacing: CGFloat = CookLayout.Spacing.small
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         arrangement(width: proposal.width, subviews: subviews).size
@@ -65,7 +65,8 @@ struct SearchIntentTagFlow: Layout {
     }
 
     private func arrangement(width: CGFloat?, subviews: Subviews) -> (size: CGSize, frames: [CGRect]) {
-        let availableWidth = width.flatMap { $0.isFinite ? max(44, $0) : nil } ?? .greatestFiniteMagnitude
+        let availableWidth = width.flatMap { $0.isFinite ? max(CookLayout.minimumHitSize, $0) : nil }
+            ?? .greatestFiniteMagnitude
         var frames: [CGRect] = []
         var x: CGFloat = 0
         var y: CGFloat = 0

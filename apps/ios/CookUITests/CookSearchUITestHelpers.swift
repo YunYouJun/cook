@@ -16,7 +16,7 @@ extension XCUIApplication {
         XCTAssertTrue(entry.waitForExistence(timeout: 10), file: file, line: line)
         entry.tap()
         XCTAssertTrue(query.waitForExistence(timeout: 10), file: file, line: line)
-        XCTAssertTrue(query.isHittable, file: file, line: line)
+        XCTAssertTrue(query.wait(for: \.isHittable, toEqual: true, timeout: 5), file: file, line: line)
         return query
     }
 
