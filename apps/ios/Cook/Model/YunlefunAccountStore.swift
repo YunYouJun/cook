@@ -57,6 +57,18 @@ final class YunlefunAccountStore {
         try await credentialForRequest()
     }
 
+    func supportsAccountWebHandoff() async throws -> Bool {
+        try await service.supportsAccountWebHandoff()
+    }
+
+    func approveAccountWebHandoff(fields: [String: String], for subject: String) async throws {
+        guard account?.id == subject else { throw YunlefunAccountError.expiredSession }
+        let credential = try await credentialForRequest()
+        try Task.checkCancellation()
+        guard credential.subject == subject, account?.id == subject else { throw YunlefunAccountError.expiredSession }
+        try await service.approveAccountWebHandoff(fields: fields, credential: credential)
+    }
+
     func credentialForRequest() async throws -> YunlefunCredential {
         guard !isBusy else { throw YunlefunAccountError.unavailable }
         guard let current = credential else {

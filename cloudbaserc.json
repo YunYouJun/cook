@@ -25,6 +25,16 @@
       "ignore": ["*.local"]
     },
     {
+      "name": "cook-fridge-vision",
+      "timeout": 40,
+      "runtime": "Nodejs24.11",
+      "memorySize": 256,
+      "installDependency": false,
+      "handler": "index.main",
+      "envVariables": { "COOK_FRIDGE_VISION_ENABLED": "false", "COOK_FRIDGE_VISION_PROVIDER": "qwen" },
+      "ignore": ["*.local"]
+    },
+    {
       "name": "cook-user-data",
       "timeout": 10,
       "runtime": "Nodejs24.11",

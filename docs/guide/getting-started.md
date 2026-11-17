@@ -91,7 +91,7 @@ open apps/ios/Cook.xcodeproj
 
 完整运行、签名和测试说明见 [iOS README](https://github.com/YunYouJun/cook/blob/main/apps/ios/README.md)。
 
-历史 Capacitor 工程及构建命令已移除；原生 Android 计划使用 Kotlin + Jetpack Compose，尚未创建工程。技术栈和分阶段待办见 [Android 开发计划](/dev/android-roadmap)。
+原生 Android 预览工程位于 `apps/android`，使用 Kotlin + Jetpack Compose。构建步骤见 [Android README](https://github.com/YunYouJun/cook/blob/main/apps/android/README.md)，分阶段待办见 [Android 开发计划](/dev/android-roadmap)。
 
 ## 项目结构
 
@@ -99,7 +99,8 @@ open apps/ios/Cook.xcodeproj
 cook/
 ├── apps/
 │   ├── web/            # Nuxt + Ionic 网页与静态资源
-│   └── ios/            # 原生 SwiftUI 应用与 CookCore
+│   ├── ios/            # 原生 SwiftUI 应用与 CookCore
+│   └── android/        # 原生 Compose 应用与 Kotlin 核心
 ├── docs/               # 产品官网与开发文档
 ├── packages/
 │   ├── data/           # 共享 CSV、JSON、Schema 与测试用例

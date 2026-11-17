@@ -9,7 +9,7 @@ struct WeChatSignupLink: View {
             NavigationLink {
                 WeChatSignupView()
             } label: {
-                Label("使用微信注册", systemImage: "person.badge.plus")
+                SettingsRowLabel("使用微信注册", symbol: "person.badge.plus", color: .green)
             }
             .disabled(accounts.isBusy)
             .accessibilityIdentifier("account.signUpWithWeChat")

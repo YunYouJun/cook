@@ -12,8 +12,9 @@ struct CookView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(CookSession.self) private var session
     @Environment(AppRouter.self) private var router
+    @Environment(\.cookSearchExpansion) private var searchExpansion
     @Environment(FeedbackClient.self) private var feedback
-    @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }, sort: \FridgeItem.expiresAt) private var fridgeItems: [FridgeItem]
+    @Query(filter: FridgeItem.inStock, sort: \FridgeItem.expiresAt) private var fridgeItems: [FridgeItem]
     @State private var showingFilters = false
     /// 冰箱快捷入口按它判断哪些过期了，跨过零点时刷新
     @State private var now = Date()
@@ -36,6 +37,10 @@ struct CookView: View {
         .init(fill: CookPalette.primaryAction, foreground: CookPalette.onPrimaryAction)
     }
 
+    private var isSearchActive: Bool {
+        isSearching || searchExpansion?.isPresented == true
+    }
+
     var body: some View {
         let matchCount = session.candidates(in: store).count
         let emptySignal = emptySignalID(matchCount: matchCount)
@@ -45,7 +50,7 @@ struct CookView: View {
         Group {
             if presentation == .kitchen {
                 NavigationStack(path: $cookPath) {
-                    CloudKitchenView(presentation: $presentation, inputMessage: notice?.message, openSearch: { isSearching = true }, decide: openRecipe, showResults: { cookPath.append(ResultsRoute()) }, isDetailPresented: !cookPath.isEmpty, isSearchPresented: isSearching)
+                    CloudKitchenView(presentation: $presentation, inputMessage: notice?.message, openSearch: openSearch, decide: openRecipe, showResults: { cookPath.append(ResultsRoute()) }, isDetailPresented: !cookPath.isEmpty, isSearchPresented: isSearching)
                         .cookSearch(isPresented: $isSearching, onApplied: show)
                         .navigationDestination(for: ResultsRoute.self) { _ in ResultsView() }
                         .recipeDestinations()
@@ -103,7 +108,7 @@ struct CookView: View {
         @Bindable var session = session
         return List {
             Section {
-                CookSearchEntry(message: notice?.message) { isSearching = true }
+                CookSearchEntry(message: notice?.message, openSearch: openSearch)
                 CookActiveConditions()
             }
             if !warnings.isEmpty {
@@ -137,12 +142,13 @@ struct CookView: View {
             CookInspirationSection(
                 decide: openRecipe,
                 isDetailPresented: sizeClass == .regular ? !detailPath.isEmpty : !cookPath.isEmpty,
-                suppressesShake: decideRequest != nil || showingFilters || isSearching,
+                suppressesShake: decideRequest != nil || showingFilters || isSearchActive,
                 isVisible: $inspirationVisible,
                 presentRandom: { decideRequest = CookDecideRequest(batchIDs: $0) }
             )
             NavigationLink("管理食材和厨具") { PersonalCatalogView() }
         }
+        .trackCookSearchSourceOffset()
         .accessibilityIdentifier("cook.chooser")
         .listSectionSpacing(.compact)
         .contentMargins(.top, CookLayout.Spacing.small, for: .scrollContent)
@@ -178,7 +184,7 @@ struct CookView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
             let detailShown = sizeClass == .regular ? !detailPath.isEmpty : !cookPath.isEmpty
-            guard scenePhase == .active, router.tab == .cook, decideRequest == nil, !showingFilters, !isSearching, !inspirationVisible, !detailShown else { return }
+            guard scenePhase == .active, router.tab == .cook, decideRequest == nil, !showingFilters, !isSearchActive, !inspirationVisible, !detailShown else { return }
             decideRequest = CookDecideRequest(batchIDs: nil)
         }
         // 选了食材却一道菜都没有，停留 3 秒后匿名记一次，用来发现缺哪些菜；条件一变就重新计时
@@ -267,7 +273,7 @@ struct CookView: View {
     /// 选中（不是取消）食材时，从标签飞一个 emoji 到底部按钮；减弱动态效果或宽屏时不飞
     private func launchFlight(_ item: StuffItem, from frame: CGRect) {
         // 宽屏没有底部按钮，结果直接出现在右栏
-        guard sizeClass != .regular, !isSearching, !reduceMotion, !session.selectedStuff.contains(item.name) else {
+        guard sizeClass != .regular, !isSearchActive, !reduceMotion, !session.selectedStuff.contains(item.name) else {
             return
         }
         basket.launch(label: item.emoji.isEmpty ? item.name : item.emoji, isEmoji: !item.emoji.isEmpty, from: frame)
@@ -288,6 +294,14 @@ struct CookView: View {
         } else {
             guard cookPath.isEmpty else { return }
             cookPath.append(route)
+        }
+    }
+
+    private func openSearch(_ sourceScrollOffset: CGFloat) {
+        if let searchExpansion {
+            searchExpansion.open(sourceScrollOffset, show)
+        } else {
+            isSearching = true
         }
     }
 

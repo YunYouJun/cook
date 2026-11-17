@@ -168,18 +168,23 @@ final class FridgeIntakeTests: XCTestCase {
             old.productionDate = FridgeDay.stored(day(11, 1), calendar: calendar)
             old.expiryBasisRaw = FridgeExpiryBasis.manual.rawValue
             container.mainContext.insert(old)
+            let removed = LegacyFridge.FridgeItem()
+            removed.name = "已移出的牛奶"
+            removed.deletedAt = day(11, 5)
+            container.mainContext.insert(removed)
             try container.mainContext.save()
         }
         try autoreleasepool {
             let schema = Schema(Persistence.models)
             let container = try ModelContainer(
                 for: schema, configurations: ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none))
-            let saved = try XCTUnwrap(container.mainContext.fetch(FetchDescriptor<FridgeItem>()).first)
+            let saved = try XCTUnwrap(container.mainContext.fetch(FetchDescriptor<FridgeItem>(predicate: FridgeItem.inStock)).first)
             XCTAssertEqual(saved.name, "西瓜")
             XCTAssertEqual(saved.expiryDay(in: calendar), day(11, 20))
             XCTAssertEqual(saved.expiryBasis, .manual)
             XCTAssertEqual(saved.productionDate, FridgeDay.stored(day(11, 1), calendar: calendar))
             XCTAssertNil(saved.categoryKey)
+            XCTAssertEqual(try container.mainContext.fetchCount(FetchDescriptor<FridgeItem>(predicate: FridgeItem.inHistory)), 0)
             let choice = FridgeCategoryChoice(storedKey: saved.categoryKey)
             let food = try RecipeStore.loadBundled(inMemory: true).food
             XCTAssertEqual(choice.resolved(for: saved.name, in: food, custom: []), .builtIn(.fruit))
@@ -189,7 +194,7 @@ final class FridgeIntakeTests: XCTestCase {
         let schema = Schema(Persistence.models)
         let container = try ModelContainer(
             for: schema, configurations: ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none))
-        let saved = try XCTUnwrap(container.mainContext.fetch(FetchDescriptor<FridgeItem>()).first)
+        let saved = try XCTUnwrap(container.mainContext.fetch(FetchDescriptor<FridgeItem>(predicate: FridgeItem.inStock)).first)
         XCTAssertEqual(saved.categoryKey, FridgeBuiltInCategory.uncategorized.rawValue)
         XCTAssertEqual(saved.expiryBasis, .manual)
         XCTAssertEqual(saved.productionDate, FridgeDay.stored(day(11, 1), calendar: calendar))

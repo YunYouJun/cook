@@ -95,6 +95,9 @@ struct PreferenceSnapshot: Equatable {
 /// 冰箱里的一样食材。同一种可以放好几份（比如前天和今天各买了一盒鸡蛋），各记各的到期日
 @Model
 final class FridgeItem {
+    static let inStock = #Predicate<FridgeItem> { $0.deletedAt == nil && $0.consumedAt == nil }
+    static let inHistory = #Predicate<FridgeItem> { $0.deletedAt == nil && $0.consumedAt != nil }
+
     var name: String = ""
     /// 放进冰箱的那天
     var addedAt: Date = Date()
@@ -110,6 +113,8 @@ final class FridgeItem {
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
     var deletedAt: Date?
+    /// 吃完的食材留在历史里；旧版的软删除记录不会进入历史。
+    var consumedAt: Date?
 
     init(name: String, addedAt: Date, expiresAt: Date) {
         self.name = name
@@ -345,14 +350,43 @@ extension ModelContext {
         return item
     }
 
-    /// 吃完了或者扔了：软删除，其他设备同步后也会消失
-    func removeFromFridge(_ items: [FridgeItem], at date: Date = Date()) {
-        for item in items where item.deletedAt == nil {
-            item.deletedAt = date
+    /// Manual and photo batch intake use the same dates and save the entire selection together.
+    func addEstimatedFridgeItems(_ names: [String], shelfLife: ShelfLife, categoryKey: String? = nil, at date: Date = Date()) throws {
+        try saveUserChange {
+            for name in names {
+                let advice = ProduceStorageAdvice.recommendation(for: name)
+                let item = FridgeItem(name: name, days: advice?.days ?? shelfLife.days(for: name), at: date)
+                item.categoryKey = categoryKey
+                item.storageAdvice = advice?.condition
+                insert(item)
+            }
+        }
+    }
+
+    func markFridgeItemConsumed(_ item: FridgeItem, at date: Date = Date()) throws {
+        guard item.deletedAt == nil, item.consumedAt == nil else { return }
+        try saveUserChange {
+            item.consumedAt = date
             item.updatedAt = date
         }
-        purgeFridgeTombstones(now: date)
-        try? save()
+    }
+
+    func restoreFridgeItem(_ item: FridgeItem, at date: Date = Date()) throws {
+        guard item.deletedAt == nil, item.consumedAt != nil else { return }
+        try saveUserChange {
+            item.consumedAt = nil
+            item.updatedAt = date
+        }
+    }
+
+    /// 删除后保留同步标记，不将食材放入历史。
+    func deleteFridgeItem(_ item: FridgeItem, at date: Date = Date()) throws {
+        guard item.deletedAt == nil, item.consumedAt == nil else { return }
+        try saveUserChange {
+            item.deletedAt = date
+            item.updatedAt = date
+            purgeFridgeTombstones(now: date)
+        }
     }
 
     private func purgeFridgeTombstones(now: Date) {

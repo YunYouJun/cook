@@ -1,3 +1,4 @@
+import SafariServices
 import SwiftUI
 
 /// 类似系统设置的账号摘要；登录与会话提示仍可直接从首页操作。
@@ -36,13 +37,18 @@ struct YunlefunAccountSection: View {
 
 struct YunlefunAccountView: View {
     @Environment(YunlefunAccountStore.self) private var accounts
+    @State private var browser = SettingsWebsitePresenter()
+    @State private var preparingWebsite: Task<Void, Never>?
+    @State private var handoffDelegate: AccountWebHandoffDelegate?
+    @State private var websiteUnavailable = false
+    private static let settingsURL = URL(string: "https://www.yunle.fun/settings?tab=account")!
 
     var body: some View {
         List {
             if let account = accounts.account {
                 Section {
                     VStack(spacing: 12) {
-                        AccountAvatar(url: account.avatarURL, size: 88)
+                        AccountAvatar(url: account.avatarURL, size: 72)
                         VStack(spacing: 4) {
                             Text(account.displayName).font(.title2.weight(.semibold))
                             if let username = account.username, !username.isEmpty {
@@ -51,30 +57,27 @@ struct YunlefunAccountView: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+                    .padding(.vertical, 8)
                     .overlay(alignment: .topTrailing) { AccountActivityIndicator() }
                     .accessibilityElement(children: .combine)
                     .accessibilityValue(accounts.isBusy ? "正在更新账号" : "")
                     .listRowBackground(Color.clear)
                 }
                 Section {
-                    Link(destination: URL(string: "https://www.yunle.fun/settings?tab=account")!) {
-                        Label("管理云乐坊账号", systemImage: "person.crop.circle")
-                    }
-                    Link(destination: URL(string: "https://www.yunle.fun/settings?tab=account")!) {
-                        Label("申请注销账号", systemImage: "person.crop.circle.badge.minus")
-                    }
-                } footer: {
-                    Text("在云乐坊网站管理个人资料、登录方式与账号注销。")
-                }
-                if accounts.canUseWeChat {
-                    Section {
+                    websiteRow("管理云乐坊账号", symbol: "person.crop.circle", color: .indigo,
+                               subtitle: "个人资料与登录方式", isOpening: preparingWebsite != nil,
+                               action: openAccountWebsite)
+                        .disabled(accounts.isBusy || preparingWebsite != nil)
+                        .accessibilityIdentifier("account.manage")
+                    if accounts.canUseWeChat {
                         WeChatAuthorizationButton(binding: true)
                         if let message = accounts.weChatBindingMessage {
                             Text(message).font(.footnote).foregroundStyle(.secondary)
                         }
-                    } footer: {
-                        Text("在微信确认授权后，即可用此微信登录当前云乐坊账号。")
+                    }
+                } footer: {
+                    if accounts.canUseWeChat {
+                        Text("绑定后可用微信登录此账号。")
                     }
                 }
             } else {
@@ -89,23 +92,106 @@ struct YunlefunAccountView: View {
             }
             Section {
                 NavigationLink { DataSyncSettingsView() } label: {
-                    Label("数据与同步", systemImage: "icloud")
+                    SettingsRowLabel("数据与同步", symbol: "icloud.fill", color: .blue)
                 }
             } footer: {
                 Text("会员可在「数据与同步」主动启用收藏和浏览历史跨平台同步。账号记录与本机、iCloud 记录分别保留。")
             }
             if accounts.account != nil {
                 Section {
+                    websiteRow("申请注销账号", symbol: "person.crop.circle.badge.minus", color: .gray) {
+                        browser.open(Self.settingsURL)
+                    }
+                        .accessibilityIdentifier("account.delete")
                     Button("退出登录", role: .destructive) { Task { await accounts.signOut() } }
                         .disabled(accounts.isBusy)
                         .accessibilityIdentifier("account.signOut")
                 } footer: {
-                    Text("仅退出这台设备的云乐坊账号，保留现有的收藏、冰箱和私人菜谱。")
+                    Text("注销需要在云乐坊网站确认。退出登录仅影响这台设备，保留现有的收藏、冰箱和私人菜谱。")
                 }
             }
         }
         .navigationTitle("云乐坊账号")
         .navigationBarTitleDisplayMode(.inline)
+        .background { browser.presentationAnchor }
+        .onDisappear { preparingWebsite?.cancel() }
+        .alert("暂时无法打开账号管理", isPresented: $websiteUnavailable) {
+            Button("好", role: .cancel) {}
+        } message: {
+            Text("请检查网络后，从这里重试。")
+        }
+    }
+
+    private func openAccountWebsite() {
+        guard preparingWebsite == nil, let subject = accounts.account?.id else { return }
+        preparingWebsite = Task {
+            defer { preparingWebsite = nil }
+            do {
+                let supportsHandoff = try await accounts.supportsAccountWebHandoff()
+                guard !Task.isCancelled, accounts.account?.id == subject else { return }
+                guard supportsHandoff else {
+                    browser.open(Self.settingsURL)
+                    return
+                }
+                let handoff = try YunlefunAccountWebHandoff()
+                let delegate = AccountWebHandoffDelegate(handoff: handoff) { fields in
+                    try await accounts.approveAccountWebHandoff(fields: fields, for: subject)
+                }
+                if browser.open(handoff.startURL, delegate: delegate) {
+                    handoffDelegate = delegate // Safari's delegate is weak.
+                }
+            } catch {
+                if !Task.isCancelled, accounts.account?.id == subject { websiteUnavailable = true }
+            }
+        }
+    }
+
+    private func websiteRow(_ title: String, symbol: String, color: Color, subtitle: String? = nil,
+                            isOpening: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                SettingsRowLabel(title, symbol: symbol, color: color, subtitle: subtitle)
+                if isOpening {
+                    ProgressView().controlSize(.small).accessibilityHidden(true)
+                } else {
+                    Image(systemName: "arrow.up.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                }
+            }
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("在 App 内打开云乐坊网站")
+    }
+}
+
+@MainActor
+private final class AccountWebHandoffDelegate: NSObject, SFSafariViewControllerDelegate {
+    private var handoff: YunlefunAccountWebHandoff?
+    private var approval: Task<Void, Never>?
+    private let approve: ([String: String]) async throws -> Void
+
+    init(handoff: YunlefunAccountWebHandoff, approve: @escaping ([String: String]) async throws -> Void) {
+        self.handoff = handoff
+        self.approve = approve
+    }
+
+    func safariViewController(_ controller: SFSafariViewController, initialLoadDidRedirectTo url: URL) {
+        guard let fields = handoff?.approvalFields(for: url) else { return }
+        handoff = nil
+        approval = Task { [approve] in
+            // The website displays a retry message if no approval arrives.
+            try? await approve(fields)
+        }
+    }
+
+    func safariViewControllerDidFinish(_ controller: SFSafariViewController) {
+        handoff = nil
+        approval?.cancel()
+        approval = nil
     }
 }
 
@@ -129,8 +215,11 @@ private struct WeChatAuthorizationButton: View {
 
     var body: some View {
         Button { confirming = true } label: {
-            Label(title, systemImage: "bubble.left.and.bubble.right")
+            SettingsRowLabel(title, symbol: "bubble.left.and.bubble.right", color: .green)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .disabled(accounts.isBusy)
         .accessibilityIdentifier(binding ? "account.bindWeChat" : "account.signInWithWeChat")
         .confirmationDialog(title, isPresented: $confirming, titleVisibility: .visible) {

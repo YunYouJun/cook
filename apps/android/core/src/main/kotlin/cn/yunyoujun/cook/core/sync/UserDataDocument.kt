@@ -1,0 +1,302 @@
+package cn.yunyoujun.cook.core.sync
+
+import cn.yunyoujun.cook.core.model.Recipe
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
+import java.nio.charset.StandardCharsets
+
+/**
+ * Cross-platform v1 user data sync document shared with Web and iOS (`UserDataDocument.swift`).
+ * All timestamps are Unix milliseconds.
+ */
+@Serializable
+data class UserDataDocument(
+    val version: Int = SUPPORTED_VERSION,
+    val favorites: List<Favorite> = emptyList(),
+    val favoriteRemovals: List<Favorite> = emptyList(),
+    val histories: List<Visit> = emptyList(),
+    val historyRemovals: List<Removal> = emptyList(),
+    val historyClearedAt: Double = 0.0,
+) {
+    @Serializable
+    data class Favorite(
+        val id: Int,
+        val time: Double,
+    )
+
+    @Serializable
+    data class RecipeSnapshot(
+        val name: String,
+        val stuff: List<String> = emptyList(),
+        val tools: List<String> = emptyList(),
+        val link: String? = null,
+        val bv: String? = null,
+        val difficulty: String? = null,
+        val emojis: List<String>? = null,
+        val tags: List<String>? = null,
+        val methods: List<String>? = null,
+    ) {
+        constructor(recipe: Recipe) : this(
+            name = recipe.name,
+            stuff = recipe.stuff,
+            tools = recipe.tools,
+            link = recipe.link,
+            bv = recipe.bv,
+            difficulty = recipe.difficulty,
+            emojis = recipe.emojis,
+            tags = recipe.tags,
+            methods = recipe.methods,
+        )
+
+        internal fun orderingKey(): String {
+            fun listOrNull(items: List<String>?): JsonElement =
+                items?.let { JsonArray(it.map(::JsonPrimitive)) } ?: JsonNull
+
+            val fields = JsonArray(
+                listOf(
+                    JsonPrimitive(name),
+                    JsonArray(stuff.map(::JsonPrimitive)),
+                    JsonArray(tools.map(::JsonPrimitive)),
+                    link?.let(::JsonPrimitive) ?: JsonNull,
+                    bv?.let(::JsonPrimitive) ?: JsonNull,
+                    difficulty?.let(::JsonPrimitive) ?: JsonNull,
+                    listOrNull(emojis),
+                    listOrNull(tags),
+                    listOrNull(methods),
+                ),
+            )
+            return fields.toString()
+        }
+    }
+
+    @Serializable
+    data class Visit(
+        val recipe: RecipeSnapshot,
+        val time: Double,
+    )
+
+    @Serializable
+    data class Removal(
+        val name: String,
+        val time: Double,
+    )
+
+    class InvalidDocumentException(message: String = "Invalid UserDataDocument") : Exception(message)
+
+    fun validate() {
+        fun validTime(t: Double): Boolean = t.isFinite() && t >= 0.0
+        fun validName(name: String): Boolean = name.isNotEmpty() && name.length <= MAX_NAME_UTF16_LENGTH
+
+        if (version != SUPPORTED_VERSION ||
+            favorites.size > MAX_FAVORITES ||
+            favoriteRemovals.size > MAX_REMOVALS ||
+            histories.size > MAX_HISTORIES ||
+            historyRemovals.size > MAX_REMOVALS ||
+            !validTime(historyClearedAt) ||
+            favorites.any { it.id < 0 || !validTime(it.time) } ||
+            favoriteRemovals.any { it.id < 0 || !validTime(it.time) } ||
+            histories.any { !validName(it.recipe.name) || !validTime(it.time) } ||
+            historyRemovals.any { !validName(it.name) || !validTime(it.time) }
+        ) {
+            throw InvalidDocumentException("Document constraints violated")
+        }
+
+        val encodedBytes = wireJson.encodeToString(this).toByteArray(StandardCharsets.UTF_8)
+        if (encodedBytes.size > MAX_DOCUMENT_BYTES) {
+            throw InvalidDocumentException("Document exceeds $MAX_DOCUMENT_BYTES bytes")
+        }
+    }
+
+    /**
+     * Same last-operation, delete-wins tie-break, historyClearedAt watermark, and deterministic
+     * tombstone pruning rules as Web `userData.ts` and iOS `UserDataDocument.swift`.
+     */
+    fun merging(
+        other: UserDataDocument,
+        nowMillis: Double = System.currentTimeMillis().toDouble(),
+    ): UserDataDocument {
+        val mergedClearedAt = maxOf(historyClearedAt, other.historyClearedAt)
+        val adds = latestById(favorites + other.favorites)
+        val removes = latestById(favoriteRemovals + other.favoriteRemovals)
+
+        val mergedFavorites = adds.values
+            .filter { (removes[it.id]?.time ?: -1.0) < it.time }
+            .sortedWith(compareBy<Favorite> { it.time }.thenBy { it.id })
+
+        val activeFavoriteRemovals = removes.values
+            .filter { (adds[it.id]?.time ?: -1.0) <= it.time }
+        val mergedFavoriteRemovals = prune(
+            values = activeFavoriteRemovals,
+            nowMillis = nowMillis,
+            timeOf = { it.time },
+            ascComparator = compareBy<Favorite> { it.time }.thenBy { it.id },
+            tieDescComparator = compareBy<Favorite> { it.id },
+        )
+
+        data class VisitKey(val name: String, val time: Double)
+
+        val seenRemovalKeys = HashSet<VisitKey>()
+        val filteredRemovals = (historyRemovals + other.historyRemovals).filter {
+            it.time > mergedClearedAt && seenRemovalKeys.add(VisitKey(it.name, it.time))
+        }
+        val mergedHistoryRemovals = prune(
+            values = filteredRemovals,
+            nowMillis = nowMillis,
+            timeOf = { it.time },
+            ascComparator = Comparator { a, b ->
+                val cmp = a.time.compareTo(b.time)
+                if (cmp != 0) cmp else compareUtf16(a.name, b.name)
+            },
+            tieDescComparator = Comparator { a, b -> compareUtf16(a.name, b.name) },
+        )
+
+        val removedSet = mergedHistoryRemovals.map { VisitKey(it.name, it.time) }.toSet()
+        val selectedHistories = HashMap<VisitKey, Visit>()
+        for (entry in histories + other.histories) {
+            if (entry.time <= mergedClearedAt) continue
+            val key = VisitKey(entry.recipe.name, entry.time)
+            if (key in removedSet) continue
+            val previous = selectedHistories[key]
+            if (previous != null && compareUtf16(entry.recipe.orderingKey(), previous.recipe.orderingKey()) >= 0) {
+                continue
+            }
+            selectedHistories[key] = entry
+        }
+
+        val sortedHistories = selectedHistories.values
+            .sortedWith { a, b ->
+                val cmp = a.time.compareTo(b.time)
+                if (cmp != 0) cmp else compareUtf16(a.recipe.name, b.recipe.name)
+            }
+            .let { list ->
+                if (list.size > MERGED_HISTORY_CAP) list.takeLast(MERGED_HISTORY_CAP) else list
+            }
+
+        return UserDataDocument(
+            version = SUPPORTED_VERSION,
+            favorites = mergedFavorites,
+            favoriteRemovals = mergedFavoriteRemovals,
+            histories = sortedHistories,
+            historyRemovals = mergedHistoryRemovals,
+            historyClearedAt = mergedClearedAt,
+        )
+    }
+
+    /**
+     * SAF 离线文件导出/导入的非破坏性增量合并：
+     * - 保留全部现有收藏与历史，绝不因导入文件的 `favoriteRemovals` / `historyRemovals` / `historyClearedAt` 删除既有记录；
+     * - 也不会将本地既有历史按云端 `MERGED_HISTORY_CAP (200)` 截断。
+     */
+    fun importMerging(incoming: UserDataDocument): UserDataDocument {
+        val favoritesById = latestById(favorites + incoming.favorites)
+        val mergedFavorites = favoritesById.values
+            .sortedWith(compareBy<Favorite> { it.time }.thenBy { it.id })
+            .takeLast(MAX_FAVORITES)
+        val retainedFavIds = mergedFavorites.mapTo(HashSet()) { it.id }
+        val mergedFavoriteRemovals = favoriteRemovals
+            .filterNot { it.id in retainedFavIds }
+            .take(MAX_REMOVALS)
+
+        data class VisitKey(val name: String, val time: Double)
+        val selectedHistories = LinkedHashMap<VisitKey, Visit>()
+        for (entry in histories + incoming.histories) {
+            val key = VisitKey(entry.recipe.name, entry.time)
+            val prev = selectedHistories[key]
+            if (prev != null && compareUtf16(entry.recipe.orderingKey(), prev.recipe.orderingKey()) >= 0) {
+                continue
+            }
+            selectedHistories[key] = entry
+        }
+        val mergedHistories = selectedHistories.values
+            .sortedWith { a, b ->
+                val cmp = a.time.compareTo(b.time)
+                if (cmp != 0) cmp else compareUtf16(a.recipe.name, b.recipe.name)
+            }
+            .let { list ->
+                if (list.size > MAX_HISTORIES) list.takeLast(MAX_HISTORIES) else list
+            }
+        val retainedHistoryKeys = mergedHistories.mapTo(HashSet()) { VisitKey(it.recipe.name, it.time) }
+        val mergedHistoryRemovals = historyRemovals
+            .filterNot { VisitKey(it.name, it.time) in retainedHistoryKeys }
+            .take(MAX_REMOVALS)
+
+        return UserDataDocument(
+            version = SUPPORTED_VERSION,
+            favorites = mergedFavorites,
+            favoriteRemovals = mergedFavoriteRemovals,
+            histories = mergedHistories,
+            historyRemovals = mergedHistoryRemovals,
+            historyClearedAt = historyClearedAt,
+        )
+    }
+
+    companion object {
+        const val SUPPORTED_VERSION = 1
+        const val PROTOCOL_VERSION = 2
+        const val MAX_DOCUMENT_BYTES = 256 * 1024
+        const val MAX_FAVORITES = 5000
+        const val MAX_HISTORIES = 500
+        const val MAX_REMOVALS = 1000
+        const val MAX_NAME_UTF16_LENGTH = 200
+        const val MERGED_HISTORY_CAP = 200
+        const val PRUNED_REMOVAL_CAP = 500
+        const val REMOVAL_RETENTION_MS = 180.0 * 24 * 60 * 60 * 1000
+
+        // Sync service responses may include server metadata (e.g. updatedAt).
+        val wireJson = Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
+
+        fun decode(rawJson: String): UserDataDocument {
+            val rawBytes = rawJson.toByteArray(StandardCharsets.UTF_8)
+            if (rawBytes.size > MAX_DOCUMENT_BYTES) {
+                throw InvalidDocumentException("Raw JSON exceeds $MAX_DOCUMENT_BYTES bytes")
+            }
+            val value = try {
+                wireJson.decodeFromString<UserDataDocument>(rawJson)
+            } catch (e: Exception) {
+                throw InvalidDocumentException(e.message ?: "Malformed JSON")
+            }
+            value.validate()
+            return value
+        }
+
+        private fun latestById(items: List<Favorite>): Map<Int, Favorite> {
+            val result = HashMap<Int, Favorite>()
+            for (item in items) {
+                val existing = result[item.id]
+                if (existing == null || item.time > existing.time) {
+                    result[item.id] = item
+                }
+            }
+            return result
+        }
+
+        private fun <T> prune(
+            values: List<T>,
+            nowMillis: Double,
+            timeOf: (T) -> Double,
+            ascComparator: Comparator<T>,
+            tieDescComparator: Comparator<T>,
+        ): List<T> {
+            val cutoff = nowMillis - REMOVAL_RETENTION_MS
+            return values
+                .filter { timeOf(it) >= cutoff }
+                .sortedWith { a, b ->
+                    val ta = timeOf(a)
+                    val tb = timeOf(b)
+                    if (ta == tb) tieDescComparator.compare(a, b) else tb.compareTo(ta)
+                }
+                .take(PRUNED_REMOVAL_CAP)
+                .sortedWith(ascComparator)
+        }
+
+        private fun compareUtf16(a: String, b: String): Int = a.compareTo(b)
+    }
+}

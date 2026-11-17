@@ -1,0 +1,44 @@
+{
+  "description": "Web（test/sharedCoreContracts.test.ts）、iOS（CookCore）与 Android（:core）共用的菜谱正文块与展示结构用例。",
+  "blockDecodeCase": {
+    "rawJson": "{\"blocks\":[{\"type\":\"heading\",\"text\":\"操作\"},{\"type\":\"list\",\"ordered\":true,\"start\":3,\"items\":[\"切块\"]},{\"type\":\"image\",\"src\":\"howtocook/0123456789abcdef.webp\",\"width\":1080,\"height\":720,\"alt\":\"成品\"},{\"type\":\"paragraph\",\"text\":\"出锅\"},{\"type\":\"table\",\"rows\":[]}]}",
+    "expectedTypes": ["heading", "list", "image", "paragraph", "paragraph"],
+    "expectedOrderedListStart": 3,
+    "expectedImageCount": 1
+  },
+  "unknownSectionsCase": {
+    "rawBlocks": [
+      { "type": "paragraph", "text": "预估烹饪难度：★★，请小心操作" },
+      { "type": "heading", "text": "必备原料和工具" },
+      { "type": "paragraph", "text": "请使用耐热容器" },
+      { "type": "list", "ordered": false, "start": 1, "items": ["鸡蛋", "碗"] },
+      { "type": "heading", "text": "计算" },
+      { "type": "list", "ordered": false, "start": 1, "items": ["鸡蛋 = 2 个", "盐适量"] },
+      { "type": "heading", "text": "操作" },
+      { "type": "list", "ordered": false, "start": 1, "items": ["搅拌", "搅拌"] },
+      { "type": "image", "src": "egg.webp", "width": 100, "height": 100 },
+      { "type": "paragraph", "text": "蒸熟后取出" },
+      { "type": "heading", "text": "附加内容" },
+      { "type": "list", "ordered": true, "start": 1, "items": ["也可以煎"] }
+    ],
+    "expectedDifficultyNull": true,
+    "expectedQuantitiesCount": 0,
+    "expectedStepIds": ["1|搅拌", "2|搅拌", "1|蒸熟后取出"],
+    "expectedLastStepText": "蒸熟后取出",
+    "prefixParagraphText": "新增简介"
+  },
+  "bundledRecipe250": {
+    "id": 250,
+    "expectedSourceFingerprint": "12257c0baaf2700b",
+    "expectedDifficulty": 2,
+    "expectedCalories": "252 大卡",
+    "expectedIngredientsCount": 6,
+    "expectedStepCount": 11,
+    "expectedAmounts": {
+      "糖（可选）": "0-2g * 份数",
+      "鸡蛋": "1.5 个 * 份数，向上取整",
+      "食用油": "4ml * 鸡蛋/个"
+    },
+    "expectedMissingAmountFor": "鸡"
+  }
+}

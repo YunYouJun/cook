@@ -966,4 +966,37 @@ final class CookUITests: XCTestCase {
         tap(app.buttons["吃完了，移出冰箱"])
         wait(app.staticTexts["冰箱是空的"], "exists == true")
     }
+
+    @MainActor
+    func testFridgeHistoryRestoresConsumedFoodButExcludesDeletedFood() {
+        let app = XCUIApplication()
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launch()
+        tap(app.buttons["冰箱"].firstMatch)
+        tap(app.buttons["放点食材"])
+        tap(app.buttons["番茄"])
+        tap(app.buttons["放进去（1）"])
+
+        let item = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "番茄")).firstMatch
+        let history = app.navigationBars["冰箱"].buttons["fridge.history"]
+        wait(item, "exists == true")
+        item.swipeLeft()
+        tap(app.buttons["吃完了"])
+        wait(app.staticTexts["冰箱是空的"], "exists == true")
+
+        tap(history)
+        let historyBar = app.navigationBars["冰箱历史"]
+        wait(historyBar, "exists == true")
+        tap(app.buttons["恢复番茄"])
+        wait(app.staticTexts["还没有吃完的食材"], "exists == true")
+        tap(historyBar.buttons["冰箱"])
+
+        wait(item, "exists == true")
+        item.swipeLeft()
+        tap(app.buttons["删除"])
+        wait(app.staticTexts["冰箱是空的"], "exists == true")
+        tap(history)
+        wait(app.staticTexts["还没有吃完的食材"], "exists == true")
+    }
 }

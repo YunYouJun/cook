@@ -86,7 +86,7 @@ final class FridgeTests: XCTestCase {
         XCTAssertEqual(FridgeReminder.names(["菠菜", "鸡蛋", "番茄", "豆腐"]), "菠菜、鸡蛋、番茄等 4 样")
     }
 
-    func testAddAndRemoveFridgeItems() throws {
+    func testFridgeExpiryKeepsTheSameDayAcrossTimeZones() throws {
         let container = Persistence.makeContainer(inMemory: true)
         let context = container.mainContext
         let item = context.addToFridge("鸡蛋", days: 30, at: day(10, 20, hour: 18), calendar: calendar)
@@ -96,10 +96,36 @@ final class FridgeTests: XCTestCase {
         losAngeles.timeZone = TimeZone(identifier: "America/Los_Angeles")!
         let there = losAngeles.dateComponents([.year, .month, .day, .hour], from: item.expiryDay(in: losAngeles))
         XCTAssertEqual([there.year, there.month, there.day, there.hour], [2026, 11, 19, 0])
+    }
 
-        context.removeFromFridge([item], at: day(10, 21))
-        let active = try context.fetch(FetchDescriptor<FridgeItem>(predicate: #Predicate { $0.deletedAt == nil }))
-        XCTAssertTrue(active.isEmpty)
-        XCTAssertEqual(try context.fetchCount(FetchDescriptor<FridgeItem>()), 1, "软删除，记录留着同步删除")
+    func testFridgeHistorySurvivesDeletionCleanupAndRestoresTheOriginalBatch() throws {
+        let container = Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let addedAt = day(10, 20, hour: 18)
+        let consumed = context.addToFridge("鸡蛋", days: 30, at: addedAt, calendar: calendar)
+        consumed.categoryKey = "custom:eggs"
+        let mistaken = context.addToFridge("鸡蛋", days: 7, at: day(10, 21), calendar: calendar)
+        let later = context.addToFridge("番茄", days: 7, at: day(12, 1), calendar: calendar)
+        let consumedAt = day(10, 22)
+        try context.markFridgeItemConsumed(consumed, at: consumedAt)
+        try context.deleteFridgeItem(mistaken, at: day(10, 22))
+        XCTAssertEqual(try context.fetch(FetchDescriptor<FridgeItem>(predicate: FridgeItem.inStock)).map(\.name), ["番茄"])
+        XCTAssertNotNil(mistaken.deletedAt, "删除记录留着同步，但不进历史")
+
+        try context.deleteFridgeItem(later, at: day(12, 2))
+        let reopened = ModelContext(container)
+        let history = try reopened.fetch(FetchDescriptor<FridgeItem>(predicate: FridgeItem.inHistory))
+        XCTAssertEqual(history.map(\.persistentModelID), [consumed.persistentModelID])
+        XCTAssertEqual(history.first?.consumedAt, consumedAt)
+        XCTAssertEqual(try reopened.fetchCount(FetchDescriptor<FridgeItem>()), 2, "清理过期删除标记时保留吃完的记录")
+
+        let saved = try XCTUnwrap(history.first)
+        try reopened.restoreFridgeItem(saved, at: day(12, 3))
+        let active = try reopened.fetch(FetchDescriptor<FridgeItem>(predicate: FridgeItem.inStock))
+        XCTAssertEqual(active.map(\.persistentModelID), [consumed.persistentModelID])
+        XCTAssertEqual(active.first?.addedAt, addedAt)
+        XCTAssertEqual(active.first?.expiryDay(in: calendar), day(11, 19))
+        XCTAssertEqual(active.first?.categoryKey, "custom:eggs")
+        XCTAssertEqual(try reopened.fetchCount(FetchDescriptor<FridgeItem>(predicate: FridgeItem.inHistory)), 0)
     }
 }

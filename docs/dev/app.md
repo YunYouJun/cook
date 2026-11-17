@@ -25,7 +25,7 @@ Bundle ID 为 `fun.yunle.cook`。构建和测试见 [iOS README](https://github.
 
 ## 原生 Android
 
-采用 Kotlin + Jetpack Compose，按共享核心、本地做菜流程、文件迁移、账号与同步、发布的顺序推进。技术栈、模块边界、各阶段待办和验收条件见 [Android 开发方案与计划](./android-roadmap)，选型依据见 [0016](../decisions/0016-native-android-and-capacitor-retirement)。
+原生预览工程位于 `apps/android`，采用 Kotlin + Jetpack Compose。构建与测试见 [Android README](https://github.com/YunYouJun/cook/blob/main/apps/android/README.md)，分阶段验收见 [Android 开发方案与计划](./android-roadmap)，选型依据见 [0016](../decisions/0016-native-android-and-capacitor-retirement)。
 
 ## Capacitor 外壳退役
 

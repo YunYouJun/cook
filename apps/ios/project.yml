@@ -17,7 +17,7 @@ settings:
   base:
     SWIFT_VERSION: '5.0'
     MARKETING_VERSION: 2.0.0
-    CURRENT_PROJECT_VERSION: '15'
+    CURRENT_PROJECT_VERSION: '22'
     DEVELOPMENT_TEAM: ${APPLE_DEVELOPMENT_TEAM}
     CODE_SIGN_STYLE: Automatic
 targets:
@@ -69,6 +69,7 @@ targets:
         CookAIServiceURL: $(COOK_AI_SERVICE_URL)
         # Guidance has its own capability and deployment gate; never infer it from search.
         CookAIGuidanceServiceURL: $(COOK_AI_GUIDANCE_SERVICE_URL)
+        CookFridgeVisionServiceURL: $(COOK_FRIDGE_VISION_SERVICE_URL)
         # 只在 SDK、账号绑定与审核均就绪后开启。
         CookWeChatLoginEnabled: $(COOK_WECHAT_LOGIN_ENABLED)
         CookWeChatSignupEnabled: $(COOK_WECHAT_SIGNUP_ENABLED)
@@ -86,7 +87,7 @@ targets:
             NSUbiquitousContainerSupportedFolderLevels: ANY
         # 大图里的分享按钮可以把配图存到相册
         NSPhotoLibraryAddUsageDescription: 把菜谱配图存到相册。
-        NSCameraUsageDescription: 拍摄食品包装日期或蔬果，在本机识别后记录冰箱食材。
+        NSCameraUsageDescription: 拍摄食品包装或冰箱食材。离线识别在本机处理；AI 识图仅在你同意后上传这张照片。
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: true
         UIBackgroundModes: [remote-notification]
@@ -130,6 +131,8 @@ targets:
         COOK_MEMBERSHIP_PURCHASES_ENABLED: NO
         COOK_AI_SERVICE_URL: https://api.yunle.fun/cook-ai-intent
         COOK_AI_GUIDANCE_SERVICE_URL: https://api.yunle.fun/cook-ai-guidance
+        # An empty override hides online vision without affecting offline photo recognition.
+        COOK_FRIDGE_VISION_SERVICE_URL: https://api.yunle.fun/cook-fridge-vision
         TARGETED_DEVICE_FAMILY: '1,2'
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # 构建脚本要读仓库里的 packages/data

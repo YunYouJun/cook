@@ -17,6 +17,7 @@ struct Chip: View {
     /// 点击时报告标签在屏幕上的位置，做「入篮」动画用；不需要时不传
     var onTap: ((CGRect) -> Void)? = nil
     let action: () -> Void
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var frameBox = FrameBox()
 
@@ -26,9 +27,7 @@ struct Chip: View {
             action()
         } label: {
             HStack(spacing: 4) {
-                if isSelected {
-                    Image(systemName: "checkmark").accessibilityHidden(true)
-                } else if let imageName {
+                if let imageName {
                     Image(imageName)
                         .renderingMode(.template)
                         .resizable()
@@ -49,6 +48,19 @@ struct Chip: View {
             .frame(maxWidth: .infinity, minHeight: 44)
             .foregroundStyle(isSelected ? selectionColors.foreground : Color.primary)
             .background(isSelected ? selectionColors.fill : Color(uiColor: .secondarySystemFill), in: Capsule())
+            .overlay(alignment: .topTrailing) {
+                if isSelected && differentiateWithoutColor {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(selectionColors.fill)
+                        .frame(width: 14, height: 14)
+                        .background(selectionColors.foreground, in: Circle())
+                        .padding(.trailing, 4)
+                        .offset(y: -4)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
             .contentShape(Capsule())
             // Animate the visual label, keeping the native Button and its accessibility node stable.
             .modifier(SelectBounce(isSelected: isSelected, enabled: !reduceMotion))

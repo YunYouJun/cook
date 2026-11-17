@@ -118,6 +118,7 @@ struct RecipeDetailView: View {
                     Label("厨房工作台", systemImage: "checklist")
                 }
                 .accessibilityIdentifier("recipe.openKitchen")
+                CookedRecipeRecordRow(recipeID: .catalog(recipe.id))
             }
 
             ForEach(groups, id: \.label) { group in
@@ -224,5 +225,30 @@ struct RecipeDetailView: View {
                 openURL(webURL)
             }
         }
+    }
+}
+
+struct CookedRecipeRecordRow: View {
+    @Environment(CookedRecipeRecords.self) private var records
+    let recipeID: CookedRecipeRecords.RecipeID
+
+    var body: some View {
+        let isCooked = records.recordedAt(for: recipeID) != nil
+        Button {
+            records.setCooked(!isCooked, for: recipeID)
+        } label: {
+            HStack {
+                Label(isCooked ? "已做过" : "我做过这道", systemImage: isCooked ? "checkmark.circle.fill" : "checkmark.circle")
+                    .foregroundStyle(isCooked ? Color.primary : Color.accentColor)
+                if isCooked {
+                    Spacer(minLength: 8)
+                    Text("撤销")
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+        }
+        .accessibilityLabel(isCooked ? "撤销做过记录" : "我做过这道")
+        .accessibilityValue(isCooked ? "已做过" : "")
+        .accessibilityIdentifier("recipe.cookedRecord")
     }
 }

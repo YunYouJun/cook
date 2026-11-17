@@ -9,7 +9,7 @@ struct FridgeView: View {
     @Environment(CookSession.self) private var session
     @Environment(\.modelContext) private var context
     @Environment(AppRouter.self) private var router
-    @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }, sort: \FridgeItem.expiresAt) private var items: [FridgeItem]
+    @Query(filter: FridgeItem.inStock, sort: \FridgeItem.expiresAt) private var items: [FridgeItem]
     @Query(sort: \FridgeCategory.name) private var categories: [FridgeCategory]
     @AppStorage(FridgeReminder.enabledKey) private var remindersEnabled = false
     @AppStorage(FridgeReminder.promptDismissedKey) private var promptDismissed = false
@@ -17,18 +17,21 @@ struct FridgeView: View {
     @State private var sheet: Sheet?
     @State private var grouping = Grouping.expiry
     @State private var now = Date()
+    @State private var saveError = false
 
     private enum Grouping { case expiry, category }
+    private enum Route: Hashable { case history }
 
     private enum Sheet: Identifiable {
-        case manual, photo, categories, edit(FridgeItem)
+        case manual, photo, vision, categories, edit(FridgeItem)
 
-        enum ID: Hashable { case manual, photo, categories, edit(PersistentIdentifier) }
+        enum ID: Hashable { case manual, photo, vision, categories, edit(PersistentIdentifier) }
 
         var id: ID {
             switch self {
             case .manual: return .manual
             case .photo: return .photo
+            case .vision: return .vision
             case .categories: return .categories
             case let .edit(item): return .edit(item.persistentModelID)
             }
@@ -44,6 +47,7 @@ struct FridgeView: View {
         let fresh = groups[1] ?? []
         let expired = groups[2] ?? []
         let usable = soon + fresh
+        let visionAvailable = FridgeVisionSheet.isAvailable
 
         NavigationStack(path: $path) {
             Group {
@@ -55,10 +59,16 @@ struct FridgeView: View {
                     } actions: {
                         Button("放点食材") { sheet = .manual }
                             .buttonStyle(.borderedProminent)
+                        if visionAvailable {
+                            visionEntry.buttonStyle(.bordered)
+                        }
                         Button("拍照识别", systemImage: "camera") { sheet = .photo }
                     }
                 } else {
                     List {
+                        if visionAvailable {
+                            Section { visionEntry }
+                        }
                         if !remindersEnabled, !promptDismissed {
                             ReminderPrompt(onDismiss: { promptDismissed = true })
                         }
@@ -95,8 +105,11 @@ struct FridgeView: View {
                 }
             }
             .navigationTitle("冰箱")
+            .fridgeSaveError(isPresented: $saveError)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button("冰箱历史", systemImage: "clock.arrow.circlepath") { path.append(Route.history) }
+                        .accessibilityIdentifier("fridge.history")
                     Button("管理分类", systemImage: "folder") { sheet = .categories }
                     Button { sheet = .photo } label: {
                         Label("拍照识别", systemImage: "camera")
@@ -111,11 +124,15 @@ struct FridgeView: View {
             .navigationDestination(for: ResultsRoute.self) { _ in
                 ResultsView()
             }
+            .navigationDestination(for: Route.self) { _ in
+                FridgeHistoryView()
+            }
             .recipeDestinations()
             .sheet(item: $sheet) { route in
                 switch route {
                 case .manual: AddFridgeSheet()
                 case .photo: FridgePhotoSheet()
+                case .vision: FridgeVisionSheet(onUseOffline: { sheet = .photo })
                 case .categories: FridgeCategoryManager()
                 case let .edit(item): FridgeItemSheet(item: item)
                 }
@@ -129,6 +146,11 @@ struct FridgeView: View {
             sheet = nil
             grouping = .expiry
         }
+    }
+
+    private var visionEntry: some View {
+        Button("AI 识图（会员）", systemImage: "sparkles") { sheet = .vision }
+            .accessibilityIdentifier("fridge.vision.open")
     }
 
     @ViewBuilder
@@ -190,12 +212,23 @@ struct FridgeView: View {
             } label: {
                 FridgeRow(item: item, emoji: emoji(for: item.name), freshness: Freshness(expiresAt: item.expiryDay(), now: now))
             }
-            .swipeActions(edge: .trailing) {
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 Button("吃完了", systemImage: "checkmark") {
-                    withAnimation { context.removeFromFridge([item]) }
+                    changeStock { try context.markFridgeItemConsumed(item) }
                 }
                 .tint(.green)
+                Button("删除", systemImage: "trash", role: .destructive) {
+                    changeStock { try context.deleteFridgeItem(item) }
+                }
             }
+        }
+    }
+
+    private func changeStock(_ change: () throws -> Void) {
+        do {
+            try withAnimation { try change() }
+        } catch {
+            saveError = true
         }
     }
 
@@ -210,6 +243,60 @@ struct FridgeView: View {
         }
         session.use(list.map(\.name))
         path.append(ResultsRoute())
+    }
+}
+
+private struct FridgeHistoryView: View {
+    @Environment(\.modelContext) private var context
+    @Query(filter: FridgeItem.inHistory, sort: \FridgeItem.consumedAt, order: .reverse) private var items: [FridgeItem]
+    @State private var saveError = false
+
+    var body: some View {
+        Group {
+            if items.isEmpty {
+                ContentUnavailableView("还没有吃完的食材", systemImage: "clock.arrow.circlepath",
+                                       description: Text("标记「吃完了」后，可以在这里把食材恢复到冰箱。"))
+            } else {
+                List {
+                    Section {
+                        ForEach(items) { item in
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(item.name)
+                                        .font(.headline)
+                                    if let consumedAt = item.consumedAt {
+                                        Text("吃完：\(consumedAt.formatted(date: .abbreviated, time: .shortened))")
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Text("放入：\(item.addedAt.formatted(date: .abbreviated, time: .omitted))")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .accessibilityElement(children: .combine)
+                                Spacer(minLength: 0)
+                                Button("恢复") { restore(item) }
+                                    .buttonStyle(.bordered)
+                                    .accessibilityLabel("恢复\(item.name)")
+                            }
+                        }
+                    } footer: {
+                        Text("恢复后保留原来的放入日期、到期日和分类。")
+                    }
+                }
+            }
+        }
+        .navigationTitle("冰箱历史")
+        .navigationBarTitleDisplayMode(.inline)
+        .fridgeSaveError(isPresented: $saveError)
+    }
+
+    private func restore(_ item: FridgeItem) {
+        do {
+            try withAnimation { try context.restoreFridgeItem(item) }
+        } catch {
+            saveError = true
+        }
     }
 }
 
@@ -482,17 +569,8 @@ struct AddFridgeSheet: View {
     }
 
     private func save() {
-        let now = Date()
         do {
-            try context.saveUserChange {
-                for name in selected {
-                    let advice = ProduceStorageAdvice.recommendation(for: name)
-                    let item = FridgeItem(name: name, days: advice?.days ?? store.data.shelfLife.days(for: name), at: now)
-                    item.categoryKey = category.storedKey
-                    item.storageAdvice = advice?.condition
-                    context.insert(item)
-                }
-            }
+            try context.addEstimatedFridgeItems(selected, shelfLife: store.data.shelfLife, categoryKey: category.storedKey)
             dismiss()
         } catch {
             saveError = true
@@ -500,7 +578,7 @@ struct AddFridgeSheet: View {
     }
 }
 
-/// 点开冰箱里的一样食材：改到期日，或者移出冰箱
+/// 点开冰箱里的一样食材：改到期日、标记吃完或删除
 private struct FridgeItemSheet: View {
     @Environment(RecipeStore.self) private var store
     @Environment(\.modelContext) private var context
@@ -538,10 +616,14 @@ private struct FridgeItemSheet: View {
                     Text(item.storageAdvice ?? "食用日期仅供安排食用，请核对包装日期和储存条件。")
                 }
                 Section {
-                    Button("吃完了，移出冰箱", role: .destructive) {
-                        context.removeFromFridge([item])
-                        dismiss()
+                    Button("吃完了，移出冰箱") {
+                        changeStock { try context.markFridgeItemConsumed(item) }
                     }
+                    Button("删除食材", role: .destructive) {
+                        changeStock { try context.deleteFridgeItem(item) }
+                    }
+                } footer: {
+                    Text("吃完的食材可以在冰箱历史中恢复。删除的食材不会进入历史。")
                 }
             }
             .navigationTitle(item.name)
@@ -555,6 +637,15 @@ private struct FridgeItemSheet: View {
                     Button("完成", action: save)
                 }
             }
+        }
+    }
+
+    private func changeStock(_ change: () throws -> Void) {
+        do {
+            try change()
+            dismiss()
+        } catch {
+            saveError = true
         }
     }
 

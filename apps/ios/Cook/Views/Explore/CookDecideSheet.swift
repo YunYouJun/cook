@@ -84,6 +84,12 @@ private struct CookDecideSheetModifier: ViewModifier {
 
 /// 按当前候选快照选一道菜。先换牌，确认后再进入既有详情。
 private struct CookDecideSheet: View {
+    // SwiftUI measures the fraction against the maximum detent, not the entire screen.
+    private static let compactDetent = PresentationDetent.fraction(0.71)
+    private static let compactCardMinHeight: CGFloat = 204
+    // Native large button styles add vertical padding around the label.
+    private static let actionLabelMinHeight: CGFloat = 24
+
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
     @Environment(\.dismiss) private var dismiss
@@ -97,13 +103,24 @@ private struct CookDecideSheet: View {
     @Binding var lastDecidedID: Int?
     let onOpen: (RecipeRoute) -> Void
 
-    @State private var displayed: Recipe?
+    @State private var pages = DecidePages()
+    @State private var activePool: [Recipe] = []
+    @State private var rollingRecipe: Recipe?
     @State private var shuffling = false
     @State private var spin = 0
     @State private var settledCount = 0
     @State private var rollToken = 0
     @State private var showingFilters = false
-    @State private var detent: PresentationDetent = .large
+    @State private var detent = CookDecideSheet.compactDetent
+    @State private var pageDirection = DecidePageDirection.next
+    @State private var dragDistance: CGFloat = 0
+
+    private var displayed: Recipe? { rollingRecipe ?? pages.current }
+    private var canReroll: Bool { activePool.count > 1 }
+
+    private var isCompact: Bool {
+        !dynamicTypeSize.isAccessibilitySize && detent == Self.compactDetent
+    }
 
     private struct RollTaskID: Hashable {
         let pool: [Recipe]
@@ -114,38 +131,26 @@ private struct CookDecideSheet: View {
         let snapshot = session.candidateSnapshot(in: store, ignoringKeyword: request.ignoringKeyword)
         let pool = resolvedPool(snapshot)
         let lines = CookDiscoverySummary.lines(session: session, store: store, ignoringKeyword: request.ignoringKeyword)
+        let context = lines.isEmpty ? CookDiscoverySummary.idlePrompt(session: session) : lines.joined(separator: " · ")
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(lines.isEmpty ? CookDiscoverySummary.idlePrompt(session: session) : lines.joined(separator: " · "))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier("cook.decide.context")
-                    if pool.isEmpty {
-                        emptyState
-                    } else {
-                        stage(snapshot)
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 12)
-                .frame(maxWidth: 560)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .accessibilityIdentifier("cook.decide.sheet")
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 14) {
+                results(snapshot, context: context, hasCandidates: !pool.isEmpty)
                 if !pool.isEmpty {
-                    actions(pool: pool)
+                    actions(canReroll: pool.count > 1)
                 }
             }
             .navigationTitle("今天吃什么")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("关闭") { dismiss() }
-                        .accessibilityIdentifier("cook.decide.close")
+                    Button { dismiss() } label: {
+                        Label("关闭", systemImage: "xmark")
+                            .labelStyle(.iconOnly)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel("关闭")
+                    .accessibilityIdentifier("cook.decide.close")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingFilters = true } label: {
@@ -156,16 +161,43 @@ private struct CookDecideSheet: View {
                 }
             }
         }
-        .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium, .large], selection: $detent)
+        .presentationDetents(
+            dynamicTypeSize.isAccessibilitySize ? [.large] : [Self.compactDetent, .large],
+            selection: dynamicTypeSize.isAccessibilitySize ? .constant(.large) : $detent
+        )
+        .presentationContentInteraction(.scrolls)
         .presentationDragIndicator(.visible)
         .presentationBackground(Color(uiColor: .systemGroupedBackground))
         .sheet(isPresented: $showingFilters) { FilterSheet() }
         .task(id: RollTaskID(pool: pool, revision: rollToken)) { await roll(in: pool) }
         .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
-            guard scenePhase == .active, !showingFilters else { return }
-            rollToken += 1
+            guard scenePhase == .active else { return }
+            requestReroll()
         }
         .sensoryFeedback(.success, trigger: settledCount)
+    }
+
+    private func results(_ snapshot: CookCandidateSnapshot, context: String, hasCandidates: Bool) -> some View {
+        let fillsViewport = isCompact && hasCandidates
+        let topPadding: CGFloat = 8
+        return GeometryReader { viewport in
+            ScrollView {
+                DecideResultsLayout(minimumHeight: fillsViewport ? max(0, viewport.size.height - topPadding) : 0) {
+                    Text(context)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(isCompact ? 2 : nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("cook.decide.context")
+                    if hasCandidates { stage(snapshot) } else { emptyState }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, topPadding)
+                .frame(maxWidth: 560)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .accessibilityIdentifier("cook.decide.sheet")
+        }
     }
 
     private var emptyState: some View {
@@ -190,25 +222,72 @@ private struct CookDecideSheet: View {
     private func stage(_ snapshot: CookCandidateSnapshot) -> some View {
         VStack(spacing: 14) {
             if !dynamicTypeSize.isAccessibilitySize {
-                Text(shuffling ? "正在挑一道菜" : "就做这道")
-                    .font(.headline)
+                if isCompact {
+                    HStack(spacing: 8) {
+                        die
+                        stageTitle
+                    }
                     .frame(maxWidth: .infinity)
-                    .accessibilityHidden(true)
-                die
+                    .overlay(alignment: .trailing) { pageIndicator }
+                } else {
+                    stageTitle
+                        .frame(maxWidth: .infinity)
+                        .overlay(alignment: .trailing) { pageIndicator }
+                    die
+                }
+            } else {
+                pageIndicator.frame(maxWidth: .infinity, alignment: .trailing)
             }
             ZStack {
-                if !reduceMotion, !dynamicTypeSize.isAccessibilitySize {
-                    DecideDeck(shuffling: shuffling)
-                }
                 if let recipe = displayed, resolvedPool(snapshot).contains(where: { $0.id == recipe.id }) {
                     recipeCard(recipe, snapshot: snapshot)
                         .id(recipe.id)
                         .transition(cardTransition)
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 220)
-            .padding(.vertical, reduceMotion ? 0 : 8)
+            .rotationEffect(.degrees(Double(dragOffset) / 22))
+            .offset(x: dragOffset)
+            .frame(maxWidth: .infinity, minHeight: isCompact ? Self.compactCardMinHeight : 220)
+            .background {
+                if !reduceMotion, !dynamicTypeSize.isAccessibilitySize {
+                    DecideDeck(shuffling: shuffling)
+                }
+            }
+            .overlay {
+                DecideCardPan(isEnabled: !shuffling && pages.current != nil && !showingFilters) { distance in
+                    if !reduceMotion { dragDistance = distance }
+                } onFinish: { direction in
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { dragDistance = 0 }
+                    if let direction { turnPage(direction) }
+                }
+                .accessibilityHidden(true)
+            }
+            .padding(.top, reduceMotion ? 0 : 8)
+            .padding(.bottom, isCompact ? 4 : (reduceMotion ? 0 : 8))
         }
+    }
+
+    @ViewBuilder
+    private var pageIndicator: some View {
+        if !pages.isEmpty {
+            Text("\(pages.number) / \(pages.count)")
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private var dragOffset: CGFloat {
+        guard !reduceMotion, !shuffling else { return 0 }
+        let canMove = dragDistance > 0 ? pages.hasPrevious : pages.hasNext || canReroll
+        let travel = dragDistance * (canMove ? 0.74 : 0.2)
+        return min(116, max(-116, travel))
+    }
+
+    private var stageTitle: some View {
+        Text(shuffling ? "正在挑一道菜" : "就做这道")
+            .font(.headline)
+            .accessibilityHidden(true)
     }
 
     private var die: some View {
@@ -222,7 +301,7 @@ private struct CookDecideSheet: View {
                     .symbolEffect(.bounce, value: settledCount)
             }
         }
-        .font(.system(size: dieSize))
+        .font(.system(size: isCompact ? dieSize * 2 / 3 : dieSize))
         .foregroundStyle(Color.accentColor)
         .frame(minWidth: 44, minHeight: 44)
         .accessibilityHidden(true)
@@ -231,12 +310,13 @@ private struct CookDecideSheet: View {
     private var cardTransition: AnyTransition {
         if reduceMotion { return .opacity }
         let identity = DecideCardMotion(offset: 0, angle: 0, opacity: 1, scale: 1)
+        let direction: CGFloat = pageDirection == .next ? 1 : -1
         let insertion = AnyTransition.modifier(
-            active: DecideCardMotion(offset: 46, angle: 8, opacity: 0, scale: 0.92),
+            active: DecideCardMotion(offset: 46 * direction, angle: 8 * Double(direction), opacity: 0, scale: 0.92),
             identity: identity
         )
         let removal = AnyTransition.modifier(
-            active: DecideCardMotion(offset: -40, angle: -7, opacity: 0, scale: 1.04),
+            active: DecideCardMotion(offset: -40 * direction, angle: -7 * Double(direction), opacity: 0, scale: 1.04),
             identity: identity
         )
         return .asymmetric(insertion: insertion, removal: removal)
@@ -288,7 +368,7 @@ private struct CookDecideSheet: View {
             }
         }
         .padding(20)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, minHeight: isCompact ? Self.compactCardMinHeight : nil)
         .background(.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
@@ -297,39 +377,56 @@ private struct CookDecideSheet: View {
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isStaticText)
         .accessibilityLabel(shuffling ? "正在挑选" : accessibilitySummary(recipe, match: match))
+        .accessibilityValue(shuffling ? "" : "第 \(pages.number) 道，共 \(pages.count) 道")
+        .accessibilityActions {
+            if !shuffling, pages.hasPrevious { Button("上一道") { turnPage(.previous) } }
+            if !shuffling, pages.hasNext || canReroll { Button("下一道") { turnPage(.next) } }
+        }
         .accessibilityIdentifier("cook.decide.recipe")
     }
 
-    private func actions(pool: [Recipe]) -> some View {
-        VStack(spacing: 8) {
-            Button {
-                confirm()
-            } label: {
-                Text("看做法")
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, minHeight: 44)
+    private func actions(canReroll: Bool) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                rerollButton(enabled: canReroll, wrapping: false)
+                openButton(wrapping: false)
             }
-            .prominentButtonStyle()
-            .controlSize(.large)
-            .disabled(displayed == nil || shuffling)
-            .accessibilityHint("打开这道菜的做法")
-            .accessibilityIdentifier("cook.decide.open")
-
-            Button(action: { rollToken += 1 }) {
-                Label("换一道", systemImage: "arrow.triangle.2.circlepath")
-                    .frame(maxWidth: .infinity, minHeight: 44)
+            VStack(spacing: 8) {
+                openButton(wrapping: true)
+                rerollButton(enabled: canReroll, wrapping: true)
             }
-            .buttonStyle(.bordered)
-            .disabled(shuffling || pool.count < 2)
-            .accessibilityHint("按当前条件再选一道")
-            .accessibilityIdentifier("cook.decide.again")
         }
+        .font(.headline)
+        .multilineTextAlignment(.center)
+        .controlSize(.large)
         .padding(.horizontal, 20)
-        .padding(.top, 8)
         .padding(.bottom, 12)
-        .background(Color(uiColor: .systemGroupedBackground))
+        .frame(maxWidth: 560)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func openButton(wrapping: Bool) -> some View {
+        Button(action: confirm) {
+            Text("看做法")
+                .fixedSize(horizontal: !wrapping, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: Self.actionLabelMinHeight)
+        }
+        .prominentButtonStyle()
+        .disabled(displayed == nil || shuffling)
+        .accessibilityHint("打开这道菜的做法")
+        .accessibilityIdentifier("cook.decide.open")
+    }
+
+    private func rerollButton(enabled: Bool, wrapping: Bool) -> some View {
+        Button(action: requestReroll) {
+            Label("换一道", systemImage: "arrow.triangle.2.circlepath")
+                .fixedSize(horizontal: !wrapping, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: Self.actionLabelMinHeight)
+        }
+        .buttonStyle(.bordered)
+        .disabled(!enabled || shuffling)
+        .accessibilityHint("按当前条件再选一道")
+        .accessibilityIdentifier("cook.decide.again")
     }
 
     private func resolvedPool(_ snapshot: CookCandidateSnapshot) -> [Recipe] {
@@ -360,24 +457,50 @@ private struct CookDecideSheet: View {
         onOpen(RecipeRoute(recipe: recipe, match: current.matchesByID[recipe.id], dietaryGoal: session.dietaryGoal))
     }
 
+    private func requestReroll() {
+        guard !shuffling, !showingFilters, canReroll, pages.current != nil else { return }
+        pageDirection = .next
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.22)) { shuffling = true }
+        rollToken += 1
+    }
+
+    private func turnPage(_ direction: DecidePageDirection) {
+        guard !shuffling, !showingFilters, pages.current != nil else { return }
+        if direction == .next, !pages.hasNext {
+            requestReroll()
+            return
+        }
+        guard direction == .next || pages.hasPrevious else { return }
+        pageDirection = direction
+        withAnimation(reduceMotion ? .easeOut(duration: 0.12) : .snappy(duration: 0.28)) {
+            pages.move(direction)
+        }
+        if let recipe = pages.current {
+            AccessibilityNotification.Announcement("\(recipe.name)，第 \(pages.number) 道，共 \(pages.count) 道").post()
+        }
+    }
+
     private func roll(in pool: [Recipe]) async {
         guard !Task.isCancelled else { return }
-        let previousName = pool.first { $0.id == lastDecidedID }?.name
-        let alternatives = pool.filter { $0.name != previousName }
-        guard let landing = store.randomRecipe(from: alternatives.isEmpty ? pool : alternatives, excluding: lastDecidedID) else {
+        if pool != activePool {
+            // A new candidate pool starts a fresh deck; earlier pages may no longer match.
+            activePool = pool
+            pages = DecidePages()
+            rollingRecipe = nil
             shuffling = false
-            displayed = nil
+        }
+        pageDirection = .next
+        let previousID = pages.current?.id ?? lastDecidedID
+        let previousName = pages.current?.name ?? pool.first { $0.id == previousID }?.name
+        let alternatives = pool.filter { $0.name != previousName }
+        guard let landing = store.randomRecipe(from: alternatives.isEmpty ? pool : alternatives, excluding: previousID) else {
+            shuffling = false
+            rollingRecipe = nil
             AccessibilityNotification.Announcement("这次还没找到合适的菜").post()
             return
         }
-        if displayed == nil || reduceMotion || pool.count < 2 {
-            lastDecidedID = landing.id
-            withAnimation(reduceMotion ? .easeOut(duration: 0.12) : .spring(response: 0.42, dampingFraction: 0.72)) {
-                displayed = landing
-                shuffling = false
-            }
-            settledCount += 1
-            AccessibilityNotification.Announcement("就做\(landing.name)").post()
+        if pages.isEmpty || reduceMotion || pool.count < 2 {
+            settle(landing, animation: reduceMotion ? .easeOut(duration: 0.12) : .spring(response: 0.42, dampingFraction: 0.72))
             return
         }
 
@@ -387,21 +510,144 @@ private struct CookDecideSheet: View {
         let reel = CookDiscovery.decideReel(in: pool, landing: landing)
         for (index, recipe) in reel.enumerated() {
             if Task.isCancelled { return }
-            let isLast = index == reel.count - 1
-            withAnimation(isLast ? .spring(response: 0.46, dampingFraction: 0.68) : .snappy(duration: 0.16)) {
-                displayed = recipe
-                spin += 1
-                if isLast { shuffling = false }
-            }
-            if isLast {
-                lastDecidedID = landing.id
-                settledCount += 1
-                AccessibilityNotification.Announcement("就做\(landing.name)").post()
+            if index == reel.count - 1 {
+                settle(landing, animation: .spring(response: 0.46, dampingFraction: 0.68))
                 return
+            }
+            withAnimation(.snappy(duration: 0.16)) {
+                rollingRecipe = recipe
+                spin += 1
             }
             try? await Task.sleep(for: .milliseconds(110))
             if Task.isCancelled { return }
         }
+    }
+
+    private func settle(_ recipe: Recipe, animation: Animation) {
+        withAnimation(animation) {
+            pages.append(recipe)
+            rollingRecipe = nil
+            shuffling = false
+        }
+        lastDecidedID = recipe.id
+        settledCount += 1
+        AccessibilityNotification.Announcement("就做\(recipe.name)").post()
+    }
+}
+
+private enum DecidePageDirection {
+    case previous, next
+}
+
+/// Owned by one sheet. The transient recipes shown while shuffling never become pages.
+private struct DecidePages {
+    private var recipes: [Recipe] = []
+    private var index = 0
+
+    var count: Int { recipes.count }
+    var isEmpty: Bool { recipes.isEmpty }
+    var number: Int { isEmpty ? 0 : index + 1 }
+    var current: Recipe? { isEmpty ? nil : recipes[index] }
+    var hasPrevious: Bool { index > 0 }
+    var hasNext: Bool { index + 1 < count }
+
+    mutating func append(_ recipe: Recipe) {
+        if recipes.last?.id != recipe.id { recipes.append(recipe) }
+        index = recipes.count - 1
+    }
+
+    mutating func move(_ direction: DecidePageDirection) {
+        switch direction {
+        case .previous where hasPrevious: index -= 1
+        case .next where hasNext: index += 1
+        default: break
+        }
+    }
+}
+
+/// Reject a vertical pan before recognition so the enclosing scroll view can take it.
+private struct DecideCardPan: UIViewRepresentable {
+    let isEnabled: Bool
+    let onMove: (CGFloat) -> Void
+    let onFinish: (DecidePageDirection?) -> Void
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
+        pan.delegate = context.coordinator
+        pan.maximumNumberOfTouches = 1
+        view.addGestureRecognizer(pan)
+        return view
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func updateUIView(_ view: UIView, context: Context) {
+        context.coordinator.configuration = self
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var configuration: DecideCardPan
+
+        init(_ configuration: DecideCardPan) { self.configuration = configuration }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard configuration.isEnabled, let pan = gestureRecognizer as? UIPanGestureRecognizer else { return false }
+            let velocity = pan.velocity(in: nil)
+            return abs(velocity.x) > abs(velocity.y) * 1.35
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
+            (other.view as? UIScrollView)?.panGestureRecognizer === other
+        }
+
+        @objc func pan(_ gesture: UIPanGestureRecognizer) {
+            let translation = gesture.translation(in: nil)
+            switch gesture.state {
+            case .began, .changed:
+                configuration.onMove(translation.x)
+            case .ended:
+                guard abs(translation.x) >= 48, abs(translation.x) > abs(translation.y) * 1.35 else {
+                    configuration.onFinish(nil)
+                    return
+                }
+                configuration.onFinish(translation.x > 0 ? .previous : .next)
+            case .cancelled, .failed:
+                configuration.onFinish(nil)
+            default:
+                break
+            }
+        }
+    }
+}
+
+/// Gives a short result the bottom of the scroll viewport, while long results can scroll naturally.
+private struct DecideResultsLayout: Layout {
+    let minimumHeight: CGFloat
+    private let spacing: CGFloat = 16
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let sizes = subviews.map { $0.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil)) }
+        return CGSize(
+            width: proposal.width ?? sizes.map(\.width).max() ?? 0,
+            height: max(minimumHeight, contentHeight(sizes))
+        )
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let childProposal = ProposedViewSize(width: bounds.width, height: nil)
+        let sizes = subviews.map { $0.sizeThatFits(childProposal) }
+        let extra = max(0, bounds.height - contentHeight(sizes))
+        let breathingRoom = extra / CGFloat(max(1, subviews.count))
+        var y = bounds.minY + breathingRoom
+        for (view, size) in zip(subviews, sizes) {
+            view.place(at: CGPoint(x: bounds.minX, y: y), anchor: .topLeading, proposal: childProposal)
+            y += size.height + spacing + breathingRoom
+        }
+    }
+
+    private func contentHeight(_ sizes: [CGSize]) -> CGFloat {
+        sizes.reduce(0) { $0 + $1.height } + spacing * CGFloat(max(0, sizes.count - 1))
     }
 }
 
@@ -419,8 +665,9 @@ private struct DecideDeck: View {
                 .offset(x: shuffling ? -12 : -7, y: 3)
         }
         .padding(.horizontal, 8)
+        .opacity(shuffling ? 1 : 0)
+        .animation(.easeOut(duration: 0.22), value: shuffling)
         .accessibilityHidden(true)
-        .animation(.spring(response: 0.45, dampingFraction: 0.72), value: shuffling)
     }
 
     private var plate: some View {

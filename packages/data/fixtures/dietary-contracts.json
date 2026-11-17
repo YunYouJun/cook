@@ -1,0 +1,33 @@
+{
+  "description": "Web（test/sharedCoreContracts.test.ts）、iOS（CookCore）与 Android（:core）共用的饮食目标与机构低 GI 校验及筛选用例。",
+  "sha256Vectors": [
+    { "input": "", "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" },
+    { "input": "abc", "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad" }
+  ],
+  "recipeFingerprintCases": [
+    { "id": 333, "expectedFingerprint": "6b9287ee273db992" },
+    { "id": 881, "expectedFingerprint": "488d67ff1410bdce" }
+  ],
+  "bundledDietarySummary": {
+    "entryCount": 36,
+    "rejectedEntryCount": 0,
+    "availableGoals": ["weight-aware", "less-added-sugar", "balanced-pairing"],
+    "lessAddedSugarCount": 12,
+    "weightAwareCount": 10,
+    "keywordSpinachLessAddedSugarIds": [630],
+    "noSpicyExcludedBalancedPairingIds": [670, 693, 777, 788, 861],
+    "avoidPorkExcludedLessAddedSugarIds": [689],
+    "avoidPorkExcludedBalancedPairingIds": [789]
+  },
+  "bundledInstitutionalLowGI": {
+    "entryCount": 10,
+    "expectedIds": [878, 879, 880, 881, 882, 883, 884, 885, 886, 887],
+    "permitsCases": [
+      { "id": 887, "avoid": [], "noSpicy": false, "expected": true },
+      { "id": 887, "avoid": ["牛奶"], "noSpicy": false, "expected": false },
+      { "id": 886, "avoid": [], "noSpicy": true, "expected": true },
+      { "id": 880, "avoid": [], "noSpicy": true, "expected": false },
+      { "id": 880, "avoid": ["牛奶"], "noSpicy": false, "expected": false }
+    ]
+  }
+}

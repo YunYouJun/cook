@@ -211,20 +211,24 @@ describe('cook-feedback function', () => {
     const { table } = createApp()
     await fn.main(report)
     await fn.main({ ...report, deviceId: 'ios-device-0123456789', platform: 'ios', version: '2.0.0' })
+    await fn.main({ ...report, deviceId: 'android-device-0123456', platform: 'android', version: '2.0.0' })
     const reports = [...table(fn._internal.FEEDBACK).values()]
     expect(reports.find(r => r.platform === 'web')).toMatchObject({ version: '' })
     expect(reports.find(r => r.platform === 'ios')).toMatchObject({ version: '2.0.0' })
-    expect(await fn.main({ ...report, platform: 'android' })).toEqual({ ok: false, code: 'INVALID_REPORT' })
+    expect(reports.find(r => r.platform === 'android')).toMatchObject({ version: '2.0.0' })
+    expect(await fn.main({ ...report, platform: 'desktop' })).toEqual({ ok: false, code: 'INVALID_REPORT' })
 
     const empty = { action: 'signal', deviceId, type: 'empty', stuff: ['羊肉'] }
     await fn.main(empty)
     await fn.main({ ...empty, platform: 'web' })
     await fn.main({ ...empty, platform: 'ios', version: '2.0.0' })
+    await fn.main({ ...empty, platform: 'android', version: '2.0.0' })
     const signals = [...table(fn._internal.SIGNALS).entries()]
-    expect(signals).toHaveLength(2)
+    expect(signals).toHaveLength(3)
     expect(signals.find(([, r]) => r.platform === 'web')![1]).toMatchObject({ count: 2 })
     expect(signals.find(([, r]) => r.platform === 'ios')![1]).toMatchObject({ count: 1, lastVersion: '2.0.0' })
-    expect(await fn.main({ ...empty, platform: 'android' })).toEqual({ ok: false, code: 'INVALID_SIGNAL' })
+    expect(signals.find(([, r]) => r.platform === 'android')![1]).toMatchObject({ count: 1, lastVersion: '2.0.0' })
+    expect(await fn.main({ ...empty, platform: 'desktop' })).toEqual({ ok: false, code: 'INVALID_SIGNAL' })
   })
 
   it('keeps the signal key of rows stored before platforms existed', async () => {
@@ -310,8 +314,10 @@ describe('cook-feedback function', () => {
     expect(await fn.main({ ...message, note: '  ' })).toEqual({ ok: false, code: 'INVALID_FEEDBACK' })
     expect(await fn.main({ ...message, note: '长'.repeat(501) })).toEqual({ ok: false, code: 'INVALID_FEEDBACK' })
     expect(await fn.main({ ...message, category: 'spam' })).toEqual({ ok: false, code: 'INVALID_FEEDBACK' })
-    expect(await fn.main({ ...message, platform: 'android' })).toEqual({ ok: false, code: 'INVALID_FEEDBACK' })
+    expect(await fn.main({ ...message, platform: 'desktop' })).toEqual({ ok: false, code: 'INVALID_FEEDBACK' })
     expect(await fn.main({ ...message, contact: 'x'.repeat(101) })).toEqual({ ok: false, code: 'INVALID_FEEDBACK' })
+    expect(await fn.main({ ...message, platform: 'android', version: '2.0.0' })).toEqual({ ok: true, receipt })
+    expect(submit.mock.calls.at(-1)![0]).toMatchObject({ context: { source: 'cook-android', version: '2.0.0' } })
   })
 
   it('accepts reports, signals and feedback posted to the HTTP trigger', async () => {

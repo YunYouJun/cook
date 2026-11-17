@@ -1,8 +1,8 @@
 {
   "fill": {
     "linear-gradient": [
-      "srgb:0.26275,0.51765,0.32549,1.00000",
-      "srgb:0.18431,0.41961,0.27059,1.00000"
+      "srgb:0.04706,0.56863,0.41961,1.00000",
+      "srgb:0.02353,0.42353,0.31765,1.00000"
     ],
     "orientation": {
       "start": {
@@ -15,110 +15,176 @@
       }
     }
   },
-  "groups": [
-    {
-      "layers": [
-        {
-          "image-name": "pot-cloud-gloss.svg",
-          "name": "pot-cloud",
-          "fill-specializations": [
-            {
-              "appearance": "dark",
-              "value": {
-                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
-              }
-            }
-          ],
-          "glass-specializations": [
-            {
-              "appearance": "dark",
-              "value": false
-            }
-          ],
-          "image-name-specializations": [
-            {
-              "appearance": "dark",
-              "value": "pot-cloud.svg"
-            },
-            {
-              "appearance": "tinted",
-              "value": "pot-cloud.svg"
-            }
-          ]
-        }
-      ],
-      "shadow": {
-        "kind": "neutral",
-        "opacity": 0.5
-      },
-      "translucency": {
-        "enabled": true,
-        "value": 0.36
-      },
-      "specular-highlight-placement": "outside",
-      "refractivity": {
-        "enabled": true,
-        "strength": 0.48,
-        "depth": 0.32
-      },
-      "refractivity-specializations": [
-        {
-          "appearance": "dark",
-          "value": {
-            "enabled": false,
-            "strength": 0,
-            "depth": 0
-          }
-        }
-      ],
-      "specular-highlight-placement-specializations": [
-        {
-          "appearance": "dark",
-          "value": "automatic"
-        }
-      ]
-    },
-    {
-      "layers": [
-        {
-          "image-name": "ladle.svg",
-          "name": "ladle",
-          "fill-specializations": [
-            {
-              "appearance": "dark",
-              "value": {
-                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
-              }
-            }
-          ]
-        }
-      ],
-      "shadow": {
-        "kind": "neutral",
-        "opacity": 0.5
-      },
-      "translucency": {
-        "enabled": false,
-        "value": 0.5
-      },
-      "specular-highlight-placement": "outside",
-      "specular-highlight-placement-specializations": [
-        {
-          "appearance": "dark",
-          "value": "automatic"
-        }
-      ]
-    }
-  ],
-  "supported-platforms": {
-    "squares": "shared"
-  },
   "fill-specializations": [
     {
       "appearance": "dark",
       "value": {
-        "solid": "srgb:0.06667,0.06667,0.06667,1.00000"
+        "linear-gradient": [
+          "srgb:0.09412,0.16078,0.12549,1.00000",
+          "srgb:0.05098,0.09412,0.07451,1.00000"
+        ],
+        "orientation": {
+          "start": {
+            "x": 0.5,
+            "y": 0
+          },
+          "stop": {
+            "x": 0.5,
+            "y": 1
+          }
+        }
       }
     }
-  ]
+  ],
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "greens.svg",
+          "name": "greens",
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:0.52941,0.70980,0.50196,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:0.74118,0.74118,0.74118,1.00000"
+              }
+            }
+          ],
+          "glass": false
+        },
+        {
+          "image-name": "tomato.svg",
+          "name": "tomato",
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:0.90588,0.51373,0.42745,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:0.90196,0.90196,0.90196,1.00000"
+              }
+            }
+          ],
+          "glass": false
+        },
+        {
+          "image-name": "golden-ingredient.svg",
+          "name": "golden-ingredient",
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:0.89804,0.71373,0.36078,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:0.84314,0.84314,0.84314,1.00000"
+              }
+            }
+          ],
+          "glass": false
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.16
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.0
+      },
+      "refractivity": {
+        "enabled": false,
+        "strength": 0.0,
+        "depth": 0.0
+      }
+    },
+    {
+      "layers": [
+        {
+          "image-name": "pan-rim.svg",
+          "name": "pan-rim",
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:0.74902,0.81176,0.76078,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:0.97255,0.97255,0.97255,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.24
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.14
+      },
+      "specular-highlight-placement": "outside",
+      "refractivity": {
+        "enabled": true,
+        "strength": 0.24,
+        "depth": 0.18
+      }
+    },
+    {
+      "layers": [
+        {
+          "image-name": "pan-well.svg",
+          "name": "pan-well",
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:0.18824,0.27843,0.23137,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:0.23922,0.23922,0.23922,1.00000"
+              }
+            }
+          ],
+          "glass": false
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.14
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.0
+      },
+      "refractivity": {
+        "enabled": false,
+        "strength": 0.0,
+        "depth": 0.0
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared"
+  }
 }

@@ -14,6 +14,7 @@ struct CookApp: App {
     @State private var loadResult: Result<RecipeStore, Error>
     @State private var session: CookSession
     @State private var searchHistory: CookSearchHistory
+    @State private var cookedRecipes: CookedRecipeRecords
     @State private var feedback = FeedbackClient()
     @State private var favoriteActions: FavoriteActions
     @State private var accounts: YunlefunAccountStore
@@ -48,6 +49,7 @@ struct CookApp: App {
         _loadResult = State(initialValue: result)
         _session = State(initialValue: CookSession(defaultPantry: defaultPantry, context: container.mainContext, dietaryDefaults: inMemory ? nil : .standard))
         _searchHistory = State(initialValue: CookSearchHistory(defaults: inMemory ? nil : .standard))
+        _cookedRecipes = State(initialValue: CookedRecipeRecords(defaults: inMemory ? nil : .standard))
         let accounts = YunlefunAccountStore(vault: inMemory ? MemoryYunlefunAccountVault() : KeychainYunlefunAccountVault())
         _accounts = State(initialValue: accounts)
         #if DEBUG
@@ -170,6 +172,7 @@ struct CookApp: App {
                     .environment(store)
                     .environment(session)
                     .environment(searchHistory)
+                    .environment(cookedRecipes)
                     .environment(feedback)
                     .environment(favoriteActions)
                     .environment(workbench)

@@ -1,0 +1,47 @@
+{
+  "date": "2026-11-17",
+  "endpoint": "https://api.yunle.fun/cook-fridge-vision",
+  "runtime": "Nodejs24.11",
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "image": {
+    "file": "fridge-vision-deepseek-2026-11-17.jpg",
+    "source": "synthetic test photo generated with built-in imagegen; prepared JPEG sent by Cook's photo service",
+    "bytes": 48774,
+    "sha256": "c16f1f25c7ce039c55fd0cdbf1c8fe0fda72dd8470ed5a96bdaf60f734f06c94",
+    "prompt": "Use case: photorealistic-natural. Create one controlled synthetic iPhone photo for testing an ingredient recognition feature. Straight-on view into a clean open refrigerator; fill the frame with two white shelves and keep every ingredient clearly separated. On the top shelf are five brown chicken eggs in an open plain cardboard carton and a small pile of red tomatoes. On the lower shelf are three whole orange carrots, two green broccoli crowns, and two small cucumbers. Only these five kinds of food; accurate everyday textures, proportions, and natural color. Soft refrigerator LED light, evenly exposed with sharp detail. No people, hands, logos, labels, text, barcodes, reflections, or packaging other than the egg carton. Portrait framing."
+  },
+  "gateway": {
+    "providerLookupHTTP": 200,
+    "anonymousUploadHTTP": 401,
+    "initialPhotoHTTP": 413,
+    "compressedUploadHTTP": 200,
+    "compressedRequestBytes": 65103
+  },
+  "recognition": {
+    "candidates": [
+      "鸡蛋",
+      "番茄",
+      "胡萝卜",
+      "西兰花",
+      "黄瓜"
+    ],
+    "latencySeconds": 7.1,
+    "managedTestSessionSignedOut": true
+  },
+  "simulator": {
+    "device": "iPhone 18 Pro",
+    "system": "iOS 27.0",
+    "mode": "The same photo and real production response were replayed in a simulator-only build; this does not test SSO or camera capture in iOS",
+    "saved": [
+      "鸡蛋",
+      "番茄"
+    ],
+    "uncheckedAndNotSaved": [
+      "胡萝卜",
+      "西兰花",
+      "黄瓜"
+    ],
+    "testsPassed": 6
+  }
+}

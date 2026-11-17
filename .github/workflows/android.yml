@@ -1,0 +1,47 @@
+name: Android
+
+on:
+  push:
+    branches: [main, dev]
+    paths: &android_paths
+      - 'apps/android/**'
+      - 'packages/cook/**'
+      - 'packages/data/**'
+      - 'packages/shared/**'
+      - 'cloudfunctions/cook-feedback/**'
+      - '.github/actions/setup-js/**'
+      - .github/workflows/android.yml
+      - .nvmrc
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+  pull_request:
+    branches: [main, dev]
+    paths: *android_paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-js
+      - run: pnpm run convert
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/wrapper-validation@v4
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-36 build-tools;35.0.0
+      - name: Run Kotlin and Android tests and build both APK variants
+        working-directory: apps/android
+        run: |
+          ./gradlew :core:test :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease --no-daemon
+          ./gradlew :core:test :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease --offline --no-daemon

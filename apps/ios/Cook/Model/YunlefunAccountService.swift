@@ -90,6 +90,8 @@ protocol YunlefunAccountServing {
     func signOut(_ credential: YunlefunCredential) async throws
     func signInWithWeChat(code: String, deviceID: String) async throws -> YunlefunCredential
     func bindWeChat(code: String, credential: YunlefunCredential) async throws
+    func supportsAccountWebHandoff() async throws -> Bool
+    func approveAccountWebHandoff(fields: [String: String], credential: YunlefunCredential) async throws
 }
 
 extension YunlefunAccountServing {
@@ -98,6 +100,10 @@ extension YunlefunAccountServing {
     }
     func bindWeChat(code: String, credential: YunlefunCredential) async throws {
         throw WeChatAccountError.unavailable
+    }
+    func supportsAccountWebHandoff() async throws -> Bool { false }
+    func approveAccountWebHandoff(fields: [String: String], credential: YunlefunCredential) async throws {
+        throw YunlefunAccountError.unavailable
     }
 }
 
@@ -235,6 +241,29 @@ struct YunlefunAccountService: YunlefunAccountServing {
         _ = try await request(URL(string: "\(Self.gateway)user/signout")!, fields: [:], credential: credential)
     }
 
+    func supportsAccountWebHandoff() async throws -> Bool {
+        let url = YunlefunAccountWebHandoff.endpoint
+        var probe = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 3)
+        probe.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await transport(probe)
+        guard let http = response as? HTTPURLResponse, http.url == url else {
+            throw YunlefunAccountError.invalidResponse
+        }
+        if http.statusCode == 404 { return false }
+        guard http.statusCode == 200, data.count < 1024,
+              let reply = try? JSONDecoder().decode(WebHandoffCapability.self, from: data) else {
+            throw YunlefunAccountError.unavailable
+        }
+        return reply.supported
+    }
+
+    func approveAccountWebHandoff(fields: [String: String], credential: YunlefunCredential) async throws {
+        let data = try await request(Self.ticketURL, fields: fields, credential: credential, origin: Self.cookOrigin, timeout: 10)
+        guard let reply = try? JSONDecoder().decode(WebHandoffApproval.self, from: data), reply.ok else {
+            throw YunlefunAccountError.invalidResponse
+        }
+    }
+
     private func token(_ path: String, fields: [String: String], deviceID: String) async throws -> YunlefunCredential {
         let data = try await request(URL(string: Self.gateway + path)!, fields: fields, deviceID: deviceID)
         guard let token = try? JSONDecoder().decode(TokenResponse.self, from: data),
@@ -246,8 +275,9 @@ struct YunlefunAccountService: YunlefunAccountServing {
 
     private func request(_ url: URL, method: String = "POST", fields: [String: String]? = nil,
                          credential: YunlefunCredential? = nil, deviceID: String? = nil, origin: String? = nil,
-                         weChat: Bool = false) async throws -> Data {
+                         weChat: Bool = false, timeout: TimeInterval? = nil) async throws -> Data {
         var request = URLRequest(url: url)
+        if let timeout { request.timeoutInterval = timeout }
         request.httpMethod = method
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -303,6 +333,8 @@ struct YunlefunAccountService: YunlefunAccountServing {
         }
     }
     private struct ServiceFailure: Decodable { let error: String?; let reason: String? }
+    private struct WebHandoffCapability: Decodable { let supported: Bool }
+    private struct WebHandoffApproval: Decodable { let ok: Bool }
     private struct SignupResponse: Decodable { let next: String?; let proof: String?; let challenge: String? }
 }
 

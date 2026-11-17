@@ -2,10 +2,27 @@ import SwiftUI
 
 /// 首页只保留账号摘要和按用途分组的入口，具体设置由各二级页管理。
 struct SettingsView: View {
+    #if DEBUG
+    @AppStorage(CookPhoneSearchStyle.storageKey) private var phoneSearchStyle = CookPhoneSearchStyle.defaultStyle
+    #endif
+
     var body: some View {
         NavigationStack {
             List {
                 YunlefunAccountSection()
+                #if DEBUG
+                if UIDevice.current.userInterfaceIdiom == .phone {
+                    Section("搜索体验对照") {
+                        Picker("搜索打开方式", selection: $phoneSearchStyle) {
+                            ForEach(CookPhoneSearchStyle.allCases, id: \.self) { style in
+                                Text(style.title).tag(style)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityIdentifier("settings.searchStyle")
+                    }
+                }
+                #endif
                 if CookFeatures.membershipUIEnabled {
                     Section {
                         NavigationLink { MembershipView() } label: {
