@@ -1,19 +1,20 @@
 # 原生 Android 开发方案与分阶段计划
 
 - 日期：2026-10-26
-- 状态：技术方向已采纳；原生工程尚未创建
+- 状态：原生预览工程已落地；正式分发、签名与历史包迁移仍待验收
 - 决策：[0016 原生 Android 与 Capacitor 外壳退役](../decisions/0016-native-android-and-capacitor-retirement)
 - 总计划：[#98](https://github.com/YunYouJun/cook/issues/98)
 - Android 待办：[#169](https://github.com/YunYouJun/cook/issues/169)
 - 启动证据：[2026-11-06 历史包身份、环境与工具链核对](./android-startup-2026-11-06)；分发和正式签名仍待确认。
+- 实现与构建：[工程说明](https://github.com/YunYouJun/cook/blob/main/apps/android/README.md)、[实施方案](./android-implementation-plan)、[三端共享契约](./cross-platform-core-ci)。
 
 ## 目标与边界
 
 为 Cook 提供独立的原生 Android 客户端，核心做菜流程无需登录即可离线使用。Web 继续保留 Nuxt + Ionic，iOS 继续使用 SwiftUI。三端共享数据、协议和测试用例，各自实现界面及平台能力。
 
-本轮完成旧 Capacitor 外壳清理与方案记录，不启动 Android 功能实现、不发布 Android 安装包。先交付可用的小版本，再逐步对齐 iOS 的厨房工作台、冰箱和私人菜谱能力。
+旧 Capacitor 外壳已清理。原生工程提供本地预览，先验收离线找菜流程，再逐步对齐 iOS 的厨房工作台、冰箱和私人菜谱能力。
 
-## 技术栈
+## 目标技术栈
 
 | 部分        | 选择                                       | 在 Cook 中的用途                                                              |
 | ----------- | ------------------------------------------ | ----------------------------------------------------------------------------- |

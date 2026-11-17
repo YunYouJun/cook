@@ -1,0 +1,200 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "5011c9f6c7f74ecee73526b5026d9a1c",
+    "entities": [
+      {
+        "tableName": "device_favorites",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`recipeId` INTEGER NOT NULL, `addedAtMs` REAL NOT NULL, PRIMARY KEY(`recipeId`))",
+        "fields": [
+          {
+            "fieldPath": "recipeId",
+            "columnName": "recipeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "addedAtMs",
+            "columnName": "addedAtMs",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "recipeId"
+          ]
+        }
+      },
+      {
+        "tableName": "device_favorite_removals",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`recipeId` INTEGER NOT NULL, `removedAtMs` REAL NOT NULL, PRIMARY KEY(`recipeId`))",
+        "fields": [
+          {
+            "fieldPath": "recipeId",
+            "columnName": "recipeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "removedAtMs",
+            "columnName": "removedAtMs",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "recipeId"
+          ]
+        }
+      },
+      {
+        "tableName": "device_histories",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`recipeName` TEXT NOT NULL, `visitedAtMs` REAL NOT NULL, `snapshotJson` TEXT NOT NULL, PRIMARY KEY(`recipeName`, `visitedAtMs`))",
+        "fields": [
+          {
+            "fieldPath": "recipeName",
+            "columnName": "recipeName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "visitedAtMs",
+            "columnName": "visitedAtMs",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "snapshotJson",
+            "columnName": "snapshotJson",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "recipeName",
+            "visitedAtMs"
+          ]
+        }
+      },
+      {
+        "tableName": "device_history_removals",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`recipeName` TEXT NOT NULL, `removedAtMs` REAL NOT NULL, PRIMARY KEY(`recipeName`, `removedAtMs`))",
+        "fields": [
+          {
+            "fieldPath": "recipeName",
+            "columnName": "recipeName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "removedAtMs",
+            "columnName": "removedAtMs",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "recipeName",
+            "removedAtMs"
+          ]
+        }
+      },
+      {
+        "tableName": "account_favorites",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`accountUid` TEXT NOT NULL, `recipeId` INTEGER NOT NULL, `addedAtMs` REAL NOT NULL, PRIMARY KEY(`accountUid`, `recipeId`))",
+        "fields": [
+          {
+            "fieldPath": "accountUid",
+            "columnName": "accountUid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recipeId",
+            "columnName": "recipeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "addedAtMs",
+            "columnName": "addedAtMs",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "accountUid",
+            "recipeId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_account_favorites_accountUid",
+            "unique": false,
+            "columnNames": [
+              "accountUid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_account_favorites_accountUid` ON `${TABLE_NAME}` (`accountUid`)"
+          }
+        ]
+      },
+      {
+        "tableName": "account_sync_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`accountUid` TEXT NOT NULL, `syncEnabled` INTEGER NOT NULL, `historyClearedAtMs` REAL NOT NULL, `lastSyncedDocumentJson` TEXT, `updatedAtMs` REAL NOT NULL, PRIMARY KEY(`accountUid`))",
+        "fields": [
+          {
+            "fieldPath": "accountUid",
+            "columnName": "accountUid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "syncEnabled",
+            "columnName": "syncEnabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "historyClearedAtMs",
+            "columnName": "historyClearedAtMs",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastSyncedDocumentJson",
+            "columnName": "lastSyncedDocumentJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "updatedAtMs",
+            "columnName": "updatedAtMs",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "accountUid"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5011c9f6c7f74ecee73526b5026d9a1c')"
+    ]
+  }
+}
