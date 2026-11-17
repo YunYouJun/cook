@@ -9,6 +9,8 @@ struct KitchenWorkbenchView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var pane: Pane = .recipe
     @State private var layout: LayoutChoice = .automatic
+    @State private var completionRecipe: Recipe?
+    @State private var notice: String?
     let recipe: Recipe
     var dietaryGoal: DietaryGoal? = nil
 
@@ -101,13 +103,34 @@ struct KitchenWorkbenchView: View {
                 }
             }
         }
+        .sheet(item: $completionRecipe) { recipe in
+            KitchenCompletionSheet(notice: $notice, recipe: recipe)
+        }
+        .overlay(alignment: .top) {
+            if let notice {
+                Text(notice)
+                    .font(.subheadline)
+                    .padding()
+                    .background(.regularMaterial, in: Capsule())
+                    .padding()
+                    .accessibilityIdentifier("cooking.notice")
+                    .allowsHitTesting(false)
+            }
+        }
+        .task(id: notice) {
+            let displayedNotice = notice
+            guard displayedNotice != nil else { return }
+            do { try await Task.sleep(for: .seconds(3)) } catch { return }
+            if notice == displayedNotice { notice = nil }
+        }
     }
 
     @ViewBuilder
     private var instructions: some View {
         if let text = store.text(for: recipe) {
             RecipeTextContent(recipe: recipe, text: text, preparationInSidebar: true,
-                              showsStepGuidance: true, dietaryGoal: dietaryGoal)
+                              showsStepGuidance: true, dietaryGoal: dietaryGoal,
+                              onFinishCooking: { completionRecipe = recipe })
         } else {
             ContentUnavailableView {
                 Label("暂未收录图文做法", systemImage: "book.closed")
@@ -117,6 +140,9 @@ struct KitchenWorkbenchView: View {
                 if let url = recipe.videoURL ?? recipe.link.flatMap(URL.init(string:)) {
                     Link("查看原做法", destination: url)
                 }
+                Button("完成做菜") { completionRecipe = recipe }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("kitchen.finishCooking")
             }
         }
     }

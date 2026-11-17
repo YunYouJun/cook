@@ -122,4 +122,16 @@ final class FavoriteSaveTests: XCTestCase {
         })
         XCTAssertTrue(reminderPolicy.contains("不随 iCloud 同步"))
     }
+
+    func testPrivacyPolicyExplainsDeviceLocalCookingFootprints() throws {
+        let text = try XCTUnwrap(PrivacyPolicyView.bundledText())
+        let footprintPolicy = try XCTUnwrap(text.components(separatedBy: "\n\n").first {
+            $0.contains("只有你主动记录「做过」或「学会」时")
+        })
+        XCTAssertTrue(text.contains("### 本机做菜足迹"))
+        XCTAssertTrue(footprintPolicy.contains("浏览菜谱、步骤完成或计时结束都不会自动记为学会"))
+        XCTAssertTrue(footprintPolicy.contains("删除单次做过记录"))
+        XCTAssertTrue(footprintPolicy.contains("撤销学会标记"))
+        XCTAssertTrue(footprintPolicy.contains("足迹不加入 CloudKit、云乐坊账号同步、推荐统计或 AI 请求"))
+    }
 }
