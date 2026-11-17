@@ -387,7 +387,7 @@ private struct FridgePhotoReview: View {
     }
 }
 
-private struct FridgeCamera: UIViewControllerRepresentable {
+struct FridgeCamera: UIViewControllerRepresentable {
     @Environment(\.dismiss) private var dismiss
     let onPhoto: (Data) -> Void
 

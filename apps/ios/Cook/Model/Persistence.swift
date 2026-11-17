@@ -345,6 +345,19 @@ extension ModelContext {
         return item
     }
 
+    /// Manual and photo batch intake use the same dates and save the entire selection together.
+    func addEstimatedFridgeItems(_ names: [String], shelfLife: ShelfLife, categoryKey: String? = nil, at date: Date = Date()) throws {
+        try saveUserChange {
+            for name in names {
+                let advice = ProduceStorageAdvice.recommendation(for: name)
+                let item = FridgeItem(name: name, days: advice?.days ?? shelfLife.days(for: name), at: date)
+                item.categoryKey = categoryKey
+                item.storageAdvice = advice?.condition
+                insert(item)
+            }
+        }
+    }
+
     /// 吃完了或者扔了：软删除，其他设备同步后也会消失
     func removeFromFridge(_ items: [FridgeItem], at date: Date = Date()) {
         for item in items where item.deletedAt == nil {

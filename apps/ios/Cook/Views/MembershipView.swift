@@ -48,6 +48,9 @@ struct MembershipView: View {
             Section {
                 Label { Text("收藏和浏览历史跨平台同步").fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "icloud").accessibilityHidden(true) }
                 Label { Text("会员智能找菜").fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "sparkles").accessibilityHidden(true) }
+                if FridgeVisionSheet.isAvailable {
+                    Label { Text("冰箱 AI 批量识图").fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "camera").accessibilityHidden(true) }
+                }
                 Text("基础做菜功能无需会员。智能服务以当前可用能力和额度为准。")
                     .font(.footnote).foregroundStyle(.secondary)
             } header: {

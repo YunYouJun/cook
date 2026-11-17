@@ -21,14 +21,15 @@ struct FridgeView: View {
     private enum Grouping { case expiry, category }
 
     private enum Sheet: Identifiable {
-        case manual, photo, categories, edit(FridgeItem)
+        case manual, photo, vision, categories, edit(FridgeItem)
 
-        enum ID: Hashable { case manual, photo, categories, edit(PersistentIdentifier) }
+        enum ID: Hashable { case manual, photo, vision, categories, edit(PersistentIdentifier) }
 
         var id: ID {
             switch self {
             case .manual: return .manual
             case .photo: return .photo
+            case .vision: return .vision
             case .categories: return .categories
             case let .edit(item): return .edit(item.persistentModelID)
             }
@@ -44,6 +45,7 @@ struct FridgeView: View {
         let fresh = groups[1] ?? []
         let expired = groups[2] ?? []
         let usable = soon + fresh
+        let visionAvailable = FridgeVisionSheet.isAvailable
 
         NavigationStack(path: $path) {
             Group {
@@ -55,10 +57,16 @@ struct FridgeView: View {
                     } actions: {
                         Button("放点食材") { sheet = .manual }
                             .buttonStyle(.borderedProminent)
+                        if visionAvailable {
+                            visionEntry.buttonStyle(.bordered)
+                        }
                         Button("拍照识别", systemImage: "camera") { sheet = .photo }
                     }
                 } else {
                     List {
+                        if visionAvailable {
+                            Section { visionEntry }
+                        }
                         if !remindersEnabled, !promptDismissed {
                             ReminderPrompt(onDismiss: { promptDismissed = true })
                         }
@@ -116,6 +124,7 @@ struct FridgeView: View {
                 switch route {
                 case .manual: AddFridgeSheet()
                 case .photo: FridgePhotoSheet()
+                case .vision: FridgeVisionSheet(onUseOffline: { sheet = .photo })
                 case .categories: FridgeCategoryManager()
                 case let .edit(item): FridgeItemSheet(item: item)
                 }
@@ -129,6 +138,11 @@ struct FridgeView: View {
             sheet = nil
             grouping = .expiry
         }
+    }
+
+    private var visionEntry: some View {
+        Button("AI 识图（会员）", systemImage: "sparkles") { sheet = .vision }
+            .accessibilityIdentifier("fridge.vision.open")
     }
 
     @ViewBuilder
@@ -482,17 +496,8 @@ struct AddFridgeSheet: View {
     }
 
     private func save() {
-        let now = Date()
         do {
-            try context.saveUserChange {
-                for name in selected {
-                    let advice = ProduceStorageAdvice.recommendation(for: name)
-                    let item = FridgeItem(name: name, days: advice?.days ?? store.data.shelfLife.days(for: name), at: now)
-                    item.categoryKey = category.storedKey
-                    item.storageAdvice = advice?.condition
-                    context.insert(item)
-                }
-            }
+            try context.addEstimatedFridgeItems(selected, shelfLife: store.data.shelfLife, categoryKey: category.storedKey)
             dismiss()
         } catch {
             saveError = true

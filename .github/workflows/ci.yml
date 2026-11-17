@@ -124,7 +124,7 @@ jobs:
         run: |
           node scripts/generate-ai-intent-contract.mjs --check
           node scripts/generate-ai-guidance-sources.mjs --check
-          node --test test/cookAiIntent.test.mjs test/aiIntentContract.test.mjs test/cookAiGuidance.test.mjs test/aiGuidanceSources.test.mjs
+          node --test test/cookAiIntent.test.mjs test/aiIntentContract.test.mjs test/cookAiGuidance.test.mjs test/aiGuidanceSources.test.mjs test/cookFridgeVision.test.mjs
       - run: pnpm run validate
       - run: pnpm run amounts:check
       - name: Check recipe ids against base branch
