@@ -93,6 +93,40 @@ struct YunlefunSSO {
     }
 }
 
+/// The browser receives only a hash of the App verifier. Safari's initial redirect
+/// supplies the binding to its own, separate HttpOnly cookie.
+struct YunlefunAccountWebHandoff {
+    static let endpoint = URL(string: "\(YunlefunSSO.issuer)/api/session/cook-handoff")!
+    private let verifier: String
+    private let request: String
+    private let createdAt: Date
+
+    init(now: Date = Date()) throws {
+        verifier = try YunlefunSSO.randomToken()
+        request = Data(SHA256.hash(data: Data(verifier.utf8))).base64URL
+        createdAt = now
+    }
+
+    var startURL: URL {
+        var parts = URLComponents(url: Self.endpoint, resolvingAgainstBaseURL: false)!
+        parts.queryItems = [.init(name: "request", value: request)]
+        return parts.url!
+    }
+
+    func approvalFields(for redirect: URL, now: Date = Date()) -> [String: String]? {
+        let prefix = "\(Self.endpoint.path)/\(request)/"
+        guard now.timeIntervalSince(createdAt) >= 0, now.timeIntervalSince(createdAt) < 45,
+              let parts = URLComponents(url: redirect, resolvingAgainstBaseURL: false),
+              parts.scheme == "https", parts.host == Self.endpoint.host,
+              parts.user == nil, parts.password == nil, parts.port == nil, parts.fragment == nil, parts.query == nil,
+              parts.percentEncodedPath.hasPrefix(prefix) else { return nil }
+        let binding = String(parts.percentEncodedPath.dropFirst(prefix.count))
+        guard binding.range(of: "^[a-zA-Z0-9_-]{43}$", options: .regularExpression) != nil else { return nil }
+        return ["action": "approveCookWebHandoff", "clientId": YunlefunSSO.clientID,
+                "verifier": verifier, "binding": binding]
+    }
+}
+
 extension Data {
     fileprivate var base64URL: String {
         base64EncodedString().replacingOccurrences(of: "+", with: "-")

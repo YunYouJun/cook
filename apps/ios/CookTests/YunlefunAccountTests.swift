@@ -79,6 +79,33 @@ final class YunlefunSSOTests: XCTestCase {
             XCTAssertTrue($0 is CancellationError)
         }
     }
+
+    func testWebsiteHandoffOnlyApprovesItsOwnFirstPartyBrowserRedirect() throws {
+        let now = Date()
+        let handoff = try YunlefunAccountWebHandoff(now: now)
+        let start = try XCTUnwrap(URLComponents(url: handoff.startURL, resolvingAgainstBaseURL: false))
+        let challenge = try XCTUnwrap(start.queryItems?.first?.value)
+        let binding = String(repeating: "b", count: 43)
+        let path = "/api/session/cook-handoff/\(challenge)/\(binding)"
+        let authorized = URL(string: "https://www.yunle.fun" + path)!
+        let fields = try XCTUnwrap(handoff.approvalFields(for: authorized, now: now))
+        let verifier = try XCTUnwrap(fields["verifier"])
+        let expected = Data(SHA256.hash(data: Data(verifier.utf8))).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        XCTAssertEqual(challenge, expected)
+        XCTAssertEqual(fields, ["action": "approveCookWebHandoff", "clientId": "cook-mobile",
+                                "verifier": verifier, "binding": binding])
+        XCTAssertFalse(handoff.startURL.absoluteString.contains(verifier))
+        XCTAssertNil(handoff.approvalFields(for: authorized, now: now.addingTimeInterval(45)))
+        XCTAssertNil(try YunlefunAccountWebHandoff(now: now).approvalFields(for: authorized, now: now))
+        for invalid in ["https://elsewhere.example" + path,
+                        authorized.absoluteString + "?next=/settings",
+                        authorized.absoluteString + "#fragment",
+                        authorized.absoluteString + "/" + binding] {
+            XCTAssertNil(handoff.approvalFields(for: URL(string: invalid)!, now: now))
+        }
+    }
 }
 
 @MainActor
@@ -426,6 +453,36 @@ private actor AccountTransportStub {
 
 @MainActor
 final class YunlefunAccountServiceTests: XCTestCase {
+    func testWebsiteHandoffCapabilityDoesNotSendCredentialsAndApprovalUsesCurrentBearer() async throws {
+        let transport = AccountTransportStub([(200, #"{"supported":true}"#), (200, #"{"ok":true}"#)])
+        let service = YunlefunAccountService(transport: { try await transport.send($0) })
+        let supported = try await service.supportsAccountWebHandoff()
+        XCTAssertTrue(supported)
+        let fields = ["action": "approveCookWebHandoff", "clientId": "cook-mobile", "verifier": "verifier", "binding": "browser"]
+        try await service.approveAccountWebHandoff(fields: fields, credential: AccountServiceStub().credential)
+        let requests = await transport.requests
+        XCTAssertEqual(requests[0].url?.absoluteString, "https://www.yunle.fun/api/session/cook-handoff")
+        XCTAssertEqual(requests[0].httpMethod, "GET")
+        XCTAssertNil(requests[0].value(forHTTPHeaderField: "Authorization"))
+        XCTAssertEqual(requests[1].url?.absoluteString, "https://api.yunle.fun/sso-ticket")
+        XCTAssertEqual(requests[1].value(forHTTPHeaderField: "Authorization"), "Bearer access")
+        XCTAssertEqual(requests[1].value(forHTTPHeaderField: "x-device-id"), "installation")
+        XCTAssertEqual(try JSONDecoder().decode([String: String].self, from: XCTUnwrap(requests[1].httpBody)), fields)
+    }
+
+    func testOnlyMissingWebsiteCapabilityFallsBackToTheLegacyPage() async throws {
+        let transport = AccountTransportStub([(404, "{}"), (503, "{}")])
+        let service = YunlefunAccountService(transport: { try await transport.send($0) })
+        let supported = try await service.supportsAccountWebHandoff()
+        XCTAssertFalse(supported)
+        do {
+            _ = try await service.supportsAccountWebHandoff()
+            XCTFail("A transient outage must not open a possibly different browser account")
+        } catch let error as YunlefunAccountError {
+            guard case .unavailable = error else { return XCTFail("Unexpected handoff probe error") }
+        }
+    }
+
     func testWeChatSignupPhoneVerificationDoesNotCreateAnExistingAccount() async throws {
         let transport = AccountTransportStub([
             (200, #"{"ok":true,"challenge":"sms-challenge"}"#),

@@ -135,15 +135,18 @@ final class SettingsWebsitePresenter {
             .accessibilityHidden(true)
     }
 
-    func open(_ url: URL) {
-        guard var presenter = anchor?.window?.rootViewController else { return }
+    @discardableResult
+    func open(_ url: URL, delegate: (any SFSafariViewControllerDelegate)? = nil) -> Bool {
+        guard var presenter = anchor?.window?.rootViewController else { return false }
         while let presented = presenter.presentedViewController {
-            guard !presented.isBeingDismissed, !(presented is SFSafariViewController) else { return }
+            guard !presented.isBeingDismissed, !(presented is SFSafariViewController) else { return false }
             presenter = presented
         }
         let safari = SFSafariViewController(url: url)
         safari.dismissButtonStyle = .done
+        safari.delegate = delegate
         presenter.present(safari, animated: true)
+        return true
     }
 
     private struct Anchor: UIViewRepresentable {
