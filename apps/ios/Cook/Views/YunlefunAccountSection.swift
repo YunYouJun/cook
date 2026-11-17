@@ -37,7 +37,9 @@ struct YunlefunAccountSection: View {
 
 struct YunlefunAccountView: View {
     @Environment(YunlefunAccountStore.self) private var accounts
+    @Environment(\.openURL) private var openURL
     @State private var browser = SettingsWebsitePresenter()
+    @State private var browserAuthorization = SystemYunlefunAuthorization()
     @State private var preparingWebsite: Task<Void, Never>?
     @State private var handoffDelegate: AccountWebHandoffDelegate?
     @State private var websiteUnavailable = false
@@ -124,26 +126,47 @@ struct YunlefunAccountView: View {
 
     private func openAccountWebsite() {
         guard preparingWebsite == nil, let subject = accounts.account?.id else { return }
+        let transport: YunlefunAccountWebHandoff.Transport = ProcessInfo.processInfo.isiOSAppOnMac ? .systemBrowser : .inAppSafari
         preparingWebsite = Task {
             defer { preparingWebsite = nil }
             do {
-                let supportsHandoff = try await accounts.supportsAccountWebHandoff()
+                let supportsHandoff = try await accounts.supportsAccountWebHandoff(in: transport)
                 guard !Task.isCancelled, accounts.account?.id == subject else { return }
                 guard supportsHandoff else {
                     browser.open(Self.settingsURL)
                     return
                 }
                 let handoff = try YunlefunAccountWebHandoff()
+                if transport == .systemBrowser {
+                    try await openAccountInSystemBrowser(handoff, subject: subject)
+                    return
+                }
                 let delegate = AccountWebHandoffDelegate(handoff: handoff) { fields in
                     try await accounts.approveAccountWebHandoff(fields: fields, for: subject)
                 }
                 if browser.open(handoff.startURL, delegate: delegate) {
                     handoffDelegate = delegate // Safari's delegate is weak.
                 }
+            } catch is CancellationError {
+                // The user closed the system authorization window.
             } catch {
                 if !Task.isCancelled, accounts.account?.id == subject { websiteUnavailable = true }
             }
         }
+    }
+
+    private func openAccountInSystemBrowser(_ handoff: YunlefunAccountWebHandoff, subject: String) async throws {
+        let callback = try await browserAuthorization.authorizeInBrowser(
+            handoff.systemBrowserStartURL, expiresAfter: YunlefunAccountWebHandoff.lifetime
+        )
+        try Task.checkCancellation()
+        guard let completion = handoff.systemBrowserCompletion(for: callback) else {
+            throw YunlefunAccountError.invalidCallback
+        }
+        try await accounts.approveAccountWebHandoff(fields: completion.approvalFields, for: subject)
+        try Task.checkCancellation()
+        guard accounts.account?.id == subject else { return }
+        openURL(completion.url)
     }
 
     private func websiteRow(_ title: String, symbol: String, color: Color, subtitle: String? = nil,

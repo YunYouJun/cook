@@ -6,7 +6,9 @@ import Security
 struct YunlefunSSO {
     static let issuer = "https://www.yunle.fun"
     static let clientID = "cook-mobile"
-    static let redirectURI = "https://cook.yunyoujun.cn/auth/callback?platform=native"
+    static let callbackHost = "cook.yunyoujun.cn"
+    static let callbackPath = "/auth/callback"
+    static let redirectURI = "https://\(callbackHost)\(callbackPath)?platform=native"
     static let scope = "identity:bootstrap"
     static let lifetime: TimeInterval = 600
 
@@ -97,6 +99,18 @@ struct YunlefunSSO {
 /// supplies the binding to its own, separate HttpOnly cookie.
 struct YunlefunAccountWebHandoff {
     static let endpoint = URL(string: "\(YunlefunSSO.issuer)/api/session/cook-handoff")!
+    static let lifetime: TimeInterval = 45
+
+    enum Transport {
+        case inAppSafari
+        case systemBrowser
+    }
+
+    struct BrowserCompletion {
+        let approvalFields: [String: String]
+        let url: URL
+    }
+
     private let verifier: String
     private let request: String
     private let createdAt: Date
@@ -108,20 +122,58 @@ struct YunlefunAccountWebHandoff {
     }
 
     var startURL: URL {
+        startURL(transport: .inAppSafari)
+    }
+
+    var systemBrowserStartURL: URL {
+        startURL(transport: .systemBrowser)
+    }
+
+    private func startURL(transport: Transport) -> URL {
         var parts = URLComponents(url: Self.endpoint, resolvingAgainstBaseURL: false)!
         parts.queryItems = [.init(name: "request", value: request)]
+        if transport == .systemBrowser {
+            parts.queryItems?.append(.init(name: "transport", value: "browser"))
+        }
         return parts.url!
     }
 
     func approvalFields(for redirect: URL, now: Date = Date()) -> [String: String]? {
         let prefix = "\(Self.endpoint.path)/\(request)/"
-        guard now.timeIntervalSince(createdAt) >= 0, now.timeIntervalSince(createdAt) < 45,
+        guard isCurrent(at: now),
               let parts = URLComponents(url: redirect, resolvingAgainstBaseURL: false),
               parts.scheme == "https", parts.host == Self.endpoint.host,
               parts.user == nil, parts.password == nil, parts.port == nil, parts.fragment == nil, parts.query == nil,
               parts.percentEncodedPath.hasPrefix(prefix) else { return nil }
         let binding = String(parts.percentEncodedPath.dropFirst(prefix.count))
-        guard binding.range(of: "^[a-zA-Z0-9_-]{43}$", options: .regularExpression) != nil else { return nil }
+        guard Self.isBinding(binding) else { return nil }
+        return approvalFields(binding: binding)
+    }
+
+    /// The system authentication window closes on this HTTPS callback. Resume on
+    /// the original website so it can redeem using the same browser's HttpOnly cookie.
+    func systemBrowserCompletion(for callback: URL, now: Date = Date()) -> BrowserCompletion? {
+        let prefix = "cook_handoff=\(request)."
+        guard isCurrent(at: now), YunlefunSSO.isCallback(callback),
+              let fragment = URLComponents(url: callback, resolvingAgainstBaseURL: false)?.percentEncodedFragment,
+              fragment.hasPrefix(prefix) else { return nil }
+        let binding = String(fragment.dropFirst(prefix.count))
+        guard Self.isBinding(binding) else { return nil }
+        var page = URLComponents(string: YunlefunSSO.issuer + "/auth/cook-account")!
+        page.queryItems = [.init(name: "request", value: request), .init(name: "binding", value: binding)]
+        return BrowserCompletion(approvalFields: approvalFields(binding: binding), url: page.url!)
+    }
+
+    private func isCurrent(at date: Date) -> Bool {
+        let age = date.timeIntervalSince(createdAt)
+        return age >= 0 && age < Self.lifetime
+    }
+
+    private static func isBinding(_ value: String) -> Bool {
+        value.range(of: "^[a-zA-Z0-9_-]{43}$", options: .regularExpression) != nil
+    }
+
+    private func approvalFields(binding: String) -> [String: String] {
         return ["action": "approveCookWebHandoff", "clientId": YunlefunSSO.clientID,
                 "verifier": verifier, "binding": binding]
     }

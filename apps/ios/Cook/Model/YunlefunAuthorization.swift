@@ -18,6 +18,10 @@ final class SystemYunlefunAuthorization: NSObject, YunlefunAuthorizing, ASWebAut
     private var attemptID: UUID?
 
     func authorize(_ transaction: YunlefunSSO) async throws -> URL {
+        try await authorizeInBrowser(transaction.authorizationURL, expiresAfter: YunlefunSSO.lifetime)
+    }
+
+    func authorizeInBrowser(_ url: URL, expiresAfter lifetime: TimeInterval) async throws -> URL {
         guard #available(iOS 17.4, *) else { throw YunlefunAccountError.requiresUpdate }
         guard session == nil else { throw YunlefunAccountError.unavailable }
         let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
@@ -34,8 +38,8 @@ final class SystemYunlefunAuthorization: NSObject, YunlefunAuthorizing, ASWebAut
             try Task.checkCancellation()
             return try await withCheckedThrowingContinuation { continuation in
                 self.continuation = continuation
-                let session = ASWebAuthenticationSession(url: transaction.authorizationURL,
-                    callback: .https(host: "cook.yunyoujun.cn", path: "/auth/callback")) { [weak self] url, error in
+                let session = ASWebAuthenticationSession(url: url,
+                    callback: .https(host: YunlefunSSO.callbackHost, path: YunlefunSSO.callbackPath)) { [weak self] url, error in
                     Task { @MainActor in
                         if let error = error as? ASWebAuthenticationSessionError, error.code == .canceledLogin {
                             self?.finish(.failure(CancellationError()), id: id)
@@ -43,6 +47,8 @@ final class SystemYunlefunAuthorization: NSObject, YunlefunAuthorizing, ASWebAut
                         else { self?.finish(.failure(YunlefunAccountError.authorizationFailed), id: id) }
                     }
                 }
+                // The handoff resumes in the default browser with its own short-lived cookie.
+                session.prefersEphemeralWebBrowserSession = false
                 session.presentationContextProvider = self
                 self.session = session
                 guard session.start() else {
@@ -50,7 +56,7 @@ final class SystemYunlefunAuthorization: NSObject, YunlefunAuthorizing, ASWebAut
                     return
                 }
                 timeout = Task { [weak self] in
-                    do { try await Task.sleep(for: .seconds(YunlefunSSO.lifetime)) }
+                    do { try await Task.sleep(for: .seconds(lifetime)) }
                     catch { return }
                     guard self?.attemptID == id else { return }
                     self?.session?.cancel()

@@ -90,7 +90,7 @@ protocol YunlefunAccountServing {
     func signOut(_ credential: YunlefunCredential) async throws
     func signInWithWeChat(code: String, deviceID: String) async throws -> YunlefunCredential
     func bindWeChat(code: String, credential: YunlefunCredential) async throws
-    func supportsAccountWebHandoff() async throws -> Bool
+    func supportsAccountWebHandoff(in transport: YunlefunAccountWebHandoff.Transport) async throws -> Bool
     func approveAccountWebHandoff(fields: [String: String], credential: YunlefunCredential) async throws
 }
 
@@ -101,7 +101,7 @@ extension YunlefunAccountServing {
     func bindWeChat(code: String, credential: YunlefunCredential) async throws {
         throw WeChatAccountError.unavailable
     }
-    func supportsAccountWebHandoff() async throws -> Bool { false }
+    func supportsAccountWebHandoff(in transport: YunlefunAccountWebHandoff.Transport) async throws -> Bool { false }
     func approveAccountWebHandoff(fields: [String: String], credential: YunlefunCredential) async throws {
         throw YunlefunAccountError.unavailable
     }
@@ -241,9 +241,10 @@ struct YunlefunAccountService: YunlefunAccountServing {
         _ = try await request(URL(string: "\(Self.gateway)user/signout")!, fields: [:], credential: credential)
     }
 
-    func supportsAccountWebHandoff() async throws -> Bool {
+    func supportsAccountWebHandoff(in mode: YunlefunAccountWebHandoff.Transport = .inAppSafari) async throws -> Bool {
         let url = YunlefunAccountWebHandoff.endpoint
-        var probe = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 3)
+        // This endpoint can take longer than three seconds to respond on a healthy connection.
+        var probe = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
         probe.setValue("application/json", forHTTPHeaderField: "Accept")
         let (data, response) = try await transport(probe)
         guard let http = response as? HTTPURLResponse, http.url == url else {
@@ -254,7 +255,7 @@ struct YunlefunAccountService: YunlefunAccountServing {
               let reply = try? JSONDecoder().decode(WebHandoffCapability.self, from: data) else {
             throw YunlefunAccountError.unavailable
         }
-        return reply.supported
+        return reply.supported && (mode == .inAppSafari || reply.systemBrowser == true)
     }
 
     func approveAccountWebHandoff(fields: [String: String], credential: YunlefunCredential) async throws {
@@ -333,7 +334,10 @@ struct YunlefunAccountService: YunlefunAccountServing {
         }
     }
     private struct ServiceFailure: Decodable { let error: String?; let reason: String? }
-    private struct WebHandoffCapability: Decodable { let supported: Bool }
+    private struct WebHandoffCapability: Decodable {
+        let supported: Bool
+        let systemBrowser: Bool?
+    }
     private struct WebHandoffApproval: Decodable { let ok: Bool }
     private struct SignupResponse: Decodable { let next: String?; let proof: String?; let challenge: String? }
 }
