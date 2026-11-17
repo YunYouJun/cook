@@ -57,8 +57,8 @@ final class YunlefunAccountStore {
         try await credentialForRequest()
     }
 
-    func supportsAccountWebHandoff() async throws -> Bool {
-        try await service.supportsAccountWebHandoff()
+    func supportsAccountWebHandoff(in transport: YunlefunAccountWebHandoff.Transport) async throws -> Bool {
+        try await service.supportsAccountWebHandoff(in: transport)
     }
 
     func approveAccountWebHandoff(fields: [String: String], for subject: String) async throws {

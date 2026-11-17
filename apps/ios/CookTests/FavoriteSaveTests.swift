@@ -117,8 +117,9 @@ final class FavoriteSaveTests: XCTestCase {
         let text = try XCTUnwrap(PrivacyPolicyView.bundledText())
         XCTAssertTrue(text.contains("云食册隐私政策"))
         XCTAssertTrue(text.contains("me@yunyoujun.cn"))
-        XCTAssertTrue(text.contains("默认关闭"))
-        XCTAssertTrue(text.contains("冰箱临期提醒"))
-        XCTAssertTrue(text.contains("不随 iCloud 同步"))
+        let reminderPolicy = try XCTUnwrap(text.components(separatedBy: "\n\n").first {
+            $0.contains("临期提醒默认关闭")
+        })
+        XCTAssertTrue(reminderPolicy.contains("不随 iCloud 同步"))
     }
 }
