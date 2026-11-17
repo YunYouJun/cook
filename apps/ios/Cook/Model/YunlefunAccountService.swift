@@ -243,7 +243,8 @@ struct YunlefunAccountService: YunlefunAccountServing {
 
     func supportsAccountWebHandoff(in mode: YunlefunAccountWebHandoff.Transport = .inAppSafari) async throws -> Bool {
         let url = YunlefunAccountWebHandoff.endpoint
-        var probe = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 3)
+        // This endpoint can take longer than three seconds to respond on a healthy connection.
+        var probe = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
         probe.setValue("application/json", forHTTPHeaderField: "Accept")
         let (data, response) = try await transport(probe)
         guard let http = response as? HTTPURLResponse, http.url == url else {
