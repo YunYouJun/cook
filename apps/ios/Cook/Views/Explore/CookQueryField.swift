@@ -33,7 +33,8 @@ struct CookQueryField: View {
                 }
             }
         }
-        .padding(.horizontal, Space.medium)
+        .padding(.leading, CookLayout.SearchField.leadingInset)
+        .padding(.trailing, CookLayout.SearchField.trailingInset)
         .frame(minHeight: CookLayout.searchFieldHeight)
         .background(CookPalette.inputBackground, in: shape)
         .overlay {
@@ -46,9 +47,7 @@ struct CookQueryField: View {
 
     private var query: some View {
         HStack(spacing: Space.small) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
+            CookSearchMagnifier()
             TextField("菜名、食材或一句话", text: $text)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
@@ -89,7 +88,7 @@ struct CookQueryField: View {
             }
             .font(dynamicTypeSize.isAccessibilitySize ? .body : .title2)
             .foregroundStyle(canSearch ? CookPalette.primaryAction : Color.secondary)
-            .frame(minWidth: CookLayout.minimumHitSize, minHeight: CookLayout.minimumHitSize)
+            .frame(minWidth: CookLayout.SearchField.actionWidth, minHeight: CookLayout.minimumHitSize)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

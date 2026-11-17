@@ -23,28 +23,75 @@ struct RootView: View {
     @Environment(FeedbackClient.self) private var feedback
     @Environment(FavoriteActions.self) private var favoriteActions
     @State private var showingSignalConsent = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    #if DEBUG
+    @AppStorage(CookPhoneSearchStyle.storageKey) private var phoneSearchStyle = CookPhoneSearchStyle.defaultStyle
+    #endif
+    @State private var expandedSearch: CookExpandedSearchRequest?
+    @State private var expandedSearchKeyboardVisible = false
+    @State private var searchDissolve = CookSearchDissolve()
 
     init(router: AppRouter = AppRouter()) {
         _router = State(initialValue: router)
     }
 
     var body: some View {
-        TabView(selection: $router.tab) {
-            CookView()
-                .tabItem { Label("找菜", systemImage: "frying.pan") }
-                .tag(AppTab.cook)
-            FridgeView()
-                .tabItem { Label("冰箱", systemImage: "refrigerator") }
-                .tag(AppTab.fridge)
-            LibraryView()
-                .tabItem { Label("菜谱", systemImage: "book") }
-                .tag(AppTab.library)
-            SettingsView()
-                .tabItem { Label("我的", systemImage: "person.crop.circle") }
-                .tag(AppTab.settings)
+        ZStack(alignment: .top) {
+            TabView(selection: $router.tab) {
+                CookView()
+                    .tabItem { Label("找菜", systemImage: "frying.pan") }
+                    .tag(AppTab.cook)
+                FridgeView()
+                    .tabItem { Label("冰箱", systemImage: "refrigerator") }
+                    .tag(AppTab.fridge)
+                LibraryView()
+                    .tabItem { Label("菜谱", systemImage: "book") }
+                    .tag(AppTab.library)
+                SettingsView()
+                    .tabItem { Label("我的", systemImage: "person.crop.circle") }
+                    .tag(AppTab.settings)
+            }
+            .minimizesTabBarOnScroll()
+            .environment(\.cookSearchExpansion, searchExpansion)
+            .ignoresSafeArea(.keyboard, edges: expandedSearch == nil ? [] : .bottom)
+            .allowsHitTesting(expandedSearch == nil)
+            .accessibilityHidden(expandedSearch != nil)
+            .transaction(value: expandedSearch?.phase) { transaction in
+                transaction.animation = nil
+                transaction.disablesAnimations = true
+            }
+
+            if let request = expandedSearch {
+                NavigationStack {
+                    CookSearchView(
+                        expansion: CookExpandedSearchHeader(sourceScrollOffset: request.sourceScrollOffset, close: closeExpandedSearch),
+                        onApplied: request.onApplied
+                    )
+                }
+                .background(CookSearchDissolveAnchor(dissolve: searchDissolve))
+                .opacity(request.isClosing ? 0 : 1)
+                .allowsHitTesting(!request.isClosing)
+                .accessibilityHidden(request.isClosing)
+                .transition(reduceMotion ? .identity : .opacity)
+                .zIndex(1)
+            }
         }
-        .minimizesTabBarOnScroll()
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .ignoresSafeArea(.keyboard, edges: expandedSearch?.isClosing == true ? .bottom : [])
         .environment(router)
+        .onChange(of: router.tab) {
+            if router.tab != .cook, expandedSearch != nil {
+                removeExpandedSearch()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            if expandedSearch != nil { expandedSearchKeyboardVisible = true }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)) { _ in
+            expandedSearchKeyboardVisible = false
+            completeExpandedSearchCloseIfReady()
+        }
         .onOpenURL { url in
             if accounts.handleWeChat(url) { return }
             if accounts.handleYunlefunCallback(url) { return }
@@ -106,6 +153,67 @@ struct RootView: View {
             Text("已保留原来的收藏状态。请检查设备的可用储存空间，然后重试。")
         }
         .sensoryFeedback(.success, trigger: favoriteActions.savedCount)
+    }
+
+    private var searchExpansion: CookSearchExpansion? {
+        guard UIDevice.current.userInterfaceIdiom == .phone, horizontalSizeClass == .compact else { return nil }
+        #if DEBUG
+        guard phoneSearchStyle == .expanded else { return nil }
+        #endif
+        return CookSearchExpansion(
+            isPresented: expandedSearch != nil,
+            hidesSourceField: !reduceMotion && expandedSearch?.isClosing == false && (expandedSearch?.sourceScrollOffset ?? 0) > 0.5,
+            open: openExpandedSearch
+        )
+    }
+
+    private func openExpandedSearch(_ sourceScrollOffset: CGFloat, _ onApplied: @escaping (InputNotice) -> Void) {
+        guard expandedSearch == nil else { return }
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) {
+            expandedSearch = CookExpandedSearchRequest(sourceScrollOffset: sourceScrollOffset, onApplied: onApplied)
+        }
+    }
+
+    private func closeExpandedSearch() {
+        guard expandedSearch?.isClosing == false else { return }
+        if reduceMotion {
+            finishExpandedSearchFade()
+        } else if expandedSearchKeyboardVisible, searchDissolve.freeze() {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) { expandedSearch?.phase = .fadingOut }
+            searchDissolve.fade(completion: finishExpandedSearchFade)
+        } else {
+            withAnimation(.easeInOut(duration: CookSearchDissolve.duration), completionCriteria: .removed) {
+                expandedSearch?.phase = .fadingOut
+            } completion: {
+                guard expandedSearch?.phase == .fadingOut else { return }
+                finishExpandedSearchFade()
+            }
+        }
+    }
+
+    private func finishExpandedSearchFade() {
+        guard expandedSearch != nil else { return }
+        expandedSearch?.phase = .fadedOut
+        completeExpandedSearchCloseIfReady()
+    }
+
+    private func completeExpandedSearchCloseIfReady() {
+        // Keep the tab layout fixed until the keyboard is offscreen.
+        if expandedSearch?.phase == .fadedOut, !expandedSearchKeyboardVisible {
+            removeExpandedSearch()
+        }
+    }
+
+    private func removeExpandedSearch() {
+        searchDissolve.clear()
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            expandedSearch = nil
+            expandedSearchKeyboardVisible = false
+        }
     }
 
     private var reminderEntries: [FridgeReminder.Entry] {

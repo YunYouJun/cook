@@ -6,7 +6,7 @@ import SwiftUI
 struct CloudKitchenView: View {
     @Binding var presentation: CookPresentation
     let inputMessage: String?
-    let openSearch: () -> Void
+    let openSearch: (CGFloat) -> Void
     let decide: (RecipeRoute) -> Void
     let showResults: () -> Void
     var isDetailPresented = false
@@ -18,6 +18,7 @@ struct CloudKitchenView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(AppRouter.self) private var router
+    @Environment(\.cookSearchExpansion) private var searchExpansion
     @ScaledMetric(relativeTo: .caption) var minIngredientWidth: CGFloat = 68
     @State private var showingFilters = false
     @State private var showingAllIngredients = false
@@ -75,11 +76,12 @@ struct CloudKitchenView: View {
                 CookInspirationSection(
                     decide: decide,
                     isDetailPresented: isDetailPresented,
-                    suppressesShake: decideRequest != nil || showingFilters || isSearchPresented,
+                    suppressesShake: decideRequest != nil || showingFilters || isSearchActive,
                     isVisible: $inspirationVisible,
                     presentRandom: { decideRequest = CookDecideRequest(batchIDs: $0) }
                 )
             }
+            .trackCookSearchSourceOffset()
             .accessibilityIdentifier("kitchen.content")
             .listSectionSpacing(.compact)
             .contentMargins(.top, CookLayout.Spacing.small, for: .scrollContent)
@@ -125,7 +127,7 @@ struct CloudKitchenView: View {
         }
         .cookDecideSheet(request: $decideRequest, lastDecidedID: $lastDecidedID, openRecipe: decide)
         .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
-            guard scenePhase == .active, router.tab == .cook, !isDetailPresented, decideRequest == nil, !showingFilters, !isSearchPresented, !inspirationVisible else { return }
+            guard scenePhase == .active, router.tab == .cook, !isDetailPresented, decideRequest == nil, !showingFilters, !isSearchActive, !inspirationVisible else { return }
             decideRequest = CookDecideRequest(batchIDs: nil)
         }
         .sheet(isPresented: $showingFilters) {
@@ -156,6 +158,10 @@ struct CloudKitchenView: View {
             }
         }
         .sensoryFeedback(.impact(weight: .light), trigger: cooking)
+    }
+
+    private var isSearchActive: Bool {
+        isSearchPresented || searchExpansion?.isPresented == true
     }
 
     private var kitchenScene: some View {

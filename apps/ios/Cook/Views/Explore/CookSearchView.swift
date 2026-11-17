@@ -4,6 +4,7 @@ import SwiftUI
 /// Draft input belongs to this destination; leaving it never changes the cooking session.
 struct CookSearchView: View {
     var isModal = false
+    var expansion: CookExpandedSearchHeader?
     let onApplied: (InputNotice) -> Void
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
@@ -15,6 +16,45 @@ struct CookSearchView: View {
     @FocusState private var focused: Bool
 
     var body: some View {
+        Group {
+            if expansion != nil {
+                searchPage
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("取消搜索", systemImage: "xmark", action: close)
+                                .labelStyle(.iconOnly)
+                                .accessibilityIdentifier("cook.search.cancel")
+                        }
+                    }
+                    .accessibilityAction(.escape) { close() }
+            } else {
+                searchPage
+                    .toolbar(.hidden, for: .tabBar)
+                    .toolbar {
+                        if isModal {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("取消", action: close)
+                                    .accessibilityIdentifier("cook.search.cancel")
+                            }
+                        }
+                    }
+            }
+        }
+        .navigationTitle("搜索")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $preview, onDismiss: {
+            if previewApplied {
+                finish("已应用找菜条件。")
+            } else {
+                focused = true
+            }
+        }) { request in
+            SearchIntentSheet(text: request.text) { previewApplied = true }
+        }
+        .onAppear { focused = true }
+    }
+
+    private var searchPage: some View {
         ScrollView {
             CookSearchSupport(
                 text: $input,
@@ -30,33 +70,20 @@ struct CookSearchView: View {
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .top, spacing: 0) {
             CookQueryField(text: $input, focused: $focused) { submit(input) }
+                .cookSearchFieldMotion(from: expansion?.sourceScrollOffset ?? 0)
                 .padding(.horizontal, CookLayout.Spacing.large)
                 .padding(.top, CookLayout.Spacing.small)
                 .padding(.bottom, CookLayout.Spacing.medium)
                 .background(Color(uiColor: .systemGroupedBackground))
         }
-        .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("搜索")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .tabBar)
-        .toolbar {
-            if isModal {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
-                        .accessibilityIdentifier("cook.search.cancel")
-                }
-            }
-        }
-        .sheet(item: $preview, onDismiss: {
-            if previewApplied {
-                finish("已应用找菜条件。")
+        .background {
+            let background = Color(uiColor: .systemGroupedBackground)
+            if expansion != nil {
+                background.ignoresSafeArea()
             } else {
-                focused = true
+                background
             }
-        }) { request in
-            SearchIntentSheet(text: request.text) { previewApplied = true }
         }
-        .onAppear { focused = true }
     }
 
     private func submit(_ text: String) {
@@ -82,9 +109,14 @@ struct CookSearchView: View {
     }
 
     private func finish(_ message: String) {
-        focused = false
         onApplied(InputNotice(kind: .applied, message: message))
-        dismiss()
+        close()
+    }
+
+    private func close() {
+        expansion?.close()
+        focused = false
+        if expansion == nil { dismiss() }
     }
 }
 
