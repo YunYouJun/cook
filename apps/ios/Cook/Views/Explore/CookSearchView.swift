@@ -140,6 +140,7 @@ private struct CookHomeActionBar<Bar: View>: ViewModifier {
     let background: Color
     let isSearchPresented: Bool
     let bar: () -> Bar
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var restingLayout: Layout?
     @State private var returningFromSearch = false
 
@@ -154,7 +155,9 @@ private struct CookHomeActionBar<Bar: View>: ViewModifier {
             let showsAction = !(isSearchPresented || returningFromSearch) || hasRestoredInset
             content.bottomActionBar(background: background) {
                 bar()
-                    .opacity(showsAction ? 1 : 0)
+                    .animation(showsAction && !reduceMotion ? .easeOut(duration: 0.18) : nil) { button in
+                        button.opacity(showsAction ? 1 : 0)
+                    }
                     .allowsHitTesting(showsAction)
                     .accessibilityHidden(!showsAction)
             }
