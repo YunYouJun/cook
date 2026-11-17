@@ -1,0 +1,80 @@
+{
+  "description": "iOS（CookCore）与 Android（:core）共用的菜谱用量缩放、步骤表达式换算与余量分配用例；Web 侧同步校验源码指纹与边界解析规则。",
+  "bundledTomato250": {
+    "id": 250,
+    "servingsCases": [
+      { "servings": 1, "eggs": "2 个", "oil": "8 ml" },
+      { "servings": 2, "eggs": "3 个", "oil": "12 ml" },
+      { "servings": 3, "eggs": "5 个", "oil": "20 ml" },
+      { "servings": 20, "eggs": "30 个", "oil": "120 ml" }
+    ],
+    "servings3Details": {
+      "西红柿": "3 个（约 540 g）",
+      "盐": "4.5–6 g",
+      "糖（可选）": "0–6 g",
+      "葱花（可选）": "0–30 g",
+      "eggNote": "已向上取整"
+    }
+  },
+  "bundledInstructionExamples": [
+    { "id": 225, "servings": 3, "expression": "（份数 * 5）g", "expected": "15 g" },
+    { "id": 225, "servings": 3, "expression": "（份数 * 3）g", "expected": "9 g" },
+    { "id": 250, "servings": 3, "expression": "1g * 份数", "expected": "3 g" },
+    { "id": 686, "servings": 3, "expression": "份数 * 13 毫升", "expected": "39 ml" },
+    { "id": 688, "servings": 3, "expression": "份数 * 9ml", "expected": "27 ml" },
+    { "id": 763, "servings": 3, "expression": "份数 * 8ml", "expected": "24 ml" },
+    { "id": 859, "servings": 3, "expression": "（2g * 份数）", "expected": "6 g" }
+  ],
+  "bundledAllocationChecks": [
+    { "id": 598, "block": 9, "item": 3, "servings": 3, "contains": ["本步 食盐 1.5 g", "本步 酱油 5 g"], "expectUnresolved": false },
+    { "id": 598, "block": 9, "item": 9, "servings": 3, "contains": ["剩下的食盐（1.5 g）", "味极鲜酱油酱油（5 g）"], "expectUnresolved": false },
+    { "id": 680, "block": 14, "item": 0, "servings": 3, "contains": ["40g 低筋面粉（本步 低筋面粉 120 g）"], "expectUnresolved": false },
+    { "id": 680, "block": 14, "item": 1, "servings": 3, "contains": ["剩余 80g 低筋面粉（240 g）"], "expectUnresolved": false },
+    { "id": 710, "block": 10, "item": 1, "servings": 3, "contains": ["本步 油 15 ml"], "expectUnresolved": true },
+    { "id": 710, "block": 10, "item": 7, "servings": 3, "contains": ["剩余的油（90 ml）"], "expectUnresolved": false },
+    { "id": 710, "block": 10, "item": 8, "servings": 3, "exactText": "将热油淋入葱姜碗中", "expectUnresolved": true },
+    { "id": 754, "block": 9, "item": 3, "servings": 3, "contains": ["本步 冰糖 3–6 粒"], "expectUnresolved": true },
+    { "id": 754, "block": 9, "item": 5, "servings": 3, "contains": ["本步 料酒或者黄酒 45–60 ml"], "expectUnresolved": true },
+    { "id": 799, "block": 10, "item": 2, "servings": 3, "contains": ["剩余大约 10g 姜片（本步 生姜 30 g）"], "expectUnresolved": true },
+    { "id": 799, "block": 10, "item": 4, "servings": 3, "contains": [], "expectUnresolved": true }
+  ],
+  "syntheticUsageCases": [
+    {
+      "servings": 2,
+      "quantities": ["盐 = 10g * 份数", "水 = 1 L * 份数"],
+      "steps": ["加入 2g * 份数 的盐", "放入盐 1 g", "加入剩余的盐", "倒入 250 ml 水", "倒入剩下的水"],
+      "expectedTexts": ["加入 4 g 的盐", "放入盐 1 g", "加入剩余的盐（15 g）", "倒入 250 ml 水", "倒入剩下的水（1.75 L）"],
+      "expectedUnresolvedLast": false
+    },
+    {
+      "servings": 1,
+      "quantities": ["食用油 = 20 ml"],
+      "steps": ["加入少许食用油", "加入剩余的食用油"],
+      "expectedTexts": ["加入少许食用油", "加入剩余的食用油"],
+      "expectedUnresolvedLast": true
+    },
+    {
+      "servings": 1,
+      "quantities": ["盐 = 5g"],
+      "steps": ["如果喜欢咸味，加入 1g 盐", "加入剩余的盐"],
+      "expectedTexts": ["如果喜欢咸味，加入 1g 盐", "加入剩余的盐"],
+      "expectedUnresolvedLast": true
+    }
+  ],
+  "unsupportedInstructionExpressions": [
+    "1g * 份数 + 2g",
+    "未知数量 * 2g * 份数",
+    "份数 * 2g / 未知数量",
+    "1g * (份数 + 1)",
+    "((份数 * 2g))",
+    "份数 * 10mm",
+    "份数 * 一把半",
+    "-1g * 份数",
+    "份数 * 2g - 份数 * 6g",
+    "`份数 * 2g + 未知数量`",
+    "`份数 * 2g` + 1g",
+    "份数 * 1.5个，向下取整",
+    "`份数 * 1.5个`，向上取整",
+    "（份数 * 1.5个），向下取整"
+  ]
+}
