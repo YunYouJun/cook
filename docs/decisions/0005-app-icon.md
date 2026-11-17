@@ -4,6 +4,8 @@
 - 日期：2026-10-19
 - 关联：[0004 iOS App 命名为「云食册」](./0004-ios-app-name)
 
+> 2026-11-17：iOS 主屏幕改用工坊版俯视锅，见下文。网页版继续使用「蒸汽成云」。
+
 ## 背景
 
 - iOS 版改名「云食册」并挂上云乐坊品牌（见 0004），原来的祖母绿俯视锅图标和云乐坊系列（云乐盘、云生、云匣）的视觉不统一。
@@ -34,3 +36,11 @@
 
 - `YunLeFun/icons` 的 `cook-mark` / `cook-app-icon` 需要重新同步；它的 metadata 里来源路径还是旧的 `public/brand/`，应改成 `apps/web/public/brand/`。
 - 之后改图标先改 SVG，再重新导出各平台 PNG，并更新 `test/nativeAppMetadata.test.ts`。
+
+## iOS 俯视锅 · 2026-11-17
+
+云食册主屏幕改用工坊「今天来做菜」的[俯视锅图标](https://github.com/YunYouJun/cook/blob/7bc18f58bf8359ea1f56d985b1aa48364d663502/public/brand/cook-app-icon.svg)。保留祖母绿、双耳锅和红黄绿食材，让两个入口容易认作同一产品。
+
+`apps/ios/Cook/Resources/AppIcon.icon` 是 iOS 图标源文件。底色由 Icon Composer 绘制，锅沿为独立矢量层，使用系统高光与轻微折射；锅底、食材用实色。双耳镂空、锅沿与锅内的间隙、番茄星形留白在几个外观中沿用同一轮廓。深色降低底色亮度；Mono 用明度区分食材，由系统生成 Clear 和 Tinted。所有图层不预切圆角，也不预绘阴影。
+
+修改矢量或配色后，在仓库根目录运行 `node apps/ios/scripts/export-app-icon.mjs`，重新导出资源目录中的默认、深色和着色 1024 px 静态图。iOS 的分层资源与静态图共用造型，工坊目录和 Web 资产不需要同步改动。

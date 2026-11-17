@@ -25,7 +25,7 @@ describe('native app metadata', () => {
     expect(iosProject).toContain('PRODUCT_BUNDLE_IDENTIFIER: fun.yunle.cook')
   })
 
-  it('ships the selected Cook icon across web and native iOS', () => {
+  it('ships the Web brand and all three opaque iOS icon appearances', () => {
     const appIcon = readFileSync(resolve(root, 'apps/web/public/brand/cook-app-icon.svg'), 'utf8')
     const mark = readFileSync(resolve(root, 'apps/web/public/brand/cook-mark.svg'), 'utf8')
     const iosIconSet = JSON.parse(readFileSync(
@@ -33,7 +33,7 @@ describe('native app metadata', () => {
       'utf8',
     ))
 
-    // 菜叶绿渐变底板 + 白色锅与云 + 明黄长勺，见 docs/decisions/0005-app-icon.md
+    // Web 继续使用「蒸汽成云」；iOS 用独立的俯视锅图标。
     expect(appIcon).toContain('viewBox="0 0 64 64"')
     expect(appIcon).toContain('<stop stop-color="#438453"/>')
     expect(appIcon).toContain('<stop offset="1" stop-color="#2F6B45"/>')
