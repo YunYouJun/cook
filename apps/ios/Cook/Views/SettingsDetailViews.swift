@@ -1,3 +1,4 @@
+import SafariServices
 import SwiftUI
 
 struct CookingPreferencesView: View {
@@ -54,6 +55,8 @@ struct PrivacySettingsView: View {
 
 struct AboutSettingsView: View {
     @Environment(RecipeStore.self) private var store
+    @State private var browser = SettingsWebsitePresenter()
+    private static let legacyURL = URL(string: "https://v1.cook.yunyoujun.cn")!
 
     private var appVersion: String {
         let info = Bundle.main.infoDictionary
@@ -85,9 +88,24 @@ struct AboutSettingsView: View {
                 githubLink("在 GitHub 上反馈", destination: URL(string: "https://github.com/YunYouJun/cook/issues")!)
                 githubLink("参与讨论", destination: URL(string: "https://github.com/YunYouJun/cook/discussions")!)
             }
+            Section {
+                Button { browser.open(Self.legacyURL) } label: {
+                    Text("怀旧版本")
+                        .font(.footnote)
+                        .underline()
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("在 App 内打开旧版网页")
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
         }
         .navigationTitle("关于云食册")
         .navigationBarTitleDisplayMode(.inline)
+        .background { browser.presentationAnchor }
     }
 
     private func githubLink(_ title: String, destination: URL) -> some View {
@@ -103,5 +121,40 @@ struct AboutSettingsView: View {
         }
         .buttonStyle(.plain)
         .accessibilityHint("打开 GitHub")
+    }
+}
+
+/// Present Safari modally from the scene containing this page, as required by SafariServices.
+@MainActor
+final class SettingsWebsitePresenter {
+    private weak var anchor: UIView?
+
+    var presentationAnchor: some View {
+        Anchor(presenter: self)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    func open(_ url: URL) {
+        guard var presenter = anchor?.window?.rootViewController else { return }
+        while let presented = presenter.presentedViewController {
+            guard !presented.isBeingDismissed, !(presented is SFSafariViewController) else { return }
+            presenter = presented
+        }
+        let safari = SFSafariViewController(url: url)
+        safari.dismissButtonStyle = .done
+        presenter.present(safari, animated: true)
+    }
+
+    private struct Anchor: UIViewRepresentable {
+        let presenter: SettingsWebsitePresenter
+
+        func makeUIView(context: Context) -> UIView {
+            let anchor = UIView()
+            presenter.anchor = anchor
+            return anchor
+        }
+
+        func updateUIView(_ view: UIView, context: Context) {}
     }
 }

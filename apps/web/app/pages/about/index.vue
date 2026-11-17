@@ -82,6 +82,15 @@ const appStoreUrl = appStoreId ? `https://apps.apple.com/cn/app/id${appStoreId}`
           </ion-text>
         </ion-item>
       </ion-list>
+
+      <footer class="pb-3 text-center">
+        <a
+          :href="links.legacyCook"
+          class="min-h-11 inline-flex items-center px-3 text-sm color-[var(--ion-text-color-step-400,#636366)] underline underline-offset-3"
+          target="_blank"
+          rel="noopener noreferrer"
+        >怀旧版本</a>
+      </footer>
     </ion-content>
   </ion-page>
 </template>
