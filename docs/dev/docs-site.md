@@ -10,6 +10,14 @@
 
 文档和产品首页共用 `docs` 中的一份 VitePress 源码、导航和搜索，标准地址（canonical）与 sitemap 使用 `https://cook.yunle.fun`。App、公开页面、README 和平台资料中的文档链接统一使用官网。旧文档域名只承担历史链接兼容，不再部署第二份内容。微信开放平台已经提交的 `https://cook.yunyoujun.cn/about/` 及其用户协议保留可用，审核期间不因本次域名分工而删除。
 
+### 开发预览 cook.yunle.app
+
+`cook.yunle.app` 是遗留的 Vercel 开发预览，不是官网，也不是网页版的标准地址。两个正式站点继续各自使用自己的 canonical：官网 `https://cook.yunle.fun`，网页版 `https://cook.yunyoujun.cn`。
+
+仓库根目录和 `apps/web/vercel.json` 在 Host 为 `cook.yunle.app` 或 `*.vercel.app` 时返回 `X-Robots-Tag: noindex, nofollow`。EdgeOne 不读取该文件，所以这条规则不会作用到上述两个正式域名。预览的 `robots.txt` 继续允许抓取，方便搜索引擎读到 noindex；不要改成 `Disallow: /`，否则已收录的旧页面可能一直留在索引里。
+
+2026-11-17 实测该预览仍返回 200：首页没有 `<title>`，描述仍是「好的，今天我们来做菜！」，`/robots.txt` 为 `Allow: /`，没有 canonical 或 noindex，响应头为 `server: Vercel`。本仓库没有 Vercel 项目 ID、域名绑定或控制台跳转配置。若项目已停止从 `main` 自动部署，或 Root Directory 既不是仓库根目录也不是 `apps/web`，合并后线上预览不会变化。需要在 Vercel 控制台重新部署当前 `main`，或在控制台为该域名加上同样的 `X-Robots-Tag`。控制台里的跳转规则不在本仓库中。
+
 ## 本地开发与构建
 
 ```bash

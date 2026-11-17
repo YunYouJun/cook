@@ -9,9 +9,14 @@ export const siteTitle = '食用手册｜根据家里的食材和厨具找菜谱
 export const appDescription = '根据家里现有的食材和厨具，找到今天能做的家常菜。食用手册（Cook）免费使用，也叫云食册：点选食材、一句话找菜、看做法、收藏，或随机决定今天吃什么。'
 export const socialImagePath = '/about/assets/light-2-cook-selected.webp'
 
+/** Keep in sync with docs/.vitepress/theme/structured-data.ts. */
 export const authorName = '云游君'
 export const authorAlternateName = 'YunYouJun'
-export const authorUrl = 'https://github.com/YunYouJun'
+export const authorId = 'https://www.yunyoujun.cn/#identity'
+export const authorUrl = 'https://www.yunyoujun.cn/'
+export const publisherId = 'https://www.yunle.fun/#organization'
+export const publisherName = '云乐坊'
+export const publisherUrl = 'https://www.yunle.fun/'
 
 export interface CookSeoPage {
   title: string
@@ -68,9 +73,19 @@ export function absoluteSiteUrl(path = '/') {
 export function personEntity() {
   return {
     '@type': 'Person',
+    '@id': authorId,
     'name': authorName,
     'alternateName': authorAlternateName,
     'url': authorUrl,
+  }
+}
+
+export function organizationEntity() {
+  return {
+    '@type': 'Organization',
+    '@id': publisherId,
+    'name': publisherName,
+    'url': publisherUrl,
   }
 }
 
@@ -94,6 +109,8 @@ export function webApplicationJsonLd() {
     },
     'author': personEntity(),
     'creator': personEntity(),
+    'publisher': organizationEntity(),
+    'brand': organizationEntity(),
     'image': absoluteSiteUrl(socialImagePath),
   }
 }
@@ -174,8 +191,18 @@ function replaceCanonical(html: string, url: string) {
  * crawler that does not run JavaScript still sees that route's title and canonical.
  * Homepage aliases already match the shell and are left untouched.
  */
+function ensureMetaRobots(html: string, content: string) {
+  const robots = html.match(/<meta\b[^>]*>/gi)?.find(tag => hasAttribute(tag, 'name', 'robots'))
+  if (robots)
+    return replaceMetaContent(html, 'name', 'robots', content)
+  return html.replace(/<head(\s[^>]*)?>/i, match => `${match}<meta name="robots" content="${content}">`)
+}
+
 export function applyCookRouteSeo(html: string, route: string) {
-  const page = routeSeoByPath[normalizePath(route)]
+  const normalized = normalizePath(route)
+  if (normalized === '/404')
+    return ensureMetaRobots(html, 'noindex')
+  const page = routeSeoByPath[normalized]
   if (!page || page.path === '/' || !html.includes(`<title>${siteTitle}</title>`))
     return html
   const url = absoluteSiteUrl(page.path)

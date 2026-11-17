@@ -24,4 +24,4 @@
 
 - `cook.yunyoujun.cn`：食用手册网页版的标准地址
 - `cook.yunle.fun`：产品官网与文档的标准地址
-- `cook.yunle.app`：开发预览，不是对外标准地址
+- `cook.yunle.app`：开发预览，不是对外标准地址，不应被搜索引擎收录

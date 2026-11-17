@@ -22,13 +22,25 @@ export const productFaq = [
   },
 ] as const
 
-const person = {
+/** Keep in sync with apps/web/app/constants/seo.ts. */
+export const personIdentity = {
   '@type': 'Person',
-  '@id': 'https://github.com/YunYouJun#person',
+  '@id': 'https://www.yunyoujun.cn/#identity',
   'name': '云游君',
   'alternateName': 'YunYouJun',
-  'url': 'https://github.com/YunYouJun',
-}
+  'url': 'https://www.yunyoujun.cn/',
+} as const
+
+/** Keep in sync with apps/web/app/constants/seo.ts. */
+export const organizationIdentity = {
+  '@type': 'Organization',
+  '@id': 'https://www.yunle.fun/#organization',
+  'name': '云乐坊',
+  'url': 'https://www.yunle.fun/',
+} as const
+
+const person = personIdentity
+const organization = organizationIdentity
 
 export function productHomeJsonLd() {
   return {
@@ -42,7 +54,7 @@ export function productHomeJsonLd() {
         'url': 'https://cook.yunle.fun/',
         'description': productSiteDescription,
         'inLanguage': 'zh-CN',
-        'publisher': { '@id': person['@id'] },
+        'publisher': { '@id': organization['@id'] },
       },
       {
         '@type': 'WebApplication',
@@ -61,6 +73,8 @@ export function productHomeJsonLd() {
         },
         'author': { '@id': person['@id'] },
         'creator': { '@id': person['@id'] },
+        'publisher': { '@id': organization['@id'] },
+        'brand': { '@id': organization['@id'] },
       },
       {
         '@type': 'SoftwareApplication',
@@ -72,8 +86,11 @@ export function productHomeJsonLd() {
         'url': 'https://cook.yunle.fun/',
         'sameAs': [links.testflight],
         'author': { '@id': person['@id'] },
+        'publisher': { '@id': organization['@id'] },
+        'brand': { '@id': organization['@id'] },
       },
       person,
+      organization,
       {
         '@type': 'FAQPage',
         '@id': 'https://cook.yunle.fun/#faq',
@@ -92,6 +109,25 @@ export function productHomeJsonLd() {
   }
 }
 
+export function guideArticleJsonLd(page: { title: string, description?: string, path: string }) {
+  const url = `https://cook.yunle.fun/${page.path.replace(/^\//, '')}`
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'TechArticle',
+    'headline': page.title,
+    ...(page.description ? { description: page.description } : {}),
+    'inLanguage': 'zh-CN',
+    'url': url,
+    'mainEntityOfPage': url,
+    'author': personIdentity,
+    'publisher': organizationIdentity,
+  }
+}
+
+export function serializeJsonLd(data: unknown) {
+  return JSON.stringify(data).replace(/</g, '\\u003c')
+}
+
 export function serializeProductJsonLd() {
-  return JSON.stringify(productHomeJsonLd()).replace(/</g, '\\u003c')
+  return serializeJsonLd(productHomeJsonLd())
 }

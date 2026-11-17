@@ -11,7 +11,7 @@
 
 - 官网与文档：[cook.yunle.fun](https://cook.yunle.fun)
 - 网页应用：[cook.yunyoujun.cn](https://cook.yunyoujun.cn)
-- 开发版（Vercel）：[cook.yunle.app](https://cook.yunle.app)
+- 开发版（Vercel，不提供给搜索引擎收录）：[cook.yunle.app](https://cook.yunle.app)
 
 本仓库不再配置 Netlify 自动部署；当前部署配置见[文档站点部署说明](./docs/dev/docs-site.md)。
 
