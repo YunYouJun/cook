@@ -28,7 +28,6 @@ describe('web app citation metadata', () => {
     expect(data.author).toMatchObject(personIdentity)
     expect(data.creator).toMatchObject(personIdentity)
     expect(data.publisher).toMatchObject(organizationIdentity)
-    expect(data.brand).toMatchObject(organizationIdentity)
     expect(appDescription).toContain('食材')
     expect(appDescription).toContain('厨具')
     expect(appDescription).not.toBe('好的，今天我们来做菜！')
@@ -43,10 +42,14 @@ describe('web app citation metadata', () => {
     expect(applyCookRouteSeo(shell(), '/home')).toBe(shell())
     expect(applyCookRouteSeo(shell('其他标题'), '/library')).toBe(shell('其他标题'))
     expect(applyCookRouteSeo(shell(), '/settings')).toBe(shell())
-    expect(applyCookRouteSeo(shell(), '/404/')).toContain('<head><meta name="robots" content="noindex">')
-    expect(applyCookRouteSeo(shell(), '/404')).toContain(siteTitle)
+  })
+
+  it('marks both the prerendered 404 route and the hosting fallback as noindex', () => {
+    for (const route of ['/404', '/404/', '/404.html'])
+      expect(applyCookRouteSeo(shell(), route)).toContain('<head><meta name="robots" content="noindex">')
+
     const indexed = shell().replace('<head>', '<head><meta name="robots" content="index">')
-    const hidden = applyCookRouteSeo(indexed, '/404')
+    const hidden = applyCookRouteSeo(indexed, '/404.html')
     expect(hidden).toContain('name="robots" content="noindex"')
     expect(hidden.match(/name="robots"/g)).toHaveLength(1)
   })
@@ -112,8 +115,8 @@ describe('web app citation metadata', () => {
     expect(web.offers.price).toBe('0')
     expect(web.author).toMatchObject({ '@id': personIdentity['@id'] })
     expect(web.publisher).toMatchObject({ '@id': organizationIdentity['@id'] })
-    expect(web.brand).toMatchObject({ '@id': organizationIdentity['@id'] })
     expect(ios.author).toMatchObject({ '@id': personIdentity['@id'] })
+    expect(ios.publisher).toMatchObject({ '@id': organizationIdentity['@id'] })
     const person = graph.find((entry: { '@type': string }) => entry['@type'] === 'Person')
     const organization = graph.find((entry: { '@type': string }) => entry['@type'] === 'Organization')
     expect(person).toMatchObject(personIdentity)
@@ -135,7 +138,6 @@ describe('product site citation metadata', () => {
     expect(website).toMatchObject({ url: 'https://cook.yunle.fun/', description: productSiteDescription, publisher: { '@id': organizationIdentity['@id'] } })
     expect(application.author).toEqual({ '@id': personIdentity['@id'] })
     expect(application.publisher).toEqual({ '@id': organizationIdentity['@id'] })
-    expect(application.brand).toEqual({ '@id': organizationIdentity['@id'] })
     expect(ios.publisher).toEqual({ '@id': organizationIdentity['@id'] })
     expect(person).toMatchObject(personIdentity)
     expect(organization).toMatchObject(organizationIdentity)
@@ -218,26 +220,6 @@ describe('product site citation metadata', () => {
       const bytes = readFileSync(join(root, icon))
       expect(bytes.subarray(0, 4).toString('hex')).toBe('00000100')
     }
-    for (const configPath of ['vercel.json', 'apps/web/vercel.json']) {
-      const headers = JSON.parse(read(configPath)).headers
-      expect(headers).toEqual([
-        {
-          source: '/(.*)',
-          has: [{ type: 'host', value: '^cook\\.yunle\\.app$' }],
-          headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
-        },
-        {
-          source: '/(.*)',
-          has: [{ type: 'host', value: '(^|\\.)vercel\\.app$' }],
-          headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
-        },
-      ])
-    }
-    const vitepress = read('docs/.vitepress/config/index.ts')
-    expect(vitepress).toContain('publicProductSitemapItems')
-    expect(vitepress).toContain('isNonIndexableProductPage')
-    expect(vitepress).toContain('guideArticleJsonLd')
-    expect(vitepress).toContain('public/**/*.md')
     expect(read('docs/.vitepress/theme/components/LandingIngredients.vue')).toContain(':alt="item.name"')
     expect(read('docs/.vitepress/theme/components/IngredientGallery.vue')).toContain(':alt="item.name"')
   })

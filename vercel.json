@@ -1,28 +1,7 @@
 {
   "headers": [
     {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "^cook\\.yunle\\.app$"
-        }
-      ],
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "(^|\\.)vercel\\.app$"
-        }
-      ],
+      "source": "/:path*",
       "headers": [
         {
           "key": "X-Robots-Tag",

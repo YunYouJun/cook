@@ -74,7 +74,6 @@ export function productHomeJsonLd() {
         'author': { '@id': person['@id'] },
         'creator': { '@id': person['@id'] },
         'publisher': { '@id': organization['@id'] },
-        'brand': { '@id': organization['@id'] },
       },
       {
         '@type': 'SoftwareApplication',
@@ -87,7 +86,6 @@ export function productHomeJsonLd() {
         'sameAs': [links.testflight],
         'author': { '@id': person['@id'] },
         'publisher': { '@id': organization['@id'] },
-        'brand': { '@id': organization['@id'] },
       },
       person,
       organization,

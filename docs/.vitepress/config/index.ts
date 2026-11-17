@@ -1,12 +1,14 @@
+import type { HeadConfig } from 'vitepress'
 import { getVitepressConfig } from '@yunyoujun/docs'
 import { defineConfig } from 'vitepress'
 import { withYunlefun, yunlefunMarkdown, zhThemeConfig } from 'vitepress-theme-yunlefun/config'
-import { isNonIndexableProductPage, publicProductSitemapItems } from '../theme/indexing.ts'
+import { isNonIndexableProductPage, productPagePath, publicProductSitemapItems } from '../theme/indexing.ts'
 import { guideArticleJsonLd, serializeJsonLd, serializeProductJsonLd } from '../theme/structured-data.ts'
 
 const vpConfig = getVitepressConfig({
   repo: 'https://github.com/YunYouJun/cook',
 })
+const noindex: HeadConfig = ['meta', { name: 'robots', content: 'noindex' }]
 
 export default defineConfig(withYunlefun({
   ...vpConfig,
@@ -24,16 +26,17 @@ export default defineConfig(withYunlefun({
     transformItems: items => publicProductSitemapItems(items),
   },
   transformHead({ page }) {
-    if (!isNonIndexableProductPage(page))
-      return
-    return [
-      ['meta', { name: 'robots', content: 'noindex' }],
-    ]
+    // VitePress's built-in 404 does not pass through transformPageData.
+    if (page === '404.md')
+      return [noindex]
   },
   transformPageData(pageData) {
-    const path = pageData.relativePath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '')
+    const path = productPagePath(pageData.relativePath)
     pageData.frontmatter.head ??= []
     pageData.frontmatter.head.push(['link', { rel: 'canonical', href: `https://cook.yunle.fun/${path}` }])
+    // Keep robots metadata in the page data so it follows client navigation.
+    if (pageData.relativePath !== '404.md' && isNonIndexableProductPage(pageData.relativePath))
+      pageData.frontmatter.head.push(noindex)
     if (pageData.relativePath.startsWith('guide/')) {
       const description = typeof pageData.frontmatter.description === 'string' ? pageData.frontmatter.description : ''
       const frontmatterTitle = typeof pageData.frontmatter.title === 'string' ? pageData.frontmatter.title : ''

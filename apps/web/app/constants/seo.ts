@@ -110,7 +110,6 @@ export function webApplicationJsonLd() {
     'author': personEntity(),
     'creator': personEntity(),
     'publisher': organizationEntity(),
-    'brand': organizationEntity(),
     'image': absoluteSiteUrl(socialImagePath),
   }
 }
@@ -186,11 +185,6 @@ function replaceCanonical(html: string, url: string) {
   return replaceTagAttribute(html, 'link', tag => hasAttribute(tag, 'rel', 'canonical'), 'href', url)
 }
 
-/**
- * The generated SPA shell carries the homepage head. Rewrite public routes so a
- * crawler that does not run JavaScript still sees that route's title and canonical.
- * Homepage aliases already match the shell and are left untouched.
- */
 function ensureMetaRobots(html: string, content: string) {
   const robots = html.match(/<meta\b[^>]*>/gi)?.find(tag => hasAttribute(tag, 'name', 'robots'))
   if (robots)
@@ -198,9 +192,13 @@ function ensureMetaRobots(html: string, content: string) {
   return html.replace(/<head(\s[^>]*)?>/i, match => `${match}<meta name="robots" content="${content}">`)
 }
 
+/**
+ * Rewrite the generated SPA shell so crawlers see each public route's metadata
+ * and both Nitro 404 outputs carry noindex.
+ */
 export function applyCookRouteSeo(html: string, route: string) {
   const normalized = normalizePath(route)
-  if (normalized === '/404')
+  if (normalized === '/404' || normalized === '/404.html')
     return ensureMetaRobots(html, 'noindex')
   const page = routeSeoByPath[normalized]
   if (!page || page.path === '/' || !html.includes(`<title>${siteTitle}</title>`))

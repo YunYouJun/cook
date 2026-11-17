@@ -12,11 +12,11 @@
 
 ### 开发预览 cook.yunle.app
 
-`cook.yunle.app` 是遗留的 Vercel 开发预览，不是官网，也不是网页版的标准地址。两个正式站点继续各自使用自己的 canonical：官网 `https://cook.yunle.fun`，网页版 `https://cook.yunyoujun.cn`。
+`cook.yunle.app` 是遗留的 Vercel 开发预览。官网 `https://cook.yunle.fun` 和网页版 `https://cook.yunyoujun.cn` 均由 EdgeOne 发布，各自使用自己的 canonical。
 
-仓库根目录和 `apps/web/vercel.json` 在 Host 为 `cook.yunle.app` 或 `*.vercel.app` 时返回 `X-Robots-Tag: noindex, nofollow`。EdgeOne 不读取该文件，所以这条规则不会作用到上述两个正式域名。预览的 `robots.txt` 继续允许抓取，方便搜索引擎读到 noindex；不要改成 `Disallow: /`，否则已收录的旧页面可能一直留在索引里。
+仓库根目录的 `vercel.json` 给新 Vercel 部署的所有路径加上 `X-Robots-Tag: noindex, nofollow`。EdgeOne 使用自己的配置，两个正式域名不受影响。预览的 `robots.txt` 继续允许抓取，方便搜索引擎读取 `noindex`。
 
-2026-11-17 实测该预览仍返回 200：首页没有 `<title>`，描述仍是「好的，今天我们来做菜！」，`/robots.txt` 为 `Allow: /`，没有 canonical 或 noindex，响应头为 `server: Vercel`。本仓库没有 Vercel 项目 ID、域名绑定或控制台跳转配置。若项目已停止从 `main` 自动部署，或 Root Directory 既不是仓库根目录也不是 `apps/web`，合并后线上预览不会变化。需要在 Vercel 控制台重新部署当前 `main`，或在控制台为该域名加上同样的 `X-Robots-Tag`。控制台里的跳转规则不在本仓库中。
+`cook.yunle.app` 绑定在 [Vercel 的个人 Cook 项目](https://vercel.com/yunyoujuns-projects/cook)，其生产分支是 `dev`；合并到 `main` 不会更新它。已有部署通过该项目 **CDN → Routing Rules** 的响应头规则设置相同的值，可用 `curl -I https://cook.yunle.app/` 核对。若要退役 Vercel，先为旧域名配置并验证指向正式站点的永久跳转，再解除 Git 连接；解除连接本身不会迁移域名。
 
 ## 本地开发与构建
 
