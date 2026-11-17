@@ -94,6 +94,8 @@ CI 的 `ios-tests` 矩阵在 iPhone 和 iPad 模拟器上分组跑单元测试�
 
 ## 冰箱分类与拍照录入
 
+在冰箱列表左滑食材，或点开详情，可标记「吃完了」或删除。吃完的食材不再参与找菜和临期提醒，可从右上角的「冰箱历史」恢复原来的那一份，放入日期、到期日和分类不变。误加的食材可直接删除，不进入历史；旧版已经移出的食材也不会补入历史。
+
 冰箱可在「按临期」和「按分类」之间切换。「按分类」自动把已知食材归入水果、蔬菜、肉和蛋或主食，未匹配的归入「未分类」。右上角「管理分类」可新建、重命名或删除自定义分类；删除后食材保留并恢复自动归类。手动添加可按批选择分类，拍照确认和单份食材详情也可指定分类。水果快选包含蓝莓、西瓜、苹果等常见水果。
 
 冰箱右上角的相机按钮可拍摄包装或一份蔬果，也可通过系统照片选择器选图。Apple Vision 在本机识别，照片和识别原文不保存、不上传；不需要 AI Key 或会员。确认页可编辑食材、生产日期、到期日及日期依据；日期不完整、无法判断标签或存在冲突时需手动核对。包装到期日优先，其次按识别出的生产日期与唯一保质期推算。
@@ -108,10 +110,10 @@ CI 的 `ios-tests` 矩阵在 iPhone 和 iPad 模拟器上分组跑单元测试�
 
 收藏、浏览记录、做菜偏好、冰箱食材和分类、私人菜谱用 SwiftData 存，登录 iCloud 时通过容器 `iCloud.fun.yunle.cook` 同步。TestFlight 和 App Store 版本用 CloudKit 的 **Production** 环境，结构要先在 Development 环境建好，再手动部署过去：
 
-1. 用 Xcode 在**真机**上跑 Debug 版（已登录 iCloud）。第一次启动会调用 `initializeCloudKitSchema()` 把 `CD_Favorite`、`CD_HistoryEntry`、`CD_Preferences`、`CD_FridgeItem`、`CD_PrivateRecipeRecord` 和 `CD_FridgeCategory` 建到 Development，首屏会多等几秒；日志里看到「已在 Development 环境建好 CloudKit 结构」就是成功了。版本 4 添加冰箱记录的可选生产日期、日期依据与储存建议；版本 5 新增分类及食材上的可选分类键。之前初始化过旧版本的设备也会重新初始化。模拟器和 Release 构建不会跑这一步（见 `Cook/Model/CloudKitSchema.swift`）。
+1. 用 Xcode 在**真机**上跑 Debug 版（已登录 iCloud）。第一次启动会调用 `initializeCloudKitSchema()` 把 `CD_Favorite`、`CD_HistoryEntry`、`CD_Preferences`、`CD_FridgeItem`、`CD_PrivateRecipeRecord` 和 `CD_FridgeCategory` 建到 Development，首屏会多等几秒；日志里看到「已在 Development 环境建好 CloudKit 结构」就是成功了。版本 4 添加冰箱记录的可选生产日期、日期依据与储存建议；版本 5 新增分类及食材上的可选分类键；版本 6 给 `CD_FridgeItem` 添加可选的 `CD_consumedAt`。之前初始化过旧版本的设备也会重新初始化。模拟器和 Release 构建不会跑这一步（见 `Cook/Model/CloudKitSchema.swift`）。
 2. 打开 [CloudKit Console](https://icloud.developer.apple.com/dashboard/) → `iCloud.fun.yunle.cook` → Development → Record Types，确认这几个类型和字段都在。
 3. 点左下角 **Deploy Schema Changes…**，检查变更只有新增（类型、索引和对应的默认权限），再点 Deploy。Production 的字段之后只能加不能删改，部署前想清楚。
-4. 在 Production → Record Types 确认当前六个模型的结构已经同步过去，再用同一 Production 构建验证两台设备之间的收藏、历史、偏好、冰箱食材和分类、私人菜谱读写，以及离线冲突、账号隔离和退出 iCloud 后的本地数据处理。记录版本、设备、环境、操作与观察结果；没有实际证据的项目保留为未验证。
+4. 在 Production → Record Types 确认当前六个模型的结构已经同步过去，再用同一 Production 构建验证两台设备之间的收藏、历史、偏好、冰箱食材和分类、私人菜谱读写，以及离线冲突、账号隔离和退出 iCloud 后的本地数据处理。冰箱验证应覆盖标记吃完、恢复和直接删除；旧版 App 不识别吃完状态，可能仍把记录显示在库存中。记录版本、设备、环境、操作与观察结果；没有实际证据的项目保留为未验证。
 
 改了 `@Model` 的字段时：把 `CloudKitSchema.version` 加一，真机 Debug 启动一次，然后重复第 2–4 步。如果在 Console 里 Reset 了 Development 环境，用启动参数 `-cloudkit.schemaInitialized 0` 让开发版重新建一次。
 

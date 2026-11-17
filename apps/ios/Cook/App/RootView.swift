@@ -14,7 +14,7 @@ struct RootView: View {
     /// 每个窗口自己的 Tab，不跟别的窗口联动
     @State private var router: AppRouter
     @Environment(\.scenePhase) private var scenePhase
-    @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }) private var fridgeItems: [FridgeItem]
+    @Query(filter: FridgeItem.inStock) private var fridgeItems: [FridgeItem]
     @Query private var preferenceRecords: [Preferences]
     @Environment(CookSession.self) private var session
     @Environment(YunlefunAccountStore.self) private var accounts

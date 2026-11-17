@@ -14,7 +14,7 @@ struct CookView: View {
     @Environment(AppRouter.self) private var router
     @Environment(\.cookSearchExpansion) private var searchExpansion
     @Environment(FeedbackClient.self) private var feedback
-    @Query(filter: #Predicate<FridgeItem> { $0.deletedAt == nil }, sort: \FridgeItem.expiresAt) private var fridgeItems: [FridgeItem]
+    @Query(filter: FridgeItem.inStock, sort: \FridgeItem.expiresAt) private var fridgeItems: [FridgeItem]
     @State private var showingFilters = false
     /// 冰箱快捷入口按它判断哪些过期了，跨过零点时刷新
     @State private var now = Date()
