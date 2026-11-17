@@ -106,6 +106,35 @@ final class YunlefunSSOTests: XCTestCase {
             XCTAssertNil(handoff.approvalFields(for: URL(string: invalid)!, now: now))
         }
     }
+
+    func testSystemBrowserHandoffOnlyResumesTheBrowserBoundToThisAttempt() throws {
+        let now = Date()
+        let handoff = try YunlefunAccountWebHandoff(now: now)
+        let start = try XCTUnwrap(URLComponents(url: handoff.systemBrowserStartURL, resolvingAgainstBaseURL: false))
+        let request = try XCTUnwrap(start.queryItems?.first(where: { $0.name == "request" })?.value)
+        XCTAssertEqual(start.queryItems?.first(where: { $0.name == "transport" })?.value, "browser")
+        let binding = String(repeating: "b", count: 43)
+        let callback = "\(YunlefunSSO.redirectURI)#cook_handoff=\(request).\(binding)"
+        let result = try XCTUnwrap(handoff.systemBrowserCompletion(for: URL(string: callback)!, now: now))
+        let verifier = try XCTUnwrap(result.approvalFields["verifier"])
+        let safari = URL(string: "https://www.yunle.fun/api/session/cook-handoff/\(request)/\(binding)")!
+        XCTAssertEqual(result.approvalFields, handoff.approvalFields(for: safari, now: now))
+        XCTAssertEqual(result.url.absoluteString, "https://www.yunle.fun/auth/cook-account?request=\(request)&binding=\(binding)")
+        XCTAssertFalse(start.string!.contains(verifier))
+        XCTAssertFalse(result.url.absoluteString.contains(verifier))
+        XCTAssertNil(handoff.approvalFields(for: URL(string: callback)!, now: now))
+        XCTAssertNil(handoff.systemBrowserCompletion(for: safari, now: now))
+        XCTAssertNil(handoff.systemBrowserCompletion(for: URL(string: callback)!, now: now.addingTimeInterval(45)))
+        XCTAssertNil(try YunlefunAccountWebHandoff(now: now).systemBrowserCompletion(for: URL(string: callback)!, now: now))
+        for invalid in [
+            callback.replacingOccurrences(of: "cook.yunyoujun.cn", with: "elsewhere.example"),
+            callback.replacingOccurrences(of: "platform=native", with: "platform=native&next=https://elsewhere.example"),
+            callback + ".extra",
+            callback.replacingOccurrences(of: "cook_handoff=", with: "ylf_sso="),
+        ] {
+            XCTAssertNil(handoff.systemBrowserCompletion(for: URL(string: invalid)!, now: now))
+        }
+    }
 }
 
 @MainActor
@@ -481,6 +510,21 @@ final class YunlefunAccountServiceTests: XCTestCase {
         } catch let error as YunlefunAccountError {
             guard case .unavailable = error else { return XCTFail("Unexpected handoff probe error") }
         }
+    }
+
+    func testMacHandoffRequiresAnExplicitBrowserCapability() async throws {
+        let transport = AccountTransportStub([
+            (200, #"{"supported":true}"#),
+            (200, #"{"supported":true}"#),
+            (200, #"{"supported":true,"systemBrowser":true}"#),
+        ])
+        let service = YunlefunAccountService(transport: { try await transport.send($0) })
+        let iPhone = try await service.supportsAccountWebHandoff()
+        let beforeWebsiteUpdate = try await service.supportsAccountWebHandoff(in: .systemBrowser)
+        let afterWebsiteUpdate = try await service.supportsAccountWebHandoff(in: .systemBrowser)
+        XCTAssertTrue(iPhone)
+        XCTAssertFalse(beforeWebsiteUpdate)
+        XCTAssertTrue(afterWebsiteUpdate)
     }
 
     func testWeChatSignupPhoneVerificationDoesNotCreateAnExistingAccount() async throws {
