@@ -1,11 +1,14 @@
+import type { HeadConfig } from 'vitepress'
 import { getVitepressConfig } from '@yunyoujun/docs'
 import { defineConfig } from 'vitepress'
 import { withYunlefun, yunlefunMarkdown, zhThemeConfig } from 'vitepress-theme-yunlefun/config'
-import { serializeProductJsonLd } from '../theme/structured-data.ts'
+import { isNonIndexableProductPage, productPagePath, publicProductSitemapItems } from '../theme/indexing.ts'
+import { guideArticleJsonLd, serializeJsonLd, serializeProductJsonLd } from '../theme/structured-data.ts'
 
 const vpConfig = getVitepressConfig({
   repo: 'https://github.com/YunYouJun/cook',
 })
+const noindex: HeadConfig = ['meta', { name: 'robots', content: 'noindex' }]
 
 export default defineConfig(withYunlefun({
   ...vpConfig,
@@ -13,13 +16,40 @@ export default defineConfig(withYunlefun({
   title: '云食册',
   cleanUrls: true,
   description: '有什么食材，就做什么菜。云食册产品官网、iOS 发布信息与食用手册使用文档。',
+  srcExclude: [...(vpConfig.srcExclude ?? []), 'public/**/*.md'],
+  head: [
+    ...(vpConfig.head ?? []),
+    ['link', { rel: 'icon', href: '/favicon.ico', sizes: 'any' }],
+  ],
   sitemap: {
     hostname: 'https://cook.yunle.fun',
+    transformItems: items => publicProductSitemapItems(items),
+  },
+  transformHead({ page }) {
+    // VitePress's built-in 404 does not pass through transformPageData.
+    if (page === '404.md')
+      return [noindex]
   },
   transformPageData(pageData) {
-    const path = pageData.relativePath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '')
+    const path = productPagePath(pageData.relativePath)
     pageData.frontmatter.head ??= []
     pageData.frontmatter.head.push(['link', { rel: 'canonical', href: `https://cook.yunle.fun/${path}` }])
+    // Keep robots metadata in the page data so it follows client navigation.
+    if (pageData.relativePath !== '404.md' && isNonIndexableProductPage(pageData.relativePath))
+      pageData.frontmatter.head.push(noindex)
+    if (pageData.relativePath.startsWith('guide/')) {
+      const description = typeof pageData.frontmatter.description === 'string' ? pageData.frontmatter.description : ''
+      const frontmatterTitle = typeof pageData.frontmatter.title === 'string' ? pageData.frontmatter.title : ''
+      pageData.frontmatter.head.push([
+        'script',
+        { type: 'application/ld+json' },
+        serializeJsonLd(guideArticleJsonLd({
+          title: frontmatterTitle || pageData.title || '云食册使用指南',
+          description,
+          path,
+        })),
+      ])
+    }
     if (pageData.relativePath !== 'index.md')
       return
     const description = typeof pageData.frontmatter.description === 'string' ? pageData.frontmatter.description : ''

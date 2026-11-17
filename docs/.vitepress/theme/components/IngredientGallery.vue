@@ -90,7 +90,7 @@ onBeforeUnmount(() => {
     </div>
     <div class="ingredient-shelf" role="group" aria-label="选择展示的食材">
       <button v-for="item in ingredientCatalog" :key="item.id" type="button" :aria-pressed="current === item.id" :aria-label="`查看${item.name}模型`" @click="pick(item.id)">
-        <img :src="`/models/ingredients/${item.id}.png`" alt="" width="96" height="96">
+        <img :src="`/models/ingredients/${item.id}.png`" :alt="item.name" width="96" height="96">
         <span>{{ item.name }}</span>
       </button>
     </div>

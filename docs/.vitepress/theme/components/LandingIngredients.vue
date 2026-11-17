@@ -24,7 +24,7 @@ const shown = computed(() => {
   <div class="ingredient-picker" :class="variant">
     <div id="hero-ingredients" class="ingredient-items" role="group" aria-label="选食材，看看能做什么">
       <button v-for="item in shown" :key="item.name" class="ingredient-item" type="button" :aria-pressed="selected.includes(item.name)" @click="emit('select', item.name)">
-        <span class="ingredient-art" aria-hidden="true"><img v-if="ingredientImage(item.name)" :src="ingredientImage(item.name)" alt="" width="52" height="52"><template v-else>{{ item.emoji }}</template></span>
+        <span class="ingredient-art" aria-hidden="true"><img v-if="ingredientImage(item.name)" :src="ingredientImage(item.name)" :alt="item.name" width="52" height="52"><template v-else>{{ item.emoji }}</template></span>
         <span class="ingredient-name">{{ item.name }}</span>
         <span v-if="selected.includes(item.name)" class="ingredient-check" aria-hidden="true">
           <svg class="ingredient-check-icon" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8 3 3 6-6" /></svg>

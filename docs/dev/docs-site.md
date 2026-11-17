@@ -10,6 +10,14 @@
 
 文档和产品首页共用 `docs` 中的一份 VitePress 源码、导航和搜索，标准地址（canonical）与 sitemap 使用 `https://cook.yunle.fun`。App、公开页面、README 和平台资料中的文档链接统一使用官网。旧文档域名只承担历史链接兼容，不再部署第二份内容。微信开放平台已经提交的 `https://cook.yunyoujun.cn/about/` 及其用户协议保留可用，审核期间不因本次域名分工而删除。
 
+### 开发预览 cook.yunle.app
+
+`cook.yunle.app` 是遗留的 Vercel 开发预览。官网 `https://cook.yunle.fun` 和网页版 `https://cook.yunyoujun.cn` 均由 EdgeOne 发布，各自使用自己的 canonical。
+
+仓库根目录的 `vercel.json` 给新 Vercel 部署的所有路径加上 `X-Robots-Tag: noindex, nofollow`。EdgeOne 使用自己的配置，两个正式域名不受影响。预览的 `robots.txt` 继续允许抓取，方便搜索引擎读取 `noindex`。
+
+`cook.yunle.app` 绑定在 [Vercel 的个人 Cook 项目](https://vercel.com/yunyoujuns-projects/cook)，其生产分支是 `dev`；合并到 `main` 不会更新它。已有部署通过该项目 **CDN → Routing Rules** 的响应头规则设置相同的值，可用 `curl -I https://cook.yunle.app/` 核对。若要退役 Vercel，先为旧域名配置并验证指向正式站点的永久跳转，再解除 Git 连接；解除连接本身不会迁移域名。
+
 ## 本地开发与构建
 
 ```bash
