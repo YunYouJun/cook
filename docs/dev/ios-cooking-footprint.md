@@ -40,7 +40,9 @@ v2 将版本号、全部 `CookedRecord` 和 `LearnedRecord` 编码为一个 JSON
 
 详情采用渐进式入口：初始只显示「我做过这道」；做过后显示次数、记录菜单和「记为学会」；学会后显示日期铭牌和必要时的「今天又做了一次」。铭牌菜单只提供查看足迹和撤销学会。
 
-「完成做菜」位于工作台做法正文末尾，无图文做法时也提供按钮。收尾 Sheet 支持下滑和跳过。主动确认学会后展示庆祝卡片、系统成功触感、轻弹簧和约 1.2 秒星光。系统开启 Reduce Motion 时不生成粒子、不做位移或缩放，只保留淡入、文字与触感。支持空白处收起、完成按钮、即时撤销和大字体滚动。
+足迹页显示当前范围内的做过和学会统计。从单道菜谱进入时，统计与时间线都按该菜筛选。
+
+「完成做菜」位于工作台做法正文末尾，无图文做法时也提供按钮。收尾面板展示菜谱图标、名称及已有的厨具和难度信息，普通竖屏按内容定高，横屏和无障碍大字号使用可滚动的大面板。面板支持下滑和跳过。主动确认学会后展示庆祝卡片、系统成功触感、轻弹簧和约 1.2 秒星光。系统开启 Reduce Motion 时不生成粒子、不做位移或缩放，只保留淡入、文字与触感。支持空白处收起、完成按钮、即时撤销和大字体滚动。
 
 ## 验证入口
 
@@ -72,7 +74,7 @@ xcodebuild test -project apps/ios/Cook.xcodeproj -scheme Cook \
 
 ## 本次文件清单
 
-下表列出本功能及相关隐私测试的 18 个文件。路径相对仓库根目录。
+下表列出本功能及相关隐私测试的 19 个文件。路径相对仓库根目录。
 
 | 文件                                                               | 类型 | 用途                                     |
 | ------------------------------------------------------------------ | ---- | ---------------------------------------- |
@@ -82,6 +84,7 @@ xcodebuild test -project apps/ios/Cook.xcodeproj -scheme Cook \
 | `apps/ios/Cook/Views/CookingCelebrationView.swift`                 | 新增 | 庆祝卡片、触感、Reduce Motion 和日期文案 |
 | `apps/ios/Cook/Views/CookingFootprintView.swift`                   | 新增 | 我的入口、统计、筛选、时间线与单条删除   |
 | `apps/ios/Cook/Views/KitchenCompletionSheet.swift`                 | 新增 | 可跳过的工作台收尾                       |
+| `apps/ios/Cook/Views/Design/CookingJournalPalette.swift`           | 新增 | 足迹与庆祝的浅色、深色主题强调色         |
 | `apps/ios/Cook/Views/RecipeDetailView.swift`                       | 修改 | 官方菜谱接入进度行                       |
 | `apps/ios/Cook/Views/PrivateRecipesView.swift`                     | 修改 | 私人菜谱接入进度行及足迹回跳             |
 | `apps/ios/Cook/Views/KitchenWorkbenchView.swift`                   | 修改 | 显式收尾入口与轻提示                     |

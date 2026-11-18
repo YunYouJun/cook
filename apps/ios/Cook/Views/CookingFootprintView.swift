@@ -7,14 +7,7 @@ struct CookingFootprintLink: View {
 
     var body: some View {
         NavigationLink { CookingFootprintView() } label: {
-            HStack {
-                SettingsRowLabel("做菜足迹", symbol: "leaf.fill", color: .orange)
-                Spacer(minLength: 8)
-                Text(summary)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.trailing)
-            }
+            SettingsRowLabel("做菜足迹", symbol: "book.closed.fill", color: CookPalette.primaryAction, subtitle: summary)
         }
         .accessibilityIdentifier("settings.cookingFootprint")
     }
@@ -22,7 +15,7 @@ struct CookingFootprintLink: View {
     private var summary: String {
         if records.storageIssue != nil { return "暂时无法读取" }
         let progress = records.progress
-        if progress.cooked.isEmpty && progress.learned.isEmpty { return "开始记录" }
+        if progress.cooked.isEmpty && progress.learned.isEmpty { return "回看做过的菜和学会的日子" }
         return "学会 \(progress.learned.count) 道 · 做过 \(progress.cooked.count) 次"
     }
 }
@@ -30,6 +23,7 @@ struct CookingFootprintLink: View {
 struct CookingFootprintView: View {
     @Environment(CookedRecipeRecords.self) private var records
     @Environment(RecipeStore.self) private var store
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query private var privateRecords: [PrivateRecipeRecord]
     @State private var filter: Filter = .all
     @State private var error: String?
@@ -61,40 +55,32 @@ struct CookingFootprintView: View {
         let days = days
         let privateRecipes = privateRecipes
         List {
-            Section {
-                HStack(spacing: 20) {
-                    statistic("做过", count: records.progress.cooked.count, unit: "次", symbol: "frying.pan")
-                    Divider()
-                    statistic("学会", count: records.progress.learned.count, unit: "道", symbol: "sparkles")
-                }
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 12)
-            }
-            .accessibilityIdentifier("footprint.statistics")
-
-            Section {
-                Picker("记录范围", selection: $filter) {
-                    ForEach(Filter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
-                .accessibilityIdentifier("footprint.filter")
-            } footer: {
-                if recipeID != nil { Text("正在查看这道菜的足迹，顶部统计为全部菜谱。") }
-                Text("记录仅保存在这台设备。删除做过记录不会撤销学会标记。")
-            }
-
             if let issue = records.storageIssue {
                 Section { Text(issue).foregroundStyle(.secondary) }
-            } else if days.isEmpty {
+            } else {
+                Section {
+                    VStack(spacing: 16) {
+                        overview(privateRecipes: privateRecipes)
+                        Picker("记录范围", selection: $filter) {
+                            ForEach(Filter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityIdentifier("footprint.filter")
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                }
+            }
+
+            if records.storageIssue == nil && days.isEmpty {
                 Section {
                     ContentUnavailableView {
-                        Label(filter == .learned ? "拿手菜，慢慢积累" : "留住每一次开火", systemImage: "leaf")
+                        Label(filter == .learned ? "还没有学会记录" : "还没有下厨记录",
+                              systemImage: filter == .learned ? "sparkles" : "book.closed")
                     } description: {
                         Text(filter == .learned
-                             ? "学会一道菜后，亲手为自己记下这个时刻吧。"
-                             : "还没有留下下厨食迹，去挑一道喜欢的菜开火吧。")
+                             ? "在菜谱详情或厨房工作台确认学会后，这里会记下日期。"
+                             : "在菜谱详情点「我做过这道」，记下第一次下厨。")
                     }
                 }
                 .listRowBackground(Color.clear)
@@ -102,7 +88,7 @@ struct CookingFootprintView: View {
             }
 
             ForEach(days) { day in
-                Section(CookingDates.day(day.id)) {
+                Section {
                     ForEach(day.entries) { entry in
                         entryRow(entry, privateRecipes: privateRecipes)
                             .swipeActions(edge: .trailing) {
@@ -129,6 +115,10 @@ struct CookingFootprintView: View {
                                 }
                             }
                     }
+                } header: {
+                    Text(CookingDates.day(day.id))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
                 }
             }
         }
@@ -139,14 +129,79 @@ struct CookingFootprintView: View {
         } message: { Text(error ?? "") }
     }
 
-    private func statistic(_ title: String, count: Int, unit: String, symbol: String) -> some View {
-        VStack(spacing: 8) {
-            Label(title, systemImage: symbol)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Text("\(count) \(unit)").font(.title2.weight(.semibold))
+    private func overview(privateRecipes: [String: PrivateRecipe]) -> some View {
+        let cooked = recipeID.map { records.cookedRecords(for: $0).count } ?? records.progress.cooked.count
+        let learned = recipeID.map { records.learnedRecord(for: $0) == nil ? 0 : 1 } ?? records.progress.learned.count
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 16))
+        let headerLayout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 8))
+        return VStack(alignment: .leading, spacing: 16) {
+            headerLayout {
+                overviewTitle(privateRecipes: privateRecipes)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                deviceLabel
+            }
+            Divider()
+            layout {
+                statistic("做过", count: cooked, unit: "次", symbol: "frying.pan", tint: CookPalette.primaryAction)
+                statistic("学会", count: learned, unit: "道", symbol: "sparkles", tint: CookingJournalPalette.warmInk)
+            }
         }
-        .frame(maxWidth: .infinity)
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 22)
+                .fill(CookPalette.inputBackground)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 22)
+                        .fill(.linearGradient(colors: [CookPalette.primaryAction.opacity(0.13), .clear],
+                                              startPoint: .topLeading, endPoint: .bottomTrailing))
+                }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("footprint.statistics")
+    }
+
+    private func overviewTitle(privateRecipes: [String: PrivateRecipe]) -> some View {
+        let title = switch recipeID {
+        case let .catalog(id): store.recipesById[id]?.name ?? "这道菜的足迹"
+        case let .personal(id): privateRecipes[id]?.name ?? "这道菜的足迹"
+        case nil: "累计足迹"
+        }
+        return Text(title)
+            .font(.headline)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private var deviceLabel: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "internaldrive")
+                .accessibilityHidden(true)
+            Text("仅此设备")
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .fixedSize()
+    }
+
+    private func statistic(_ title: String, count: Int, unit: String, symbol: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(title, systemImage: symbol)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(tint)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(count, format: .number)
+                    .font(.system(.largeTitle, design: .rounded).weight(.semibold))
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.65)
+                    .lineLimit(1)
+                Text(unit).font(.subheadline).foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title) \(count) \(unit)")
     }
@@ -174,27 +229,44 @@ struct CookingFootprintView: View {
     }
 
     private func entryLabel(_ entry: CookingFootprintEntry, name: String, unavailable: String? = nil) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(name).foregroundStyle(.primary)
-                Text(entry.date, format: .dateTime.hour().minute())
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                if let unavailable { Text(unavailable).font(.caption).foregroundStyle(.secondary) }
+        HStack(alignment: .center, spacing: 12) {
+            if !dynamicTypeSize.isAccessibilitySize {
+                Image(systemName: unavailable != nil ? "book.closed" : entry.learned != nil ? "sparkles" : "frying.pan")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(entry.learned != nil ? CookingJournalPalette.warmInk : CookPalette.primaryAction)
+                    .frame(width: 36, height: 36)
+                    .background(entry.learned != nil ? CookingJournalPalette.warmFill : CookPalette.primaryAction.opacity(0.10),
+                                in: RoundedRectangle(cornerRadius: 11))
+                    .accessibilityHidden(true)
             }
-            Spacer(minLength: 0)
-            if entry.learned != nil {
-                Text("✨ 学会了")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(.orange.opacity(0.14), in: Capsule())
+            VStack(alignment: .leading, spacing: 4) {
+                Text(name).font(.body.weight(.medium)).foregroundStyle(.primary)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) { entryMetadata(entry) }
+                    VStack(alignment: .leading, spacing: 4) { entryMetadata(entry) }
+                }
+                if let unavailable {
+                    Text(unavailable).font(.caption).foregroundStyle(.secondary)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("footprint.entry")
+    }
+
+    @ViewBuilder
+    private func entryMetadata(_ entry: CookingFootprintEntry) -> some View {
+        Text(entry.date, format: .dateTime.hour().minute())
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+        if entry.learned != nil {
+            Text("✨ 学会了")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(CookingJournalPalette.warmInk)
+        }
     }
 
     private func perform(_ action: () throws -> Void) {

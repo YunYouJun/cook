@@ -21,66 +21,14 @@ struct CookingCelebrationView: View {
                 .accessibilityLabel("收起庆祝卡片")
                 .accessibilityAddTraits(.isButton)
             ScrollView {
-                VStack(spacing: 22) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 40))
-                        .foregroundStyle(.orange)
-                        .accessibilityHidden(true)
-                    Text("今天学会了 · \(confirmation.learned.recipeName ?? "这道菜")")
-                        .font(.title2.weight(.semibold))
-                        .multilineTextAlignment(.center)
-                        .accessibilityAddTraits(.isHeader)
-                        .accessibilityFocused($headingFocused)
-                    Text(CookingDates.celebration(confirmation.learned.learnedAt))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text("第 \(confirmation.learnedCount) 道拿手菜")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                    Text("把这一刻，留在你的做菜足迹里。")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                    Button("太棒了") { dismiss() }
-                        .buttonStyle(.borderedProminent)
-                        .buttonBorderShape(.capsule)
-                        .tint(CookPalette.primaryAction)
-                        .accessibilityIdentifier("cooking.celebration.done")
-                    Button("点错了？撤销") {
-                        do {
-                            try records.undoConfirmation(confirmation)
-                            dismiss()
-                        } catch { self.error = error.localizedDescription }
-                    }
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .frame(minHeight: 44)
-                    .accessibilityIdentifier("cooking.celebration.undo")
-                }
-                .padding(28)
-                .frame(maxWidth: 400)
-                .background {
-                    RoundedRectangle(cornerRadius: 28)
-                        .fill(.background)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 28)
-                                .fill(.orange.opacity(0.06))
-                        }
-                }
-                .contentShape(RoundedRectangle(cornerRadius: 28))
-                .onTapGesture {}
-                .overlay(alignment: .top) {
-                    if !reduceMotion {
-                        sparkles
-                            .allowsHitTesting(false)
-                            .accessibilityHidden(true)
-                    }
-                }
-                .opacity(appeared ? 1 : 0)
-                .scaleEffect(reduceMotion ? 1 : (appeared ? 1 : 0.96))
-                .offset(y: reduceMotion || appeared ? 0 : 18)
-                .padding(24)
-                .frame(maxWidth: .infinity)
+                card
+                    .contentShape(RoundedRectangle(cornerRadius: 28))
+                    .onTapGesture {}
+                    .opacity(appeared ? 1 : 0)
+                    .scaleEffect(reduceMotion ? 1 : (appeared ? 1 : 0.96))
+                    .offset(y: reduceMotion || appeared ? 0 : 18)
+                    .padding(24)
+                    .frame(maxWidth: .infinity)
             }
             .scrollBounceBehavior(.basedOnSize)
             .defaultScrollAnchor(.center)
@@ -101,6 +49,76 @@ struct CookingCelebrationView: View {
         .alert("未能撤销", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("好", role: .cancel) {}
         } message: { Text(error ?? "") }
+    }
+
+    private var card: some View {
+        let name = confirmation.learned.recipeName ?? "这道菜"
+        return VStack(spacing: 20) {
+            VStack(spacing: 8) {
+                Label("今天学会了", systemImage: "sparkles")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(CookingJournalPalette.warmInk)
+                Text(name)
+                    .font(.system(.largeTitle, design: .serif).weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("今天学会了 · \(name)")
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityFocused($headingFocused)
+            .overlay {
+                if !reduceMotion {
+                    sparkles
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+            Divider()
+            VStack(spacing: 5) {
+                Text(CookingDates.celebration(confirmation.learned.learnedAt))
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                Text("第 \(confirmation.learnedCount) 道拿手菜")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(CookingJournalPalette.warmInk)
+            }
+            VStack(spacing: 4) {
+                Button { dismiss() } label: {
+                    Text("太棒了").frame(maxWidth: .infinity, minHeight: 32)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .tint(CookPalette.primaryAction)
+                .accessibilityIdentifier("cooking.celebration.done")
+                Button("点错了？撤销") {
+                    do {
+                        try records.undoConfirmation(confirmation)
+                        dismiss()
+                    } catch { self.error = error.localizedDescription }
+                }
+                .buttonStyle(.plain)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(minHeight: CookLayout.minimumHitSize)
+                .accessibilityIdentifier("cooking.celebration.undo")
+            }
+        }
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 24)
+        .padding(.top, 32)
+        .padding(.bottom, 12)
+        .frame(maxWidth: 400)
+        .background {
+            RoundedRectangle(cornerRadius: 28)
+                .fill(.background)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 28)
+                        .fill(.linearGradient(colors: [CookingJournalPalette.warmFill, .clear],
+                                              startPoint: .top, endPoint: .bottom))
+                }
+        }
+        .shadow(color: .black.opacity(0.16), radius: 24, y: 12)
     }
 
     private var sparkles: some View {
