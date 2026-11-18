@@ -55,6 +55,9 @@ struct CookingFootprintView: View {
         let days = days
         let privateRecipes = privateRecipes
         List {
+            if recipeID == nil {
+                Section { learnedDishesLink }
+            }
             if let issue = records.storageIssue {
                 Section { Text(issue).foregroundStyle(.secondary) }
             } else {
@@ -127,6 +130,14 @@ struct CookingFootprintView: View {
         .alert("未能保存足迹", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("好", role: .cancel) {}
         } message: { Text(error ?? "") }
+    }
+
+    private var learnedDishesLink: some View {
+        let subtitle = records.storageIssue == nil ? "徽章与首次学会日期" : "暂时无法读取"
+        return NavigationLink { LearnedDishesView() } label: {
+            SettingsRowLabel("我的拿手菜", symbol: "medal.fill", color: .brown, subtitle: subtitle)
+        }
+        .accessibilityIdentifier("footprint.learnedDishes")
     }
 
     private func overview(privateRecipes: [String: PrivateRecipe]) -> some View {

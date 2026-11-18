@@ -1,14 +1,19 @@
 import XCTest
+import UIKit
 
 final class CookingFootprintUITests: XCTestCase {
     @MainActor
-    private func launch() -> XCUIApplication {
+    private func launch(largeDark: Bool = false) -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
         app.launchArguments = XCUIApplication.standardCookingLaunchArguments + [
             "-ui-testing-reset-consent", "-ui-testing-reset-kitchen",
         ]
+        if largeDark {
+            app.launchArguments += ["-UIPreferredContentSizeCategoryName",
+                                    UIContentSizeCategory.accessibilityExtraExtraExtraLarge.rawValue, "-ui-testing-dark"]
+        }
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launch()
         terminateAppAfterTest(app)
@@ -26,10 +31,17 @@ final class CookingFootprintUITests: XCTestCase {
 
         app.buttons["recipe.markLearned"].tap()
         XCTAssertTrue(app.buttons["cooking.celebration.undo"].waitForExistence(timeout: 5))
+        let celebrationHeading = app.descendants(matching: .any).matching(identifier: "cooking.celebration.heading").firstMatch
+        XCTAssertTrue(celebrationHeading.label.contains("获得菜肴徽章"))
         capture(app, "footprint-celebration")
         app.buttons["cooking.celebration.undo"].tap()
         XCTAssertTrue(app.buttons["recipe.markLearned"].waitForExistence(timeout: 5),
                       "Immediate undo must preserve the cook that existed before learning.")
+        app.buttons.matching(identifier: "我的").firstMatch.tap()
+        openLearnedDishes(app)
+        XCTAssertTrue(app.staticTexts["还没有拿手菜"].exists)
+        closeLearnedDishes(app)
+        app.buttons.matching(identifier: "菜谱").firstMatch.tap()
         app.buttons["recipe.markLearned"].tap()
         app.buttons["cooking.celebration.done"].tap()
         let learned = app.buttons["recipe.learnedStatus"]
@@ -46,6 +58,12 @@ final class CookingFootprintUITests: XCTestCase {
                       "Removing the cook must leave its learned milestone reachable.")
         app.segmentedControls.buttons["已学会"].tap()
         XCTAssertTrue(app.staticTexts["✨ 学会了"].exists)
+        app.buttons.matching(identifier: "我的").firstMatch.tap()
+        openLearnedDishes(app)
+        assertBadge(app, contains: ["番茄炒蛋", "首次学会"])
+        capture(app, "learned-dishes-catalog")
+        closeLearnedDishes(app)
+        app.buttons.matching(identifier: "菜谱").firstMatch.tap()
         row.tap()
         XCTAssertTrue(learned.waitForExistence(timeout: 5))
         learned.tap()
@@ -58,6 +76,10 @@ final class CookingFootprintUITests: XCTestCase {
         let notice = app.staticTexts["cooking.notice"]
         XCTAssertTrue(notice.waitForExistence(timeout: 5))
         XCTAssertEqual(notice.label, "今天已记过做过这道啦")
+        app.buttons.matching(identifier: "我的").firstMatch.tap()
+        openLearnedDishes(app)
+        XCTAssertTrue(app.staticTexts["还没有拿手菜"].exists,
+                      "Regular undo must remove the badge even when the dish still has a cooking record.")
     }
 
     @MainActor
@@ -110,6 +132,9 @@ final class CookingFootprintUITests: XCTestCase {
         XCTAssertFalse(app.buttons["recipe.learnedStatus"].exists)
 
         app.buttons.matching(identifier: "我的").firstMatch.tap()
+        openLearnedDishes(app)
+        XCTAssertTrue(app.staticTexts["还没有拿手菜"].exists)
+        closeLearnedDishes(app)
         app.buttons["我的菜谱"].tap()
         app.buttons["新建菜谱"].tap()
         let name = app.textFields["菜名（最多 30 字）"]
@@ -139,6 +164,56 @@ final class CookingFootprintUITests: XCTestCase {
         unavailable.swipeLeft()
         app.buttons["删除做过记录"].tap()
         XCTAssertTrue(unavailable.waitForExistence(timeout: 5))
+        app.buttons["footprint.learnedDishes"].tap()
+        assertBadge(app, contains: ["足迹测试蒸蛋", "首次学会", "私人菜谱已删除或暂不可用"])
+        capture(app, "learned-dishes-deleted-private-recipe")
+    }
+
+    @MainActor
+    func testLearnedBadgeFitsLargestTextInDarkAppearance() {
+        let app = launch(largeDark: true)
+        openRecipe(app)
+        app.buttons["recipe.cookedRecord"].tap()
+        app.buttons["recipe.markLearned"].tap()
+        let done = app.buttons["cooking.celebration.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        for _ in 0..<4 where !done.isHittable { app.swipeUp() }
+        done.tap()
+        app.buttons.matching(identifier: "我的").firstMatch.tap()
+        openLearnedDishes(app)
+        let badge = assertBadge(app, contains: ["番茄炒蛋", "首次学会", "年", "月", "日"])
+        XCTAssertTrue(app.windows.firstMatch.frame.contains(badge.frame))
+        capture(app, "learned-dishes-largest-dark")
+    }
+
+    @MainActor
+    private func openLearnedDishes(_ app: XCUIApplication) {
+        let footprint = app.buttons["settings.cookingFootprint"]
+        XCTAssertTrue(footprint.waitForExistence(timeout: 5))
+        for _ in 0..<5 where !footprint.isHittable { app.swipeUp() }
+        footprint.tap()
+        let link = app.buttons["footprint.learnedDishes"]
+        XCTAssertTrue(link.waitForExistence(timeout: 5))
+        link.tap()
+        XCTAssertTrue(app.navigationBars["我的拿手菜"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    private func closeLearnedDishes(_ app: XCUIApplication) {
+        app.navigationBars["我的拿手菜"].buttons.element(boundBy: 0).tap()
+        app.navigationBars["做菜足迹"].buttons.element(boundBy: 0).tap()
+    }
+
+    @MainActor
+    @discardableResult
+    private func assertBadge(_ app: XCUIApplication, contains fragments: [String],
+                             file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
+        let badge = app.descendants(matching: .any).matching(identifier: "learnedDishes.badge").firstMatch
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), file: file, line: line)
+        for fragment in fragments {
+            XCTAssertTrue(badge.label.contains(fragment), badge.label, file: file, line: line)
+        }
+        return badge
     }
 
     @MainActor
