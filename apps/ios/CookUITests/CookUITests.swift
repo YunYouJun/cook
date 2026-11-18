@@ -279,15 +279,24 @@ final class CookUITests: XCTestCase {
         wait(signIn, "exists == true AND isEnabled == true")
         XCTAssertFalse(app.buttons["account.signOut"].exists)
         XCTAssertTrue(app.buttons["我的菜谱"].exists)
-        // 首页展示入口，数据说明和导入操作集中在二级页。
-        XCTAssertFalse(app.buttons["从文件导入"].exists)
-        let attachment = XCTAttachment(screenshot: app.screenshot())
-        attachment.name = "云乐坊账号与 iCloud"
-        attachment.lifetime = .keepAlways
-        add(attachment)
-        tap(app.buttons["数据与同步"])
-        XCTAssertTrue(app.buttons["从文件导入"].waitForExistence(timeout: timeout))
+        tap(app.buttons["settings.dataSync"])
+        let transfer = app.buttons["dataSync.webTransfer"]
+        XCTAssertTrue(transfer.waitForExistence(timeout: timeout))
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "云乐坊账号的登录和退出不会改变这些数据")).firstMatch.exists)
+        XCTAssertFalse(app.buttons["从文件导入"].exists)
+        let syncScreen = XCTAttachment(screenshot: app.screenshot())
+        syncScreen.name = "数据与同步"
+        syncScreen.lifetime = .keepAlways
+        add(syncScreen)
+
+        tap(transfer)
+        XCTAssertTrue(app.buttons["从文件导入"].waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.buttons["webTransfer.paste"].exists)
+        XCTAssertTrue(app.buttons["共享导出文件"].exists)
+        let transferScreen = XCTAttachment(screenshot: app.screenshot())
+        transferScreen.name = "导入与导出"
+        transferScreen.lifetime = .keepAlways
+        add(transferScreen)
         // 基础功能不要求账号，登录入口不会挡住菜谱筛选。
         tap(app.buttons["找菜"].firstMatch)
         selectCookingIngredient("番茄")

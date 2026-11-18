@@ -4,8 +4,49 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// 云乐坊身份与 iCloud 数据同步分开管理，文件导入只增加收藏和历史。
 struct DataSyncSettingsView: View {
+    @Environment(RecipeStore.self) private var store
+    @Environment(\.accountUserData) private var accountData
+    @Environment(\.modelContext) private var context
+
+    var body: some View {
+        List {
+            if let accountData {
+                AccountSyncSettingsSection(data: accountData) {
+                    let favorites = try context.fetch(FetchDescriptor<Favorite>())
+                    let visits = try context.fetch(FetchDescriptor<HistoryEntry>())
+                    let text = WebUserData.export(favorites: favorites, visits: visits, recipesById: store.recipesById)
+                    var value = try UserDataDocument.decode(Data(text.utf8))
+                    value.favoriteRemovals = []
+                    value.historyRemovals = []
+                    try accountData.importDocument(value)
+                }
+            }
+            Section {
+                SettingsRowLabel("Apple 设备间同步", symbol: "icloud.fill", color: .blue,
+                                 subtitle: "使用系统 iCloud 账户")
+            } header: {
+                Text("iCloud")
+            } footer: {
+                Text("iCloud 可用时，同一 Apple 账户的设备会同步本机的收藏、浏览记录、做菜偏好、冰箱和私人菜谱。云乐坊账号的登录和退出不会改变这些数据。")
+            }
+            Section("手动迁移") {
+                NavigationLink {
+                    WebDataTransferView()
+                } label: {
+                    SettingsRowLabel("导入与导出", symbol: "arrow.left.arrow.right", color: .indigo,
+                                     subtitle: "在 App 和网页版间迁移收藏和浏览记录")
+                }
+                .accessibilityIdentifier("dataSync.webTransfer")
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("数据与同步")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct WebDataTransferView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(\.accountUserData) private var accountData
     @Environment(\.modelContext) private var context
@@ -38,49 +79,38 @@ struct DataSyncSettingsView: View {
 
     var body: some View {
         List {
-            if let accountData {
-                AccountSyncSettingsSection(data: accountData) {
-                    var value = try UserDataDocument.decode(Data(appleExport.utf8))
-                    value.favoriteRemovals = []
-                    value.historyRemovals = []
-                    try accountData.importDocument(value)
-                }
-            }
             Section {
-                Label("使用系统 iCloud 账户", systemImage: "icloud")
-            } header: {
-                Text("Apple 设备间同步")
-            } footer: {
-                Text("iCloud 可用时，收藏、浏览记录、做菜偏好、冰箱和私人菜谱会在同一 Apple 账户的设备间同步。云乐坊账号的登录和退出不会改变这些数据。")
-            }
-            Section {
-                ShareLink(
-                    item: WebExportFile(text: accountData?.usesAccountLibrary == true ? accountData!.exportText() : appleExport),
-                    preview: SharePreview("云食册的收藏和浏览记录")
-                ) {
-                    Label("导出给网页版", systemImage: "square.and.arrow.up")
-                }
-                Button {
-                    importingFile = true
-                } label: {
-                    Label("从文件导入", systemImage: "folder")
-                }
+                Button("从文件导入", systemImage: "folder") { importingFile = true }
                 LabeledContent {
                     PasteButton(payloadType: String.self) { strings in
                         Task { @MainActor in importText(strings.joined()) }
                     }
-                    .labelStyle(.iconOnly)
-                    .buttonBorderShape(.capsule)
+                    .labelStyle(.titleOnly)
+                    .accessibilityLabel("粘贴并导入网页版数据")
+                    .accessibilityIdentifier("webTransfer.paste")
                 } label: {
-                    Label("粘贴网页版复制的数据", systemImage: "doc.on.clipboard")
+                    Label("从剪贴板导入", systemImage: "doc.on.clipboard")
                 }
             } header: {
-                Text("和网页版互通")
+                Text("从网页版导入")
             } footer: {
-                Text("网页版在「我的 → 设置 → 收藏和历史」里导出或复制，再到这里导入。导入只会添加，不会覆盖 App 里已有的收藏和浏览记录。")
+                Text("在网页版「我的 → 设置 → 收藏和历史」导出文件或复制到剪贴板，再选上方对应的方式。已有的收藏和浏览记录会保留。")
+            }
+            Section {
+                ShareLink(
+                    item: WebExportFile(text: exportText),
+                    preview: SharePreview("云食册的收藏和浏览记录")
+                ) {
+                    Label("共享导出文件", systemImage: "square.and.arrow.up")
+                }
+            } header: {
+                Text("导出到网页版")
+            } footer: {
+                Text("保存或发送当前收藏和浏览记录的文件，再到网页版选择「从文件导入」。")
             }
         }
-        .navigationTitle("数据与同步")
+        .listStyle(.insetGrouped)
+        .navigationTitle("导入与导出")
         .navigationBarTitleDisplayMode(.inline)
         .fileImporter(isPresented: $importingFile, allowedContentTypes: [.json, .plainText]) { result in
             guard case let .success(url) = result else {
@@ -144,8 +174,9 @@ struct DataSyncSettingsView: View {
         }
     }
 
-    private var appleExport: String {
-        WebUserData.export(favorites: allFavorites, visits: allVisits, recipesById: store.recipesById)
+    private var exportText: String {
+        if let accountData, accountData.usesAccountLibrary { return accountData.exportText() }
+        return WebUserData.export(favorites: allFavorites, visits: allVisits, recipesById: store.recipesById)
     }
 }
 

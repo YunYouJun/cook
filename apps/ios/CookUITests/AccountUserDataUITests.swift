@@ -23,7 +23,7 @@ final class AccountUserDataUITests: XCTestCase {
         let mine = app.buttons["我的"].firstMatch
         XCTAssertTrue(mine.waitForExistence(timeout: 15))
         mine.tap()
-        let settings = app.buttons["数据与同步"].firstMatch
+        let settings = app.buttons["settings.dataSync"].firstMatch
         reveal(settings, app: app)
         settings.tap()
         var toggle: XCUIElement { app.switches["sync.enabled"].firstMatch }

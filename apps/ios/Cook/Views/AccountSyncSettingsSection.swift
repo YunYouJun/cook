@@ -2,7 +2,6 @@ import SwiftUI
 
 /// Consent and status stay in native controls; all sync work belongs to the store.
 struct AccountSyncSettingsSection: View {
-    @Environment(YunlefunAccountStore.self) private var accounts
     let data: AccountUserDataStore
     let copyAppleData: () throws -> Void
     private enum Confirmation { case enable, copy }
@@ -49,11 +48,18 @@ struct AccountSyncSettingsSection: View {
         } header: {
             Text("会员跨平台同步")
         } footer: {
-            Text("有效云乐坊会员可与网页版同步。启用后使用独立账号记录，首次不会上传本机与 iCloud 内容。关闭或退出后恢复 Apple 设备记录；账号记录保留在本机，登录同一账号后可继续使用。冰箱、偏好和私人菜谱仍由本机与 iCloud 管理。")
+            if data.isEnabled {
+                Text("关闭同步或退出登录后会切回本机与 iCloud 的记录，云乐坊账号的记录仍会保留。")
+            } else if data.ownerID != nil {
+                Text("云乐坊会员可与网页版同步收藏和浏览记录。启用时不会自动上传本机与 iCloud 记录。")
+            } else {
+                Text("云乐坊会员登录后可开启自动同步，让 App 和网页版共享收藏和浏览记录。")
+            }
         }
-        .confirmationDialog(confirmation == .copy ? "复制到当前云乐坊账号？" : "启用账号同步？",
-                            isPresented: Binding(get: { confirmation != nil }, set: { if !$0 { confirmation = nil } }),
-                            titleVisibility: .visible, presenting: confirmation) { action in
+        .alert(confirmation == .copy ? "复制到当前云乐坊账号？" : "启用账号同步？",
+               isPresented: Binding(get: { confirmation != nil }, set: { if !$0 { confirmation = nil } }),
+               presenting: confirmation) { action in
+            Button("取消", role: .cancel) {}
             switch action {
             case .enable:
                 Button("启用同步") { changeEnabled(true) }

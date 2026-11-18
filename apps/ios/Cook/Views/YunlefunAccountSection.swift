@@ -92,13 +92,6 @@ struct YunlefunAccountView: View {
             if accounts.message != nil || accounts.canRetry {
                 Section { AccountSessionStatus() }
             }
-            Section {
-                NavigationLink { DataSyncSettingsView() } label: {
-                    SettingsRowLabel("数据与同步", symbol: "icloud.fill", color: .blue)
-                }
-            } footer: {
-                Text("会员可在「数据与同步」主动启用收藏和浏览历史跨平台同步。账号记录与本机、iCloud 记录分别保留。")
-            }
             if accounts.account != nil {
                 Section {
                     websiteRow("申请注销账号", symbol: "person.crop.circle.badge.minus", color: .gray) {

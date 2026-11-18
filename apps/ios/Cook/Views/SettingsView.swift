@@ -52,8 +52,10 @@ struct SettingsView: View {
                         SettingsRowLabel("提醒", symbol: "bell.badge.fill", color: .red)
                     }
                     NavigationLink { DataSyncSettingsView() } label: {
-                        SettingsRowLabel("数据与同步", symbol: "icloud.fill", color: .blue)
+                        SettingsRowLabel("数据与同步", symbol: "arrow.triangle.2.circlepath", color: .blue,
+                                         subtitle: "iCloud、网页版同步和数据迁移")
                     }
+                    .accessibilityIdentifier("settings.dataSync")
                     NavigationLink { PrivacySettingsView() } label: {
                         SettingsRowLabel("隐私", symbol: "hand.raised.fill", color: .blue)
                     }
