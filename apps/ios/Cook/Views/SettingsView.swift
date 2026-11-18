@@ -32,6 +32,7 @@ struct SettingsView: View {
                     }
                 }
                 Section("我的厨房") {
+                    CookingFootprintLink()
                     NavigationLink { PrivateRecipesView() } label: {
                         SettingsRowLabel("我的菜谱", symbol: "book.closed.fill", color: .orange)
                     }
@@ -77,4 +78,5 @@ struct SettingsView: View {
 #Preview {
     SettingsView().environment(YunlefunAccountStore(vault: MemoryYunlefunAccountVault()))
         .environment(CookAISettings(defaults: nil, vault: MemoryCookAIKeyVault()))
+        .environment(CookedRecipeRecords())
 }

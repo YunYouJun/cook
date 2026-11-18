@@ -203,7 +203,7 @@ struct PrivateRecipeDocument: FileDocument {
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper { FileWrapper(regularFileWithContents: Data(text.utf8)) }
 }
 
-private struct PrivateRecipeDetailView: View {
+struct PrivateRecipeDetailView: View {
     let customId: String
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -225,7 +225,7 @@ private struct PrivateRecipeDetailView: View {
                     Section("厨具") { Text(recipe.tools.isEmpty ? "未记录" : recipe.tools.joined(separator: "、")) }
                     if let url = recipe.sourceURL { Section("来源") { Link(destination: url) { Label(recipe.bv ?? recipe.link ?? "打开来源", systemImage: "arrow.up.right.square") } } }
                     if let note = recipe.note, !note.isEmpty { Section("做法与备注") { Text(note).textSelection(.enabled) } }
-                    Section { CookedRecipeRecordRow(recipeID: .personal(recipe.customId)) }
+                    Section { CookedRecipeRecordRow(recipeID: .personal(recipe.customId), recipeName: recipe.name) }
                     Section {
                         Button("编辑菜谱") { editor = RecipeEditorItem(recipe: recipe) }
                         Button("删除菜谱", role: .destructive) { deleting = true }

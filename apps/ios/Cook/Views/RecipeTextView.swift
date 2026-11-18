@@ -36,15 +36,17 @@ struct RecipeTextContent: View {
     let preparationInSidebar: Bool
     let showsStepGuidance: Bool
     let dietaryGoal: DietaryGoal?
+    let onFinishCooking: (() -> Void)?
     private let presentation: RecipePresentation
 
     init(recipe: Recipe, text: RecipeText, preparationInSidebar: Bool = false,
-         showsStepGuidance: Bool = false, dietaryGoal: DietaryGoal? = nil) {
+         showsStepGuidance: Bool = false, dietaryGoal: DietaryGoal? = nil, onFinishCooking: (() -> Void)? = nil) {
         self.recipe = recipe
         self.text = text
         self.preparationInSidebar = preparationInSidebar
         self.showsStepGuidance = showsStepGuidance
         self.dietaryGoal = dietaryGoal
+        self.onFinishCooking = onFinishCooking
         presentation = RecipePresentation(text: text)
     }
 
@@ -127,6 +129,17 @@ struct RecipeTextContent: View {
                                !(preparationInSidebar && presentation.ingredientBlocks.contains(offset)) {
                                 presentedBlock(block, at: offset, amounts: amounts, usage: usage, jump: jump)
                             }
+                        }
+                        if let onFinishCooking {
+                            Button(action: onFinishCooking) {
+                                Label("完成做菜", systemImage: "checkmark.seal")
+                                    .frame(maxWidth: .infinity, minHeight: 44)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .buttonBorderShape(.capsule)
+                            .tint(CookPalette.primaryAction)
+                            .accessibilityIdentifier("kitchen.finishCooking")
+                            .padding(.top, 12)
                         }
                         footer
                             .padding(.top, 12)
