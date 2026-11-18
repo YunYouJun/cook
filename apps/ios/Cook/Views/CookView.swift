@@ -334,6 +334,7 @@ struct CookView: View {
                 MoreChip(isExpanded: isExpanded, hidden: hidden) {
                     toggleMore(title)
                 }
+                .accessibilityIdentifier("cook.ingredient.more.\(title)")
             }
         }
     }

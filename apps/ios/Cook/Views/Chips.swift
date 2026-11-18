@@ -150,16 +150,14 @@ struct ChipSection<Content: View>: View {
     var note: String? = nil
     /// 跟着系统字号放大，字大时一行少放几个，免得菜名被截断（不能是 private，否则逐一成员构造器也会变成 private）
     @ScaledMetric(relativeTo: .subheadline) var minChipWidth: CGFloat = 92
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ViewBuilder let content: () -> Content
 
     var body: some View {
         Section {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: minChipWidth), spacing: 8)], spacing: 8) {
+            // List 已按卡片加载；卡片内部一次布局所有标签，避免二次懒加载留下空行。
+            AdaptiveChipGrid(minimumChipWidth: minChipWidth) {
                 content()
             }
-            // 字号改变会切换列数，重建网格，避免懒加载的旧单元格仍停留在原位置。
-            .id(dynamicTypeSize)
             .padding(.vertical, 4)
         } header: {
             Text(title)
@@ -168,6 +166,44 @@ struct ChipSection<Content: View>: View {
                 Text(note)
             }
         }
+    }
+}
+
+private struct AdaptiveChipGrid: Layout {
+    let minimumChipWidth: CGFloat
+    private let spacing = CookLayout.Spacing.small
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? minimumChipWidth
+        let grid = measure(width: width, subviews: subviews)
+        let height = grid.rowHeights.reduce(0, +) + CGFloat(max(0, grid.rowHeights.count - 1)) * spacing
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let grid = measure(width: bounds.width, subviews: subviews)
+        let chipProposal = ProposedViewSize(width: grid.chipWidth, height: nil)
+        var top = bounds.minY
+        for (row, height) in grid.rowHeights.enumerated() {
+            let first = row * grid.columns
+            for index in first..<min(first + grid.columns, subviews.count) {
+                let x = bounds.minX + CGFloat(index - first) * (grid.chipWidth + spacing)
+                subviews[index].place(at: CGPoint(x: x, y: top + height / 2), anchor: .leading, proposal: chipProposal)
+            }
+            top += height + spacing
+        }
+    }
+
+    private func measure(width: CGFloat, subviews: Subviews) -> (columns: Int, chipWidth: CGFloat, rowHeights: [CGFloat]) {
+        let columns = max(1, Int((width + spacing) / (minimumChipWidth + spacing)))
+        let chipWidth = (width - CGFloat(columns - 1) * spacing) / CGFloat(columns)
+        let chipProposal = ProposedViewSize(width: chipWidth, height: nil)
+        var rowHeights: [CGFloat] = []
+        for first in stride(from: 0, to: subviews.count, by: columns) {
+            let row = subviews[first..<min(first + columns, subviews.count)]
+            rowHeights.append(row.map { $0.sizeThatFits(chipProposal).height }.max() ?? 0)
+        }
+        return (columns, chipWidth, rowHeights)
     }
 }
 

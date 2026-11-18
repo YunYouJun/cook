@@ -6,6 +6,57 @@ final class CookDiscoveryUITests: XCTestCase {
     override func setUp() { continueAfterFailure = false }
 
     @MainActor
+    func testVegetableChipsStayVisibleAfterExpandingAndCollapsing() throws {
+        try XCTSkipUnless(UIDevice.current.userInterfaceIdiom == .phone, "Matches the compact iPhone ingredient list.")
+        let app = launch()
+        let chooser = app.collectionViews["cook.chooser"]
+        let more = chooser.buttons["cook.ingredient.more.蔬菜"]
+        let potato = chooser.buttons["cook.ingredient.土豆"]
+
+        app.buttons["冰箱"].firstMatch.tap()
+        let manual = app.buttons["放点食材"]
+        XCTAssertTrue(manual.waitForExistence(timeout: 10))
+        manual.tap()
+        let input = app.textFields["词典里没有的，比如：秋葵"]
+        XCTAssertTrue(input.waitForExistence(timeout: 10))
+        input.tap()
+        input.typeText("番茄,鸡蛋\n")
+        app.buttons["放进去（2）"].tap()
+        XCTAssertTrue(app.buttons["用冰箱里的做菜（2 样）"].waitForExistence(timeout: 10))
+        app.tabBars.buttons["找菜"].tap()
+
+        let shortcut = chooser.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "加上冰箱里的 2 样食材")).firstMatch
+        XCTAssertTrue(shortcut.waitForExistence(timeout: 10))
+        func assertFirstRow(_ thirdChip: String, file: StaticString = #filePath, line: UInt = #line) {
+            for name in ["土豆", "胡萝卜", thirdChip] {
+                let chip = chooser.buttons["cook.ingredient.\(name)"]
+                XCTAssertTrue(chip.wait(for: \.isHittable, toEqual: true, timeout: 3), name, file: file, line: line)
+            }
+        }
+
+        reveal(more, in: app)
+        if more.label == "收起不常用的食材" {
+            more.tap()
+            reveal(app.buttons["cook.search.open"], in: app, towardTop: true)
+            reveal(more, in: app)
+        }
+        assertFirstRow("西兰花")
+        more.tap()
+        capture(app, "vegetables-immediately-after-expanding")
+        assertFirstRow("花菜")
+        potato.tap()
+        XCTAssertTrue(potato.wait(for: \.isSelected, toEqual: true, timeout: 5))
+
+        reveal(more, in: app)
+        XCTAssertEqual(more.label, "收起不常用的食材")
+        more.tap()
+        reveal(app.buttons["cook.search.open"], in: app, towardTop: true)
+        assertFirstRow("西兰花")
+        XCTAssertFalse(chooser.buttons["cook.ingredient.花菜"].exists)
+        capture(app, "vegetables-after-collapsing")
+    }
+
+    @MainActor
     func testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients() {
         let app = launch()
         let wide = app.windows.firstMatch.horizontalSizeClass == .regular
@@ -271,7 +322,8 @@ final class CookDiscoveryUITests: XCTestCase {
         closeFilters(in: app)
         submit("番茄炒蛋", in: app)
         let recipe = recipeLinks(in: app).firstMatch
-        reveal(recipe, in: app)
+        // At the largest size, each chip occupies a row above the recommendations.
+        reveal(recipe, in: app, maxScrolls: 14)
         XCTAssertTrue(recipe.label.contains("番茄炒蛋"))
         capture(app, "find-recipes-largest-search-result")
         let decide = cookingContent(in: app).buttons.matching(identifier: "discovery.decide").firstMatch
@@ -527,6 +579,7 @@ final class CookDiscoveryUITests: XCTestCase {
     @MainActor
     private func reveal(_ element: XCUIElement, in app: XCUIApplication, towardTop: Bool = false,
                         page: ContentPage = .findRecipes,
+                        maxScrolls: Int = 10,
                         file: StaticString = #filePath, line: UInt = #line) {
         switch page {
         case .findRecipes: wait(app.cookingToolbarButton("cook.presentation"), "isHittable == true", file: file, line: line)
@@ -552,7 +605,7 @@ final class CookDiscoveryUITests: XCTestCase {
         }
         var visibleTop = windowFrame.minY
         var visibleBottom = windowFrame.maxY
-        for _ in 0..<10 {
+        for _ in 0..<maxScrolls {
             let exists = element.exists
             let frame = exists ? element.frame : CGRect.null
             // 固定底部结果按钮本身无需滚动，不能拿自己的上沿当遮挡边界。

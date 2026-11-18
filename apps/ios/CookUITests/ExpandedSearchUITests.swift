@@ -7,9 +7,7 @@ final class ExpandedSearchUITests: XCTestCase {
         try XCTSkipUnless(UIDevice.current.userInterfaceIdiom == .phone, "Only iPhone uses in-place search.")
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
-        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + [
-            "-ui-testing-reset-consent", "-cook.search.phoneStyle", "expanded",
-        ]
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
         app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
         app.launch()

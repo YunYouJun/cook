@@ -1,23 +1,5 @@
 import SwiftUI
 
-#if DEBUG
-enum CookPhoneSearchStyle: String, CaseIterable {
-    case expanded
-    case navigation
-
-    static let storageKey = "cook.search.phoneStyle"
-    // Existing navigation tests still exercise the native route by default.
-    static let defaultStyle: Self = ProcessInfo.processInfo.arguments.contains("-ui-testing") ? .navigation : .expanded
-
-    var title: String {
-        switch self {
-        case .expanded: "原地展开"
-        case .navigation: "原生侧滑"
-        }
-    }
-}
-#endif
-
 /// A window-local presentation bridge from the home search entry to the tab overlay.
 struct CookSearchExpansion {
     let isPresented: Bool

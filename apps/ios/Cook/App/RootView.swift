@@ -25,9 +25,6 @@ struct RootView: View {
     @State private var showingSignalConsent = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    #if DEBUG
-    @AppStorage(CookPhoneSearchStyle.storageKey) private var phoneSearchStyle = CookPhoneSearchStyle.defaultStyle
-    #endif
     @State private var expandedSearch: CookExpandedSearchRequest?
     @State private var expandedSearchKeyboardVisible = false
     @State private var searchDissolve = CookSearchDissolve()
@@ -157,9 +154,6 @@ struct RootView: View {
 
     private var searchExpansion: CookSearchExpansion? {
         guard UIDevice.current.userInterfaceIdiom == .phone, horizontalSizeClass == .compact else { return nil }
-        #if DEBUG
-        guard phoneSearchStyle == .expanded else { return nil }
-        #endif
         return CookSearchExpansion(
             isPresented: expandedSearch != nil,
             hidesSourceField: !reduceMotion && expandedSearch?.isClosing == false && (expandedSearch?.sourceScrollOffset ?? 0) > 0.5,
