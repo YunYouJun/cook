@@ -63,6 +63,55 @@ final class DeepSeekIntentServiceTests: XCTestCase {
         }
     }
 
+    func testConnectionCheckUsesOnlyAuthorizationOnTheOfficialBalanceEndpoint() async throws {
+        let url = URL(string: "https://api.deepseek.com/user/balance")!
+        for available in [true, false] {
+            let transport = DeepSeekTransportStub(body: Data("{\"is_available\":\(available)}".utf8), responseURL: url)
+            let result = try await service(transport).checkConnection(key: " \(testKey)\n")
+            XCTAssertEqual(result, available ? .available : .insufficientBalance)
+            let requests = await transport.requests
+            XCTAssertEqual(requests.count, 1)
+            let request = try XCTUnwrap(requests.first)
+            XCTAssertEqual(request.url, url)
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertNil(request.httpBody)
+            XCTAssertNil(request.httpBodyStream)
+            XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer \(testKey)")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Cache-Control"), "no-store")
+        }
+    }
+
+    func testConnectionCheckRejectsInvalidInputAndDoesNotEchoServerErrors() async throws {
+        let url = DeepSeekIntentService.balanceEndpoint
+        let invalidInput = DeepSeekTransportStub(responseURL: url)
+        do {
+            _ = try await service(invalidInput).checkConnection(key: "bad key")
+            XCTFail("Invalid Key must not reach the transport")
+        } catch { XCTAssertEqual(error as? DeepSeekIntentError, .invalidKey) }
+        let requests = await invalidInput.requests
+        XCTAssertTrue(requests.isEmpty)
+
+        let refused = DeepSeekTransportStub(status: 401, body: Data(testKey.utf8), responseURL: url)
+        do {
+            _ = try await service(refused).checkConnection(key: testKey)
+            XCTFail("Unauthorized Key was accepted")
+        } catch {
+            XCTAssertEqual(error as? DeepSeekIntentError, .authentication)
+            XCTAssertFalse(error.localizedDescription.contains(testKey))
+        }
+
+        for invalidResponse in [
+            DeepSeekTransportStub(body: Data("{}".utf8), responseURL: url),
+            DeepSeekTransportStub(body: Data("{\"is_available\":true}".utf8), responseURL: URL(string: "https://other.example")!),
+        ] {
+            do {
+                _ = try await service(invalidResponse).checkConnection(key: testKey)
+                XCTFail("Unverified response was accepted")
+            } catch { XCTAssertEqual(error as? DeepSeekIntentError, .invalidResponse) }
+        }
+    }
+
     func testRequestUsesFixedEndpointCurrentPublicContractAndOnlyCurrentText() async throws {
         let data = try data()
         let expected = draft(data)

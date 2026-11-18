@@ -2,11 +2,12 @@ import CookCore
 import Foundation
 
 enum DeepSeekIntentError: Error, LocalizedError, Equatable {
-    case invalidInput, authentication, insufficientBalance, rateLimited, timedOut, offline, unavailable, invalidResponse
+    case invalidInput, invalidKey, authentication, insufficientBalance, rateLimited, timedOut, offline, unavailable, invalidResponse
 
     var errorDescription: String? {
         switch self {
         case .invalidInput: return "请输入 1–1000 字的做菜想法。"
+        case .invalidKey: return "请检查 Key 格式，去掉中间的空格或换行。"
         case .authentication: return "DeepSeek Key 无效或已失效，请在设置中更换。"
         case .insufficientBalance: return "DeepSeek 账号余额不足，请检查自己的账号。"
         case .rateLimited: return "DeepSeek 请求过于频繁，请稍后重试。"
@@ -18,10 +19,13 @@ enum DeepSeekIntentError: Error, LocalizedError, Equatable {
     }
 }
 
-/// An explicit BYOK request only translates text into a validated, editable condition draft.
+/// Personal DeepSeek requests are sent directly to the provider.
 struct DeepSeekIntentService: Sendable {
     typealias Transport = @Sendable (URLRequest) async throws -> (Data, URLResponse)
+    enum ConnectionStatus: Equatable, Sendable { case available, insufficientBalance }
+
     static let endpoint = URL(string: "https://api.deepseek.com/chat/completions")!
+    static let balanceEndpoint = URL(string: "https://api.deepseek.com/user/balance")!
     private static let maximumResponseBytes = 65_536
     private let transport: Transport
 
@@ -34,36 +38,18 @@ struct DeepSeekIntentService: Sendable {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, text.count <= 1_000 else {
             throw DeepSeekIntentError.invalidInput
         }
-        guard !key.isEmpty, key.utf8.count <= 512,
-              key.unicodeScalars.allSatisfy({ (33...126).contains($0.value) }) else {
-            throw DeepSeekIntentError.authentication
-        }
+        guard Self.isValidKey(key) else { throw DeepSeekIntentError.authentication }
         let validator = SearchIntentValidator(data: data, availableGoals: availableGoals)
-        var request = URLRequest(url: Self.endpoint)
+        var request = Self.authorizedRequest(to: Self.endpoint, key: key)
         request.httpMethod = "POST"
-        request.timeoutInterval = 20
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("no-store", forHTTPHeaderField: "Cache-Control")
         request.httpBody = try JSONEncoder().encode(ChatRequest(messages: [
             Message(role: "system", content: try Self.prompt(validator: validator)),
             Message(role: "user", content: text),
         ]))
 
         do {
-            let (body, response) = try await transport(request)
-            try Task.checkCancellation()
-            guard let http = response as? HTTPURLResponse, http.url == Self.endpoint,
-                  body.count <= Self.maximumResponseBytes else { throw DeepSeekIntentError.invalidResponse }
-            switch http.statusCode {
-            case 200: break
-            case 401, 403: throw DeepSeekIntentError.authentication
-            case 402: throw DeepSeekIntentError.insufficientBalance
-            case 429: throw DeepSeekIntentError.rateLimited
-            default: throw DeepSeekIntentError.unavailable
-            }
+            let body = try await responseBody(for: request)
             guard let completion = try? JSONDecoder().decode(ChatResponse.self, from: body),
                   completion.choices.count == 1, let choice = completion.choices.first,
                   choice.finishReason == "stop", choice.message.role == "assistant",
@@ -73,6 +59,48 @@ struct DeepSeekIntentService: Sendable {
             }
             let result = try validator.decode(Data(content.utf8), expectedSource: .deepseek)
             return try CookAIIntentValidation.preserveLocalConditions(result, text: text, data: data, availableGoals: availableGoals)
+        } catch is CookAIIntentValidationFailure {
+            throw DeepSeekIntentError.invalidResponse
+        }
+    }
+
+    /// A bodyless GET checks the credential and balance without making a model call.
+    func checkConnection(key: String) async throws -> ConnectionStatus {
+        let key = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard Self.isValidKey(key) else { throw DeepSeekIntentError.invalidKey }
+        let body = try await responseBody(for: Self.authorizedRequest(to: Self.balanceEndpoint, key: key))
+        guard let status = try? JSONDecoder().decode(BalanceStatus.self, from: body) else {
+            throw DeepSeekIntentError.invalidResponse
+        }
+        return status.isAvailable ? .available : .insufficientBalance
+    }
+
+    private static func isValidKey(_ key: String) -> Bool {
+        !key.isEmpty && key.utf8.count <= 512 && key.unicodeScalars.allSatisfy { (33...126).contains($0.value) }
+    }
+
+    private static func authorizedRequest(to url: URL, key: String) -> URLRequest {
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 20)
+        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("no-store", forHTTPHeaderField: "Cache-Control")
+        return request
+    }
+
+    private func responseBody(for request: URLRequest) async throws -> Data {
+        do {
+            try Task.checkCancellation()
+            let (body, response) = try await transport(request)
+            try Task.checkCancellation()
+            guard let http = response as? HTTPURLResponse, http.url == request.url,
+                  body.count <= Self.maximumResponseBytes else { throw DeepSeekIntentError.invalidResponse }
+            switch http.statusCode {
+            case 200: return body
+            case 401, 403: throw DeepSeekIntentError.authentication
+            case 402: throw DeepSeekIntentError.insufficientBalance
+            case 429: throw DeepSeekIntentError.rateLimited
+            default: throw DeepSeekIntentError.unavailable
+            }
         } catch is CancellationError {
             throw CancellationError()
         } catch let error as URLError {
@@ -83,15 +111,16 @@ struct DeepSeekIntentService: Sendable {
                 throw DeepSeekIntentError.offline
             default: throw DeepSeekIntentError.unavailable
             }
-        } catch is CookAIIntentValidationFailure {
-            throw DeepSeekIntentError.invalidResponse
-        } catch let error as SearchIntentError {
-            throw error
         } catch let error as DeepSeekIntentError {
             throw error
         } catch {
             throw DeepSeekIntentError.unavailable
         }
+    }
+
+    private struct BalanceStatus: Decodable {
+        let isAvailable: Bool
+        enum CodingKeys: String, CodingKey { case isAvailable = "is_available" }
     }
 
     private static func sendLive(_ request: URLRequest) async throws -> (Data, URLResponse) {

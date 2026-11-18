@@ -232,23 +232,37 @@ final class SearchIntentUITests: XCTestCase {
         settings.tap()
         let aiForm = app.collectionViews["aiSettings.form"]
         XCTAssertTrue(aiForm.waitForExistence(timeout: 10))
-        XCTAssertTrue(aiForm.buttons["aiSettings.managed"].waitForExistence(timeout: 10))
+        XCTAssertTrue(aiForm.descendants(matching: .any).matching(identifier: "aiSettings.managed").firstMatch.waitForExistence(timeout: 10))
         XCTAssertTrue(finishEditing.waitForNonExistence(timeout: 5))
-        let keyInput = aiForm.secureTextFields["aiSettings.keyInput"]
-        // Prepare the actual settings field with bounded native scrolling inside its own form.
-        for _ in 0..<14 {
-            if keyInput.exists && keyInput.isHittable { break }
-            aiForm.swipeUp(velocity: .slow)
-        }
+        let addKey = aiForm.buttons["aiSettings.addKey"]
+        XCTAssertTrue(addKey.isHittable)
+        addKey.tap()
+        let keyInput = app.secureTextFields["aiSettings.keyInput"]
         XCTAssertTrue(keyInput.waitForExistence(timeout: 5))
-        XCTAssertTrue(keyInput.isHittable)
+        let saveKey = app.buttons["aiSettings.saveKey"]
+        let testConnection = app.buttons["aiSettings.testConnection"]
+        let connectionStatus = app.descendants(matching: .any).matching(identifier: "aiSettings.connectionStatus").firstMatch
+        XCTAssertFalse(saveKey.isEnabled)
+        XCTAssertTrue(testConnection.exists)
+        XCTAssertFalse(testConnection.isEnabled)
         keyInput.tap()
-        keyInput.typeText("x")
-        let saveKey = aiForm.buttons["aiSettings.saveKey"]
-        XCTAssertTrue(saveKey.waitForExistence(timeout: 5))
+        keyInput.typeText("bad key")
         XCTAssertTrue(saveKey.isEnabled)
+        XCTAssertTrue(testConnection.isEnabled)
+        XCTAssertFalse(connectionStatus.exists)
+        testConnection.tap()
+        XCTAssertTrue(connectionStatus.waitForExistence(timeout: 5))
         XCTAssertTrue(finishEditing.waitForNonExistence(timeout: 5))
-        // Leave the in-memory key draft unsaved and return through the real navigation control.
+        app.buttons["aiSettings.cancelKey"].tap()
+        XCTAssertTrue(keyInput.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(addKey.isHittable)
+        addKey.tap()
+        XCTAssertTrue(keyInput.waitForExistence(timeout: 5))
+        XCTAssertFalse(saveKey.isEnabled)
+        XCTAssertFalse(testConnection.isEnabled)
+        XCTAssertFalse(connectionStatus.exists)
+        app.buttons["aiSettings.cancelKey"].tap()
+        XCTAssertTrue(keyInput.waitForNonExistence(timeout: 5))
         let back = app.navigationBars["AI 设置"].buttons.element(boundBy: 0)
         XCTAssertTrue(back.waitForExistence(timeout: 5))
         back.tap()

@@ -4,91 +4,305 @@ import SwiftUI
 struct AISettingsView: View {
     @Environment(CookAISettings.self) private var settings
     @Environment(YunlefunAccountStore.self) private var accounts
-    @State private var keyInput = ""
+    @State private var showsKeyEditor = false
 
     var body: some View {
         Form {
             Section {
-                providerButton(.local)
-                providerButton(.ownDeepSeek)
-                    .disabled(!settings.hasAPIKey)
-                providerButton(.managedDeepSeek)
-                    .disabled(!settings.isManagedAvailable)
+                Button { settings.selectProvider(.local) } label: {
+                    providerLabel(.local, detail: "无需联网", accessory: selectionMark(for: .local))
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(settings.provider == .local ? .isSelected : [])
+                .accessibilityIdentifier("aiSettings.provider.local")
+
+                managedProvider
                     .accessibilityIdentifier("aiSettings.managed")
-            } header: {
-                Text("智能找菜")
-            } footer: {
-                Text("内置 DeepSeek 仅向有效云乐坊会员提供，由服务端核验会员与额度。普通用户和会员均可使用自己的 Key；普通搜索始终在本机完成。")
-            }
 
-            Section {
-                if settings.managedStatus == .checking { ProgressView("正在核验会员与服务状态…") }
-                else { Text(settings.managedStatus.message).foregroundStyle(.secondary) }
-                if settings.managedStatus == .loginRequired {
-                    NavigationLink("登录或管理云乐坊账号") { YunlefunAccountView() }
-                }
-                if settings.isManagedConfigured, accounts.account != nil {
-                    Button("重新检查会员与服务状态") { Task { await settings.refreshManagedCapability(accounts: accounts) } }
-                        .disabled(settings.managedStatus == .checking || accounts.isBusy)
-                        .accessibilityIdentifier("aiSettings.refreshMembership")
-                }
-            } header: { Text("会员内置服务") } footer: {
-                Text("检查时只发送登录凭据。会员到期、切换账号或核验过期后需重新检查；每次智能识别还会由服务器检查会员资格和使用额度。")
-            }
-
-            Section {
-                LabeledContent("本机 API Key", value: settings.hasAPIKey ? "已保存" : "未保存")
-                    .accessibilityIdentifier("aiSettings.keyStatus")
-                SecureField(settings.hasAPIKey ? "输入新的 Key 以替换" : "输入 DeepSeek API Key", text: $keyInput)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .privacySensitive()
-                    .accessibilityLabel("DeepSeek API Key")
-                    .accessibilityIdentifier("aiSettings.keyInput")
-                Button("保存 Key") {
-                    if settings.saveAPIKey(keyInput) { keyInput = "" }
-                }
-                .disabled(keyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .accessibilityIdentifier("aiSettings.saveKey")
-                if settings.hasAPIKey {
-                    Button("删除本机 Key", role: .destructive) {
-                        if settings.deleteAPIKey() { keyInput = "" }
-                    }
-                    .accessibilityIdentifier("aiSettings.deleteKey")
-                }
+                personalProvider
             } header: {
-                Text("自己的 DeepSeek Key")
+                Text("识别方式")
             } footer: {
-                Text("Key 仅保存在这台设备的钥匙串，不进入 iCloud、做菜数据或导出文件。只有主动选择智能识别并确认发送时，本次文本才会直发 DeepSeek；调用费用由你的 DeepSeek 账号承担。保存 Key 或切换选项不会发送请求。")
-            }
-            if let message = settings.message {
-                Section {
-                    Text(message).font(.footnote).foregroundStyle(.secondary)
-                        .accessibilityIdentifier("aiSettings.message")
-                }
+                Text("普通搜索始终在本机。只有确认使用 AI 时，才会发送本次内容。")
             }
         }
         .accessibilityIdentifier("aiSettings.form")
         .navigationTitle("AI 设置")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showsKeyEditor) {
+            DeepSeekKeyEditor()
+        }
         .task(id: accounts.sessionRevision) { await settings.refreshManagedCapability(accounts: accounts) }
-        .onDisappear { keyInput = "" }
     }
 
-    private func providerButton(_ provider: CookAIProvider) -> some View {
-        Button {
-            settings.selectProvider(provider)
-        } label: {
-            HStack {
-                Text(provider.title).foregroundStyle(.primary)
-                Spacer()
-                if settings.provider == provider {
-                    Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
+    @ViewBuilder
+    private var managedProvider: some View {
+        switch settings.managedStatus {
+        case .checking:
+            providerLabel(.managedDeepSeek, detail: "正在核验会员资格…", isChecking: true)
+        case .loginRequired:
+            NavigationLink { YunlefunAccountView() } label: {
+                providerLabel(.managedDeepSeek, detail: "登录云乐坊后核验资格")
+            }
+        case .ready where settings.isManagedAvailable:
+            Button { settings.selectProvider(.managedDeepSeek) } label: {
+                providerLabel(.managedDeepSeek, detail: "云乐坊会员专享 · 无需 API Key", accessory: selectionMark(for: .managedDeepSeek))
+            }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(settings.provider == .managedDeepSeek ? .isSelected : [])
+        case .unconfigured:
+            providerLabel(.managedDeepSeek, detail: "此版本暂未开放")
+        default:
+            let detail = switch settings.managedStatus {
+            case .membershipRequired: "当前账号未开通云乐坊会员"
+            case .expired: "云乐坊会员已到期"
+            case .ready: "会员资格需要重新核验"
+            default: settings.managedStatus.message
+            }
+            Button {
+                Task { await settings.refreshManagedCapability(accounts: accounts) }
+            } label: {
+                providerLabel(.managedDeepSeek, detail: detail, accessory: "arrow.clockwise")
+            }
+            .buttonStyle(.plain)
+            .disabled(accounts.isBusy)
+            .accessibilityHint("重新核验会员资格")
+        }
+    }
+
+    @ViewBuilder
+    private var personalProvider: some View {
+        if settings.hasAPIKey {
+            HStack(spacing: 8) {
+                Button { settings.selectProvider(.ownDeepSeek) } label: {
+                    providerLabel(.ownDeepSeek, detail: "仅支持 DeepSeek · 已保存", accessory: selectionMark(for: .ownDeepSeek))
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(settings.provider == .ownDeepSeek ? .isSelected : [])
+                .accessibilityIdentifier("aiSettings.provider.own-deepseek")
+
+                Button { showsKeyEditor = true } label: {
+                    Image(systemName: "pencil")
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("管理 DeepSeek API Key")
+                .accessibilityIdentifier("aiSettings.editKey")
+            }
+        } else {
+            Button { showsKeyEditor = true } label: {
+                providerLabel(.ownDeepSeek, detail: "仅支持 DeepSeek · 添加 Key", accessory: "chevron.right")
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("aiSettings.addKey")
+        }
+    }
+
+    private func providerLabel(_ provider: CookAIProvider, detail: String, accessory: String? = nil, isChecking: Bool = false) -> some View {
+        let (title, symbol, color): (String, String, Color) = switch provider {
+        case .local: ("仅本地识别", "iphone", .green)
+        case .managedDeepSeek: ("会员内置服务", "star.fill", .orange)
+        case .ownDeepSeek: ("个人 API Key", "key.fill", .blue)
+        }
+        return HStack(spacing: 12) {
+            SettingsRowLabel(title, symbol: symbol, color: color, subtitle: detail)
+            Group {
+                if isChecking {
+                    ProgressView().controlSize(.small)
+                } else if let accessory {
+                    Image(systemName: accessory)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(accessory == "chevron.right" ? Color.secondary : Color.accentColor)
                 }
             }
+            .frame(width: isChecking || accessory != nil ? 22 : 0)
+            .accessibilityHidden(true)
         }
-        .accessibilityAddTraits(settings.provider == provider ? .isSelected : [])
-        .accessibilityIdentifier("aiSettings.provider.\(provider.rawValue)")
+        .padding(.vertical, 3)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+    }
+
+    private func selectionMark(for provider: CookAIProvider) -> String? {
+        settings.provider == provider ? "checkmark" : nil
+    }
+}
+
+private struct DeepSeekKeyEditor: View {
+    @Environment(CookAISettings.self) private var settings
+    @Environment(\.dismiss) private var dismiss
+    @State private var keyInput = ""
+    @State private var errorMessage: String?
+    @State private var confirmsDeletion = false
+    @State private var connectionCheck: Task<Void, Never>?
+    @State private var connectionResult: Result<DeepSeekIntentService.ConnectionStatus, DeepSeekIntentError>?
+    @FocusState private var keyIsFocused: Bool
+
+    private static let keyPortal = URL(string: "https://platform.deepseek.com/api_keys")!
+
+    private var canSave: Bool { !keyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    SecureField(settings.hasAPIKey ? "粘贴或输入新的 API Key" : "粘贴或输入 API Key", text: $keyInput)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.asciiCapable)
+                        .focused($keyIsFocused)
+                        .privacySensitive()
+                        .accessibilityLabel("DeepSeek API Key")
+                        .accessibilityIdentifier("aiSettings.keyInput")
+
+                    PasteButton(payloadType: String.self) { strings in
+                        Task { @MainActor in
+                            if let key = strings.first { keyInput = key }
+                        }
+                    }
+                    .accessibilityLabel("粘贴 API Key")
+
+                    Button(action: testConnection) {
+                        HStack {
+                            Label(connectionCheck == nil ? "测试连接" : "正在测试连接…", systemImage: "link")
+                            if connectionCheck != nil {
+                                Spacer()
+                                ProgressView().controlSize(.small).accessibilityHidden(true)
+                            }
+                        }
+                    }
+                    .disabled(!canSave || connectionCheck != nil)
+                    .accessibilityIdentifier("aiSettings.testConnection")
+
+                    if let connectionResult {
+                        let (message, symbol, color) = connectionFeedback(connectionResult)
+                        Label {
+                            Text(message)
+                        } icon: {
+                            Image(systemName: symbol).foregroundStyle(color)
+                        }
+                        .font(.subheadline)
+                        .accessibilityIdentifier("aiSettings.connectionStatus")
+                    }
+
+                    Link(destination: Self.keyPortal) {
+                        Label("前往 DeepSeek 获取 Key", systemImage: "arrow.up.right.square")
+                    }
+
+                    if let errorMessage {
+                        Label(errorMessage, systemImage: "exclamationmark.circle")
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                            .accessibilityIdentifier("aiSettings.message")
+                    }
+                } header: {
+                    HStack(spacing: 8) {
+                        // Official DeepSeek API documentation site mark.
+                        Image("deepseek-mark")
+                            .renderingMode(.original)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 23, height: 18)
+                            .accessibilityHidden(true)
+                        Text("DeepSeek")
+                            .accessibilityAddTraits(.isHeader)
+                    }
+                    .textCase(nil)
+                } footer: {
+                    Text("只有点「测试连接」才会把输入的 Key 发给 DeepSeek 核验，不发送做菜内容，也不调用模型。Key 只保存在本机；智能识别由你的 DeepSeek 账号计费。")
+                }
+
+                if settings.hasAPIKey {
+                    Section {
+                        Button("删除本机 Key", role: .destructive) { confirmsDeletion = true }
+                            .accessibilityIdentifier("aiSettings.deleteKey")
+                    }
+                }
+            }
+            .navigationTitle(settings.hasAPIKey ? "管理 API Key" : "添加 API Key")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                        .accessibilityIdentifier("aiSettings.cancelKey")
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(settings.hasAPIKey ? "保存新 Key" : "保存并使用") { saveKey() }
+                        .disabled(!canSave)
+                        .accessibilityIdentifier("aiSettings.saveKey")
+                }
+            }
+            .confirmationDialog("删除本机 DeepSeek Key？", isPresented: $confirmsDeletion, titleVisibility: .visible) {
+                Button("删除 Key", role: .destructive) {
+                    if settings.deleteAPIKey() { dismiss() }
+                    else { errorMessage = settings.message }
+                }
+            } message: {
+                Text(settings.provider == .ownDeepSeek ? "删除后将切回本地识别。" : "之后可以重新添加。")
+            }
+            .onChange(of: keyInput) {
+                cancelConnectionCheck()
+                connectionResult = nil
+                errorMessage = nil
+            }
+            .onDisappear { cancelConnectionCheck() }
+        }
+    }
+
+    private func testConnection() {
+        guard canSave, connectionCheck == nil else { return }
+        keyIsFocused = false
+        connectionResult = nil
+        let key = keyInput
+        connectionCheck = Task {
+            defer {
+                if !Task.isCancelled, key == keyInput { connectionCheck = nil }
+            }
+            let result: Result<DeepSeekIntentService.ConnectionStatus, DeepSeekIntentError>
+            do {
+                result = .success(try await DeepSeekIntentService().checkConnection(key: key))
+            } catch is CancellationError {
+                return
+            } catch {
+                result = .failure(error as? DeepSeekIntentError ?? .unavailable)
+            }
+            guard !Task.isCancelled, key == keyInput else { return }
+            connectionResult = result
+        }
+    }
+
+    private func cancelConnectionCheck() {
+        connectionCheck?.cancel()
+        connectionCheck = nil
+    }
+
+    private func connectionFeedback(_ result: Result<DeepSeekIntentService.ConnectionStatus, DeepSeekIntentError>) -> (String, String, Color) {
+        switch result {
+        case .success(.available):
+            return ("连接成功，Key 可用。", "checkmark.circle.fill", .green)
+        case .success(.insufficientBalance):
+            return ("Key 有效，但 DeepSeek 余额不足。", "exclamationmark.circle.fill", .orange)
+        case let .failure(error):
+            let message = switch error {
+            case .authentication: "Key 无效或已失效，请检查后重试。"
+            case .timedOut: "连接超时，请重试。"
+            case .offline: "无法连接 DeepSeek，请检查网络。"
+            case .insufficientBalance, .rateLimited, .invalidKey: error.localizedDescription
+            default: "DeepSeek 暂时无法核验 Key，请稍后重试。"
+            }
+            return (message, "exclamationmark.circle.fill", .red)
+        }
+    }
+
+    private func saveKey() {
+        let isAdding = !settings.hasAPIKey
+        guard settings.saveAPIKey(keyInput) else {
+            errorMessage = settings.message
+            return
+        }
+        if isAdding { settings.selectProvider(.ownDeepSeek) }
+        dismiss()
     }
 }
 
