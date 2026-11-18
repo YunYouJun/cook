@@ -59,16 +59,9 @@ struct FridgeView: View {
                     } actions: {
                         Button("放点食材") { sheet = .manual }
                             .buttonStyle(.borderedProminent)
-                        if visionAvailable {
-                            visionEntry.buttonStyle(.bordered)
-                        }
-                        Button("拍照识别", systemImage: "camera") { sheet = .photo }
                     }
                 } else {
                     List {
-                        if visionAvailable {
-                            Section { visionEntry }
-                        }
                         if !remindersEnabled, !promptDismissed {
                             ReminderPrompt(onDismiss: { promptDismissed = true })
                         }
@@ -107,6 +100,12 @@ struct FridgeView: View {
             .navigationTitle("冰箱")
             .fridgeSaveError(isPresented: $saveError)
             .toolbar {
+                if visionAvailable {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("AI 识图") { sheet = .vision }
+                            .accessibilityIdentifier("fridge.vision.open")
+                    }
+                }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button("冰箱历史", systemImage: "clock.arrow.circlepath") { path.append(Route.history) }
                         .accessibilityIdentifier("fridge.history")
@@ -146,11 +145,6 @@ struct FridgeView: View {
             sheet = nil
             grouping = .expiry
         }
-    }
-
-    private var visionEntry: some View {
-        Button("AI 识图（会员）", systemImage: "sparkles") { sheet = .vision }
-            .accessibilityIdentifier("fridge.vision.open")
     }
 
     @ViewBuilder
