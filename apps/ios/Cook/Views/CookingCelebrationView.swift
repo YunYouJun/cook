@@ -4,6 +4,7 @@ import UIKit
 
 struct CookingCelebrationView: View {
     @Environment(CookedRecipeRecords.self) private var records
+    @Environment(RecipeStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) private var dismiss
     @State private var appeared = false
@@ -55,6 +56,8 @@ struct CookingCelebrationView: View {
         let name = confirmation.learned.recipeName ?? "这道菜"
         return VStack(spacing: 20) {
             VStack(spacing: 8) {
+                LearnedDishBadge(catalogRecipeID: badgeCatalogID, size: 96)
+                    .padding(.bottom, 4)
                 Label("今天学会了", systemImage: "sparkles")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(CookingJournalPalette.warmInk)
@@ -64,8 +67,9 @@ struct CookingCelebrationView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("今天学会了 · \(name)")
+            .accessibilityLabel("今天学会了 · \(name)，获得菜肴徽章")
             .accessibilityAddTraits(.isHeader)
+            .accessibilityIdentifier("cooking.celebration.heading")
             .accessibilityFocused($headingFocused)
             .overlay {
                 if !reduceMotion {
@@ -121,6 +125,11 @@ struct CookingCelebrationView: View {
         .shadow(color: .black.opacity(0.16), radius: 24, y: 12)
     }
 
+    private var badgeCatalogID: Int? {
+        guard case let .catalog(id) = confirmation.learned.recipeID else { return nil }
+        return store.recipesById[id]?.id
+    }
+
     private var sparkles: some View {
         ZStack {
             ForEach(0..<12, id: \.self) { index in
@@ -139,9 +148,11 @@ struct CookingCelebrationView: View {
 
 #Preview("学会庆祝") {
     let records = CookedRecipeRecords()
-    if let confirmation = try? records.confirmLearned(.catalog(42), name: "番茄炒蛋") {
+    if let store = try? RecipeStore.loadBundled(inMemory: true),
+       let confirmation = try? records.confirmLearned(.catalog(250), name: "番茄炒蛋") {
         CookingCelebrationView(confirmation: confirmation)
             .environment(records)
+            .environment(store)
     }
 }
 
