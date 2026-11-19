@@ -4,7 +4,7 @@ export const links = {
   cook: 'https://cook.yunyoujun.cn',
   legacyCook: 'https://v1.cook.yunyoujun.cn',
   testflight: 'https://testflight.apple.com/join/KTTJNhDh',
-  iosBetaGuide: 'https://cook.yunle.fun/guide/ios-beta',
+  iosBetaGuide: 'https://cook.yunle.fun/guide/ios-beta.html',
 
   /**
    * 应用内反馈提交失败时的可选邮件兜底
