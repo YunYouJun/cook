@@ -434,8 +434,12 @@ final class CookingFootprintUITests: XCTestCase {
         }
         XCTAssertTrue(search.waitForExistence(timeout: 10))
         search.tap()
+        let clear = search.buttons["清除文本"]
+        if clear.exists { clear.tap() }
         search.typeText("\(name)\n")
-        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch.tap()
+        let recipe = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
+        XCTAssertTrue(recipe.waitForExistence(timeout: 5))
+        recipe.tap()
         let close = app.buttons.matching(NSPredicate(format: "label IN %@", ["关闭", "取消"])).firstMatch
         if close.exists && close.isHittable { close.tap() }
         if app.buttons["隐藏边栏"].exists { app.buttons["隐藏边栏"].tap() }
