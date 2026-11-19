@@ -60,8 +60,28 @@ final class CookingFootprintUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["✨ 学会了"].exists)
         app.buttons.matching(identifier: "我的").firstMatch.tap()
         openLearnedDishes(app)
-        assertBadge(app, contains: ["番茄炒蛋", "首次学会"])
+        let achievement = assertBadge(app, contains: ["番茄炒蛋", "首次学会", "查看立体成就"])
         capture(app, "learned-dishes-catalog")
+        achievement.tap()
+        let viewport = app.descendants(matching: .any).matching(identifier: "achievement.model").firstMatch
+        let turn = app.buttons["右转"]
+        XCTAssertTrue(turn.waitForExistence(timeout: 15))
+        XCTAssertEqual(viewport.value as? String, "0 度")
+        let reset = app.buttons["复位"]
+        XCTAssertFalse(reset.isEnabled)
+        turn.tap()
+        XCTAssertEqual(viewport.value as? String, "30 度")
+        XCTAssertTrue(reset.isEnabled)
+        app.buttons["左转"].tap()
+        XCTAssertEqual(viewport.value as? String, "0 度")
+        viewport.swipeLeft()
+        XCTAssertNotEqual(viewport.value as? String, "0 度")
+        capture(app, "tomato-egg-achievement-rotated")
+        reset.tap()
+        XCTAssertEqual(viewport.value as? String, "0 度")
+        XCTAssertFalse(reset.isEnabled)
+        capture(app, "tomato-egg-achievement-reset")
+        app.buttons["完成"].tap()
         closeLearnedDishes(app)
         app.buttons.matching(identifier: "菜谱").firstMatch.tap()
         row.tap()
@@ -184,6 +204,16 @@ final class CookingFootprintUITests: XCTestCase {
         let badge = assertBadge(app, contains: ["番茄炒蛋", "首次学会", "年", "月", "日"])
         XCTAssertTrue(app.windows.firstMatch.frame.contains(badge.frame))
         capture(app, "learned-dishes-largest-dark")
+        badge.tap()
+        let turn = app.buttons["右转"]
+        XCTAssertTrue(turn.waitForExistence(timeout: 15))
+        for _ in 0..<4 where !turn.isHittable { app.swipeUp() }
+        turn.tap()
+        let reset = app.buttons["复位"]
+        XCTAssertTrue(reset.isEnabled)
+        capture(app, "tomato-egg-achievement-dark-rotated")
+        reset.tap()
+        XCTAssertFalse(reset.isEnabled)
     }
 
     @MainActor

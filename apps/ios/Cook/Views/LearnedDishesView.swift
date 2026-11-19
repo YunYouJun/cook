@@ -9,6 +9,8 @@ struct LearnedDishesView: View {
     @Query private var privateRecords: [PrivateRecipeRecord]
     @ScaledMetric(relativeTo: .body) private var tileWidth: CGFloat = 148
 
+    @State private var selectedAchievement: LearnedRecord?
+
     private struct Dish {
         let name: String
         var catalogRecipeID: Int? = nil
@@ -31,6 +33,14 @@ struct LearnedDishesView: View {
         .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle("我的拿手菜")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $selectedAchievement) { record in
+            TomatoEggAchievementView(learnedAt: record.learnedAt)
+        }
+        .onChange(of: records.progress.learned) { _, learned in
+            if let selectedAchievement, !learned.contains(where: { $0.id == selectedAchievement.id }) {
+                self.selectedAchievement = nil
+            }
+        }
     }
 
     private var badges: some View {
@@ -41,7 +51,18 @@ struct LearnedDishesView: View {
         return ScrollView {
             LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
                 ForEach(learned) { record in
-                    tile(for: dish(for: record, privateNames: privateNames), learnedAt: record.learnedAt)
+                    let dish = dish(for: record, privateNames: privateNames)
+                    if dish.catalogRecipeID == 250 {
+                        Button { selectedAchievement = record } label: {
+                            tile(for: dish, learnedAt: record.learnedAt)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("打开可旋转的番茄炒蛋模型")
+                        .accessibilityIdentifier("learnedDishes.badge")
+                    } else {
+                        tile(for: dish, learnedAt: record.learnedAt)
+                            .accessibilityIdentifier("learnedDishes.badge")
+                    }
                 }
             }
             .frame(maxWidth: 720)
@@ -64,6 +85,11 @@ struct LearnedDishesView: View {
                     .font(.footnote.monospacedDigit())
                     .foregroundStyle(CookingJournalPalette.warmInk)
                     .accessibilityLabel("首次学会 \(CookingDates.celebration(learnedAt))")
+                if dish.catalogRecipeID == 250 {
+                    Label("查看立体成就", systemImage: "rotate.3d")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(CookingJournalPalette.warmInk)
+                }
                 if let unavailable = dish.unavailable {
                     Text(unavailable).font(.caption).foregroundStyle(.secondary)
                 }
@@ -76,7 +102,6 @@ struct LearnedDishesView: View {
         .padding(14)
         .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18))
         .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("learnedDishes.badge")
     }
 
     private func dish(for record: LearnedRecord, privateNames: [String: String]) -> Dish {
