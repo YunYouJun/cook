@@ -7,13 +7,32 @@ final class ShowcaseAssetStoreTests: XCTestCase {
     nonisolated private static let model = Data("tomato model".utf8)
     nonisolated private static let updatedModel = Data("updated tomato model".utf8)
 
-    func testBundleManifestsContainBothPacksAndKeepPayloadsOutOfApp() throws {
-        let manifest = try XCTUnwrap(ShowcaseManifest.bundled())
-        XCTAssertEqual(manifest.recipeID, 250)
-        XCTAssertEqual(manifest.pairID, "tomato-egg-clay")
-        XCTAssertEqual(manifest.packs.map(\.kind), [.image, .model])
-        XCTAssertNil(Bundle.main.url(forResource: "TomatoEggAchievement", withExtension: "usdz"))
-        XCTAssertNil(Bundle.main.url(forResource: "tomato-egg", withExtension: "webp"))
+    func testBundleManifestsContainAllDishPacksAndKeepPayloadsOutOfApp() {
+        let manifests = ShowcaseManifest.bundled()
+        XCTAssertEqual(Set(manifests.map(\.recipeID)), [250, 497, 588])
+        XCTAssertEqual(manifests.first(where: { $0.recipeID == 250 })?.pairID, "tomato-egg-clay")
+        for manifest in manifests {
+            XCTAssertEqual(manifest.packs.map(\.kind), [.image, .model])
+        }
+        XCTAssertNil(Bundle.main.url(forResource: "showcase", withExtension: nil))
+        XCTAssertNil(Bundle.main.url(forResource: "model", withExtension: "usdz"))
+        XCTAssertNil(Bundle.main.url(forResource: "image", withExtension: "webp"))
+    }
+
+    func testDeletingOneDishCannotRemoveAnotherDishesPack() async throws {
+        let directory = temporaryDirectory()
+        let custard = ShowcaseAssetStore(manifest: Self.manifest(recipeID: 588), directory: directory) { _, _ in Self.model }
+        let cucumber = ShowcaseAssetStore(manifest: Self.manifest(recipeID: 497), directory: directory) { _, _ in Self.model }
+        await custard.download(.model)?.value
+        await cucumber.download(.model)?.value
+        let model = try XCTUnwrap(cucumber.installed[.model]?.url)
+        XCTAssertNotEqual(custard.installed[.model]?.url, model)
+        custard.remove(.model)
+        custard.reload()
+        cucumber.reload()
+        XCTAssertNil(custard.installed[.model])
+        XCTAssertEqual(cucumber.installed[.model]?.url, model)
+        XCTAssertEqual(try Data(contentsOf: model), Self.model)
     }
 
     func testIndependentDownloadsReopenOfflineDeleteAndRedownload() async throws {
@@ -105,12 +124,12 @@ final class ShowcaseAssetStoreTests: XCTestCase {
         XCTAssertEqual(updating.installed[.model]?.url, previousURL)
     }
 
-    private static func manifest(modelVersion: Int = 1) -> ShowcaseManifest {
+    private static func manifest(recipeID: Int = 250, modelVersion: Int = 1) -> ShowcaseManifest {
         func asset(_ kind: ShowcaseAssetKind, version: Int, data: Data) -> ShowcaseAsset {
             ShowcaseAsset(kind: kind, version: version, url: URL(string: "https://example.test")!,
                           bytes: data.count, sha256: ShowcaseAsset.digest(data))
         }
-        return ShowcaseManifest(recipeID: 250, pairID: "tomato-egg-clay", packs: [
+        return ShowcaseManifest(recipeID: recipeID, pairID: "tomato-egg-clay", packs: [
             asset(.image, version: 1, data: image),
             asset(.model, version: modelVersion, data: modelVersion == 1 ? model : updatedModel),
         ])

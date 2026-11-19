@@ -1,0 +1,62 @@
+[
+  {
+    "recipeID": 250,
+    "pairID": "tomato-egg-clay",
+    "packs": [
+      {
+        "kind": "image",
+        "version": 1,
+        "url": "https://assets.yunle.fun/cook/showcase/250/tomato-egg-clay/image/v1-b27b5faea673ca918b01252827709cac99065701098d5fa4c946fe004f4c66e5.webp",
+        "bytes": 30522,
+        "sha256": "b27b5faea673ca918b01252827709cac99065701098d5fa4c946fe004f4c66e5"
+      },
+      {
+        "kind": "model",
+        "version": 1,
+        "url": "https://assets.yunle.fun/cook/showcase/250/tomato-egg-clay/model/v1-1dc5b0796f4a82078120dfb81a412ad79f74c7600bb924b6cbbbe95dbfc10996.usdz",
+        "bytes": 1387895,
+        "sha256": "1dc5b0796f4a82078120dfb81a412ad79f74c7600bb924b6cbbbe95dbfc10996"
+      }
+    ]
+  },
+  {
+    "recipeID": 588,
+    "pairID": "steamed-egg-clay",
+    "packs": [
+      {
+        "kind": "image",
+        "version": 1,
+        "url": "https://assets.yunle.fun/cook/showcase/588/steamed-egg-clay/image/v1-d710a85e5b8c4470244a134c05eb2d050bcb80a356096ef597cf751c20d08f3b.webp",
+        "bytes": 21682,
+        "sha256": "d710a85e5b8c4470244a134c05eb2d050bcb80a356096ef597cf751c20d08f3b"
+      },
+      {
+        "kind": "model",
+        "version": 1,
+        "url": "https://assets.yunle.fun/cook/showcase/588/steamed-egg-clay/model/v1-1fd52c915c69de27bbb3ca7ad9415caa354744559b777b00c09829737ae33463.usdz",
+        "bytes": 257867,
+        "sha256": "1fd52c915c69de27bbb3ca7ad9415caa354744559b777b00c09829737ae33463"
+      }
+    ]
+  },
+  {
+    "recipeID": 497,
+    "pairID": "smashed-cucumber-clay",
+    "packs": [
+      {
+        "kind": "image",
+        "version": 1,
+        "url": "https://assets.yunle.fun/cook/showcase/497/smashed-cucumber-clay/image/v1-ebef71f65cc8e8fdf8e922504fb38059bf9adecfa1da6a9ecefc479db0fa79a6.webp",
+        "bytes": 26156,
+        "sha256": "ebef71f65cc8e8fdf8e922504fb38059bf9adecfa1da6a9ecefc479db0fa79a6"
+      },
+      {
+        "kind": "model",
+        "version": 1,
+        "url": "https://assets.yunle.fun/cook/showcase/497/smashed-cucumber-clay/model/v1-37496813b782b3e621caf5ab0af49c99985ee80afac99db8268315644dead7ea.usdz",
+        "bytes": 199919,
+        "sha256": "37496813b782b3e621caf5ab0af49c99985ee80afac99db8268315644dead7ea"
+      }
+    ]
+  }
+]

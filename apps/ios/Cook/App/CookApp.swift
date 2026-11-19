@@ -15,7 +15,7 @@ struct CookApp: App {
     @State private var session: CookSession
     @State private var searchHistory: CookSearchHistory
     @State private var cookedRecipes: CookedRecipeRecords
-    @State private var showcaseAssets = ShowcaseAssetStore.live()
+    @State private var showcaseAssets = ShowcaseAssetLibrary.live()
     @State private var feedback = FeedbackClient()
     @State private var favoriteActions: FavoriteActions
     @State private var accounts: YunlefunAccountStore

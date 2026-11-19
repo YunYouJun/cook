@@ -26,25 +26,30 @@ struct ShowcaseAsset: Decodable, Sendable {
     }
 }
 
-struct ShowcaseManifest: Decodable {
+struct ShowcaseManifest: Decodable, Sendable {
     static let maximumBytes = 8 * 1024 * 1024
     let recipeID: Int
     let pairID: String
     let packs: [ShowcaseAsset]
 
-    static func bundled() -> Self? {
-        guard let url = Bundle.main.url(forResource: "tomato-egg-clay", withExtension: "json"),
+    static func bundled() -> [Self] {
+        guard let url = Bundle.main.url(forResource: "showcase-packs", withExtension: "json"),
               let data = try? Data(contentsOf: url),
-              let manifest = try? JSONDecoder().decode(Self.self, from: data),
-              manifest.recipeID == 250, manifest.pairID == "tomato-egg-clay",
-              manifest.packs.count == ShowcaseAssetKind.allCases.count,
-              Set(manifest.packs.map(\.kind)) == Set(ShowcaseAssetKind.allCases),
-              manifest.packs.allSatisfy({ pack in
-                  pack.version > 0 && (1...maximumBytes).contains(pack.bytes) && ShowcaseAsset.isDigest(pack.sha256)
-                      && pack.url.absoluteString == "https://assets.yunle.fun/cook/showcase/\(manifest.recipeID)/\(manifest.pairID)/\(pack.kind.rawValue)/\(pack.filename)"
-              })
-        else { return nil }
-        return manifest
+              let list = try? JSONDecoder().decode([Self].self, from: data)
+        else { return [] }
+        let recipes = Dictionary(grouping: list, by: \.recipeID)
+        let pairs = Dictionary(grouping: list, by: \.pairID)
+        return list.filter { recipes[$0.recipeID]?.count == 1 && pairs[$0.pairID]?.count == 1 && $0.isValid }
+    }
+
+    private var isValid: Bool {
+        recipeID > 0 && pairID.range(of: "^[a-z0-9]+(-[a-z0-9]+)*$", options: .regularExpression) != nil
+            && packs.count == ShowcaseAssetKind.allCases.count
+            && Set(packs.map(\.kind)) == Set(ShowcaseAssetKind.allCases)
+            && packs.allSatisfy { pack in
+                pack.version > 0 && (1...Self.maximumBytes).contains(pack.bytes) && ShowcaseAsset.isDigest(pack.sha256)
+                    && pack.url.absoluteString == "https://assets.yunle.fun/cook/showcase/\(recipeID)/\(pairID)/\(pack.kind.rawValue)/\(pack.filename)"
+            }
     }
 }
 
@@ -57,7 +62,7 @@ final class ShowcaseAssetStore {
 
     typealias Transfer = @Sendable (ShowcaseAsset, @Sendable (Double) async -> Void) async throws -> Data
 
-    let manifest: ShowcaseManifest?
+    let manifest: ShowcaseManifest
     private(set) var installed: [ShowcaseAssetKind: Installation] = [:]
     private(set) var progress: [ShowcaseAssetKind: Double] = [:]
     private(set) var problems: [ShowcaseAssetKind: String] = [:]
@@ -66,44 +71,14 @@ final class ShowcaseAssetStore {
     private let transfer: Transfer
     private let fileManager = FileManager.default
 
-    init(manifest: ShowcaseManifest?, directory: URL, transfer: Transfer? = nil) {
+    init(manifest: ShowcaseManifest, directory: URL, transfer: Transfer? = nil) {
         self.manifest = manifest
         self.directory = directory
         self.transfer = transfer ?? { try await Self.fetch($0, progress: $1) }
     }
 
-    static func live() -> ShowcaseAssetStore {
-        let manifest = ShowcaseManifest.bundled()
-        let directory = URL.applicationSupportDirectory.appending(path: "CookShowcaseAssets", directoryHint: .isDirectory)
-        #if DEBUG
-            let process = ProcessInfo.processInfo
-            if process.arguments.contains("-ui-testing") {
-                let env = process.environment
-                let session = env["COOK_UI_TEST_SHOWCASE_SESSION"].flatMap(UUID.init(uuidString:)) ?? UUID()
-                let testDirectory = URL.applicationSupportDirectory
-                    .appending(path: "CookShowcaseUITests", directoryHint: .isDirectory)
-                    .appending(path: session.uuidString, directoryHint: .isDirectory)
-                if env["COOK_UI_TEST_SHOWCASE_LIVE"] != "1" {
-                    let fixtures: [ShowcaseAssetKind: String] = [
-                        .image: env["COOK_UI_TEST_SHOWCASE_IMAGE"] ?? "",
-                        .model: env["COOK_UI_TEST_SHOWCASE_MODEL"] ?? "",
-                    ]
-                    return ShowcaseAssetStore(manifest: manifest, directory: testDirectory) { asset, _ in
-                        guard let path = fixtures[asset.kind], !path.isEmpty else {
-                            throw URLError(.notConnectedToInternet)
-                        }
-                        return try Data(contentsOf: URL(fileURLWithPath: path))
-                    }
-                }
-                return ShowcaseAssetStore(manifest: manifest, directory: testDirectory)
-            }
-        #endif
-        return ShowcaseAssetStore(manifest: manifest, directory: directory)
-    }
-
     /// Find the most recent verified copy, including a previous version when an update is available.
     func reload() {
-        guard let manifest else { return }
         for asset in manifest.packs {
             installed[asset.kind] = findInstallation(for: asset)
         }
@@ -111,7 +86,7 @@ final class ShowcaseAssetStore {
 
     @discardableResult
     func download(_ kind: ShowcaseAssetKind) -> Task<Void, Never>? {
-        guard let asset = manifest?.packs.first(where: { $0.kind == kind }),
+        guard let asset = manifest.packs.first(where: { $0.kind == kind }),
               tasks[kind] == nil, installed[kind]?.url.lastPathComponent != asset.filename
         else { return nil }
         progress[kind] = 0
@@ -147,7 +122,8 @@ final class ShowcaseAssetStore {
     }
 
     func remove(_ kind: ShowcaseAssetKind) {
-        guard tasks[kind] == nil, let folder = folder(for: kind) else { return }
+        guard tasks[kind] == nil else { return }
+        let folder = folder(for: kind)
         problems[kind] = nil
         do {
             try fileManager.removeItem(at: folder)
@@ -163,15 +139,14 @@ final class ShowcaseAssetStore {
         progress[kind] = fraction
     }
 
-    private func folder(for kind: ShowcaseAssetKind) -> URL? {
-        guard let manifest else { return nil }
-        return directory
+    private func folder(for kind: ShowcaseAssetKind) -> URL {
+        directory
             .appending(path: "\(manifest.recipeID)-\(manifest.pairID)", directoryHint: .isDirectory)
             .appending(path: kind.rawValue, directoryHint: .isDirectory)
     }
 
     private func findInstallation(for asset: ShowcaseAsset) -> Installation? {
-        guard let folder = folder(for: asset.kind) else { return nil }
+        let folder = folder(for: asset.kind)
         let urls = (try? fileManager.contentsOfDirectory(at: folder,
                                                         includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey],
                                                         options: [.skipsHiddenFiles])) ?? []
@@ -200,7 +175,7 @@ final class ShowcaseAssetStore {
 
     private func install(_ data: Data, for asset: ShowcaseAsset) throws {
         var root = directory
-        guard let folder = folder(for: asset.kind) else { throw AssetError.invalidContent }
+        let folder = folder(for: asset.kind)
         try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
         var values = URLResourceValues()
         values.isExcludedFromBackup = true

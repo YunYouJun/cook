@@ -7,27 +7,37 @@ const { COS_SECRET_ID, COS_SECRET_KEY, COS_BUCKET, COS_REGION } = process.env
 if (!COS_SECRET_ID || !COS_SECRET_KEY || !COS_BUCKET || !COS_REGION)
   throw new Error('缺少 COS 上传配置')
 
-const manifest = JSON.parse(await readFile(new URL('../apps/ios/Cook/Resources/tomato-egg-clay.json', import.meta.url), 'utf8'))
+const manifests = JSON.parse(await readFile(new URL('../apps/ios/Cook/Resources/showcase-packs.json', import.meta.url), 'utf8'))
 const files = {
-  image: { name: 'tomato-egg.webp', type: 'image/webp', extension: 'webp' },
-  model: { name: 'TomatoEggAchievement.usdz', type: 'model/vnd.usdz+zip', extension: 'usdz' },
+  image: { name: 'image.webp', type: 'image/webp' },
+  model: { name: 'model.usdz', type: 'model/vnd.usdz+zip' },
 }
-if (manifest.recipeID !== 250 || manifest.pairID !== 'tomato-egg-clay'
-  || manifest.packs.length !== 2 || !['image', 'model'].every(kind => manifest.packs.some(pack => pack.kind === kind))) {
-  throw new Error('番茄炒蛋的素材清单有误')
+if (!Array.isArray(manifests) || !manifests.length
+  || new Set(manifests.map(manifest => manifest.recipeID)).size !== manifests.length
+  || new Set(manifests.map(manifest => manifest.pairID)).size !== manifests.length) {
+  throw new Error('素材清单缺失或菜品重复')
 }
 
-const uploads = await Promise.all(manifest.packs.map(async (pack) => {
-  const file = files[pack.kind]
-  const data = await readFile(new URL(`../assets/showcase/tomato-egg-clay/${file.name}`, import.meta.url))
-  const digest = createHash('sha256').update(data).digest('hex')
-  const key = `cook/showcase/250/tomato-egg-clay/${pack.kind}/v${pack.version}-${digest}.${file.extension}`
-  if (!Number.isSafeInteger(pack.version) || pack.version < 1 || data.length !== pack.bytes
-    || pack.bytes < 1 || pack.bytes > 8 * 1024 * 1024 || pack.sha256 !== digest
-    || pack.url !== `https://assets.yunle.fun/${key}`) {
-    throw new Error(`${pack.kind} 的本地文件与清单不一致`)
+const uploads = await Promise.all(manifests.flatMap((manifest) => {
+  const { recipeID, pairID, packs } = manifest
+  if (!Number.isSafeInteger(recipeID) || recipeID < 1 || typeof pairID !== 'string'
+    || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(pairID) || !Array.isArray(packs)
+    || packs.length !== 2 || !Object.keys(files).every(kind => packs.some(pack => pack.kind === kind))) {
+    throw new Error(`菜品 ${recipeID} 的素材清单有误`)
   }
-  return { key, file, data }
+  return packs.map(async (pack) => {
+    const file = files[pack.kind]
+    const data = await readFile(new URL(`../assets/showcase/${pairID}/${file.name}`, import.meta.url))
+    const digest = createHash('sha256').update(data).digest('hex')
+    const extension = file.name.split('.').at(-1)
+    const key = `cook/showcase/${recipeID}/${pairID}/${pack.kind}/v${pack.version}-${digest}.${extension}`
+    if (!Number.isSafeInteger(pack.version) || pack.version < 1 || data.length !== pack.bytes
+      || pack.bytes < 1 || pack.bytes > 8 * 1024 * 1024 || pack.sha256 !== digest
+      || pack.url !== `https://assets.yunle.fun/${key}`) {
+      throw new Error(`${pairID} 的 ${pack.kind} 文件与清单不一致`)
+    }
+    return { key, file, data }
+  })
 }))
 
 const cos = new COS({ SecretId: COS_SECRET_ID, SecretKey: COS_SECRET_KEY })

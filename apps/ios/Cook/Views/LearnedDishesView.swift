@@ -5,11 +5,20 @@ import SwiftUI
 struct LearnedDishesView: View {
     @Environment(CookedRecipeRecords.self) private var records
     @Environment(RecipeStore.self) private var store
+    @Environment(ShowcaseAssetLibrary.self) private var showcases
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query private var privateRecords: [PrivateRecipeRecord]
     @ScaledMetric(relativeTo: .body) private var tileWidth: CGFloat = 148
 
-    @State private var selectedTomatoEgg: LearnedRecord?
+    @State private var selection: ShowcaseSelection?
+
+    private struct ShowcaseSelection: Identifiable {
+        let record: LearnedRecord
+        let name: String
+        let assets: ShowcaseAssetStore
+
+        var id: UUID { record.id }
+    }
 
     private struct Dish {
         let name: String
@@ -33,12 +42,12 @@ struct LearnedDishesView: View {
         .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle("我的拿手菜")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $selectedTomatoEgg) { record in
-            TomatoEggShowcaseView(learnedAt: record.learnedAt)
+        .sheet(item: $selection) { selection in
+            DishShowcaseView(name: selection.name, learnedAt: selection.record.learnedAt, assets: selection.assets)
         }
         .onChange(of: records.progress.learned) { _, learned in
-            if let selectedTomatoEgg, !learned.contains(where: { $0.id == selectedTomatoEgg.id }) {
-                self.selectedTomatoEgg = nil
+            if let selection, !learned.contains(where: { $0.id == selection.id }) {
+                self.selection = nil
             }
         }
     }
@@ -52,12 +61,14 @@ struct LearnedDishesView: View {
             LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
                 ForEach(learned) { record in
                     let dish = dish(for: record, privateNames: privateNames)
-                    if dish.catalogRecipeID == TomatoEggAchievementView.recipeID {
-                        Button { selectedTomatoEgg = record } label: {
-                            tile(for: dish, learnedAt: record.learnedAt)
+                    if let id = dish.catalogRecipeID, let assets = showcases.stores[id] {
+                        Button {
+                            selection = ShowcaseSelection(record: record, name: dish.name, assets: assets)
+                        } label: {
+                            tile(for: dish, learnedAt: record.learnedAt, showsShowcaseLink: true)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityHint("查看番茄炒蛋成就和离线素材")
+                        .accessibilityHint("查看菜肴成就和离线素材")
                         .accessibilityIdentifier("learnedDishes.badge")
                     } else {
                         tile(for: dish, learnedAt: record.learnedAt)
@@ -72,7 +83,7 @@ struct LearnedDishesView: View {
         .accessibilityIdentifier("learnedDishes.collection")
     }
 
-    private func tile(for dish: Dish, learnedAt: Date) -> some View {
+    private func tile(for dish: Dish, learnedAt: Date, showsShowcaseLink: Bool = false) -> some View {
         let usesLargeText = dynamicTypeSize.isAccessibilitySize
         let layout = usesLargeText
             ? AnyLayout(HStackLayout(alignment: .top, spacing: 12))
@@ -85,7 +96,7 @@ struct LearnedDishesView: View {
                     .font(.footnote.monospacedDigit())
                     .foregroundStyle(CookingJournalPalette.warmInk)
                     .accessibilityLabel("首次学会 \(CookingDates.celebration(learnedAt))")
-                if dish.catalogRecipeID == TomatoEggAchievementView.recipeID {
+                if showsShowcaseLink {
                     Label("查看成就", systemImage: "sparkles")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(CookingJournalPalette.warmInk)
@@ -126,7 +137,7 @@ struct LearnedDishesView: View {
         NavigationStack { LearnedDishesView() }
             .environment(store)
             .environment(records)
-            .environment(ShowcaseAssetStore.live())
+            .environment(ShowcaseAssetLibrary.live())
             .modelContainer(Persistence.makeContainer(inMemory: true))
             .preferredColorScheme(.dark)
     }
@@ -137,7 +148,7 @@ struct LearnedDishesView: View {
         NavigationStack { LearnedDishesView() }
             .environment(store)
             .environment(CookedRecipeRecords())
-            .environment(ShowcaseAssetStore.live())
+            .environment(ShowcaseAssetLibrary.live())
             .modelContainer(Persistence.makeContainer(inMemory: true))
     }
 }

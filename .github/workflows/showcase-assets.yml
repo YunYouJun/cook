@@ -4,8 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - assets/showcase/tomato-egg-clay/**
-      - apps/ios/Cook/Resources/tomato-egg-clay.json
+      - assets/showcase/**
+      - apps/ios/Cook/Resources/showcase-packs.json
       - scripts/upload-showcase-assets.mjs
       - .github/workflows/showcase-assets.yml
   workflow_dispatch:

@@ -398,6 +398,7 @@ test('core regression runs App units once and distributes representative UI acro
       'CookTests',
       'CookUITests/MembershipUITests',
       'CookUITests/CookingFootprintUITests/testShowcasePacksDownloadIndependentlyReopenOfflineAndDelete',
+      'CookUITests/CookingFootprintUITests/testSteamedEggAndCucumberShowcasesStayIndependentOffline',
       'CookUITests/CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients',
       'CookUITests/CloudKitchenUITests/testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled',
     ])
