@@ -33,7 +33,7 @@
 
 模型使用随 App 打包的 `TomatoEggAchievement.usdz`，约 1.4 MB。RealityKit 在打开时异步加载本地资源。旋转停稳后保留静态画面并释放实时场景；读取或快照失败时显示已有徽章与学会日期。系统启用减弱动态效果时，旋转按钮停用图标弹跳。旧真机性能和素材包安装留待后续验证。
 
-模型与透明预览可在 Blender 4.4 中通过[场景脚本](../scripts/showcase/tomato_egg_clay.py)生成。命令的末尾参数指定独立输出目录，例如 `blender -b -P docs/scripts/showcase/tomato_egg_clay.py -- /tmp/cook-tomato-egg`。
+模型与透明预览可通过仓库中的 Blender 4.4 场景脚本 `docs/scripts/showcase/tomato_egg_clay.py` 生成。从仓库根目录运行 `blender -b -P docs/scripts/showcase/tomato_egg_clay.py -- /tmp/cook-tomato-egg`，末尾参数指定独立输出目录。
 
 - [ ] 先为少量代表菜制作模型，例如番茄炒蛋、蒸蛋、拍黄瓜；其余菜谱使用通用餐盘或徽章展示。
 - [ ] 通过本地资源映射关联菜谱 ID 与模型，不改变菜谱 ID、历史记录或私人菜谱同步格式。
