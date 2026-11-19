@@ -36,6 +36,7 @@ const legacyRoutes = [
 ]
 const protectedPaths = ['_nuxt', 'auth', '.well-known', 'sw.js', 'about']
 const requiredWebFiles = ['index.html', 'sw.js', '.well-known/apple-app-site-association', '.well-known/cook-build.json', 'auth/wechat/index.html', 'about/index.html', 'about/terms.html']
+const iosBetaGuideRoute = 'guide/ios-beta'
 const defaultRoot = fileURLToPath(new URL('../', import.meta.url))
 
 function requirePath(path, directory = false) {
@@ -121,7 +122,7 @@ export function composeProductSite(repositoryRoot = defaultRoot) {
   requirePath(join(web, '_nuxt'), true)
   for (const path of requiredWebFiles)
     requirePath(join(web, path))
-  for (const path of ['index.html', '404.html', 'terms.html'])
+  for (const path of ['index.html', '404.html', 'terms.html', `${iosBetaGuideRoute}.html`])
     requirePath(join(docs, path))
   requirePath(join(root, 'edgeone.json'))
   // Validate configuration before replacing an earlier successful composition.
@@ -153,6 +154,8 @@ export function composeProductSite(repositoryRoot = defaultRoot) {
       filter: source => source !== join(web, '200.html'),
     })
     cpSync(docs, staging, { recursive: true, dereference: true })
+    // EdgeOne can serve the exact asset path even when its clean URL rewrite is unavailable.
+    cpSync(join(staging, `${iosBetaGuideRoute}.html`), join(staging, iosBetaGuideRoute), { force: false, errorOnExist: true })
     for (const route of legacyRoutes) {
       const page = join(staging, route.slice(1), 'index.html')
       if (!existsSync(page)) {

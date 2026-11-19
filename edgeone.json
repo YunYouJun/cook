@@ -2,6 +2,15 @@
   "nodeVersion": "24.18.0",
   "headers": [
     {
+      "source": "/guide/ios-beta",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/html; charset=utf-8"
+        }
+      ]
+    },
+    {
       "source": "/auth/wechat/*",
       "headers": [
         {

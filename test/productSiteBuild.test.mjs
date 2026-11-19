@@ -30,6 +30,7 @@ const inputs = {
   'docs/.vitepress/dist/terms.html': 'current product agreement',
   'docs/.vitepress/dist/privacy.html': 'privacy policy',
   'docs/.vitepress/dist/guide/start.html': 'getting started',
+  'docs/.vitepress/dist/guide/ios-beta.html': '<h1>云食册 iOS 体验测试</h1>',
   'edgeone.json': JSON.stringify({
     headers: ['/auth/wechat/*', '/auth/callback', '/auth/callback/*'].map(source => ({
       source,
@@ -83,6 +84,20 @@ test('documentation owns root and unknown-page HTML while legacy resources survi
       assert.equal(read(path), content, `input must remain unchanged: ${path}`)
     assert.equal(existsSync(join(root, 'dist/home')), false)
   })
+})
+
+test('both iOS beta guide URLs serve the same HTML on the product site', () => {
+  fixture(({ root, read }) => {
+    composeProductSite(root)
+    const guide = inputs['docs/.vitepress/dist/guide/ios-beta.html']
+    assert.equal(read('dist-site/guide/ios-beta'), guide)
+    assert.equal(read('dist-site/guide/ios-beta.html'), guide)
+    assert.equal(existsSync(join(root, 'dist/guide/ios-beta')), false)
+  })
+
+  const config = JSON.parse(readFileSync(new URL('../edgeone.json', import.meta.url), 'utf8'))
+  const headers = config.headers.find(rule => rule.source === '/guide/ios-beta')?.headers ?? []
+  assert.ok(headers.some(header => header.key === 'Content-Type' && header.value === 'text/html; charset=utf-8'))
 })
 
 test('only composed marketing aliases navigate to fixed destinations through complete HTML', () => {
