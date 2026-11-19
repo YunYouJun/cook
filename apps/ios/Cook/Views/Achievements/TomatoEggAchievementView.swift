@@ -43,6 +43,12 @@ struct TomatoEggAchievementView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             do {
+                if #available(iOS 18, *) {
+                    let entity = try await Entity(contentsOf: modelURL)
+                    try Task.checkCancellation()
+                    model = entity
+                    return
+                }
                 for try await entity in Entity.loadAsync(contentsOf: modelURL).values {
                     try Task.checkCancellation()
                     model = entity
