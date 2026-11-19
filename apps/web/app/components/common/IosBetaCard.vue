@@ -14,20 +14,20 @@ const dismissed = useStorage(`${namespace}:ios-beta-banner-dismissed`, false, un
 </script>
 
 <template>
-  <aside v-if="dismissible && !dismissed" class="ios-beta-prompt" :aria-label="`${iosAppName} iOS 内测`">
+  <aside v-if="dismissible && !dismissed" class="ios-beta-prompt" :aria-label="`${iosAppName} iOS 体验测试`">
     <a class="ios-beta-prompt-link" :href="links.iosBetaGuide" target="_blank" rel="noopener noreferrer">
       <img src="/brand/cook-app-icon.svg" alt="" width="28" height="28">
-      <span>{{ iosAppName }} iOS 内测</span>
+      <span>{{ iosAppName }} iOS 体验测试</span>
       <ion-icon :icon="ioniconsChevronForward" aria-hidden="true" />
     </a>
-    <button class="ios-beta-prompt-close" type="button" aria-label="关闭 iOS 内测提示" @click="dismissed = true">
+    <button class="ios-beta-prompt-close" type="button" aria-label="关闭 iOS 体验测试提示" @click="dismissed = true">
       <ion-icon :icon="ioniconsCloseOutline" aria-hidden="true" />
     </button>
   </aside>
-  <aside v-else-if="!dismissible" class="ios-beta-card" :aria-label="`${iosAppName} iOS 内测`">
+  <aside v-else-if="!dismissible" class="ios-beta-card" :aria-label="`${iosAppName} iOS 体验测试`">
     <img class="ios-beta-icon" src="/brand/cook-app-icon.svg" alt="" width="44" height="44">
     <div class="ios-beta-copy">
-      <h2>{{ iosAppName }} iOS 内测</h2>
+      <h2>{{ iosAppName }} iOS 体验测试</h2>
       <p>iPhone / iPad · iOS 17+</p>
     </div>
     <div class="ios-beta-actions">
