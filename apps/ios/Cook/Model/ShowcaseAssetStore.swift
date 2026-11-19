@@ -192,7 +192,8 @@ final class ShowcaseAssetStore {
                   let data = try? Data(contentsOf: item.url, options: .mappedIfSafe),
                   ShowcaseAsset.digest(data) == item.digest
             else { continue }
-            return Installation(url: item.url, bytes: size)
+            let localURL = folder.appending(path: item.url.lastPathComponent, directoryHint: .notDirectory)
+            return Installation(url: localURL, bytes: size)
         }
         return nil
     }
