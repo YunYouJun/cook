@@ -3,7 +3,7 @@ name: cook
 description: "食用手册 —— 围绕「吃什么」的生活灵感助手。帮助用户根据手边食材想菜谱、做每周饮食规划、了解食材搭配与储存知识、获取烹饪灵感。当用户提到做饭、做菜、食材搭配、菜谱推荐、饮食规划、今天吃什么、冰箱里有什么能做、食物相克、烹饪技巧、节气饮食、减脂餐、宝宝辅食等与日常饮食生活相关的话题时使用此 skill。"
 metadata:
   author: YunYouJun
-  version: 0.3.0
+  version: 0.4.0
   repository: https://github.com/YunYouJun/cook
 ---
 
@@ -31,9 +31,10 @@ metadata:
 | 菜谱库        | `https://raw.githubusercontent.com/YunYouJun/cook/main/packages/data/recipe.csv`             | CSV  |
 | 食物相克      | `https://raw.githubusercontent.com/YunYouJun/cook/main/packages/data/incompatible-foods.csv` | CSV  |
 | 食材/厨具分类 | `https://raw.githubusercontent.com/YunYouJun/cook/main/packages/data/food.json`              | JSON |
+| 冰箱保质期    | `https://raw.githubusercontent.com/YunYouJun/cook/main/packages/data/shelf-life.json`        | JSON |
 
-> **Skill 内置数据**：本 Skill 自带 `data/recipe.csv` 和 `data/incompatible-foods.csv`，Fallback 时优先读取，无需网络。
-> **Cook 项目本地**：如果在 Cook 项目内使用，直接读取 `packages/data/` 下的文件（菜谱、相克、食材/厨具）。
+> **Skill 内置数据**：本 Skill 自带 `data/recipe.csv`、`data/incompatible-foods.csv`、`data/shelf-life.json` 和 `data/aliases.json`，Fallback 时优先读取，无需网络。
+> **Cook 项目本地**：如果在 Cook 项目内使用，直接读取 `packages/data/` 下的文件（菜谱、相克、食材/厨具、保质期）。
 > **在线获取**：以上均不可用时，通过 GitHub Raw URL 获取。
 
 ### CSV 字段说明
@@ -63,40 +64,63 @@ metadata:
 
 ### 检索流程
 
-当用户询问菜谱相关问题时，**必须**使用 CLI 检索，**不要直接读取 CSV 文件**（避免浪费 token）。
+当用户询问菜谱、食材保质期或食物相克问题时，**优先**使用 MCP 工具或 CLI 检索，**不要直接读取整份 CSV 文件**（避免浪费 token）。
 
-#### 方式一：在 Cook 项目内使用（推荐）
+#### 方式一：通过 MCP Server 调用（如客户端已挂载 `@yunyoujun/cook` MCP）
+
+直接调用以下工具：
+
+- `search_recipes`：按自然语言 `query` 或 `stuff`/`avoid`/`tool`/`difficulty`/`method`/`tag`/`noSpicy`/`mode` 检索菜谱
+- `parse_cook_query`：把中文描述解析成结构化筛选条件
+- `check_shelf_life`：查食材冰箱冷藏建议保质天数（支持别名）
+- `check_incompatible_foods`：查食材组合的食物相克提醒
+
+#### 方式二：在 Cook 项目内通过 CLI 使用
 
 ```bash
-pnpm --filter @yunyoujun/cook search --stuff "鸡蛋,番茄" --json [--tool "电饭煲"] [--difficulty "简单"] [--tag "懒人"] [--method "炒"] [--limit 10]
+# 结构化或自然语言检索菜谱
+pnpm --filter @yunyoujun/cook search --query "冰箱里有土豆和鸡蛋，不要辣，用空气炸锅" --json
+pnpm --filter @yunyoujun/cook search --stuff "鸡蛋,番茄" --avoid "香菜" --no-spicy --mode loose --json [--tool "电饭煲"] [--difficulty "简单"] [--tag "懒人"] [--method "炒"] [--limit 10]
+
+# 查冰箱冷藏建议保质期
+pnpm --filter @yunyoujun/cook cook shelf-life 西红柿 鸡蛋 菠菜 --json
+
+# 查食物相克
+pnpm --filter @yunyoujun/cook cook incompatible 牛奶 韭菜 --json
 ```
 
-#### 方式二：通过 npx 使用（已发布后）
+#### 方式三：通过 npx 使用（已发布 `@yunyoujun/cook`，内置离线数据）
 
 ```bash
-npx @yunyoujun/cook search --stuff "鸡蛋,番茄" --json
+npx -y @yunyoujun/cook search --query "有西红柿和鸡蛋，不要辣" --json
+npx -y @yunyoujun/cook shelf-life 西红柿 鸡蛋 --json
+npx -y @yunyoujun/cook incompatible 牛奶 韭菜 --json
 ```
 
-#### 方式三：Fallback（CLI 不可用时）
+#### 方式四：Fallback（CLI 与 MCP 均不可用时）
 
 按以下优先级读取数据，手动筛选：
 
-1. **Skill 内置数据**（推荐）：读取本 Skill 目录下的 `data/recipe.csv` 和 `data/incompatible-foods.csv`
-2. **Cook 项目本地数据**：读取 `packages/data/recipe.csv`（仅在 Cook 项目内有效）
+1. **Skill 内置数据**（推荐）：读取本 Skill 目录下的 `data/recipe.csv`、`data/incompatible-foods.csv`、`data/shelf-life.json`
+2. **Cook 项目本地数据**：读取 `packages/data/` 下的对应文件（仅在 Cook 项目内有效）
 3. **在线获取**：通过上方 GitHub Raw URL 下载
 
-CLI 返回精简 JSON，包含匹配菜谱（含视频链接、匹配/缺少的食材）和食物相克警告，直接基于结果推荐。支持食材别名（如 西红柿→番茄、泡面→方便面）。
+CLI / MCP 返回精简 JSON，包含匹配菜谱（含视频链接、匹配/缺少的食材、常备调料）和食物相克警告，直接基于结果推荐。支持食材别名（如 西红柿→番茄、泡面→方便面）。
 
 #### 检索参数说明
 
-| 参数           | 说明           | 示例          |
-| -------------- | -------------- | ------------- |
-| `--stuff`      | 食材，逗号分隔 | `"鸡蛋,番茄"` |
-| `--tool`       | 厨具           | `"电饭煲"`    |
-| `--difficulty` | 难度           | `"简单"`      |
-| `--tag`        | 标签           | `"懒人"`      |
-| `--method`     | 做法           | `"炒"`        |
-| `--limit`      | 最大返回数     | `10`          |
+| 参数           | 说明                                         | 示例                           |
+| -------------- | -------------------------------------------- | ------------------------------ |
+| `--query`      | 自然语言整句（自动解析食材、忌口、厨具、辣） | `"冰箱里有土豆和鸡蛋，不要辣"` |
+| `--stuff`      | 食材，逗号分隔                               | `"鸡蛋,番茄"`                  |
+| `--avoid`      | 忌口食材，逗号分隔                           | `"香菜,虾"`                    |
+| `--tool`       | 厨具                                         | `"电饭煲"`                     |
+| `--difficulty` | 难度                                         | `"简单"`                       |
+| `--tag`        | 标签                                         | `"懒人"`                       |
+| `--method`     | 做法                                         | `"炒"`                         |
+| `--no-spicy`   | 排除辣菜                                     | `--no-spicy`                   |
+| `--mode`       | 推荐模式：`loose` / `strict` / `survival`    | `"survival"`                   |
+| `--limit`      | 最大返回数                                   | `10`                           |
 
 ### 推荐格式
 

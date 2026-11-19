@@ -88,6 +88,21 @@ Skill 自带菜谱数据（`data/` 目录），离线即可使用；数据也可
 
 > **项目级安装**：也可将文件解压到项目根目录下的 `.codebuddy/skills/cook/`（或 `.claude/skills/cook/`），仅对当前项目生效。
 
+### 方式三：作为 MCP Server 接入（Claude Desktop / Cursor / Antigravity / Codex 等）
+
+`@yunyoujun/cook` 内置零依赖 Stdio MCP Server（打包自带离线菜谱、相克与保质期数据），配置后任意支持 MCP 的客户端都可以直接调用 `search_recipes`、`parse_cook_query`、`check_shelf_life`、`check_incompatible_foods` 四个工具：
+
+```json
+{
+  "mcpServers": {
+    "cook": {
+      "command": "npx",
+      "args": ["-y", "@yunyoujun/cook", "mcp"]
+    }
+  }
+}
+```
+
 ### 验证安装
 
 安装完成后，随便跟 AI 说一句：

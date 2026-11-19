@@ -1,28 +1,66 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// 基于当前文件位置计算 monorepo 根目录
-// config.ts → src/utils/ → packages/cook/ → 项目根
+// 基于当前文件位置计算目录：
+// 开发态 config.ts → src/utils/ → packages/cook/ → 项目根
+// 构建态 dist/cli.mjs → packages/cook/dist/（或 node_modules/@yunyoujun/cook/dist/）
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const root = path.resolve(__dirname, '../../../..')
 
-// monorepo 根目录
+function findMonorepoRoot(startDir: string): string | undefined {
+  let current = startDir
+  for (let i = 0; i < 6; i++) {
+    if (fs.existsSync(path.join(current, 'packages/data/recipe.csv')))
+      return current
+    const parent = path.dirname(current)
+    if (parent === current)
+      break
+    current = parent
+  }
+  return undefined
+}
+
+function resolveDataDir(startDir: string, monorepoRoot?: string): string {
+  if (monorepoRoot)
+    return path.join(monorepoRoot, 'packages/data')
+  for (const candidate of [
+    path.resolve(startDir, 'data'),
+    path.resolve(startDir, '../data'),
+    path.resolve(startDir, '../../data'),
+  ]) {
+    if (fs.existsSync(path.join(candidate, 'recipe.csv')))
+      return candidate
+  }
+  return path.resolve(startDir, '../../../../packages/data')
+}
+
+const detectedMonorepoRoot = findMonorepoRoot(__dirname)
+const root = detectedMonorepoRoot ?? path.resolve(__dirname, '../../../..')
+
+// monorepo 根目录（独立安装运行时回退到包目录上游，仅 monorepo 命令使用）
 export const rootDir = root
+
+// 运行时数据目录：monorepo 内读取 packages/data，独立安装包读取内置 dist/data
+export const dataDir = resolveDataDir(__dirname, detectedMonorepoRoot)
 
 // .env 文件路径
 export const envFile = path.resolve(root, '.env')
 
 // Data 文件路径
-export const recipeCsvFile = path.resolve(root, 'packages/data/recipe.csv')
-export const recipeJsonFile = path.resolve(root, 'packages/data/recipe.json')
-export const recipeMetaJsonFile = path.resolve(root, 'packages/data/recipe-meta.json')
-export const incompatibleFoodsCsvFile = path.resolve(root, 'packages/data/incompatible-foods.csv')
-export const incompatibleFoodsJsonFile = path.resolve(root, 'packages/data/incompatible-foods.json')
+export const recipeCsvFile = path.resolve(dataDir, 'recipe.csv')
+export const recipeJsonFile = path.resolve(dataDir, 'recipe.json')
+export const recipeMetaJsonFile = path.resolve(dataDir, 'recipe-meta.json')
+export const incompatibleFoodsCsvFile = path.resolve(dataDir, 'incompatible-foods.csv')
+export const incompatibleFoodsJsonFile = path.resolve(dataDir, 'incompatible-foods.json')
+export const shelfLifeJsonFile = path.resolve(dataDir, 'shelf-life.json')
+export const pantryJsonFile = path.resolve(dataDir, 'pantry.json')
+export const foodJsonFile = path.resolve(dataDir, 'food.json')
+export const aliasesJsonFile = path.resolve(dataDir, 'aliases.json')
 /** 视频巡检记下的 B 站数据，用来算菜谱质量分（见 utils/score.ts） */
-export const videoStatsJsonFile = path.resolve(root, 'packages/data/video-stats.json')
+export const videoStatsJsonFile = path.resolve(dataDir, 'video-stats.json')
 /** 手写、直接提交的共享数据，参与 dataVersion 计算 */
 export const sharedDataFiles = ['aliases.json', 'food.json', 'pantry.json', 'query.json', 'shelf-life.json']
-  .map(file => path.resolve(root, 'packages/data', file))
+  .map(file => path.resolve(dataDir, file))
 
 /**
  * packages/data 里 JSON 的结构版本，写进 recipe-meta.json 的 schemaVersion。
