@@ -159,6 +159,12 @@ targets:
       - path: CookTests/Fixtures/private-recipe-video.mp4
         type: file
         buildPhase: resources
+      - path: ../../assets/showcase/tomato-egg-clay/tomato-egg.webp
+        type: file
+        buildPhase: resources
+      - path: ../../assets/showcase/tomato-egg-clay/TomatoEggAchievement.usdz
+        type: file
+        buildPhase: resources
     dependencies:
       - target: Cook
       - package: CookCore

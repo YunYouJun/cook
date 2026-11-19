@@ -4,8 +4,7 @@ import SwiftUI
 
 struct TomatoEggAchievementView: View {
     static let recipeID = 250
-    let learnedAt: Date
-    @Environment(\.dismiss) private var dismiss
+    let modelURL: URL
     @State private var model: Entity?
     @State private var loadFailed = false
     @State private var yaw = 0.0
@@ -18,48 +17,33 @@ struct TomatoEggAchievementView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            GeometryReader { geometry in
-                ScrollView {
-                    VStack(spacing: 0) {
-                        viewport
-                            .aspectRatio(1, contentMode: .fit)
-                            .frame(maxWidth: 420)
-                        Text("番茄炒蛋").font(.title.bold())
-                        Text("首次学会 \(CookingDates.plaque(learnedAt))")
-                            .font(.subheadline)
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 0) {
+                    viewport
+                        .aspectRatio(1, contentMode: .fit)
+                        .frame(maxWidth: 420)
+                    if loadFailed {
+                        Text("模型暂不可用，已显示菜品徽章。").font(.footnote)
+                            .padding(.top, 24)
+                    } else if model != nil {
+                        controls.padding(.top, 20)
+                        Text("左右拖动可旋转菜品")
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
-                            .accessibilityLabel("首次学会 \(CookingDates.celebration(learnedAt))")
-                            .padding(.top, 6)
-                        if loadFailed {
-                            Text("模型暂不可用，已显示菜品徽章。").font(.footnote)
-                                .padding(.top, 24)
-                        } else if model != nil {
-                            controls.padding(.top, 28)
-                            Text("左右拖动可旋转菜品")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .padding(.top, 12)
-                        }
+                            .padding(.top, 12)
                     }
-                    .multilineTextAlignment(.center)
-                    .padding()
-                    .frame(maxWidth: .infinity, minHeight: geometry.size.height)
                 }
-            }
-            .navigationTitle("特殊成就")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") { dismiss() }
-                }
+                .multilineTextAlignment(.center)
+                .padding()
+                .frame(maxWidth: .infinity, minHeight: geometry.size.height)
             }
         }
+        .navigationTitle("3D 模型")
+        .navigationBarTitleDisplayMode(.inline)
         .task {
-            guard let url = Bundle.main.url(forResource: "TomatoEggAchievement", withExtension: "usdz")
-            else { loadFailed = true; return }
             do {
-                for try await entity in Entity.loadAsync(contentsOf: url).values {
+                for try await entity in Entity.loadAsync(contentsOf: modelURL).values {
                     try Task.checkCancellation()
                     model = entity
                     return

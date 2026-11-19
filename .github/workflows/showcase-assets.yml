@@ -2,7 +2,7 @@ name: Showcase Assets
 
 on:
   push:
-    branches: [main, codex/ios-tomato-asset-packs]
+    branches: [main]
     paths:
       - assets/showcase/tomato-egg-clay/**
       - apps/ios/Cook/Resources/tomato-egg-clay.json
