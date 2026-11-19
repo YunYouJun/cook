@@ -3,7 +3,7 @@ import UIKit
 
 final class CookingFootprintUITests: XCTestCase {
     @MainActor
-    private func launch(largeDark: Bool = false) -> XCUIApplication {
+    private func launch(largeDark: Bool = false, showcaseSession: UUID? = nil) -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
@@ -15,6 +15,13 @@ final class CookingFootprintUITests: XCTestCase {
                                     UIContentSizeCategory.accessibilityExtraExtraExtraLarge.rawValue, "-ui-testing-dark"]
         }
         app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        let fixtures = Bundle(for: Self.self)
+        app.launchEnvironment["COOK_UI_TEST_SHOWCASE_IMAGE"] = fixtures.path(forResource: "tomato-egg", ofType: "webp")
+        app.launchEnvironment["COOK_UI_TEST_SHOWCASE_MODEL"] = fixtures.path(forResource: "TomatoEggAchievement", ofType: "usdz")
+        if let showcaseSession {
+            app.launchEnvironment["COOK_UI_TEST_SHOWCASE_SESSION"] = showcaseSession.uuidString
+            app.launchEnvironment["COOK_UI_TEST_SHOWCASE_LIVE"] = ProcessInfo.processInfo.environment["COOK_UI_TEST_SHOWCASE_LIVE"]
+        }
         app.launch()
         terminateAppAfterTest(app)
         return app
@@ -60,9 +67,10 @@ final class CookingFootprintUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["✨ 学会了"].exists)
         app.buttons.matching(identifier: "我的").firstMatch.tap()
         openLearnedDishes(app)
-        let achievement = assertBadge(app, contains: ["番茄炒蛋", "首次学会", "查看立体成就"])
+        let achievement = assertBadge(app, contains: ["番茄炒蛋", "首次学会", "查看成就"])
         capture(app, "learned-dishes-catalog")
         achievement.tap()
+        downloadShowcaseModel(app)
         let viewport = app.descendants(matching: .any).matching(identifier: "achievement.model").firstMatch
         let turn = app.buttons["右转"]
         XCTAssertTrue(turn.waitForExistence(timeout: 15))
@@ -81,7 +89,8 @@ final class CookingFootprintUITests: XCTestCase {
         XCTAssertEqual(viewport.value as? String, "0 度")
         XCTAssertFalse(reset.isEnabled)
         capture(app, "tomato-egg-achievement-reset")
-        app.buttons["完成"].tap()
+        closeShowcaseModel(app)
+        app.navigationBars["菜肴成就"].buttons["完成"].tap()
         closeLearnedDishes(app)
         app.buttons.matching(identifier: "菜谱").firstMatch.tap()
         row.tap()
@@ -205,6 +214,7 @@ final class CookingFootprintUITests: XCTestCase {
         XCTAssertTrue(app.windows.firstMatch.frame.contains(badge.frame))
         capture(app, "learned-dishes-largest-dark")
         badge.tap()
+        downloadShowcaseModel(app)
         let turn = app.buttons["右转"]
         XCTAssertTrue(turn.waitForExistence(timeout: 15))
         for _ in 0..<4 where !turn.isHittable { app.swipeUp() }
@@ -214,6 +224,105 @@ final class CookingFootprintUITests: XCTestCase {
         capture(app, "tomato-egg-achievement-dark-rotated")
         reset.tap()
         XCTAssertFalse(reset.isEnabled)
+    }
+
+    @MainActor
+    func testShowcasePacksDownloadIndependentlyReopenOfflineAndDelete() {
+        let app = launch(showcaseSession: UUID())
+        openRecipe(app)
+        app.buttons["recipe.cookedRecord"].tap()
+        app.buttons["recipe.markLearned"].tap()
+        app.buttons["cooking.celebration.done"].tap()
+
+        openShowcase(app)
+        let badge = app.descendants(matching: .any).matching(identifier: "showcase.preview.badge").firstMatch
+        let image = app.images["showcase.preview.image"]
+        let learnedAt = app.staticTexts["showcase.learnedAt"]
+        XCTAssertTrue(learnedAt.exists)
+        let learnedDate = learnedAt.label
+        let getImage = app.buttons["showcase.image.download"]
+        let getModel = app.buttons["showcase.model.download"]
+        let openModel = app.buttons["showcase.model.open"]
+        XCTAssertTrue(badge.waitForExistence(timeout: 5))
+        XCTAssertFalse(image.exists)
+        XCTAssertFalse(openModel.exists)
+        tapShowcaseAction(getImage, in: app)
+        XCTAssertTrue(image.waitForExistence(timeout: 30))
+        XCTAssertFalse(openModel.exists)
+        capture(app, "showcase-image-only")
+
+        downloadShowcaseModel(app)
+        XCTAssertTrue(app.buttons["右转"].waitForExistence(timeout: 15))
+        closeShowcaseModel(app)
+        tapShowcaseAction(app.buttons["showcase.image.delete"], in: app)
+        XCTAssertTrue(badge.waitForExistence(timeout: 5))
+        XCTAssertFalse(image.exists)
+        XCTAssertTrue(openModel.exists)
+        capture(app, "showcase-model-only")
+        tapShowcaseAction(getImage, in: app)
+        XCTAssertTrue(image.waitForExistence(timeout: 30))
+
+        // Relaunch with a transport that always fails: installed assets must still open.
+        app.terminate()
+        app.launchEnvironment.removeValue(forKey: "COOK_UI_TEST_SHOWCASE_IMAGE")
+        app.launchEnvironment.removeValue(forKey: "COOK_UI_TEST_SHOWCASE_MODEL")
+        app.launchEnvironment.removeValue(forKey: "COOK_UI_TEST_SHOWCASE_LIVE")
+        app.launch()
+        openShowcase(app)
+        XCTAssertTrue(image.waitForExistence(timeout: 10))
+        tapShowcaseAction(openModel, in: app)
+        let turn = app.buttons["右转"]
+        XCTAssertTrue(turn.waitForExistence(timeout: 15))
+        turn.tap()
+        let model = app.descendants(matching: .any).matching(identifier: "achievement.model").firstMatch
+        XCTAssertEqual(model.value as? String, "30 度")
+        capture(app, "showcase-offline-model")
+        closeShowcaseModel(app)
+
+        tapShowcaseAction(app.buttons["showcase.model.delete"], in: app)
+        XCTAssertFalse(openModel.exists)
+        XCTAssertTrue(image.exists, "Removing the model must keep the downloaded photo.")
+        tapShowcaseAction(getModel, in: app)
+        XCTAssertTrue(app.staticTexts["下载失败，请重试。"].waitForExistence(timeout: 5))
+        XCTAssertFalse(openModel.exists)
+        tapShowcaseAction(app.buttons["showcase.image.delete"], in: app)
+        XCTAssertTrue(badge.waitForExistence(timeout: 5))
+        XCTAssertEqual(learnedAt.label, learnedDate)
+        capture(app, "showcase-badge-after-deletion")
+    }
+
+    @MainActor
+    private func openShowcase(_ app: XCUIApplication) {
+        let me = app.buttons.matching(identifier: "我的").firstMatch
+        XCTAssertTrue(me.waitForExistence(timeout: 10))
+        me.tap()
+        openLearnedDishes(app)
+        assertBadge(app, contains: ["番茄炒蛋", "首次学会"]).tap()
+        XCTAssertTrue(app.navigationBars["菜肴成就"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    private func downloadShowcaseModel(_ app: XCUIApplication) {
+        tapShowcaseAction(app.buttons["showcase.model.download"], in: app)
+        let openModel = app.buttons["showcase.model.open"]
+        XCTAssertTrue(openModel.waitForExistence(timeout: 30))
+        tapShowcaseAction(openModel, in: app)
+    }
+
+    @MainActor
+    private func closeShowcaseModel(_ app: XCUIApplication) {
+        app.navigationBars["3D 模型"].buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.navigationBars["菜肴成就"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    private func tapShowcaseAction(_ action: XCUIElement, in app: XCUIApplication) {
+        XCTAssertTrue(action.waitForExistence(timeout: 10))
+        let sheet = app.scrollViews["showcase.content"]
+        for _ in 0..<5 where !action.isHittable { sheet.swipeUp() }
+        for _ in 0..<5 where !action.isHittable { sheet.swipeDown() }
+        XCTAssertTrue(action.isHittable)
+        action.tap()
     }
 
     @MainActor

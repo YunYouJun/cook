@@ -34,7 +34,7 @@ struct LearnedDishesView: View {
         .navigationTitle("我的拿手菜")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $selectedTomatoEgg) { record in
-            TomatoEggAchievementView(learnedAt: record.learnedAt)
+            TomatoEggShowcaseView(learnedAt: record.learnedAt)
         }
         .onChange(of: records.progress.learned) { _, learned in
             if let selectedTomatoEgg, !learned.contains(where: { $0.id == selectedTomatoEgg.id }) {
@@ -57,7 +57,7 @@ struct LearnedDishesView: View {
                             tile(for: dish, learnedAt: record.learnedAt)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityHint("打开可旋转的番茄炒蛋模型")
+                        .accessibilityHint("查看番茄炒蛋成就和离线素材")
                         .accessibilityIdentifier("learnedDishes.badge")
                     } else {
                         tile(for: dish, learnedAt: record.learnedAt)
@@ -86,7 +86,7 @@ struct LearnedDishesView: View {
                     .foregroundStyle(CookingJournalPalette.warmInk)
                     .accessibilityLabel("首次学会 \(CookingDates.celebration(learnedAt))")
                 if dish.catalogRecipeID == TomatoEggAchievementView.recipeID {
-                    Label("查看立体成就", systemImage: "rotate.3d")
+                    Label("查看成就", systemImage: "sparkles")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(CookingJournalPalette.warmInk)
                 }
@@ -126,6 +126,7 @@ struct LearnedDishesView: View {
         NavigationStack { LearnedDishesView() }
             .environment(store)
             .environment(records)
+            .environment(ShowcaseAssetStore.live())
             .modelContainer(Persistence.makeContainer(inMemory: true))
             .preferredColorScheme(.dark)
     }
@@ -136,6 +137,7 @@ struct LearnedDishesView: View {
         NavigationStack { LearnedDishesView() }
             .environment(store)
             .environment(CookedRecipeRecords())
+            .environment(ShowcaseAssetStore.live())
             .modelContainer(Persistence.makeContainer(inMemory: true))
     }
 }

@@ -15,6 +15,7 @@ struct CookApp: App {
     @State private var session: CookSession
     @State private var searchHistory: CookSearchHistory
     @State private var cookedRecipes: CookedRecipeRecords
+    @State private var showcaseAssets = ShowcaseAssetStore.live()
     @State private var feedback = FeedbackClient()
     @State private var favoriteActions: FavoriteActions
     @State private var accounts: YunlefunAccountStore
@@ -49,7 +50,14 @@ struct CookApp: App {
         _loadResult = State(initialValue: result)
         _session = State(initialValue: CookSession(defaultPantry: defaultPantry, context: container.mainContext, dietaryDefaults: inMemory ? nil : .standard))
         _searchHistory = State(initialValue: CookSearchHistory(defaults: inMemory ? nil : .standard))
-        _cookedRecipes = State(initialValue: CookedRecipeRecords(defaults: inMemory ? nil : .standard))
+        var cookingDefaults: UserDefaults? = inMemory ? nil : .standard
+        #if DEBUG
+            if uiTesting, let rawSession = ProcessInfo.processInfo.environment["COOK_UI_TEST_SHOWCASE_SESSION"],
+               let session = UUID(uuidString: rawSession) {
+                cookingDefaults = UserDefaults(suiteName: "cook.showcase.tests.\(session.uuidString)")
+            }
+        #endif
+        _cookedRecipes = State(initialValue: CookedRecipeRecords(defaults: cookingDefaults))
         let accounts = YunlefunAccountStore(vault: inMemory ? MemoryYunlefunAccountVault() : KeychainYunlefunAccountVault())
         _accounts = State(initialValue: accounts)
         #if DEBUG
@@ -173,6 +181,7 @@ struct CookApp: App {
                     .environment(session)
                     .environment(searchHistory)
                     .environment(cookedRecipes)
+                    .environment(showcaseAssets)
                     .environment(feedback)
                     .environment(favoriteActions)
                     .environment(workbench)
