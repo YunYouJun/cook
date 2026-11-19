@@ -5,7 +5,9 @@ on:
     branches: [main]
     paths:
       - assets/showcase/**
+      - apps/ios/Cook/Resources/cooking-badge-*.webp
       - apps/ios/Cook/Resources/showcase-packs.json
+      - docs/scripts/showcase/tomato-cut-r2.webp
       - scripts/upload-showcase-assets.mjs
       - .github/workflows/showcase-assets.yml
   workflow_dispatch:

@@ -12,6 +12,17 @@ const files = {
   image: { name: 'image.webp', type: 'image/webp' },
   model: { name: 'model.usdz', type: 'model/vnd.usdz+zip' },
 }
+const badges = ['smashed-cucumber', 'steamed-egg', 'tomato-egg']
+const sourceImages = [
+  ...badges.map(name => ({
+    path: `../apps/ios/Cook/Resources/cooking-badge-${name}.webp`,
+    keyPrefix: `cook/showcase/badges/${name}`,
+  })),
+  {
+    path: '../docs/scripts/showcase/tomato-cut-r2.webp',
+    keyPrefix: 'cook/showcase/source/tomato-cut-r2',
+  },
+]
 if (!Array.isArray(manifests) || !manifests.length
   || new Set(manifests.map(manifest => manifest.recipeID)).size !== manifests.length
   || new Set(manifests.map(manifest => manifest.pairID)).size !== manifests.length) {
@@ -36,12 +47,20 @@ const uploads = await Promise.all(manifests.flatMap((manifest) => {
       || pack.url !== `https://assets.yunle.fun/${key}`) {
       throw new Error(`${pairID} 的 ${pack.kind} 文件与清单不一致`)
     }
-    return { key, file, data }
+    return { key, type: file.type, data }
   })
 }))
 
+const imageUploads = await Promise.all(sourceImages.map(async ({ path, keyPrefix }) => {
+  const data = await readFile(new URL(path, import.meta.url))
+  if (data.toString('ascii', 0, 4) !== 'RIFF' || data.toString('ascii', 8, 12) !== 'WEBP')
+    throw new Error(`${path} 不是有效的 WebP 文件`)
+  const digest = createHash('sha256').update(data).digest('hex')
+  return { key: `${keyPrefix}-${digest}.webp`, type: 'image/webp', data }
+}))
+
 const cos = new COS({ SecretId: COS_SECRET_ID, SecretKey: COS_SECRET_KEY })
-for (const { key, file, data } of uploads) {
+for (const { key, type, data } of [...uploads, ...imageUploads]) {
   const target = { Bucket: COS_BUCKET, Region: COS_REGION, Key: key }
   try {
     await cos.headObject(target)
@@ -56,7 +75,7 @@ for (const { key, file, data } of uploads) {
     await cos.putObject({
       ...target,
       Body: data,
-      ContentType: file.type,
+      ContentType: type,
       CacheControl: 'public, max-age=31536000, immutable',
       Headers: { 'x-cos-forbid-overwrite': 'true' },
     })

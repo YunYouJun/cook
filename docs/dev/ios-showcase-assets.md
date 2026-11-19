@@ -8,6 +8,7 @@
 - 番茄炒蛋生成脚本 `docs/scripts/showcase/tomato_egg_clay.py` 和蒸蛋羹及拍黄瓜导出脚本 `docs/scripts/showcase/export_demo_dishes.py` 从各自场景输出透明预览与 USDZ。后一个脚本可用 `blender -b -t 4 -P docs/scripts/showcase/export_demo_dishes.py -- <独立输出目录>` 重跑，再用 `cwebp -q 88 -m 6` 把 768 像素的 PNG 转成透明 WebP。
 - 官方菜谱随 App 安装徽章与 `showcase-packs.json` 清单。清单按菜谱 ID 和配对 ID 关联两份素材，按包固定版本、URL、字节数和 SHA-256。更新其中一份素材时递增对应包的版本，写入新的大小和哈希。路径中包含版本和哈希，旧版持有的 URL 继续可用。
 - `Showcase Assets` 工作流使用仓库现有 COS 上传凭据，发布到 `cook/showcase/<菜谱 ID>/<配对 ID>/`。发布前检查清单与原文件，上传时避免覆盖旧对象。首发和升级都应先从 EdgeOne 下载新素材、复核大小和哈希，再分发引用它的 App 构建。
+- 三张离线徽章与番茄切面纹理在仓库中使用 WebP。该工作流也将它们按内容 SHA-256 发布到 `cook/showcase/badges/` 和 `cook/showcase/source/`。徽章随 App 安装，Blender 从同目录加载纹理。
 - iOS 将通过校验的文件原子写入 `Application Support/CookShowcaseAssets`，并把目录排除在设备备份之外。更新取消或校验失败时可以继续使用以前的版本。仅在完成安装后移除旧版本。删除包只清理对应菜品和类别的本机版本。番茄炒蛋继续使用原本的目录，已下载素材可继续使用。
 
 ## 私人菜谱
