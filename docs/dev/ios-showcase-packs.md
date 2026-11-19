@@ -94,13 +94,13 @@
 
 ## 番茄炒蛋本地首件
 
-2026-11-18 已按确认的风格制作 catalog:250 / tomato-egg-homeplate r1。[Blender 生成脚本](../scripts/showcase/tomato_egg.py)从同一场景输出透明配图、USDZ 和各自的 v1 清单。本机首件保存在仓库的 `artifacts/showcase-first-article/tomato-egg-homeplate-r1/`，打开其中的 `首件验收.md` 可查看产物、旋转截图、叠图与重建命令。该目录沿用项目本地验证产物约定。
+2026-11-18 已按确认的风格制作 catalog:250 / tomato-egg-homeplate r1。[Blender 生成脚本](https://github.com/YunYouJun/cook/blob/main/docs/scripts/showcase/tomato_egg.py)从同一场景输出透明配图、USDZ 和各自的 v1 清单。本机首件保存在仓库的 `artifacts/showcase-first-article/tomato-egg-homeplate-r1/`，打开其中的 `首件验收.md` 可查看产物、旋转截图、叠图与重建命令。该目录沿用项目本地验证产物约定。
 
 共享 iPhone 18 Pro 模拟器上的模型为 37,672 个三角面，盘宽 159.96 mm，640 px 画幅上的实际轮廓偏差最大 1 px。模型旋转一周再复位，截图像素与初始帧一致。美术首件待评审，旧真机预算与展柜接入验收另行记录。
 
 ### 番茄炒蛋 r2
 
-沿用原盘、镜头与灯光，按评审样图制作卷起的蛋褶、下层蛋块与四种番茄切面。[r2 生成脚本](../scripts/showcase/tomato_egg_r2.py)使用同目录的 tomato-cut-r2.webp，运行方法与 r1 相同，另需 cwebp 在 PATH 中。配图直接渲染自 .blend，图片包和模型包各自为 v2，共用 tomato-egg-homeplate r2。
+沿用原盘、镜头与灯光，按评审样图制作卷起的蛋褶、下层蛋块与四种番茄切面。[r2 生成脚本](https://github.com/YunYouJun/cook/blob/main/docs/scripts/showcase/tomato_egg_r2.py)使用同目录的 tomato-cut-r2.webp，运行方法与 r1 相同，另需 cwebp 在 PATH 中。配图直接渲染自 .blend，图片包和模型包各自为 v2，共用 tomato-egg-homeplate r2。
 
 本机交付目录为 `artifacts/showcase-first-article/tomato-egg-homeplate-r2/`。透明 WebP 为 28,056 字节，USDZ 为 1,269,372 字节，RealityKit 载入 36,028 个三角面。evidence/same-angle.png 并列展示两份模型配图；evidence/realitykit-sync.mp4 的左右两栏来自共享 iPhone 18 Pro 模拟器同一非 AR 场景、同一方向光和相机，每 5° 采一帧并按角度配对。两版复位帧均与各自首帧逐像素相同。
 
@@ -112,7 +112,7 @@
 
 ### 番茄炒蛋特殊成就 · 光照版
 
-在补薄汁版 .blend 上运行 [Blender 布光与导出脚本](../scripts/showcase/light_tomato_egg.py)，通过 `-- 输出目录` 指定独立目录。源场景使用左后上方矩形柔光、正面补光和较弱的侧后轮廓光，固定原机位输出透明配图。USDZ 将短距离接触阴影、汁液颜色和湿润度写入盘面材质，保留食物原贴图与动态高光。在 RealityKit 中从固定场景锚点安装[原型灯光预设](https://github.com/YunYouJun/cook/blob/40872726f/apps/ios/Cook/Views/Achievements/TomatoEggLighting.swift)，单独旋转菜品节点。
+在补薄汁版 .blend 上运行 [Blender 布光与导出脚本](https://github.com/YunYouJun/cook/blob/main/docs/scripts/showcase/light_tomato_egg.py)，通过 `-- 输出目录` 指定独立目录。源场景使用左后上方矩形柔光、正面补光和较弱的侧后轮廓光，固定原机位输出透明配图。USDZ 将短距离接触阴影、汁液颜色和湿润度写入盘面材质，保留食物原贴图与动态高光。在 RealityKit 中从固定场景锚点安装[原型灯光预设](https://github.com/YunYouJun/cook/blob/40872726f/apps/ios/Cook/Views/Achievements/TomatoEggLighting.swift)，单独旋转菜品节点。
 
 本机素材目录为 `artifacts/showcase-first-article/tomato-egg-achievement-studio/`。iPhone 18 Pro（iOS 27.0 共享模拟器）实拍同机位对比与 360° 展示见 `evidence/`，每 6° 采一帧，复位后与首帧逐像素相同。模型含 35,068 个三角面，USDZ 为 1,360,650 字节；640 × 640 WebP 为 27,996 字节。光照版已接入 iOS 特殊成就，资源名为 TomatoEggAchievement.usdz；徽章册继续使用已确认的静态生图。
 
@@ -122,7 +122,7 @@ iOS 接入验收已在共享 iPhone 18 Pro（iOS 27.0）执行。CookingFootprin
 
 ### 番茄炒蛋特殊成就 · 软陶版
 
-软陶版将四瓣番茄、七簇炒蛋和六粒葱花做成圆润的摆件，盘沿加一圈薄荷绿波纹。正面主番茄带笑脸，两侧切面保留籽粒。炒蛋采用起伏的薄片与浅层蛋块，较小的卷边搭在上面，底层用暖金色表现层叠的深浅。从空场景运行 [Blender 生成脚本](../scripts/showcase/tomato_egg_clay.py)即可重建模型和透明预览。把生成的 `TomatoEggAchievement.usdz` 复制到 `apps/ios/Cook/Resources/`，现有机位、灯光和交互可直接加载。徽章与庆祝页沿用静态菜品图。模型为 1,387,895 字节、39,388 个三角面，通过 `usdchecker --arkit`。
+软陶版将四瓣番茄、七簇炒蛋和六粒葱花做成圆润的摆件，盘沿加一圈薄荷绿波纹。正面主番茄带笑脸，两侧切面保留籽粒。炒蛋采用起伏的薄片与浅层蛋块，较小的卷边搭在上面，底层用暖金色表现层叠的深浅。从空场景运行 [Blender 生成脚本](https://github.com/YunYouJun/cook/blob/main/docs/scripts/showcase/tomato_egg_clay.py)即可重建模型和透明预览。把生成的 `TomatoEggAchievement.usdz` 复制到 `apps/ios/Cook/Resources/`，现有机位、灯光和交互可直接加载。徽章与庆祝页沿用静态菜品图。模型为 1,387,895 字节、39,388 个三角面，通过 `usdchecker --arkit`。
 
 软陶初版和蛋褶修订版均在共享 iPhone 18 Pro（iOS 27.0）通过成就交互用例，覆盖打开模型、按钮旋转、拖动和复位。本机 `artifacts/showcase-first-article/tomato-egg-achievement-folds/ios-comparison.png` 依次展示初版、修订版正面和旋转后效果。同目录的 `previous-clay.usdz` 用于复核对照，蛋褶定稿后可回收。
 
