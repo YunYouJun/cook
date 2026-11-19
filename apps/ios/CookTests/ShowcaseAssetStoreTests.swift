@@ -102,26 +102,57 @@ final class ShowcaseAssetStoreTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: previousURL.path))
     }
 
-    func testCancelDiscardsLateTransferAndKeepsPreviousVersion() async throws {
+    func testCancelDiscardsLateTransferAndKeepsPreviousVersionUntilRetry() async throws {
         let directory = temporaryDirectory()
         let original = ShowcaseAssetStore(manifest: Self.manifest(), directory: directory) { _, _ in Self.model }
         await original.download(.model)?.value
         let previousURL = try XCTUnwrap(original.installed[.model]?.url)
-        let updating = ShowcaseAssetStore(manifest: Self.manifest(modelVersion: 2), directory: directory) { _, progress in
+        let started = expectation(description: "Update has received partial data")
+        let (release, continuation) = AsyncStream<Void>.makeStream()
+        let manifest = Self.manifest(modelVersion: 2)
+        let updating = ShowcaseAssetStore(manifest: manifest, directory: directory) { _, progress in
             await progress(0.5)
-            try? await Task.sleep(for: .seconds(1))
+            started.fulfill()
+            for await _ in release { break }
             return Self.updatedModel
         }
         updating.reload()
         let task = try XCTUnwrap(updating.download(.model))
+        await fulfillment(of: [started], timeout: 2)
+        XCTAssertEqual(updating.progress[.model], 0.5)
         XCTAssertNil(updating.download(.model))
         updating.cancel(.model)
+        continuation.finish()
         await task.value
         XCTAssertNil(updating.progress[.model])
         XCTAssertNil(updating.problems[.model])
         XCTAssertEqual(updating.installed[.model]?.url, previousURL)
-        updating.reload()
-        XCTAssertEqual(updating.installed[.model]?.url, previousURL)
+        let retry = ShowcaseAssetStore(manifest: manifest, directory: directory) { _, _ in Self.updatedModel }
+        retry.reload()
+        XCTAssertEqual(retry.installed[.model]?.url, previousURL)
+        await retry.download(.model)?.value
+        let replacementURL = try XCTUnwrap(retry.installed[.model]?.url)
+        XCTAssertEqual(try Data(contentsOf: replacementURL), Self.updatedModel)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: previousURL.path))
+    }
+
+    func testCorruptInstalledPacksAreHiddenIndependentlyOnReopen() async throws {
+        let directory = temporaryDirectory()
+        let manifest = Self.manifest()
+        let store = ShowcaseAssetStore(manifest: manifest, directory: directory) { asset, _ in
+            asset.kind == .image ? Self.image : Self.model
+        }
+        await store.download(.model)?.value
+        await store.download(.image)?.value
+        let modelURL = try XCTUnwrap(store.installed[.model]?.url)
+        let imageURL = try XCTUnwrap(store.installed[.image]?.url)
+        try Data(repeating: 0, count: Self.model.count).write(to: modelURL)
+
+        store.reload()
+        XCTAssertNil(store.installed[.model])
+        XCTAssertEqual(store.installed[.image]?.url, imageURL)
+        await store.download(.model)?.value
+        XCTAssertEqual(try Data(contentsOf: modelURL), Self.model)
     }
 
     private static func manifest(recipeID: Int = 250, modelVersion: Int = 1) -> ShowcaseManifest {

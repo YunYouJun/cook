@@ -162,6 +162,8 @@ final class CookingFootprintUITests: XCTestCase {
         app.buttons.matching(identifier: "我的").firstMatch.tap()
         openLearnedDishes(app)
         XCTAssertTrue(app.staticTexts["还没有拿手菜"].exists)
+        openGallery(app)
+        XCTAssertTrue(app.staticTexts["还没有可展出的菜"].exists)
         closeLearnedDishes(app)
         app.buttons["我的菜谱"].tap()
         app.buttons["新建菜谱"].tap()
@@ -178,6 +180,32 @@ final class CookingFootprintUITests: XCTestCase {
         app.buttons["recipe.cookedRecord"].tap()
         app.buttons["recipe.markLearned"].tap()
         app.buttons["cooking.celebration.done"].tap()
+        let privateRecipe = app.navigationBars["足迹测试蒸蛋"]
+        XCTAssertTrue(privateRecipe.waitForExistence(timeout: 5))
+        privateRecipe.buttons.firstMatch.tap()
+        app.navigationBars["我的菜谱"].buttons.firstMatch.tap()
+
+        openLearnedDishes(app)
+        openGallery(app)
+        XCTAssertTrue(app.staticTexts["showcase.learnedAt"].label.hasPrefix("首次学会"))
+        XCTAssertFalse(app.buttons["showcase.image.download"].exists)
+        XCTAssertFalse(app.buttons["showcase.model.download"].exists)
+        tapShowcaseAction(app.buttons["showcase.model.open"], in: app)
+        let model = app.descendants(matching: .any).matching(identifier: "achievement.model").firstMatch
+        let turn = app.buttons["右转"]
+        XCTAssertTrue(turn.waitForExistence(timeout: 15))
+        XCTAssertEqual(model.label, "足迹测试蒸蛋模型")
+        turn.tap()
+        XCTAssertEqual(model.value as? String, "30 度")
+        app.buttons["复位"].tap()
+        XCTAssertEqual(model.value as? String, "0 度")
+        capture(app, "showcase-private-generic-plate")
+        closeShowcaseModel(app, returningTo: "我的拿手菜")
+        closeLearnedDishes(app)
+
+        app.buttons["我的菜谱"].tap()
+        XCTAssertTrue(recipe.waitForExistence(timeout: 5))
+        recipe.tap()
         XCTAssertTrue(app.buttons["删除菜谱"].waitForExistence(timeout: 5))
         app.buttons["删除菜谱"].tap()
         let dialog = app.sheets["删除这道私人菜谱？"]
@@ -195,6 +223,9 @@ final class CookingFootprintUITests: XCTestCase {
         app.buttons["footprint.learnedDishes"].tap()
         assertBadge(app, contains: ["足迹测试蒸蛋", "首次学会", "私人菜谱已删除或暂不可用"])
         capture(app, "learned-dishes-deleted-private-recipe")
+        openGallery(app)
+        XCTAssertTrue(app.staticTexts["还没有可展出的菜"].exists)
+        XCTAssertFalse(app.buttons["showcase.model.open"].exists)
     }
 
     @MainActor
@@ -324,9 +355,15 @@ final class CookingFootprintUITests: XCTestCase {
         app.launchEnvironment.removeValue(forKey: "COOK_UI_TEST_SHOWCASE_FIXTURES")
         app.launchEnvironment.removeValue(forKey: "COOK_UI_TEST_SHOWCASE_LIVE")
         app.launch()
-        openShowcase(app, named: dishes[0])
+        app.buttons.matching(identifier: "我的").firstMatch.tap()
+        openLearnedDishes(app)
+        XCTAssertTrue(app.segmentedControls.buttons["徽章册"].isSelected)
+        openGallery(app)
         for name in dishes {
-            if name != dishes[0] { selectShowcase(app, named: name) }
+            let picker = app.buttons["learnedDishes.featuredDish"]
+            XCTAssertTrue(picker.waitForExistence(timeout: 5))
+            picker.tap()
+            app.buttons[name].tap()
             XCTAssertTrue(image.waitForExistence(timeout: 10))
             XCTAssertEqual(image.label, "\(name)配图")
             tapShowcaseAction(app.buttons["showcase.model.open"], in: app)
@@ -338,7 +375,7 @@ final class CookingFootprintUITests: XCTestCase {
             capture(app, "showcase-rotation-\(name)")
             app.buttons["复位"].tap()
             XCTAssertEqual(model.value as? String, "0 度")
-            closeShowcaseModel(app)
+            closeShowcaseModel(app, returningTo: "我的拿手菜")
             tapShowcaseAction(app.buttons["showcase.model.delete"], in: app)
             XCTAssertFalse(app.buttons["showcase.model.open"].exists)
             XCTAssertEqual(image.label, "\(name)配图")
@@ -347,8 +384,68 @@ final class CookingFootprintUITests: XCTestCase {
             XCTAssertEqual(badge.label, "\(name)徽章")
             XCTAssertEqual(date.label, dates[name])
             capture(app, "showcase-fallback-\(name)")
-            app.navigationBars["菜肴成就"].buttons["完成"].tap()
         }
+        app.segmentedControls.buttons["徽章册"].tap()
+        XCTAssertTrue(app.scrollViews["learnedDishes.collection"].exists)
+    }
+
+    @MainActor
+    func testVoiceOverReadsLearnedBadgeAndModelControls() throws {
+        #if compiler(>=6.4)
+            guard #available(iOS 27.0, *) else { throw XCTSkip("Requires the iOS 27 VoiceOver test service.") }
+            let app = launch()
+            openRecipe(app)
+            app.buttons["recipe.cookedRecord"].tap()
+            app.buttons["recipe.markLearned"].tap()
+            app.buttons["cooking.celebration.done"].tap()
+            app.buttons.matching(identifier: "我的").firstMatch.tap()
+            openLearnedDishes(app)
+            try assertVoiceOverReads([["番茄炒蛋", "首次学会"]])
+
+            selectShowcase(app, named: "番茄炒蛋")
+            downloadShowcaseModel(app)
+            XCTAssertTrue(app.buttons["右转"].waitForExistence(timeout: 15))
+            app.buttons["右转"].tap()
+            try assertVoiceOverReads([["番茄炒蛋模型", "30"], ["左转"], ["右转"], ["复位"]])
+        #else
+            throw XCTSkip("Requires the Xcode 27 VoiceOver test service.")
+        #endif
+    }
+
+    #if compiler(>=6.4)
+        @available(iOS 27.0, *)
+        @MainActor
+        private func assertVoiceOverReads(_ phrases: [[String]], file: StaticString = #filePath, line: UInt = #line) throws {
+            let voiceOver = XCUIDevice.shared.voiceOverService
+            let wasEnabled = voiceOver.isEnabled
+            if !wasEnabled { try voiceOver.enable() }
+            defer {
+                if !wasEnabled {
+                    do { try voiceOver.disable() }
+                    catch { XCTFail("Could not restore VoiceOver: \(error)", file: file, line: line) }
+                }
+            }
+            var speech: [String] = []
+            var remaining = phrases
+            for _ in 0..<15 {
+                let utterance = try voiceOver.moveForward().utterance
+                speech.append(utterance)
+                remaining.removeAll { words in words.allSatisfy { utterance.contains($0) } }
+                if remaining.isEmpty { break }
+            }
+            let attachment = XCTAttachment(string: speech.joined(separator: "\n"))
+            attachment.name = "showcase-voiceover-speech"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+            XCTAssertTrue(remaining.isEmpty, "VoiceOver missed \(remaining). Captured \(speech).", file: file, line: line)
+        }
+    #endif
+
+    @MainActor
+    private func openGallery(_ app: XCUIApplication) {
+        let segment = app.segmentedControls.buttons["展柜"]
+        XCTAssertTrue(segment.waitForExistence(timeout: 5))
+        segment.tap()
     }
 
     @MainActor
@@ -378,9 +475,9 @@ final class CookingFootprintUITests: XCTestCase {
     }
 
     @MainActor
-    private func closeShowcaseModel(_ app: XCUIApplication) {
-        app.navigationBars["3D 模型"].buttons.element(boundBy: 0).tap()
-        XCTAssertTrue(app.navigationBars["菜肴成就"].waitForExistence(timeout: 5))
+    private func closeShowcaseModel(_ app: XCUIApplication, returningTo title: String = "菜肴成就") {
+        app.navigationBars["3D 模型"].buttons.firstMatch.tap()
+        XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 5))
     }
 
     @MainActor

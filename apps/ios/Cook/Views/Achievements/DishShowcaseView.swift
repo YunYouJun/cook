@@ -1,21 +1,37 @@
 import SwiftUI
 
 struct DishShowcaseView: View {
+    enum Source {
+        case downloads(ShowcaseAssetStore)
+        case localPlate(URL)
+    }
+
     let name: String
     let learnedAt: Date
-    let assets: ShowcaseAssetStore
-    @Environment(\.dismiss) private var dismiss
+    let source: Source
     @State private var photo: (url: URL, image: UIImage)?
     @State private var showingModel = false
 
-    private var imageURL: URL? { assets.installed[.image]?.url }
-    private var modelURL: URL? { assets.installed[.model]?.url }
+    private var assets: ShowcaseAssetStore? {
+        if case let .downloads(assets) = source { return assets }
+        return nil
+    }
+
+    private var catalogRecipeID: Int? { assets?.manifest.recipeID }
+    private var imageURL: URL? { assets?.installed[.image]?.url }
+    private var modelURL: URL? {
+        switch source {
+        case let .downloads(assets): assets.installed[.model]?.url
+        case let .localPlate(url): url
+        }
+    }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    hero
+        ScrollView {
+            VStack(spacing: 24) {
+                hero
+                switch source {
+                case let .downloads(assets):
                     VStack(alignment: .leading, spacing: 12) {
                         Text("离线素材").font(.headline)
                             .accessibilityAddTraits(.isHeader)
@@ -23,28 +39,29 @@ struct DishShowcaseView: View {
                             ShowcasePackRow(pack: pack, assets: assets, openModel: { showingModel = true })
                         }
                     }
-                }
-                .frame(maxWidth: 480)
-                .padding(20)
-                .frame(maxWidth: .infinity)
-            }
-            .accessibilityIdentifier("showcase.content")
-            .background(Color(uiColor: .systemGroupedBackground))
-            .navigationTitle("菜肴成就")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") { dismiss() }
+                case .localPlate:
+                    Button {
+                        showingModel = true
+                    } label: {
+                        Label("查看通用餐盘", systemImage: "rotate.3d")
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("showcase.model.open")
                 }
             }
-            .navigationDestination(isPresented: $showingModel) {
-                if let modelURL {
-                    ShowcaseModelView(recipeID: assets.manifest.recipeID, name: name, modelURL: modelURL)
-                        .id(modelURL)
-                }
+            .frame(maxWidth: 480)
+            .padding(20)
+            .frame(maxWidth: .infinity)
+        }
+        .accessibilityIdentifier("showcase.content")
+        .background(Color(uiColor: .systemGroupedBackground))
+        .navigationDestination(isPresented: $showingModel) {
+            if let modelURL {
+                ShowcaseModelView(catalogRecipeID: catalogRecipeID, name: name, learnedAt: learnedAt, modelURL: modelURL)
+                    .id(modelURL)
             }
         }
-        .task { assets.reload() }
+        .task { assets?.reload() }
         .task(id: imageURL) {
             if let imageURL, let image = UIImage(contentsOfFile: imageURL.path) {
                 photo = (imageURL, image)
@@ -68,15 +85,16 @@ struct DishShowcaseView: View {
                         .accessibilityIdentifier("showcase.preview.image")
                 } else {
                     ZStack {
-                        LearnedDishBadge(catalogRecipeID: assets.manifest.recipeID, size: 116)
+                        LearnedDishBadge(catalogRecipeID: catalogRecipeID, size: 116)
                     }
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel("\(name)徽章")
-                        .accessibilityIdentifier("showcase.preview.badge")
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("\(name)徽章")
+                    .accessibilityIdentifier("showcase.preview.badge")
                 }
             }
             .frame(maxWidth: 300, maxHeight: 180)
             Text(name).font(.title2.bold())
+                .accessibilityAddTraits(.isHeader)
             Text("首次学会 \(CookingDates.plaque(learnedAt))")
                 .font(.footnote.monospacedDigit())
                 .foregroundStyle(CookingJournalPalette.warmInk)

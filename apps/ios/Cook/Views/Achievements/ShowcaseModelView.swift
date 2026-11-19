@@ -3,9 +3,12 @@ import RealityKit
 import SwiftUI
 
 struct ShowcaseModelView: View {
-    let recipeID: Int
+    let catalogRecipeID: Int?
     let name: String
+    let learnedAt: Date
     let modelURL: URL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
     @State private var model: Entity?
     @State private var loadFailed = false
     @State private var yaw = 0.0
@@ -13,9 +16,10 @@ struct ShowcaseModelView: View {
     @State private var still: (angle: Double, image: UIImage)?
     @State private var resetFeedback = false
 
-    private var displayedAngle: Double {
-        Self.normalized(yaw + drag)
-    }
+    private var previewsDrag: Bool { !reduceMotion && !lowPowerMode }
+    private var activeDrag: Double { previewsDrag ? drag : 0 }
+    private var displayedAngle: Double { Self.normalized(yaw + activeDrag) }
+    private var canRotate: Bool { still != nil && !loadFailed }
 
     var body: some View {
         GeometryReader { geometry in
@@ -25,11 +29,17 @@ struct ShowcaseModelView: View {
                         .aspectRatio(1, contentMode: .fit)
                         .frame(maxWidth: 420)
                     if loadFailed {
-                        Text("模型暂不可用，已显示菜品徽章。").font(.footnote)
-                            .padding(.top, 24)
-                    } else if model != nil {
+                        VStack(spacing: 8) {
+                            Text(name).font(.headline)
+                            Text("首次学会 \(CookingDates.plaque(learnedAt))")
+                                .accessibilityLabel("首次学会 \(CookingDates.celebration(learnedAt))")
+                            Text("模型暂不可用，已显示菜品徽章。")
+                        }
+                        .font(.footnote)
+                        .padding(.top, 24)
+                    } else if canRotate {
                         controls.padding(.top, 20)
-                        Text("左右拖动可旋转菜品")
+                        Text(previewsDrag ? "左右拖动可旋转菜品" : "左右拖动，松手后旋转菜品")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .padding(.top, 12)
@@ -42,6 +52,10 @@ struct ShowcaseModelView: View {
         }
         .navigationTitle("3D 模型")
         .navigationBarTitleDisplayMode(.inline)
+        .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)
+            .receive(on: DispatchQueue.main)) { _ in
+                lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+            }
         .task {
             do {
                 if #available(iOS 18, *) {
@@ -63,14 +77,31 @@ struct ShowcaseModelView: View {
     }
 
     private var viewport: some View {
+        Group {
+            if canRotate {
+                modelContent.accessibilityAdjustableAction { direction in
+                    switch direction {
+                    case .increment: turn(by: 30)
+                    case .decrement: turn(by: -30)
+                    @unknown default: break
+                    }
+                }
+            } else {
+                modelContent
+            }
+        }
+        .accessibilityIdentifier("achievement.model")
+    }
+
+    private var modelContent: some View {
         ZStack {
             if loadFailed {
-                LearnedDishBadge(catalogRecipeID: recipeID, size: 144)
+                LearnedDishBadge(catalogRecipeID: catalogRecipeID, size: 144)
             } else if let model {
-                if drag == 0, let still, still.angle == yaw {
+                if activeDrag == 0, let still, still.angle == yaw {
                     Image(uiImage: still.image).resizable().scaledToFit()
                 } else {
-                    ShowcaseRenderer(model: model, angle: displayedAngle, settling: drag == 0) { angle, image in
+                    ShowcaseRenderer(model: model, angle: displayedAngle, settling: activeDrag == 0) { angle, image in
                         if let image { still = (angle, image) }
                         else { loadFailed = true }
                     }
@@ -82,26 +113,32 @@ struct ShowcaseModelView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
         .simultaneousGesture(DragGesture(minimumDistance: 4)
-            .updating($drag) { value, state, _ in state = rotation(for: value.translation) }
-            .onEnded { value in yaw = Self.normalized(yaw + rotation(for: value.translation)) })
+            .updating($drag) { value, state, _ in
+                if previewsDrag { state = rotation(for: value.translation) }
+            }
+            .onEnded { value in turn(by: rotation(for: value.translation)) },
+            including: canRotate ? .all : .none)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(loadFailed ? "\(name)徽章" : model == nil ? "正在加载模型" : "\(name)模型")
-        .accessibilityValue(model == nil || loadFailed ? "" : "\(Int(displayedAngle.rounded()) % 360) 度")
-        .accessibilityIdentifier("achievement.model")
+        .accessibilityLabel(loadFailed ? "\(name)徽章" : !canRotate ? "正在加载模型" : "\(name)模型")
+        .accessibilityValue(canRotate ? "\(Int(displayedAngle.rounded()) % 360) 度" : "")
     }
 
     private func rotation(for translation: CGSize) -> Double {
-        guard model != nil, !loadFailed, abs(translation.width) > abs(translation.height) else { return 0 }
+        guard abs(translation.width) > abs(translation.height) else { return 0 }
         return Double(translation.width) * 0.65
+    }
+
+    private func turn(by degrees: Double) {
+        yaw = Self.normalized(yaw + degrees)
     }
 
     private var controls: some View {
         HStack(spacing: 0) {
             RotationStepButton(title: "左转", symbol: "arrow.counterclockwise") {
-                yaw = Self.normalized(yaw - 30)
+                turn(by: -30)
             }
             RotationStepButton(title: "右转", symbol: "arrow.clockwise") {
-                yaw = Self.normalized(yaw + 30)
+                turn(by: 30)
             }
             Divider().frame(height: 20).accessibilityHidden(true)
             Button {

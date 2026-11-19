@@ -1,6 +1,6 @@
-"""Export the steamed egg and cucumber dishes from the #239 demo in the native clay style.
+"""Export the steamed egg and cucumber dishes from the #239 demo in the native clay style. Also exports the shared plate for private recipes.
 
-Blender 4.4+: blender -b -t 4 -P export_demo_dishes.py -- OUTPUT_DIRECTORY
+Blender 4.4+: blender -b -t 4 -P export_demo_dishes.py -- OUTPUT_DIRECTORY [generic-plate]
 """
 
 from collections import defaultdict
@@ -13,7 +13,8 @@ import bpy
 from mathutils import Matrix, Vector
 
 
-out = Path(sys.argv[sys.argv.index("--") + 1]).resolve()
+args = sys.argv[sys.argv.index("--") + 1:]
+out = Path(args[0]).resolve()
 scale = 0.052  # Demo units to meters, keeping a plate about 16 cm across.
 
 
@@ -75,6 +76,15 @@ def plate(porcelain, mint):
     bpy.ops.mesh.primitive_torus_add(major_segments=64, minor_segments=8,
                                     major_radius=1.50, minor_radius=.042, location=(0, 0, .275))
     finish(bpy.context.object, "Mint plate rim", mint)
+
+
+def generic_plate(porcelain, mint):
+    plate(porcelain, mint)
+    # A small asymmetric glaze mark makes rotation visible on the empty plate.
+    for index, angle in enumerate((-.43, -.33, -.23)):
+        mark = pebble("Glaze mark", (1.17 * cos(angle), 1.17 * sin(angle), .215),
+                      (.046 + .012 * index, .031, .012), mint)
+        mark.rotation_euler.z = angle
 
 
 def custard(porcelain, mint):
@@ -182,7 +192,9 @@ def studio(scene):
     scene.view_settings.view_transform = "Khronos PBR Neutral"
 
 
-for slug, draw in [("steamed-egg-clay", custard), ("smashed-cucumber-clay", cucumber)]:
+dishes = {"steamed-egg-clay": custard, "smashed-cucumber-clay": cucumber, "generic-plate": generic_plate}
+for slug in args[1:] or ("steamed-egg-clay", "smashed-cucumber-clay"):
+    draw = dishes[slug]
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
     draw(clay("Warm porcelain", "fff1d7", .42), clay("Mint glaze", "9bcfc3", .36))

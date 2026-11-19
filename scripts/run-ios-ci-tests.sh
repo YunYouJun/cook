@@ -67,6 +67,7 @@ case "$IOS_SUITE" in
           -only-testing:CookUITests/MembershipUITests \
           -only-testing:CookUITests/CookingFootprintUITests/testShowcasePacksDownloadIndependentlyReopenOfflineAndDelete \
           -only-testing:CookUITests/CookingFootprintUITests/testSteamedEggAndCucumberShowcasesStayIndependentOffline \
+          -only-testing:CookUITests/CookingFootprintUITests/testCookOnlyAndDeletedPrivateRecipeFallback \
           -only-testing:CookUITests/CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients \
           -only-testing:CookUITests/CloudKitchenUITests/testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled
         ;;
