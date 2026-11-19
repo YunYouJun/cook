@@ -31,6 +31,7 @@ struct TomatoEggShowcaseView: View {
                 .padding(20)
                 .frame(maxWidth: .infinity)
             }
+            .accessibilityIdentifier("showcase.content")
             .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle("菜肴成就")
             .navigationBarTitleDisplayMode(.inline)
@@ -83,6 +84,7 @@ struct TomatoEggShowcaseView: View {
                 .font(.footnote.monospacedDigit())
                 .foregroundStyle(CookingJournalPalette.warmInk)
                 .accessibilityLabel("首次学会 \(CookingDates.celebration(learnedAt))")
+                .accessibilityIdentifier("showcase.learnedAt")
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)

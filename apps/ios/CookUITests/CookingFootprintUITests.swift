@@ -237,6 +237,9 @@ final class CookingFootprintUITests: XCTestCase {
         openShowcase(app)
         let badge = app.descendants(matching: .any).matching(identifier: "showcase.preview.badge").firstMatch
         let image = app.images["showcase.preview.image"]
+        let learnedAt = app.staticTexts["showcase.learnedAt"]
+        XCTAssertTrue(learnedAt.exists)
+        let learnedDate = learnedAt.label
         let getImage = app.buttons["showcase.image.download"]
         let getModel = app.buttons["showcase.model.download"]
         let openModel = app.buttons["showcase.model.open"]
@@ -284,7 +287,7 @@ final class CookingFootprintUITests: XCTestCase {
         XCTAssertFalse(openModel.exists)
         tapShowcaseAction(app.buttons["showcase.image.delete"], in: app)
         XCTAssertTrue(badge.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "首次学会")).firstMatch.exists)
+        XCTAssertEqual(learnedAt.label, learnedDate)
         capture(app, "showcase-badge-after-deletion")
     }
 
@@ -315,8 +318,9 @@ final class CookingFootprintUITests: XCTestCase {
     @MainActor
     private func tapShowcaseAction(_ action: XCUIElement, in app: XCUIApplication) {
         XCTAssertTrue(action.waitForExistence(timeout: 10))
-        let sheet = app.scrollViews.firstMatch
+        let sheet = app.scrollViews["showcase.content"]
         for _ in 0..<5 where !action.isHittable { sheet.swipeUp() }
+        for _ in 0..<5 where !action.isHittable { sheet.swipeDown() }
         XCTAssertTrue(action.isHittable)
         action.tap()
     }

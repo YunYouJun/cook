@@ -65,6 +65,7 @@ case "$IOS_SUITE" in
         run_tests "$DEVICE" core-regression \
           -only-testing:CookTests \
           -only-testing:CookUITests/MembershipUITests \
+          -only-testing:CookUITests/CookingFootprintUITests/testShowcasePacksDownloadIndependentlyReopenOfflineAndDelete \
           -only-testing:CookUITests/CookDiscoveryUITests/testDefaultCatalogCountMatchesFilterPreviewWithoutIngredients \
           -only-testing:CookUITests/CloudKitchenUITests/testOptionalRotationMovesCameraKeepsTapsAndResetsWhenDisabled
         ;;
