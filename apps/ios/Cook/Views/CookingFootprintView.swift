@@ -291,7 +291,7 @@ struct CookingFootprintView: View {
         NavigationStack { CookingFootprintView() }
             .environment(store)
             .environment(CookedRecipeRecords())
-            .environment(ShowcaseAssetStore.live())
+            .environment(ShowcaseAssetLibrary.live())
             .modelContainer(Persistence.makeContainer(inMemory: true))
     }
 }

@@ -3,7 +3,7 @@ import UIKit
 
 /// Attach to the stationary studio anchor, alongside the camera and outside the rotating dish.
 @MainActor
-func installTomatoEggLighting(in view: ARView, on anchor: AnchorEntity) {
+func installShowcaseLighting(in view: ARView, on anchor: AnchorEntity) {
     view.environment.lighting.intensityExponent = -0.65
     let target = SIMD3<Float>(0, 0.017, 0)
 

@@ -2,8 +2,9 @@ import Combine
 import RealityKit
 import SwiftUI
 
-struct TomatoEggAchievementView: View {
-    static let recipeID = 250
+struct ShowcaseModelView: View {
+    let recipeID: Int
+    let name: String
     let modelURL: URL
     @State private var model: Entity?
     @State private var loadFailed = false
@@ -64,12 +65,12 @@ struct TomatoEggAchievementView: View {
     private var viewport: some View {
         ZStack {
             if loadFailed {
-                LearnedDishBadge(catalogRecipeID: Self.recipeID, size: 144)
+                LearnedDishBadge(catalogRecipeID: recipeID, size: 144)
             } else if let model {
                 if drag == 0, let still, still.angle == yaw {
                     Image(uiImage: still.image).resizable().scaledToFit()
                 } else {
-                    TomatoEggRenderer(model: model, angle: displayedAngle, settling: drag == 0) { angle, image in
+                    ShowcaseRenderer(model: model, angle: displayedAngle, settling: drag == 0) { angle, image in
                         if let image { still = (angle, image) }
                         else { loadFailed = true }
                     }
@@ -84,7 +85,7 @@ struct TomatoEggAchievementView: View {
             .updating($drag) { value, state, _ in state = rotation(for: value.translation) }
             .onEnded { value in yaw = Self.normalized(yaw + rotation(for: value.translation)) })
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(loadFailed ? "番茄炒蛋徽章" : model == nil ? "正在加载模型" : "番茄炒蛋模型")
+        .accessibilityLabel(loadFailed ? "\(name)徽章" : model == nil ? "正在加载模型" : "\(name)模型")
         .accessibilityValue(model == nil || loadFailed ? "" : "\(Int(displayedAngle.rounded()) % 360) 度")
         .accessibilityIdentifier("achievement.model")
     }
@@ -156,7 +157,7 @@ private struct RotationStepButton: View {
 }
 
 /// Once the requested orientation is on screen, keep its snapshot and release the live renderer.
-private struct TomatoEggRenderer: UIViewRepresentable {
+private struct ShowcaseRenderer: UIViewRepresentable {
     let model: Entity
     let angle: Double
     let settling: Bool
@@ -186,7 +187,7 @@ private struct TomatoEggRenderer: UIViewRepresentable {
         camera.camera.near = 0.003
         anchor.addChild(camera)
         camera.look(at: [0, 0.0135, 0], from: [0.1577126, 0.2610783, 0.225237], relativeTo: nil)
-        installTomatoEggLighting(in: view, on: anchor)
+        installShowcaseLighting(in: view, on: anchor)
         return view
     }
 

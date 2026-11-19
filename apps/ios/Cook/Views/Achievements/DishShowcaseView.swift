@@ -1,8 +1,9 @@
 import SwiftUI
 
-struct TomatoEggShowcaseView: View {
+struct DishShowcaseView: View {
+    let name: String
     let learnedAt: Date
-    @Environment(ShowcaseAssetStore.self) private var assets
+    let assets: ShowcaseAssetStore
     @Environment(\.dismiss) private var dismiss
     @State private var photo: (url: URL, image: UIImage)?
     @State private var showingModel = false
@@ -15,16 +16,12 @@ struct TomatoEggShowcaseView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     hero
-                    if let manifest = assets.manifest {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("离线素材").font(.headline)
-                                .accessibilityAddTraits(.isHeader)
-                            ForEach(manifest.packs, id: \.kind) { pack in
-                                ShowcasePackRow(pack: pack, openModel: { showingModel = true })
-                            }
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("离线素材").font(.headline)
+                            .accessibilityAddTraits(.isHeader)
+                        ForEach(assets.manifest.packs, id: \.kind) { pack in
+                            ShowcasePackRow(pack: pack, assets: assets, openModel: { showingModel = true })
                         }
-                    } else {
-                        Text("素材暂不可用").font(.footnote).foregroundStyle(.secondary)
                     }
                 }
                 .frame(maxWidth: 480)
@@ -42,7 +39,7 @@ struct TomatoEggShowcaseView: View {
             }
             .navigationDestination(isPresented: $showingModel) {
                 if let modelURL {
-                    TomatoEggAchievementView(modelURL: modelURL)
+                    ShowcaseModelView(recipeID: assets.manifest.recipeID, name: name, modelURL: modelURL)
                         .id(modelURL)
                 }
             }
@@ -67,19 +64,19 @@ struct TomatoEggShowcaseView: View {
                     Image(uiImage: photo.image)
                         .resizable()
                         .scaledToFit()
-                        .accessibilityLabel("番茄炒蛋配图")
+                        .accessibilityLabel("\(name)配图")
                         .accessibilityIdentifier("showcase.preview.image")
                 } else {
                     ZStack {
-                        LearnedDishBadge(catalogRecipeID: TomatoEggAchievementView.recipeID, size: 116)
+                        LearnedDishBadge(catalogRecipeID: assets.manifest.recipeID, size: 116)
                     }
                         .accessibilityElement(children: .ignore)
-                        .accessibilityLabel("番茄炒蛋徽章")
+                        .accessibilityLabel("\(name)徽章")
                         .accessibilityIdentifier("showcase.preview.badge")
                 }
             }
             .frame(maxWidth: 300, maxHeight: 180)
-            Text("番茄炒蛋").font(.title2.bold())
+            Text(name).font(.title2.bold())
             Text("首次学会 \(CookingDates.plaque(learnedAt))")
                 .font(.footnote.monospacedDigit())
                 .foregroundStyle(CookingJournalPalette.warmInk)
@@ -94,8 +91,8 @@ struct TomatoEggShowcaseView: View {
 
 private struct ShowcasePackRow: View {
     let pack: ShowcaseAsset
+    let assets: ShowcaseAssetStore
     let openModel: () -> Void
-    @Environment(ShowcaseAssetStore.self) private var assets
 
     private var name: String { pack.kind == .image ? "图片包" : "模型包" }
     private var symbol: String { pack.kind == .image ? "photo" : "cube" }
