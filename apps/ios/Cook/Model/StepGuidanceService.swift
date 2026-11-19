@@ -153,7 +153,8 @@ struct ManagedStepGuidanceService: ManagedStepGuidanceServing {
     }
 
     static var configuredEndpoint: URL? {
-        guard let value = Bundle.main.object(forInfoDictionaryKey: "CookAIGuidanceServiceURL") as? String,
+        guard CookFeatures.onlineAIEnabled,
+              let value = Bundle.main.object(forInfoDictionaryKey: "CookAIGuidanceServiceURL") as? String,
               !value.isEmpty else { return nil }
         return URL(string: value).flatMap(approvedEndpoint)
     }

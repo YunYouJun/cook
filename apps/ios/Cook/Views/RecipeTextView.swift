@@ -275,7 +275,7 @@ struct RecipeTextContent: View {
                                 jump(next)
                             }
                         }
-                        if showsStepGuidance, nextStep == step.id {
+                        if showsStepGuidance, ai.onlineAIEnabled, nextStep == step.id {
                             RecipeStepGuidancePanel(
                                 step: step,
                                 guidance: guidance,
@@ -407,9 +407,8 @@ struct RecipeTextContent: View {
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // 没配置配图地址的数据包不显示图片，提示去原文看
-            if text.imageCount > 0, !store.showsTextImages {
-                Text("原文还有 \(text.imageCount) 张配图。")
+            if text.imageCount > photos.count {
+                Text("原文另有 \(text.imageCount - photos.count) 张配图。")
             }
             if let source = store.textSource {
                 Text("做法来自 \(source.name)（\(source.license)），用量和步骤以原文为准。")
