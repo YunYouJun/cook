@@ -96,7 +96,8 @@ test('both iOS beta guide URLs serve the same HTML on the product site', () => {
   })
 
   const config = JSON.parse(readFileSync(new URL('../edgeone.json', import.meta.url), 'utf8'))
-  const headers = config.headers.find(rule => rule.source === '/guide/ios-beta')?.headers ?? []
+  // EdgeOne's exact match skips requests with a query string.
+  const headers = config.headers.find(rule => rule.source === '/guide/ios-beta*')?.headers ?? []
   assert.ok(headers.some(header => header.key === 'Content-Type' && header.value === 'text/html; charset=utf-8'))
 })
 

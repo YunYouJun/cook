@@ -2,7 +2,7 @@
   "nodeVersion": "24.18.0",
   "headers": [
     {
-      "source": "/guide/ios-beta",
+      "source": "/guide/ios-beta*",
       "headers": [
         {
           "key": "Content-Type",
