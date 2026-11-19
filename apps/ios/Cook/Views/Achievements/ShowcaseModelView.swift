@@ -200,6 +200,8 @@ private struct ShowcaseRenderer: UIViewRepresentable {
     let settling: Bool
     let onStill: (Double, UIImage?) -> Void
 
+    private static let usesLowMemoryRendering = ProcessInfo.processInfo.physicalMemory <= 4 * 1024 * 1024 * 1024
+
     final class Coordinator {
         let pivot = Entity()
         var pending: Task<Void, Never>?
@@ -212,6 +214,10 @@ private struct ShowcaseRenderer: UIViewRepresentable {
 
     func makeUIView(context: Context) -> ARView {
         let view = ARView(frame: .zero, cameraMode: .nonAR, automaticallyConfigureSession: false)
+        // Limit render buffers and the resulting snapshot on memory-constrained devices.
+        if Self.usesLowMemoryRendering {
+            view.contentScaleFactor = min(view.contentScaleFactor, 1)
+        }
         view.isOpaque = false
         view.backgroundColor = .clear
         view.environment.background = .color(.clear)
