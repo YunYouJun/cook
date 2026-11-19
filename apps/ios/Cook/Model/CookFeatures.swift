@@ -1,6 +1,10 @@
 import Foundation
 
 enum CookFeatures {
+    static var onlineAIEnabled: Bool {
+        Bundle.main.object(forInfoDictionaryKey: "CookOnlineAIEnabled") as? String == "YES"
+    }
+
     static var membershipUIEnabled: Bool {
         #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("-ui-testing-membership") { return true }

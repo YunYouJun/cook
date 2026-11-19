@@ -27,10 +27,12 @@ struct SettingsView: View {
                     }
                 }
                 Section("设置") {
-                    NavigationLink { AISettingsView() } label: {
-                        SettingsRowLabel("AI 设置", symbol: "sparkles", color: .purple)
+                    if CookFeatures.onlineAIEnabled {
+                        NavigationLink { AISettingsView() } label: {
+                            SettingsRowLabel("AI 设置", symbol: "sparkles", color: .purple)
+                        }
+                        .accessibilityIdentifier("settings.ai")
                     }
-                    .accessibilityIdentifier("settings.ai")
                     NavigationLink { ReminderSettingsView() } label: {
                         SettingsRowLabel("提醒", symbol: "bell.badge.fill", color: .red)
                     }

@@ -1,3 +1,4 @@
+import CookCore
 import SwiftData
 import XCTest
 @testable import Cook
@@ -111,6 +112,22 @@ final class FavoriteSaveTests: XCTestCase {
         let added = try context.importWebData(data, recipeIdByName: ["新菜": 1], validIds: [1, 9])
         XCTAssertEqual(added.favorites, 1)
         XCTAssertEqual(added.visits, 1)
+    }
+
+    func testRecipeImageApprovalLeavesSourceAndAmountsIntact() throws {
+        let directory = try XCTUnwrap(Bundle.main.url(forResource: "CookData", withExtension: nil))
+        let data = try CookData.load(from: directory)
+        let unrestricted = RecipeStore(data: data, dataDirectory: directory)
+        let approved = "howtocook/fcab1b3841f8e0c7.webp"
+        let restricted = RecipeStore(data: data, dataDirectory: directory, approvedTextImagePaths: [approved])
+        let recipe = try XCTUnwrap(restricted.recipesById[264])
+        let hidden = "howtocook/ad77e0934f5592d6.webp"
+
+        XCTAssertNotNil(restricted.textImageURL(approved))
+        XCTAssertNotNil(unrestricted.textImageURL(hidden))
+        XCTAssertNil(restricted.textImageURL(hidden))
+        XCTAssertNotNil(restricted.text(for: recipe))
+        XCTAssertEqual(restricted.text(for: recipe), unrestricted.text(for: recipe))
     }
 
     func testPrivacyPolicyIsIncludedInTheAppBundle() throws {
