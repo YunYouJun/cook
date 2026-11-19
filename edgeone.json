@@ -1,5 +1,11 @@
 {
   "nodeVersion": "24.18.0",
+  "rewrites": [
+    {
+      "source": "/guide/ios-beta",
+      "destination": "/guide/ios-beta.html"
+    }
+  ],
   "headers": [
     {
       "source": "/auth/wechat/*",
