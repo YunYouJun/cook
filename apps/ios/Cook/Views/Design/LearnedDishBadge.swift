@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// An illustrated medallion for an available catalog recipe, or a shared plate for other recipes.
 struct LearnedDishBadge: View {
@@ -13,8 +14,8 @@ struct LearnedDishBadge: View {
             Circle().strokeBorder(CookingJournalPalette.warmInk.opacity(0.44), lineWidth: 2)
             Circle().strokeBorder(CookingJournalPalette.warmInk.opacity(0.20), lineWidth: 1)
                 .padding(5)
-            if let artwork {
-                Image(artwork)
+            if let catalogRecipeID, let artwork = Self.artwork[catalogRecipeID] {
+                Image(uiImage: artwork)
                     .resizable()
                     .scaledToFit()
                     .frame(width: size * 0.76, height: size * 0.76)
@@ -28,12 +29,12 @@ struct LearnedDishBadge: View {
         .accessibilityHidden(true)
     }
 
-    private var artwork: String? {
-        switch catalogRecipeID {
-        case 250: "cooking-badge-tomato-egg" // 番茄炒蛋
-        case 588: "cooking-badge-steamed-egg" // 蒸蛋羹
-        case 497: "cooking-badge-smashed-cucumber" // 拍黄瓜
-        default: nil
-        }
+    private static let artwork: [Int: UIImage] = [
+        250: "cooking-badge-tomato-egg",
+        588: "cooking-badge-steamed-egg",
+        497: "cooking-badge-smashed-cucumber",
+    ].compactMapValues { name in
+        guard let path = Bundle.main.path(forResource: name, ofType: "webp") else { return nil }
+        return UIImage(contentsOfFile: path)
     }
 }

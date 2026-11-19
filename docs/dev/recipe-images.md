@@ -81,6 +81,15 @@ App 通过 EdgeOne 加载配图，EdgeOne 使用私有回源访问这个桶。�
 - 点图片全屏查看：左右滑动切换同一篇里的配图，双指或双击放大，轻点隐藏按钮，右上角可以分享或存到相册；iOS 18 起从原图位置放大展开、下滑收回，旧系统用关闭按钮；
 - 数据里没有 `imageBase` 时不显示配图，页底提示「原文还有 N 张配图」。
 
+## iPad 保存到相册验收
+
+2026-11-18 在远端 `main` 的 `7cbb8b6ba` 上复核。#117 的 iPad 记录停在打开系统分享面板。#209 的 `testReviewedTextSurvivesImageFailureAndLoadsAfterRecovery` 覆盖配图加载恢复。复核时，查看器仍通过 `ShareLink` 分享当前配图，工程配置仍声明仅添加照片的权限说明。见 [#117](https://github.com/YunYouJun/cook/pull/117) 和 [#209](https://github.com/YunYouJun/cook/pull/209)。
+
+- 使用共享池的 iPad Pro 11 英寸（M5）、iPadOS 27.0（24A434）和 Xcode 27.1。Debug 测试包使用独立标识和 `-ui-testing` 内存数据。通过 `COOK_UI_TEST_TEXT_IMAGE_BASE` 从本机回环地址提供「柱候牛腩」的两张公开源图。
+- 本地 XCUITest 从「看图文做法」点开第二张图，确认查看器显示 `2 / 16`，点右上角的「分享」，选择系统保存图像动作，在系统权限提示中点「允许」，随后返回查看器。最终执行 1 项，通过 1 项。先前一次运行中，分享弹窗容器出现后，XCTest 在等待窗口内未找到保存动作，同一构建重跑完成了全流程。
+- 只读核对 iPad 的照片图库记录和原始文件。图库新增一张 1080 × 810 的 PNG，原有 6 条图库记录和对应文件路径仍在。新增文件与第二张源图解码为 RGB 后，SHA-256 均为 `ec8cac323e444d462dceef30459c6fcaa45a8e299fb5f6ba5f02757e7f0bfeee`。见[第二张源图](https://assets.yunle.fun/cook/howtocook/1d21e2cdde42c3e7.webp)。
+- 运行覆盖为 iPadOS 27.0。项目最低部署目标为 iOS 17.0，本机没有对应运行时。
+
 ## 换地址
 
 以后给桶配 CDN 或自定义域名，只要重新生成数据：

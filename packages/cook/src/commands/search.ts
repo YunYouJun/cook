@@ -1,22 +1,21 @@
-import type { SearchOptions } from '../utils/search.js'
-import fs from 'node:fs'
+import type { RecommendationMode } from '../utils/recommend.js'
+import process from 'node:process'
 import consola from 'consola'
 import { colors } from 'consola/utils'
-import {
-  incompatibleFoodsCsvFile,
-  recipeCsvFile,
-} from '../utils/config.js'
-import { parseIncompatibleFoodsCsv, parseRecipeCsv } from '../utils/csv.js'
-import { searchRecipes } from '../utils/search.js'
+import { loadCookCatalog, queryCookCatalog } from '../utils/agent-catalog.js'
 
-export type { SearchOptions }
+export type { SearchOptions } from '../utils/search.js'
 
 export interface SearchCommandOptions {
+  query?: string
   stuff?: string
+  avoid?: string
   tool?: string
   difficulty?: string
   tag?: string
   method?: string
+  noSpicy?: boolean
+  mode?: RecommendationMode
   limit?: number
   /** 输出原始 JSON（供 AI/脚本消费） */
   json?: boolean
@@ -25,32 +24,24 @@ export interface SearchCommandOptions {
 const STUFF_SPLIT_RE = /[,，、]/
 
 export function runSearch(opts: SearchCommandOptions) {
-  const recipeCsv = fs.readFileSync(recipeCsvFile, 'utf-8')
-  const recipes = parseRecipeCsv(recipeCsv)
+  const catalog = loadCookCatalog()
 
-  let incompatible: ReturnType<typeof parseIncompatibleFoodsCsv> = []
-  try {
-    const incompatibleCsv = fs.readFileSync(incompatibleFoodsCsvFile, 'utf-8')
-    incompatible = parseIncompatibleFoodsCsv(incompatibleCsv)
-  }
-  catch {
-    consola.warn('未找到食物相克数据，跳过相克检查')
-  }
-
-  const options: SearchOptions = {
+  const result = queryCookCatalog(catalog, {
+    query: opts.query,
     stuff: opts.stuff?.split(STUFF_SPLIT_RE).filter(Boolean),
+    avoid: opts.avoid?.split(STUFF_SPLIT_RE).filter(Boolean),
     tool: opts.tool,
     difficulty: opts.difficulty,
     tag: opts.tag,
     method: opts.method,
-    limit: opts.limit ?? 10,
-  }
-
-  const result = searchRecipes(recipes, incompatible, options)
+    noSpicy: opts.noSpicy,
+    mode: opts.mode,
+    limit: opts.limit !== undefined ? Number(opts.limit) : 10,
+  })
 
   // JSON 模式：供 AI Skill / 脚本消费
   if (opts.json) {
-    consola.log(JSON.stringify(result, null, 2))
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
     return
   }
 

@@ -12,6 +12,8 @@ const outputPath = resolve(skillsDir, `${skillName}.zip`)
 const dataFiles = [
   'recipe.csv',
   'incompatible-foods.csv',
+  'shelf-life.json',
+  'aliases.json',
 ]
 
 const dataSourceDir = resolve(root, 'packages/data')
@@ -23,8 +25,9 @@ for (const file of dataFiles) {
   copyFileSync(resolve(dataSourceDir, file), resolve(dataTargetDir, file))
 }
 
-// 2. 打包（保留目录结构）
+// 2. 清理旧包并打包（保留目录结构）
 mkdirSync(skillsDir, { recursive: true })
+rmSync(outputPath, { force: true })
 execSync(`zip -r "${outputPath}" ${skillName}`, { cwd: skillsDir, stdio: 'ignore' })
 
 // 3. 清理临时复制的数据目录
