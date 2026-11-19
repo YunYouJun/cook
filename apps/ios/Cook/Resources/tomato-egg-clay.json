@@ -1,0 +1,20 @@
+{
+  "recipeID": 250,
+  "pairID": "tomato-egg-clay",
+  "packs": [
+    {
+      "kind": "image",
+      "version": 1,
+      "url": "https://assets.yunle.fun/cook/showcase/250/tomato-egg-clay/image/v1-b27b5faea673ca918b01252827709cac99065701098d5fa4c946fe004f4c66e5.webp",
+      "bytes": 30522,
+      "sha256": "b27b5faea673ca918b01252827709cac99065701098d5fa4c946fe004f4c66e5"
+    },
+    {
+      "kind": "model",
+      "version": 1,
+      "url": "https://assets.yunle.fun/cook/showcase/250/tomato-egg-clay/model/v1-1dc5b0796f4a82078120dfb81a412ad79f74c7600bb924b6cbbbe95dbfc10996.usdz",
+      "bytes": 1387895,
+      "sha256": "1dc5b0796f4a82078120dfb81a412ad79f74c7600bb924b6cbbbe95dbfc10996"
+    }
+  ]
+}

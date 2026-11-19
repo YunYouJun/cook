@@ -1,0 +1,31 @@
+name: Showcase Assets
+
+on:
+  push:
+    branches: [main, codex/ios-tomato-asset-packs]
+    paths:
+      - assets/showcase/tomato-egg-clay/**
+      - apps/ios/Cook/Resources/tomato-egg-clay.json
+      - scripts/upload-showcase-assets.mjs
+      - .github/workflows/showcase-assets.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: showcase-assets
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-js
+      - run: node scripts/upload-showcase-assets.mjs
+        env:
+          COS_BUCKET: ${{ vars.COS_BUCKET || 'yunlefun-assets-prod-1325586649' }}
+          COS_REGION: ${{ vars.COS_REGION || 'ap-shanghai' }}
+          COS_SECRET_ID: ${{ secrets.COS_SECRET_ID }}
+          COS_SECRET_KEY: ${{ secrets.COS_SECRET_KEY }}
