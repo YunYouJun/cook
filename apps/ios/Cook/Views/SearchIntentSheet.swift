@@ -52,8 +52,10 @@ struct SearchIntentSheet: View {
                                 .accessibilityIdentifier("intent.cancelRequest")
                         }
                     }
-                    NavigationLink("AI 设置") { AISettingsView() }
-                        .accessibilityIdentifier("intent.settings")
+                    if ai.onlineAIEnabled {
+                        NavigationLink("AI 设置") { AISettingsView() }
+                            .accessibilityIdentifier("intent.settings")
+                    }
                 } header: { Text("这次想怎么做") } footer: {
                     Text("普通识别在本机完成。确认前不会修改当前选择；确认后合并条件，保留已有忌口和筛选。")
                 }

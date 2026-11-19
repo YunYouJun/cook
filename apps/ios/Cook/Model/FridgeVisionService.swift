@@ -98,7 +98,8 @@ struct FridgeVisionService: Sendable {
     static let productionURL = URL(string: "https://api.yunle.fun/cook-fridge-vision")!
     private static let maxResponseBytes = 8192
     static var configuredEndpoint: URL? {
-        guard let value = Bundle.main.object(forInfoDictionaryKey: "CookFridgeVisionServiceURL") as? String,
+        guard CookFeatures.onlineAIEnabled,
+              let value = Bundle.main.object(forInfoDictionaryKey: "CookFridgeVisionServiceURL") as? String,
               value == productionURL.absoluteString else { return nil }
         return productionURL
     }

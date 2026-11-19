@@ -38,6 +38,25 @@ final class CookAISettingsTests: XCTestCase {
         try action(defaults)
     }
 
+    func testReleaseDisableKeepsSavedKeyAndUsesLocalRecognition() throws {
+        try withDefaults { defaults in
+            defaults.set(CookAIProvider.ownDeepSeek.rawValue, forKey: CookAISettings.providerKey)
+            let vault = AIKeyVaultStub()
+            vault.key = testKey
+            let settings = CookAISettings(defaults: defaults, vault: vault,
+                                          managedService: ManagedCookAIService(endpoint: nil), onlineAIEnabled: false)
+
+            XCTAssertEqual(settings.provider, .local)
+            XCTAssertFalse(settings.canUseRemote)
+            XCTAssertFalse(settings.selectProvider(.ownDeepSeek))
+            XCTAssertFalse(settings.saveAPIKey("sk-replacement-test-key"))
+            XCTAssertThrowsError(try settings.apiKeyForRequest())
+            XCTAssertEqual(vault.reads, 0)
+            XCTAssertEqual(vault.key, testKey)
+            XCTAssertEqual(defaults.string(forKey: CookAISettings.providerKey), CookAIProvider.ownDeepSeek.rawValue)
+        }
+    }
+
     func testOrdinaryUsersCanConfigureOwnKeyWithoutAccountAndDefaultIsLocal() throws {
         try withDefaults { defaults in
             let vault = AIKeyVaultStub()

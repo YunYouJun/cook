@@ -111,6 +111,7 @@ final class MemoryCookAIKeyVault: CookAIKeyVault {
 @MainActor @Observable
 final class CookAISettings {
     static let providerKey = "cook.ai.provider"
+    let onlineAIEnabled: Bool
     private(set) var provider: CookAIProvider = .local
     private(set) var hasAPIKey = false
     private(set) var message: String?
@@ -129,11 +130,15 @@ final class CookAISettings {
     @ObservationIgnored private var expiryTask: Task<Void, Never>?
 
     init(defaults: UserDefaults? = .standard, vault: CookAIKeyVault? = nil,
-         managedService: ManagedCookAIServing = ManagedCookAIService(), now: @escaping () -> Date = Date.init) {
+         managedService: ManagedCookAIServing = ManagedCookAIService(), now: @escaping () -> Date = Date.init,
+         onlineAIEnabled: Bool = CookFeatures.onlineAIEnabled) {
+        self.onlineAIEnabled = onlineAIEnabled
         self.defaults = defaults
         self.vault = vault ?? KeychainCookAIKeyVault()
         self.managedService = managedService
         self.now = now
+        requestedProvider = .local
+        guard onlineAIEnabled else { return }
         let saved = defaults?.string(forKey: Self.providerKey).flatMap(CookAIProvider.init(rawValue:)) ?? .local
         requestedProvider = saved
         managedStatus = managedService.isConfigured ? .loginRequired : .unconfigured
@@ -147,7 +152,7 @@ final class CookAISettings {
     }
 
     var canUseOwnDeepSeek: Bool { provider == .ownDeepSeek && hasAPIKey }
-    var isManagedConfigured: Bool { managedService.isConfigured }
+    var isManagedConfigured: Bool { onlineAIEnabled && managedService.isConfigured }
     var wantsManagedDeepSeek: Bool { requestedProvider == .managedDeepSeek }
     var isManagedAvailable: Bool {
         managedStatus == .ready && managedValidUntil.map { $0 > now() } == true
@@ -158,6 +163,7 @@ final class CookAISettings {
 
     @discardableResult
     func selectProvider(_ next: CookAIProvider) -> Bool {
+        guard next == .local || onlineAIEnabled else { return false }
         guard next != .managedDeepSeek || isManagedAvailable else {
             message = managedStatus.message
             return false
@@ -176,6 +182,7 @@ final class CookAISettings {
 
     @discardableResult
     func saveAPIKey(_ value: String) -> Bool {
+        guard onlineAIEnabled else { return false }
         let key = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard Self.isValidKey(key) else {
             message = CookAISettingsError.invalidKey.localizedDescription
@@ -228,12 +235,12 @@ final class CookAISettings {
 
     /// A capability is short-lived and is discarded whenever the account lifecycle changes.
     func invalidateManagedCapability(accounts: YunlefunAccountStore) {
-        clearManagedCapability(status: !managedService.isConfigured ? .unconfigured : (accounts.account == nil ? .loginRequired : .needsRefresh))
+        clearManagedCapability(status: !isManagedConfigured ? .unconfigured : (accounts.account == nil ? .loginRequired : .needsRefresh))
     }
 
     func refreshManagedCapability(accounts: YunlefunAccountStore) async {
         clearManagedCapability(status: .checking)
-        guard managedService.isConfigured else { managedStatus = .unconfigured; return }
+        guard isManagedConfigured else { managedStatus = .unconfigured; return }
         guard let subject = accounts.account?.id else { managedStatus = .loginRequired; return }
         let revision = accounts.sessionRevision
         let generation = capabilityGeneration

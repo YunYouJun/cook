@@ -29,6 +29,8 @@ final class RecipeStore {
     @ObservationIgnored private let dataDirectory: URL?
     /// 仅 UI 测试用于稳定验证配图失败与恢复，不改变正常构建的图片地址。
     @ObservationIgnored private let textImageBaseOverride: URL?
+    /// 屏蔽已核出第三方平台水印的配图，正文与用量仍使用完整来源快照。
+    @ObservationIgnored private let hiddenTextImagePaths: Set<String>
     @ObservationIgnored private lazy var textLibrary: RecipeTextLibrary? = dataDirectory.flatMap { try? RecipeTextLibrary.load(from: $0) }
     @ObservationIgnored private lazy var dietaryResult: Result<DietaryCatalog, Error> = Result {
         guard let dataDirectory else { throw DietaryCatalogError.missingData }
@@ -58,10 +60,11 @@ final class RecipeStore {
     }
 
     init(data: CookData, dataDirectory: URL? = nil, catalog: PersonalCatalogStore = PersonalCatalogStore(),
-         textImageBaseOverride: URL? = nil) {
+         textImageBaseOverride: URL? = nil, hiddenTextImagePaths: Set<String> = []) {
         self.data = data
         self.dataDirectory = dataDirectory
         self.textImageBaseOverride = textImageBaseOverride
+        self.hiddenTextImagePaths = hiddenTextImagePaths
         recommender = Recommender(recipes: data.recipes, normalizer: data.normalizer)
         recipesById = Dictionary(data.recipes.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         recipeIdByName = Dictionary(data.recipes.map { ($0.name, $0.id) }, uniquingKeysWith: { first, _ in first })
@@ -83,9 +86,12 @@ final class RecipeStore {
         #else
             let imageBaseOverride: URL? = nil
         #endif
+        let hiddenData = bundle.url(forResource: "hidden-recipe-images", withExtension: "json")
+            .flatMap { try? Data(contentsOf: $0) }
+        let hiddenPaths = hiddenData.flatMap { try? JSONDecoder().decode(Set<String>.self, from: $0) } ?? []
         return RecipeStore(data: try CookData.load(from: url), dataDirectory: url,
                            catalog: PersonalCatalogStore(url: inMemory ? nil : PersonalCatalogStore.defaultURL),
-                           textImageBaseOverride: imageBaseOverride)
+                           textImageBaseOverride: imageBaseOverride, hiddenTextImagePaths: hiddenPaths)
     }
 
     /// 内置的图文做法正文（目前来自 HowToCook），没有时去原文网页看
@@ -97,17 +103,13 @@ final class RecipeStore {
         textLibrary?.source
     }
 
-    /// 图文做法配图的地址；没配置配图地址时为 nil
+    /// 配图可显示时返回下载地址。正文和用量核对仍使用完整来源快照。
     func textImageURL(_ src: String) -> URL? {
+        guard !hiddenTextImagePaths.contains(src) else { return nil }
         if let textImageBaseOverride {
             return URL(string: src, relativeTo: textImageBaseOverride)?.absoluteURL
         }
         return textLibrary?.imageURL(src)
-    }
-
-    /// 内置数据配了配图地址，正文里能显示图片
-    var showsTextImages: Bool {
-        textImageBaseOverride != nil || textLibrary?.imageBase != nil
     }
 
     var recipes: [Recipe] {

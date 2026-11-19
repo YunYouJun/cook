@@ -1,3 +1,4 @@
+import CookCore
 import SwiftData
 import XCTest
 @testable import Cook
@@ -111,6 +112,29 @@ final class FavoriteSaveTests: XCTestCase {
         let added = try context.importWebData(data, recipeIdByName: ["新菜": 1], validIds: [1, 9])
         XCTAssertEqual(added.favorites, 1)
         XCTAssertEqual(added.visits, 1)
+    }
+
+    func testHiddenRecipeImagesLeaveSourceAndAmountsIntact() throws {
+        let directory = try XCTUnwrap(Bundle.main.url(forResource: "CookData", withExtension: nil))
+        let data = try CookData.load(from: directory)
+        let unrestricted = RecipeStore(data: data, dataDirectory: directory)
+        let watermarked = "howtocook/1beadffd0179aea6.webp"
+        let visibleDeclared = "howtocook/fcab1b3841f8e0c7.webp"
+        let visibleUnwatermarked = "howtocook/ad77e0934f5592d6.webp"
+        let filtered = RecipeStore(data: data, dataDirectory: directory, hiddenTextImagePaths: [watermarked])
+        let recipe = try XCTUnwrap(filtered.recipesById[835])
+
+        XCTAssertNotNil(unrestricted.textImageURL(watermarked))
+        XCTAssertNil(filtered.textImageURL(watermarked))
+        XCTAssertNotNil(filtered.textImageURL(visibleDeclared))
+        XCTAssertNotNil(filtered.textImageURL(visibleUnwatermarked))
+        XCTAssertNotNil(filtered.text(for: recipe))
+        XCTAssertEqual(filtered.text(for: recipe), unrestricted.text(for: recipe))
+
+        let bundled = try RecipeStore.loadBundled(inMemory: true)
+        XCTAssertNil(bundled.textImageURL(watermarked))
+        XCTAssertNotNil(bundled.textImageURL(visibleDeclared))
+        XCTAssertNotNil(bundled.textImageURL(visibleUnwatermarked))
     }
 
     func testPrivacyPolicyIsIncludedInTheAppBundle() throws {
