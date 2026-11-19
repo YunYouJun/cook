@@ -33,12 +33,13 @@ metadata:
 
    ```bash
    pnpm feedback:pull   # 应用内反馈和筛选信号；没配置 .env 就跳过这一步
+   pnpm audit:loop --json > /tmp/loop-before.json
    pnpm validate --json > /tmp/recipe-validate.json
    gh issue list --label recipe-data --state open --json number,title,body
    gh issue list --label dead-video --state open --json number,body
    ```
 
-   读 `.cook/feedback/summary.md`。如果 `pnpm validate` 有错误，先修错误。
+   读 `.cook/feedback/summary.md` 和 `/tmp/loop-before.json`（含校验统计、fixtures 漂移、离线视频覆盖和搜索评测基线）。如果 `pnpm validate` 有错误，先修错误。
 
 3. **处理应用内反馈**（summary 里的「菜谱反馈」，按分数从高到低）
    - 视频或图文打不开：先按数据规范核实对应来源；未知状态不当作失效。替代来源也须满足收录准则，确认与同一菜品匹配。
@@ -61,7 +62,7 @@ metadata:
    pnpm eval:search --json > /tmp/eval-before.json
    ```
    - 「没有结果的食材组合」里，用户输入的词是已有食材的别名（如「羊排」之于「羊肉」）→ 在 `packages/data/aliases.json` 加别名。词典里根本没有的食材 → 写进「需要维护者决定」。
-   - 被频繁点开却排在 10 名以后的菜 → 可以调整 `recommend.ts` 的排序，但改动要小、要能解释，并同步改 iOS 的 `apps/ios/CookCore/Sources/CookCore/Recommender.swift`（CI 的 swift 任务会用共享用例检查两边是否一致）。
+   - 被频繁点开却排在 10 名以后的菜 → 可以调整 `recommend.ts` 的排序，但改动要小、要能解释，并同步改 iOS（`apps/ios/CookCore/Sources/CookCore/Recommender.swift`）和 Android（`apps/android/core/src/main/kotlin/cn/yunyoujun/cook/core/recommend/Recommender.kt`）；三端对齐细则见 `skills/cross-platform-sync/SKILL.md`（CI 会用共享用例检查三端是否一致）。
    - 改完再跑一次，对比前后：
 
    ```bash
@@ -75,10 +76,11 @@ metadata:
    ```bash
    pnpm validate --base origin/main
    pnpm fixtures
+   pnpm audit:loop --check --json > /tmp/loop-after.json
    pnpm test -- --run
    ```
 
-   `test/recommendations.test.ts` 里的数量断言会随数据变化。只有当变化是你的修改直接造成的，才更新这些数字，并在 PR 描述中说明。其他测试失败就停下，不要提交。`pnpm fixtures` 会重新生成 Web 和 iOS 共用的用例 `packages/data/fixtures/*.json`，一起提交。
+   `test/recommendations.test.ts` 里的数量断言会随数据变化。只有当变化是你的修改直接造成的，才更新这些数字，并在 PR 描述中说明。其他测试失败就停下，不要提交。`pnpm fixtures` 会重新生成 Web / iOS / Android 共用的用例 `packages/data/fixtures/*.json`，一起提交；对比 `/tmp/loop-before.json` 与 `/tmp/loop-after.json` 把指标变化写进 PR 描述的「统计」部分。
 
 8. **提交并开 PR**
    ```bash

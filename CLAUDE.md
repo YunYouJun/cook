@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Cook (食用手册) is a Chinese recipe web/mobile app for finding recipes based on available ingredients. Web uses Nuxt 4 (Vue 3, CSR-only) and Ionic UI; native iOS uses SwiftUI. The Capacitor shells have been retired; native Android is planned with Kotlin and Jetpack Compose. The UI and content are in Chinese.
+Cook (食用手册) is a Chinese recipe web/mobile app for finding recipes based on available ingredients. Web uses Nuxt 4 (Vue 3, CSR-only) and Ionic UI; native iOS uses SwiftUI (`apps/ios`); native Android uses Kotlin and Jetpack Compose (`apps/android`). The Capacitor shells have been retired. The UI and content are in Chinese.
 
 ## Common Commands
 
@@ -12,12 +12,14 @@ Cook (食用手册) is a Chinese recipe web/mobile app for finding recipes based
 pnpm install              # Install deps (auto-runs nuxt prepare via postinstall)
 pnpm convert              # Convert CSV recipe data → JSON (required before first run)
 pnpm validate             # Validate recipe.csv (ids, ingredient/tool dictionary, values, video ids)
+pnpm audit:loop           # Unified measurable health report (validation, fixture drift, videos, search eval, next actions)
 pnpm feedback:pull        # Pull in-app feedback + search signals from CloudBase (needs .env)
 pnpm eval:search          # Evaluate recommendation ranking against real search signals
 pnpm howtocook <dir>      # Regenerate packages/data/recipe-text.json (in-app text recipes) and .cache/recipe-images from a HowToCook checkout
 pnpm images:upload        # Upload text-recipe images to Tencent COS (needs COS_* env; CI does this on main)
 pnpm check:videos         # Offline video-id checks and coverage report; opt-in small online checks: docs/dev/data.md
-pnpm fixtures             # Regenerate shared Web/iOS fixtures: recommend, search, incompatible (after data, alias, ranking or search changes)
+pnpm fixtures             # Regenerate shared Web/iOS/Android fixtures: recommend, search, incompatible (after data, alias, ranking or search changes)
+pnpm pack:skill           # Package skills/cook/ (with bundled data) into skills/cook.zip
 pnpm dev                  # Dev server on http://localhost:3333
 pnpm lint                 # ESLint check (uses @antfu/eslint-config flat config)
 pnpm lint --fix           # Auto-fix lint issues
@@ -34,6 +36,16 @@ pnpm convert
 xcodegen generate --spec apps/ios/project.yml
 open apps/ios/Cook.xcodeproj
 swift test --package-path apps/ios/CookCore
+(cd apps/android && ./gradlew :core:test :app:testDebugUnitTest --no-daemon)
+```
+
+### Agent CLI & MCP Server
+
+```bash
+pnpm --filter @yunyoujun/cook search --query "冰箱里有番茄和鸡蛋，不要辣" --json
+pnpm --filter @yunyoujun/cook cook shelf-life 西红柿 鸡蛋 --json
+pnpm --filter @yunyoujun/cook cook incompatible 牛奶 韭菜 --json
+pnpm --filter @yunyoujun/cook cook mcp    # Start zero-dependency stdio MCP server
 ```
 
 ## Architecture
@@ -46,12 +58,14 @@ Project decisions are recorded in `docs/decisions/` — read the relevant one be
 
 ### Monorepo Structure (pnpm workspaces)
 
-Layout follows `docs/decisions/0003-native-ios-monorepo.md` and `0016-native-android-and-capacitor-retirement.md`; plans are in `docs/dev/ios-roadmap.md` and `docs/dev/android-roadmap.md`. Android has no project yet; create it under `apps/android` when implementation starts.
+Layout follows `docs/decisions/0003-native-ios-monorepo.md` and `docs/decisions/0016-native-android-and-capacitor-retirement.md`; plans are in `docs/dev/ios-roadmap.md` and `docs/dev/android-roadmap.md`.
 
-- **apps/ios/CookCore** — Swift Package porting the recommend/search/incompatible logic for the native iOS app; `swift test --package-path apps/ios/CookCore` (after `pnpm convert`) runs the shared fixtures. Change TS and Swift logic together
+- **apps/ios/CookCore** — Swift Package porting the recommend/search/incompatible/query/dietary logic for the native iOS app; `swift test --package-path apps/ios/CookCore` (after `pnpm convert`) runs the shared fixtures.
+- **apps/android/core** — Kotlin core module mirroring the same shared contracts for native Android; `(cd apps/android && ./gradlew :core:test --no-daemon)` verifies shared fixtures. Change TS, Swift, and Kotlin core logic together (see `skills/cross-platform-sync/SKILL.md`).
 - **apps/web** — Nuxt app (main application). Root scripts (`pnpm dev`, `pnpm build`, `pnpm typecheck`) proxy to it; `pnpm build` copies `apps/web/dist` to the root `dist/` that deploy targets read. Keep Ionic UI and routing; the unused native CLIs from `@nuxtjs/ionic` are excluded with version-scoped pnpm overrides
-- **packages/data** — Data shared by Web and iOS: recipe CSV sources and the JSON generated from them (imported in the web app as `@cook/data/*`), the food dictionary (`food.json`), pantry defaults (`pantry.json`), ingredient aliases (`aliases.json`), sentence-input word lists (`query.json`), typical fridge shelf life per ingredient for the iOS fridge (`shelf-life.json`), text recipe bodies the iOS app shows offline (`recipe-text.json`, from `pnpm howtocook`), shared fixtures (`fixtures/*.json`, regenerate with `pnpm fixtures`; `fixtures/query.json` is hand-written), and JSON Schemas (`schema/`). `recipe-meta.json` carries `schemaVersion` (bump `DATA_SCHEMA_VERSION` in `packages/cook/src/utils/config.ts` and CookCore together on breaking shape changes) and `dataVersion` (content hash)
-- **packages/cook** — Types, recommendation/search logic (the TS core the iOS CookCore mirrors), and the CLI (`convert`, `fetch`)
+- **packages/data** — Data shared by Web, iOS, and Android: recipe CSV sources and the JSON generated from them (imported in the web app as `@cook/data/*`), the food dictionary (`food.json`), pantry defaults (`pantry.json`), ingredient aliases (`aliases.json`), sentence-input word lists (`query.json`), typical fridge shelf life per ingredient (`shelf-life.json`), text recipe bodies (`recipe-text.json`, from `pnpm howtocook`), shared fixtures (`fixtures/*.json`, regenerate with `pnpm fixtures`; `fixtures/query.json` is hand-written), and JSON Schemas (`schema/`). `recipe-meta.json` carries `schemaVersion` (bump `DATA_SCHEMA_VERSION` in `packages/cook/src/utils/config.ts`, iOS `CookCore`, and Android `core` together on breaking shape changes) and `dataVersion` (content hash)
+- **packages/cook** — Types, recommendation/search/shelf-life logic (the TS core that iOS `CookCore` and Android `core` mirror), and the CLI + Stdio MCP Server (`convert`, `fetch`, `search`, `shelf-life`, `incompatible`, `mcp`; bundles runtime data under `dist/data` on build)
+- **skills** — Reusable Agent Skills: `cook` (user-facing recipe assistant & MCP/CLI guide), `recipe-data-review` (measurable data review loop), `recipe-sourcing` (recipe sourcing workflow), `cross-platform-sync` (Web/iOS/Android core sync checklist), and `community-digest` (release notes & community draft helper)
 - **docs** — VitePress documentation site
 - **scripts** — Build/utility scripts
 - **Root** — Workspace tooling, tests (`test/`) and `cloudfunctions/`; no legacy native shells

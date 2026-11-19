@@ -19,6 +19,7 @@
     "dietary:validate": "tsx scripts/validate-dietary.ts",
     "amounts:annotate": "tsx scripts/annotate-recipe-amounts.ts",
     "audit:amounts": "tsx scripts/audit-recipe-amounts.ts",
+    "audit:loop": "tsx scripts/loop-report.ts",
     "check:videos": "tsx scripts/check-video-links.ts",
     "feedback:pull": "tsx scripts/pull-feedback.ts",
     "eval:search": "tsx scripts/eval-search.ts",
