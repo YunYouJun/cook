@@ -171,6 +171,13 @@ async function handleSignOut(): Promise<void> {
       </ion-list>
 
       <ion-list :inset="true">
+        <ion-item :href="links.iosBetaGuide" target="_blank" rel="noopener noreferrer" :detail="true" :detail-icon="ioniconsOpenOutline">
+          <CookListIcon slot="start" :icon="ioniconsPhonePortraitOutline" color="#007aff" />
+          <ion-label>
+            <h2>iOS App 体验测试</h2>
+            <p>iPhone / iPad · TestFlight 安装指南</p>
+          </ion-label>
+        </ion-item>
         <ion-item router-link="/changelog">
           <CookListIcon slot="start" :icon="ioniconsDocumentTextOutline" color="#af52de" />
           <ion-label>更新日志</ion-label>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useIonRouter } from '@ionic/vue'
 import { getPrimaryNavigation, normalizeNavigationPath } from '~/config'
+import { links } from '~/constants/links'
 
 const collapsed = defineModel<boolean>('collapsed', { default: false })
 const router = useRouter()
@@ -69,6 +70,17 @@ function navigate(event: MouseEvent, href: string) {
     </nav>
 
     <div class="desktop-sidebar-footer">
+      <a
+        class="desktop-sidebar-item"
+        :href="links.iosBetaGuide"
+        target="_blank"
+        rel="noopener noreferrer"
+        :title="collapsed ? 'iOS App 体验测试' : undefined"
+        :aria-label="collapsed ? 'iOS App 体验测试' : undefined"
+      >
+        <ion-icon class="desktop-sidebar-icon" :icon="ioniconsPhonePortraitOutline" aria-hidden="true" />
+        <span class="desktop-sidebar-label">iOS App 体验测试</span>
+      </a>
       <a class="desktop-sidebar-item" href="/settings" :title="collapsed ? '设置' : undefined" :aria-label="collapsed ? '设置' : undefined" :aria-current="path === '/settings' ? 'page' : undefined" @click="navigate($event, '/settings')">
         <ion-icon class="desktop-sidebar-icon" :icon="path === '/settings' ? ioniconsSettings : ioniconsSettingsOutline" aria-hidden="true" />
         <span class="desktop-sidebar-label">设置</span>
