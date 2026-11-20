@@ -15,6 +15,7 @@ final class RandomRecipeUITests: XCTestCase {
         openRandom(in: app)
         let card = decidedRecipe(in: app)
         wait(card, "value == '第 1 道，共 1 道'")
+        let initialHeight = card.frame.height
         let previous = card.label
         card.swipeRight()
         XCTAssertEqual(card.value as? String, "第 1 道，共 1 道")
@@ -23,6 +24,7 @@ final class RandomRecipeUITests: XCTestCase {
         again.tap()
         wait(app.buttons["cook.decide.open"], "isEnabled == true AND isHittable == true")
         wait(card, "value == '第 2 道，共 2 道'")
+        XCTAssertEqual(card.frame.height, initialHeight, accuracy: 1.0)
         let second = card.label
         XCTAssertNotEqual(second, previous)
 
@@ -34,6 +36,7 @@ final class RandomRecipeUITests: XCTestCase {
         XCTAssertEqual(card.label, second)
         card.swipeLeft()
         wait(card, "value == '第 3 道，共 3 道'")
+        XCTAssertEqual(card.frame.height, initialHeight, accuracy: 1.0)
         XCTAssertNotEqual(card.label, second)
         capture(app, "library-random-motion-result")
 
@@ -101,9 +104,7 @@ final class RandomRecipeUITests: XCTestCase {
         wait(app.staticTexts["cook.decide.context"], "label CONTAINS '减少添加糖'")
         XCTAssertTrue(app.buttons["cook.decide.open"].isHittable, "Large-text actions must stay reachable")
         capture(app, "library-random-largest-text")
-        app.confirmDecidedRecipe()
-        wait(favoriteButton(in: app), "isHittable == true")
-        XCTAssertTrue(app.buttons["dietary.openReviewedRecipe"].exists)
+        app.confirmDecidedRecipe(detailAction: "dietary.openReviewedRecipe")
 
         if app.windows.firstMatch.horizontalSizeClass != .regular {
             app.navigationBars.buttons.element(boundBy: 0).tap()

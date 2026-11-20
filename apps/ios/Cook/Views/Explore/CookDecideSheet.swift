@@ -82,13 +82,23 @@ private struct CookDecideSheetModifier: ViewModifier {
     }
 }
 
-/// 按当前候选快照选一道菜。先换牌，确认后再进入既有详情。
+private struct DecidePage: Identifiable, Hashable {
+    let id: UUID
+    let recipe: Recipe
+
+    init(id: UUID = UUID(), recipe: Recipe) {
+        self.id = id
+        self.recipe = recipe
+    }
+}
+
+/// 按当前候选快照选一道菜。使用原生横向分页浏览，确认后再进入既有详情。
 private struct CookDecideSheet: View {
     // SwiftUI measures the fraction against the maximum detent, not the entire screen.
     private static let compactDetent = PresentationDetent.fraction(0.71)
-    private static let compactCardMinHeight: CGFloat = 204
     // Native large button styles add vertical padding around the label.
     private static let actionLabelMinHeight: CGFloat = 24
+    private static let trailingBufferCount = 2
 
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
@@ -96,35 +106,43 @@ private struct CookDecideSheet: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.scenePhase) private var scenePhase
-    @ScaledMetric(relativeTo: .largeTitle) private var dieSize: CGFloat = 48
+    @ScaledMetric(relativeTo: .largeTitle) private var dieSize: CGFloat = 28
     @ScaledMetric(relativeTo: .largeTitle) private var thumbnailSize: CGFloat = 64
 
     let request: CookDecideRequest
     @Binding var lastDecidedID: Int?
     let onOpen: (RecipeRoute) -> Void
 
-    @State private var pages = DecidePages()
     @State private var activePool: [Recipe] = []
-    @State private var rollingRecipe: Recipe?
-    @State private var shuffling = false
-    @State private var spin = 0
+    @State private var deck: [DecidePage] = []
+    @State private var revealedCount = 0
+    @State private var selectedPageID: UUID?
+    @State private var deckGeneration = 0
     @State private var settledCount = 0
-    @State private var rollToken = 0
     @State private var showingFilters = false
     @State private var detent = CookDecideSheet.compactDetent
-    @State private var pageDirection = DecidePageDirection.next
-    @State private var dragDistance: CGFloat = 0
 
-    private var displayed: Recipe? { rollingRecipe ?? pages.current }
-    private var canReroll: Bool { activePool.count > 1 }
-
-    private var isCompact: Bool {
-        !dynamicTypeSize.isAccessibilitySize && detent == Self.compactDetent
+    private var currentIndex: Int? {
+        selectedPageID.flatMap { id in deck.firstIndex { $0.id == id } }
     }
 
-    private struct RollTaskID: Hashable {
-        let pool: [Recipe]
-        let revision: Int
+    private var currentRecipe: Recipe? {
+        currentIndex.map { deck[$0].recipe }
+    }
+
+    private var pageNumber: Int {
+        currentIndex.map { $0 + 1 } ?? 0
+    }
+
+    private var pageTotal: Int {
+        max(revealedCount, pageNumber)
+    }
+
+    private var canReroll: Bool { activePool.count > 1 }
+    private var hasPrevious: Bool { (currentIndex ?? 0) > 0 }
+    private var hasNext: Bool {
+        guard let idx = currentIndex else { return false }
+        return idx + 1 < pageTotal
     }
 
     var body: some View {
@@ -133,9 +151,37 @@ private struct CookDecideSheet: View {
         let lines = CookDiscoverySummary.lines(session: session, store: store, ignoringKeyword: request.ignoringKeyword)
         let context = lines.isEmpty ? CookDiscoverySummary.idlePrompt(session: session) : lines.joined(separator: " · ")
         NavigationStack {
-            VStack(spacing: 14) {
-                results(snapshot, context: context, hasCandidates: !pool.isEmpty)
-                if !pool.isEmpty {
+            VStack(spacing: 0) {
+                if pool.isEmpty {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            contextText(context)
+                            emptyState
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                        .frame(maxWidth: 560)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                } else {
+                    VStack(spacing: 12) {
+                        contextText(context)
+                            .padding(.horizontal, 20)
+                            .layoutPriority(1)
+                        stageHeader
+                            .padding(.horizontal, 20)
+                            .layoutPriority(1)
+                        cardPager(snapshot: snapshot)
+                            .frame(
+                                minHeight: 196,
+                                maxHeight: dynamicTypeSize.isAccessibilitySize ? .infinity : 320
+                            )
+                    }
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
+                    .frame(maxWidth: 560)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
                     actions(canReroll: pool.count > 1)
                 }
             }
@@ -169,35 +215,27 @@ private struct CookDecideSheet: View {
         .presentationDragIndicator(.visible)
         .presentationBackground(Color(uiColor: .systemGroupedBackground))
         .sheet(isPresented: $showingFilters) { FilterSheet() }
-        .task(id: RollTaskID(pool: pool, revision: rollToken)) { await roll(in: pool) }
+        .onChange(of: pool, initial: true) { _, updated in
+            syncPool(updated)
+        }
+        .onChange(of: selectedPageID) { oldID, newID in
+            handlePageSelectionChange(from: oldID, to: newID)
+        }
         .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
             guard scenePhase == .active else { return }
             requestReroll()
         }
-        .sensoryFeedback(.success, trigger: settledCount)
+        .sensoryFeedback(.selection, trigger: settledCount)
     }
 
-    private func results(_ snapshot: CookCandidateSnapshot, context: String, hasCandidates: Bool) -> some View {
-        let fillsViewport = isCompact && hasCandidates
-        let topPadding: CGFloat = 8
-        return GeometryReader { viewport in
-            ScrollView {
-                DecideResultsLayout(minimumHeight: fillsViewport ? max(0, viewport.size.height - topPadding) : 0) {
-                    Text(context)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(isCompact ? 2 : nil)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier("cook.decide.context")
-                    if hasCandidates { stage(snapshot) } else { emptyState }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, topPadding)
-                .frame(maxWidth: 560)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .accessibilityIdentifier("cook.decide.sheet")
-        }
+    private func contextText(_ context: String) -> some View {
+        Text(context)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .lineLimit(2)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityIdentifier("cook.decide.context")
     }
 
     private var emptyState: some View {
@@ -219,112 +257,112 @@ private struct CookDecideSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func stage(_ snapshot: CookCandidateSnapshot) -> some View {
-        VStack(spacing: 14) {
-            if !dynamicTypeSize.isAccessibilitySize {
-                if isCompact {
-                    HStack(spacing: 8) {
-                        die
-                        stageTitle
-                    }
-                    .frame(maxWidth: .infinity)
-                    .overlay(alignment: .trailing) { pageIndicator }
-                } else {
-                    stageTitle
-                        .frame(maxWidth: .infinity)
-                        .overlay(alignment: .trailing) { pageIndicator }
-                    die
-                }
-            } else {
-                pageIndicator.frame(maxWidth: .infinity, alignment: .trailing)
+    @ViewBuilder
+    private var stageHeader: some View {
+        if !dynamicTypeSize.isAccessibilitySize {
+            HStack(spacing: 8) {
+                die
+                Text("就做这道")
+                    .font(.headline)
+                    .accessibilityHidden(true)
+                Spacer(minLength: 8)
+                pageIndicator
             }
-            ZStack {
-                if let recipe = displayed, resolvedPool(snapshot).contains(where: { $0.id == recipe.id }) {
-                    recipeCard(recipe, snapshot: snapshot)
-                        .id(recipe.id)
-                        .transition(cardTransition)
-                }
-            }
-            .rotationEffect(.degrees(Double(dragOffset) / 22))
-            .offset(x: dragOffset)
-            .frame(maxWidth: .infinity, minHeight: isCompact ? Self.compactCardMinHeight : 220)
-            .background {
-                if !reduceMotion, !dynamicTypeSize.isAccessibilitySize {
-                    DecideDeck(shuffling: shuffling)
-                }
-            }
-            .overlay {
-                DecideCardPan(isEnabled: !shuffling && pages.current != nil && !showingFilters) { distance in
-                    if !reduceMotion { dragDistance = distance }
-                } onFinish: { direction in
-                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { dragDistance = 0 }
-                    if let direction { turnPage(direction) }
-                }
-                .accessibilityHidden(true)
-            }
-            .padding(.top, reduceMotion ? 0 : 8)
-            .padding(.bottom, isCompact ? 4 : (reduceMotion ? 0 : 8))
+        } else {
+            pageIndicator
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
     }
 
     @ViewBuilder
     private var pageIndicator: some View {
-        if !pages.isEmpty {
-            Text("\(pages.number) / \(pages.count)")
-                .font(.caption2.monospacedDigit())
+        if pageTotal > 0 {
+            Text("\(pageNumber) / \(pageTotal)")
+                .font(.footnote.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
         }
     }
 
-    private var dragOffset: CGFloat {
-        guard !reduceMotion, !shuffling else { return 0 }
-        let canMove = dragDistance > 0 ? pages.hasPrevious : pages.hasNext || canReroll
-        let travel = dragDistance * (canMove ? 0.74 : 0.2)
-        return min(116, max(-116, travel))
-    }
-
-    private var stageTitle: some View {
-        Text(shuffling ? "正在挑一道菜" : "就做这道")
-            .font(.headline)
-            .accessibilityHidden(true)
-    }
-
     private var die: some View {
-        let symbol = reduceMotion || !shuffling ? "dice.fill" : "die.face.\((abs(spin) % 6) + 1)"
-        return Group {
+        Group {
             if reduceMotion {
                 Image(systemName: "dice.fill")
             } else {
-                Image(systemName: symbol)
-                    .contentTransition(.symbolEffect(.replace))
+                Image(systemName: "dice.fill")
                     .symbolEffect(.bounce, value: settledCount)
             }
         }
-        .font(.system(size: isCompact ? dieSize * 2 / 3 : dieSize))
+        .font(.system(size: dieSize))
         .foregroundStyle(Color.accentColor)
-        .frame(minWidth: 44, minHeight: 44)
+        .frame(minWidth: 32, minHeight: 32)
         .accessibilityHidden(true)
     }
 
-    private var cardTransition: AnyTransition {
-        if reduceMotion { return .opacity }
-        let identity = DecideCardMotion(offset: 0, angle: 0, opacity: 1, scale: 1)
-        let direction: CGFloat = pageDirection == .next ? 1 : -1
-        let insertion = AnyTransition.modifier(
-            active: DecideCardMotion(offset: 46 * direction, angle: 8 * Double(direction), opacity: 0, scale: 0.92),
-            identity: identity
-        )
-        let removal = AnyTransition.modifier(
-            active: DecideCardMotion(offset: -40 * direction, angle: -7 * Double(direction), opacity: 0, scale: 1.04),
-            identity: identity
-        )
-        return .asymmetric(insertion: insertion, removal: removal)
+    @ViewBuilder
+    private func cardPager(snapshot: CookCandidateSnapshot) -> some View {
+        let reduceMotion = self.reduceMotion
+        if deck.isEmpty {
+            Color.clear
+        } else {
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 12) {
+                    ForEach(deck) { page in
+                        recipeCard(page.recipe, snapshot: snapshot, isCurrent: page.id == selectedPageID)
+                            .containerRelativeFrame(.horizontal)
+                            .id(page.id)
+                            .scrollTransition(.interactive, axis: .horizontal) { content, phase in
+                                let resting = reduceMotion || phase.isIdentity
+                                return content
+                                    .scaleEffect(resting ? 1 : 0.96)
+                                    .opacity(resting ? 1 : 0.86)
+                            }
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .id(deckGeneration)
+            .scrollIndicators(.hidden)
+            .decideCardPagingBehavior()
+            .scrollPosition(id: $selectedPageID)
+            .contentMargins(.horizontal, 20, for: .scrollContent)
+        }
     }
 
-    private func recipeCard(_ recipe: Recipe, snapshot: CookCandidateSnapshot) -> some View {
+    private func recipeCard(_ recipe: Recipe, snapshot: CookCandidateSnapshot, isCurrent: Bool) -> some View {
         let match = snapshot.matchesByID[recipe.id]
-        return VStack(spacing: 10) {
+        return ViewThatFits(in: .vertical) {
+            cardBody(recipe, match: match)
+                .padding(20)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            ScrollView(.vertical) {
+                cardBody(recipe, match: match)
+                    .padding(20)
+                    .frame(maxWidth: .infinity)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(.quaternary, lineWidth: 1)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isStaticText)
+        .accessibilityLabel(isCurrent ? accessibilitySummary(recipe, match: match) : "")
+        .accessibilityValue(isCurrent ? "第 \(pageNumber) 道，共 \(pageTotal) 道" : "")
+        .accessibilityActions {
+            if isCurrent, hasPrevious { Button("上一道") { turnPage(.previous) } }
+            if isCurrent, hasNext || canReroll { Button("下一道") { turnPage(.next) } }
+        }
+        .accessibilityIdentifier(isCurrent ? "cook.decide.recipe" : "cook.decide.recipe.inactive")
+        .accessibilityHidden(!isCurrent)
+    }
+
+    private func cardBody(_ recipe: Recipe, match: RecipeMatch?) -> some View {
+        VStack(spacing: 10) {
             if !dynamicTypeSize.isAccessibilitySize {
                 Text(store.thumbnail(for: recipe))
                     .font(.system(size: thumbnailSize))
@@ -367,22 +405,6 @@ private struct CookDecideSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, minHeight: isCompact ? Self.compactCardMinHeight : nil)
-        .background(.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(.quaternary, lineWidth: 1)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityAddTraits(.isStaticText)
-        .accessibilityLabel(shuffling ? "正在挑选" : accessibilitySummary(recipe, match: match))
-        .accessibilityValue(shuffling ? "" : "第 \(pages.number) 道，共 \(pages.count) 道")
-        .accessibilityActions {
-            if !shuffling, pages.hasPrevious { Button("上一道") { turnPage(.previous) } }
-            if !shuffling, pages.hasNext || canReroll { Button("下一道") { turnPage(.next) } }
-        }
-        .accessibilityIdentifier("cook.decide.recipe")
     }
 
     private func actions(canReroll: Bool) -> some View {
@@ -412,7 +434,7 @@ private struct CookDecideSheet: View {
                 .frame(maxWidth: .infinity, minHeight: Self.actionLabelMinHeight)
         }
         .prominentButtonStyle()
-        .disabled(displayed == nil || shuffling)
+        .disabled(currentRecipe == nil)
         .accessibilityHint("打开这道菜的做法")
         .accessibilityIdentifier("cook.decide.open")
     }
@@ -424,7 +446,7 @@ private struct CookDecideSheet: View {
                 .frame(maxWidth: .infinity, minHeight: Self.actionLabelMinHeight)
         }
         .buttonStyle(.bordered)
-        .disabled(!enabled || shuffling)
+        .disabled(!enabled)
         .accessibilityHint("按当前条件再选一道")
         .accessibilityIdentifier("cook.decide.again")
     }
@@ -448,90 +470,159 @@ private struct CookDecideSheet: View {
     }
 
     private func confirm() {
-        guard let displayed, !shuffling else { return }
+        guard let currentRecipe else { return }
         let current = session.candidateSnapshot(in: store, ignoringKeyword: request.ignoringKeyword)
-        guard let recipe = resolvedPool(current).first(where: { $0.id == displayed.id }) else {
-            rollToken += 1
+        guard let recipe = resolvedPool(current).first(where: { $0.id == currentRecipe.id }) else {
+            syncPool(resolvedPool(current))
             return
         }
         onOpen(RecipeRoute(recipe: recipe, match: current.matchesByID[recipe.id], dietaryGoal: session.dietaryGoal))
     }
 
-    private func requestReroll() {
-        guard !shuffling, !showingFilters, canReroll, pages.current != nil else { return }
-        pageDirection = .next
-        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.22)) { shuffling = true }
-        rollToken += 1
-    }
-
-    private func turnPage(_ direction: DecidePageDirection) {
-        guard !shuffling, !showingFilters, pages.current != nil else { return }
-        if direction == .next, !pages.hasNext {
-            requestReroll()
-            return
-        }
-        guard direction == .next || pages.hasPrevious else { return }
-        pageDirection = direction
-        withAnimation(reduceMotion ? .easeOut(duration: 0.12) : .snappy(duration: 0.28)) {
-            pages.move(direction)
-        }
-        if let recipe = pages.current {
-            AccessibilityNotification.Announcement("\(recipe.name)，第 \(pages.number) 道，共 \(pages.count) 道").post()
-        }
-    }
-
-    private func roll(in pool: [Recipe]) async {
-        guard !Task.isCancelled else { return }
-        if pool != activePool {
-            // A new candidate pool starts a fresh deck; earlier pages may no longer match.
-            activePool = pool
-            pages = DecidePages()
-            rollingRecipe = nil
-            shuffling = false
-        }
-        pageDirection = .next
-        let previousID = pages.current?.id ?? lastDecidedID
-        let previousName = pages.current?.name ?? pool.first { $0.id == previousID }?.name
-        let alternatives = pool.filter { $0.name != previousName }
-        guard let landing = store.randomRecipe(from: alternatives.isEmpty ? pool : alternatives, excluding: previousID) else {
-            shuffling = false
-            rollingRecipe = nil
+    private func syncPool(_ updated: [Recipe]) {
+        if updated.isEmpty {
+            activePool = []
+            deck = []
+            revealedCount = 0
+            selectedPageID = nil
+            deckGeneration += 1
             AccessibilityNotification.Announcement("这次还没找到合适的菜").post()
             return
         }
-        if pages.isEmpty || reduceMotion || pool.count < 2 {
-            settle(landing, animation: reduceMotion ? .easeOut(duration: 0.12) : .spring(response: 0.42, dampingFraction: 0.72))
+        if updated == activePool && !deck.isEmpty {
             return
         }
 
-        shuffling = true
-        try? await Task.sleep(for: .milliseconds(160))
-        if Task.isCancelled { return }
-        let reel = CookDiscovery.decideReel(in: pool, landing: landing)
-        for (index, recipe) in reel.enumerated() {
-            if Task.isCancelled { return }
-            if index == reel.count - 1 {
-                settle(landing, animation: .spring(response: 0.46, dampingFraction: 0.68))
-                return
+        activePool = updated
+        let previousName = lastDecidedID.flatMap { id in updated.first { $0.id == id }?.name }
+        guard let first = nextRandomRecipe(
+            in: updated,
+            excludingID: lastDecidedID,
+            excludingNames: previousName.map { [$0] } ?? []
+        ) else {
+            deck = []
+            revealedCount = 0
+            selectedPageID = nil
+            deckGeneration += 1
+            return
+        }
+
+        let firstPage = DecidePage(recipe: first)
+        var initialDeck = [firstPage]
+        if updated.count > 1 {
+            appendTrailingPages(to: &initialDeck, in: updated, targetCount: 1 + Self.trailingBufferCount)
+        }
+        deck = initialDeck
+        revealedCount = 1
+        selectedPageID = firstPage.id
+        deckGeneration += 1
+        lastDecidedID = first.id
+        settledCount += 1
+        AccessibilityNotification.Announcement("就做\(first.name)").post()
+    }
+
+    private func handlePageSelectionChange(from oldID: UUID?, to newID: UUID?) {
+        guard let oldID,
+              let newID,
+              oldID != newID,
+              deck.contains(where: { $0.id == oldID }),
+              let newIndex = deck.firstIndex(where: { $0.id == newID }) else {
+            return
+        }
+
+        if newIndex >= revealedCount {
+            revealedCount = newIndex + 1
+            if canReroll {
+                ensureTrailingBuffer(in: activePool)
             }
-            withAnimation(.snappy(duration: 0.16)) {
-                rollingRecipe = recipe
-                spin += 1
+        }
+        let recipe = deck[newIndex].recipe
+        lastDecidedID = recipe.id
+        settledCount += 1
+        let total = max(revealedCount, newIndex + 1)
+        AccessibilityNotification.Announcement("\(recipe.name)，第 \(newIndex + 1) 道，共 \(total) 道").post()
+    }
+
+    private func requestReroll() {
+        guard !showingFilters, canReroll, let currentIndex else { return }
+        let targetIndex = revealedCount
+        ensureTrailingBuffer(in: activePool, minimumCount: targetIndex + 1 + Self.trailingBufferCount)
+        guard deck.indices.contains(targetIndex) else { return }
+
+        if currentIndex < revealedCount - 1 {
+            let current = deck[currentIndex].recipe
+            let staged = deck[targetIndex].recipe
+            if staged.id == current.id || staged.name == current.name {
+                let lastRevealedName = deck[revealedCount - 1].recipe.name
+                if let replacement = nextRandomRecipe(
+                    in: activePool,
+                    excludingID: current.id,
+                    excludingNames: [current.name, lastRevealedName]
+                ) {
+                    deck[targetIndex] = DecidePage(id: deck[targetIndex].id, recipe: replacement)
+                }
             }
-            try? await Task.sleep(for: .milliseconds(110))
-            if Task.isCancelled { return }
+        }
+
+        scrollToPage(at: targetIndex)
+    }
+
+    private func turnPage(_ direction: DecidePageDirection) {
+        guard !showingFilters, let currentIndex else { return }
+        switch direction {
+        case .previous:
+            guard currentIndex > 0 else { return }
+            scrollToPage(at: currentIndex - 1)
+        case .next:
+            if hasNext {
+                scrollToPage(at: currentIndex + 1)
+            } else {
+                requestReroll()
+            }
         }
     }
 
-    private func settle(_ recipe: Recipe, animation: Animation) {
-        withAnimation(animation) {
-            pages.append(recipe)
-            rollingRecipe = nil
-            shuffling = false
+    private func scrollToPage(at index: Int) {
+        guard deck.indices.contains(index) else { return }
+        let targetID = deck[index].id
+        if reduceMotion {
+            selectedPageID = targetID
+        } else {
+            withAnimation(.smooth(duration: 0.32)) {
+                selectedPageID = targetID
+            }
         }
-        lastDecidedID = recipe.id
-        settledCount += 1
-        AccessibilityNotification.Announcement("就做\(recipe.name)").post()
+    }
+
+    private func ensureTrailingBuffer(in pool: [Recipe], minimumCount: Int? = nil) {
+        let targetCount = minimumCount ?? (revealedCount + Self.trailingBufferCount)
+        var nextDeck = deck
+        appendTrailingPages(to: &nextDeck, in: pool, targetCount: targetCount)
+        if nextDeck.count != deck.count {
+            deck = nextDeck
+        }
+    }
+
+    private func appendTrailingPages(to pages: inout [DecidePage], in pool: [Recipe], targetCount: Int) {
+        guard pool.count > 1 else { return }
+        while pages.count < targetCount {
+            let previous = pages.last?.recipe
+            guard let next = nextRandomRecipe(
+                in: pool,
+                excludingID: previous?.id,
+                excludingNames: previous.map { [$0.name] } ?? []
+            ) else { break }
+            pages.append(DecidePage(recipe: next))
+        }
+    }
+
+    private func nextRandomRecipe(
+        in pool: [Recipe],
+        excludingID: Int?,
+        excludingNames: Set<String>
+    ) -> Recipe? {
+        let alternatives = excludingNames.isEmpty ? pool : pool.filter { !excludingNames.contains($0.name) }
+        return store.randomRecipe(from: alternatives.isEmpty ? pool : alternatives, excluding: excludingID)
     }
 }
 
@@ -539,169 +630,13 @@ private enum DecidePageDirection {
     case previous, next
 }
 
-/// Owned by one sheet. The transient recipes shown while shuffling never become pages.
-private struct DecidePages {
-    private var recipes: [Recipe] = []
-    private var index = 0
-
-    var count: Int { recipes.count }
-    var isEmpty: Bool { recipes.isEmpty }
-    var number: Int { isEmpty ? 0 : index + 1 }
-    var current: Recipe? { isEmpty ? nil : recipes[index] }
-    var hasPrevious: Bool { index > 0 }
-    var hasNext: Bool { index + 1 < count }
-
-    mutating func append(_ recipe: Recipe) {
-        if recipes.last?.id != recipe.id { recipes.append(recipe) }
-        index = recipes.count - 1
-    }
-
-    mutating func move(_ direction: DecidePageDirection) {
-        switch direction {
-        case .previous where hasPrevious: index -= 1
-        case .next where hasNext: index += 1
-        default: break
+private extension View {
+    @ViewBuilder
+    func decideCardPagingBehavior() -> some View {
+        if #available(iOS 18.0, *) {
+            scrollTargetBehavior(.viewAligned(limitBehavior: .alwaysByOne))
+        } else {
+            scrollTargetBehavior(.viewAligned(limitBehavior: .always))
         }
-    }
-}
-
-/// Reject a vertical pan before recognition so the enclosing scroll view can take it.
-private struct DecideCardPan: UIViewRepresentable {
-    let isEnabled: Bool
-    let onMove: (CGFloat) -> Void
-    let onFinish: (DecidePageDirection?) -> Void
-
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView()
-        let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
-        pan.delegate = context.coordinator
-        pan.maximumNumberOfTouches = 1
-        view.addGestureRecognizer(pan)
-        return view
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
-
-    func updateUIView(_ view: UIView, context: Context) {
-        context.coordinator.configuration = self
-    }
-
-    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
-        var configuration: DecideCardPan
-
-        init(_ configuration: DecideCardPan) { self.configuration = configuration }
-
-        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            guard configuration.isEnabled, let pan = gestureRecognizer as? UIPanGestureRecognizer else { return false }
-            let velocity = pan.velocity(in: nil)
-            return abs(velocity.x) > abs(velocity.y) * 1.35
-        }
-
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
-            (other.view as? UIScrollView)?.panGestureRecognizer === other
-        }
-
-        @objc func pan(_ gesture: UIPanGestureRecognizer) {
-            let translation = gesture.translation(in: nil)
-            switch gesture.state {
-            case .began, .changed:
-                configuration.onMove(translation.x)
-            case .ended:
-                guard abs(translation.x) >= 48, abs(translation.x) > abs(translation.y) * 1.35 else {
-                    configuration.onFinish(nil)
-                    return
-                }
-                configuration.onFinish(translation.x > 0 ? .previous : .next)
-            case .cancelled, .failed:
-                configuration.onFinish(nil)
-            default:
-                break
-            }
-        }
-    }
-}
-
-/// Gives a short result the bottom of the scroll viewport, while long results can scroll naturally.
-private struct DecideResultsLayout: Layout {
-    let minimumHeight: CGFloat
-    private let spacing: CGFloat = 16
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let sizes = subviews.map { $0.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil)) }
-        return CGSize(
-            width: proposal.width ?? sizes.map(\.width).max() ?? 0,
-            height: max(minimumHeight, contentHeight(sizes))
-        )
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let childProposal = ProposedViewSize(width: bounds.width, height: nil)
-        let sizes = subviews.map { $0.sizeThatFits(childProposal) }
-        let extra = max(0, bounds.height - contentHeight(sizes))
-        let breathingRoom = extra / CGFloat(max(1, subviews.count))
-        var y = bounds.minY + breathingRoom
-        for (view, size) in zip(subviews, sizes) {
-            view.place(at: CGPoint(x: bounds.minX, y: y), anchor: .topLeading, proposal: childProposal)
-            y += size.height + spacing + breathingRoom
-        }
-    }
-
-    private func contentHeight(_ sizes: [CGSize]) -> CGFloat {
-        sizes.reduce(0) { $0 + $1.height } + spacing * CGFloat(max(0, sizes.count - 1))
-    }
-}
-
-/// 洗牌时露在结果卡片后面的两张牌。减少动态效果时不显示。
-private struct DecideDeck: View {
-    var shuffling: Bool
-
-    var body: some View {
-        ZStack {
-            plate
-                .rotationEffect(.degrees(shuffling ? 7 : 3))
-                .offset(x: shuffling ? 14 : 8, y: 6)
-            plate
-                .rotationEffect(.degrees(shuffling ? -6 : -2.5))
-                .offset(x: shuffling ? -12 : -7, y: 3)
-        }
-        .padding(.horizontal, 8)
-        .opacity(shuffling ? 1 : 0)
-        .animation(.easeOut(duration: 0.22), value: shuffling)
-        .accessibilityHidden(true)
-    }
-
-    private var plate: some View {
-        RoundedRectangle(cornerRadius: 22, style: .continuous)
-            .fill(Color.primary.opacity(0.05))
-            .overlay {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-            }
-    }
-}
-
-/// 卡片换位。减少动态效果时不使用这个位移，只保留透明度。
-private struct DecideCardMotion: ViewModifier, Animatable {
-    var offset: CGFloat
-    var angle: Double
-    var opacity: Double
-    var scale: CGFloat
-
-    var animatableData: AnimatablePair<AnimatablePair<CGFloat, Double>, AnimatablePair<Double, CGFloat>> {
-        get { AnimatablePair(AnimatablePair(offset, angle), AnimatablePair(opacity, scale)) }
-        set {
-            offset = newValue.first.first
-            angle = newValue.first.second
-            opacity = newValue.second.first
-            scale = newValue.second.second
-        }
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .scaleEffect(scale)
-            .rotationEffect(.degrees(angle))
-            .offset(x: offset)
-            .opacity(opacity)
     }
 }

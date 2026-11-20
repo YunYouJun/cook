@@ -198,7 +198,8 @@ extension XCUIApplication {
 
     /// 决定页先把选中的菜停稳，再进入既有详情。
     @MainActor
-    func confirmDecidedRecipe(file: StaticString = #filePath, line: UInt = #line) {
+    func confirmDecidedRecipe(detailAction: String = "recipe.openKitchen",
+                              file: StaticString = #filePath, line: UInt = #line) {
         // The action and spoken card each have a unique identifier. Resolve
         // them completely instead of relying on stale first-match snapshots.
         let open = buttons.matching(identifier: "cook.decide.open").element
@@ -247,10 +248,10 @@ extension XCUIApplication {
         XCTAssertTrue(dismissed, "打开做法后应进入可操作的选中菜谱详情", file: file, line: line)
         // On iPad the chooser and old detail can remain in the hierarchy while
         // the decision sheet closes. Query the body only after its navigation
-        // is ready, and keep the workbench lookup inside the actual detail List.
+        // is ready, and keep its action lookup inside the actual detail List.
         let content = collectionViews.matching(identifier: "recipe.detail").element
         XCTAssertTrue(content.waitForExistence(timeout: 10), file: file, line: line)
-        let detail = content.buttons.matching(identifier: "recipe.openKitchen").firstMatch
+        let detail = content.buttons.matching(identifier: detailAction).firstMatch
         let opened = detail.waitForExistence(timeout: 10)
         if !opened { captureDecisionFailure() }
         XCTAssertTrue(opened, "看做法应进入菜谱详情", file: file, line: line)
