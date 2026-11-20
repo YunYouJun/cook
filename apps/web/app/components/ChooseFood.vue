@@ -122,7 +122,7 @@ function clickTool(item: StuffItem) {
 
     <IngredientSection title="厨具（可选）" :icon="categoryIcons.tools" :note="rStore.curTool ? '已选' : ''">
       <template #actions>
-        <NuxtLink class="choose-food-manage" to="/catalog">
+        <NuxtLink class="choose-food-manage" to="/catalog" prefetch-on="interaction">
           管理食材和厨具
         </NuxtLink>
       </template>

@@ -149,7 +149,7 @@ function addUnlisted() {
         <p class="wb-hint">
           点一下加入，再点一下移除。<span v-if="pointerFine">也可拖到已选食材中。</span>
         </p>
-        <NuxtLink class="wb-text-button" to="/catalog">
+        <NuxtLink class="wb-text-button" to="/catalog" prefetch-on="interaction">
           管理食材和厨具
         </NuxtLink>
 

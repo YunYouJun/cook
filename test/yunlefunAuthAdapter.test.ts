@@ -1,7 +1,7 @@
 import type { AcquisitionContext, SsoAuthorizationResult } from '@yunlefun/sso'
 import type { YunlefunSsoConfig } from '../apps/web/app/utils/yunlefunSsoConfig'
 import { SsoIdentityAdoptionError } from '@yunlefun/sso/browser'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createCloudbaseIdentityAdapter,
   createWebYunlefunAuthorizationAdapter,
@@ -104,6 +104,51 @@ describe('web authorization adapter', () => {
 })
 
 describe('cloudbase identity adapter', () => {
+  const sessionKey = `credentials_${config.cloudbaseEnv}`
+  const getSession = vi.fn(async () => ({ data: { session: null } }))
+  const getAuth = vi.fn(async () => ({
+    getSession,
+    getUser: async () => ({ data: { user: null } }),
+    signInWithCustomTicket: async () => ({}),
+    signOut: async () => {},
+  }))
+
+  beforeEach(() => {
+    localStorage.removeItem(sessionKey)
+    sessionStorage.removeItem(sessionKey)
+    getAuth.mockClear()
+    getSession.mockClear()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    localStorage.removeItem(sessionKey)
+    sessionStorage.removeItem(sessionKey)
+  })
+
+  it('skips SDK loading when the browser has no CloudBase credentials', async () => {
+    const identity = createCloudbaseIdentityAdapter(config, { getAuth })
+    await expect(identity.restore()).resolves.toBeNull()
+    expect(getAuth).not.toHaveBeenCalled()
+  })
+
+  it.each(['localStorage', 'sessionStorage'] as const)('restores older sessions from %s using the SDK', async (storage) => {
+    window[storage].setItem(sessionKey, 'legacy session fixture')
+    const identity = createCloudbaseIdentityAdapter(config, { getAuth })
+    await expect(identity.restore()).resolves.toBeNull()
+    expect(getAuth).toHaveBeenCalledExactlyOnceWith(config.cloudbaseEnv)
+    expect(getSession).toHaveBeenCalledOnce()
+  })
+
+  it('lets the SDK handle browsers that block storage reads', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementationOnce(() => {
+      throw new DOMException('Storage unavailable', 'SecurityError')
+    })
+    const identity = createCloudbaseIdentityAdapter(config, { getAuth })
+    await expect(identity.restore()).resolves.toBeNull()
+    expect(getAuth).toHaveBeenCalledExactlyOnceWith(config.cloudbaseEnv)
+  })
+
   it('rejects a sign-out response that contains a CloudBase error', async () => {
     const identity = createCloudbaseIdentityAdapter(config, {
       getAuth: async () => ({

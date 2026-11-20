@@ -5,10 +5,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, defineComponent, h, ref, shallowRef, watch } from 'vue'
 
 vi.unmock('vue')
-const sdkCall = vi.hoisted(() => vi.fn())
-vi.mock('@cloudbase/js-sdk', () => ({
-  default: { init: () => ({ auth: () => ({}), callFunction: sdkCall }) },
+const { sdkApp, sdkCall, registerFunctions } = vi.hoisted(() => {
+  const sdkCall = vi.fn()
+  const sdkApp = { auth: () => ({}), callFunction: undefined as typeof sdkCall | undefined }
+  return {
+    sdkApp,
+    sdkCall,
+    registerFunctions: vi.fn(() => { sdkApp.callFunction = sdkCall }),
+  }
+})
+vi.mock('@cloudbase/js-sdk/app', () => ({
+  default: { init: () => sdkApp },
 }))
+vi.mock('@cloudbase/js-sdk/auth', () => ({ registerAuth: vi.fn() }))
+vi.mock('@cloudbase/js-sdk/functions', () => ({ registerFunctions }))
 
 describe('cloudBase SDK sync failures', () => {
   let wrapper: ReturnType<typeof mount> | undefined
@@ -17,6 +27,8 @@ describe('cloudBase SDK sync failures', () => {
     vi.resetModules()
     vi.useFakeTimers()
     localStorage.clear()
+    sdkApp.callFunction = undefined
+    registerFunctions.mockClear()
     sdkCall.mockReset()
     vi.stubGlobal('crypto', webcrypto)
     vi.stubGlobal('computed', computed)
@@ -78,5 +90,6 @@ describe('cloudBase SDK sync failures', () => {
     await vi.advanceTimersByTimeAsync(1000)
     await vi.waitFor(() => expect(page.text()).toBe('synced'))
     expect(sdkCall).toHaveBeenCalledTimes(3)
+    expect(registerFunctions).toHaveBeenCalledOnce()
   })
 })

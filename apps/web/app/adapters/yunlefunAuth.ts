@@ -2,6 +2,7 @@ import type {
   AcquisitionContext,
   SsoAuthorizationResult,
 } from '@yunlefun/sso'
+import type { CloudbaseRuntime } from './cloudbase'
 import type {
   YunlefunAccount,
   YunlefunAuthorizationAdapter,
@@ -49,13 +50,13 @@ export interface CloudbaseAuthClient {
     error?: unknown
   }>
   signInWithCustomTicket: (getTicket: () => Promise<string>) => Promise<unknown>
-  signOut: () => Promise<{ error?: unknown } | void>
+  signOut: () => Promise<unknown>
 }
 
 /** Calls a cloud function with the signed-in session and resolves its `result`. */
 export type CloudbaseFunctionCaller = (name: string, data: Record<string, unknown>) => Promise<unknown>
 
-interface CloudbaseApp {
+export interface CloudbaseApp {
   auth: (options?: { persistence: 'session' }) => CloudbaseAuthClient
   callFunction: (options: { name: string, data: Record<string, unknown> }) => Promise<{
     code?: string
@@ -63,21 +64,6 @@ interface CloudbaseApp {
     errMsg?: string
     result?: unknown
   } | undefined>
-}
-
-interface CloudbaseModule {
-  default?: {
-    init: (config: {
-      auth: { detectSessionInUrl: false }
-      env: string
-      region: 'ap-shanghai'
-    }) => CloudbaseApp
-  }
-  init?: (config: {
-    auth: { detectSessionInUrl: false }
-    env: string
-    region: 'ap-shanghai'
-  }) => CloudbaseApp
 }
 
 export interface CloudbaseIdentityDependencies {
@@ -91,7 +77,7 @@ export interface WebYunlefunAuthorizationDependencies {
 }
 
 let cachedCloudbaseEnv = ''
-let cachedCloudbaseApp: Promise<CloudbaseApp> | undefined
+let cachedCloudbase: Promise<CloudbaseRuntime> | undefined
 let cachedCloudbaseAuth: CloudbaseAuthClient | undefined
 
 export function createWebYunlefunAuthorizationAdapter(
@@ -144,46 +130,53 @@ export function createCloudbaseIdentityAdapter(
       return adopted ? readAuthenticatedAccount(auth) : null
     },
     restore: async () => {
+      if (!hasStoredCloudbaseSession(config.cloudbaseEnv))
+        return null
       const auth = await loadAuth(config.cloudbaseEnv)
       return readAuthenticatedAccount(auth)
     },
     signOut: async () => {
       const auth = await loadAuth(config.cloudbaseEnv)
       const result = await auth.signOut()
-      if (result?.error)
+      if (result && typeof result === 'object' && 'error' in result && result.error)
         throw new Error('CloudBase sign-out failed')
     },
   }
 }
 
-function getCloudbaseApp(env: string): Promise<CloudbaseApp> {
-  if (cachedCloudbaseApp) {
+function hasStoredCloudbaseSession(env: string): boolean {
+  // CloudBase v3 uses its environment ID as the default OAuth client ID.
+  // A stored value only triggers SDK loading. The SDK validates the session.
+  const key = `credentials_${env}`
+  try {
+    return window.localStorage.getItem(key) !== null || window.sessionStorage.getItem(key) !== null
+  }
+  catch {
+    // Storage can be restricted by the browser. Let the SDK handle that case.
+    return true
+  }
+}
+
+function getCloudbase(env: string): Promise<CloudbaseRuntime> {
+  if (cachedCloudbase) {
     if (cachedCloudbaseEnv !== env)
       return Promise.reject(new Error('CloudBase environment cannot change at runtime'))
-    return cachedCloudbaseApp
+    return cachedCloudbase
   }
 
   cachedCloudbaseEnv = env
-  cachedCloudbaseApp = (async () => {
-    const cloudbaseModule = await import('@cloudbase/js-sdk') as unknown as CloudbaseModule
-    const cloudbase = cloudbaseModule.default ?? cloudbaseModule
-    if (!cloudbase.init)
-      throw new Error('@cloudbase/js-sdk does not expose init()')
-
-    return cloudbase.init({
-      auth: { detectSessionInUrl: false },
-      env,
-      region: 'ap-shanghai',
-    })
+  cachedCloudbase = (async () => {
+    const { initCloudbase } = await import('./cloudbase')
+    return initCloudbase(env)
   })()
-  cachedCloudbaseApp.catch(() => {
-    cachedCloudbaseApp = undefined
+  cachedCloudbase.catch(() => {
+    cachedCloudbase = undefined
   })
-  return cachedCloudbaseApp
+  return cachedCloudbase
 }
 
 async function getCloudbaseAuth(env: string): Promise<CloudbaseAuthClient> {
-  const app = await getCloudbaseApp(env)
+  const { app } = await getCloudbase(env)
   cachedCloudbaseAuth ??= app.auth({ persistence: 'session' })
   return cachedCloudbaseAuth
 }
@@ -196,7 +189,8 @@ export async function callCloudbaseFunction(
 ): Promise<unknown> {
   // Initialise auth first so the call carries the signed-in session.
   await getCloudbaseAuth(env)
-  const app = await getCloudbaseApp(env)
+  const { app, loadFunctions } = await getCloudbase(env)
+  await loadFunctions()
   const response = await app.callFunction({ name, data })
   // A missing result means the call itself failed (not deployed, crashed, …).
   if (!response || response.result === undefined) {

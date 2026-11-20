@@ -183,6 +183,9 @@ export default defineNuxtConfig({
   },
 
   vite: {
+    optimizeDeps: {
+      include: ['@cloudbase/js-sdk/app', '@cloudbase/js-sdk/auth', '@cloudbase/js-sdk/functions'],
+    },
     plugins: [
       {
         name: 'cook:ionic-components-tree-shaking',
