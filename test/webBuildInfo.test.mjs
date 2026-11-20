@@ -9,6 +9,7 @@ import { BUILD_INFO_PATH, buildWebOutput, captureBuildInput, copyWebOutput, crea
 
 const builtAt = '2026-10-28T12:00:00.000Z'
 const now = () => new Date(builtAt)
+const assetLinksPath = 'dist/.well-known/assetlinks.json'
 
 function fixture(run, withGit = true) {
   const temporaryParent = realpathSync(tmpdir())
@@ -102,6 +103,43 @@ test('dirty before or after generation remains explicitly ineligible for product
     assert.equal(createBuildInfo(root, dirty, { environment: {}, now }).dirty, true)
     write('untracked-private-input.txt', 'local only')
     assert.equal(captureBuildInput(root, {}).dirty, true)
+  })
+})
+
+test('Android App Links are generated only from explicitly supplied release fingerprints', () => {
+  fixture(({ root, generate, read }) => {
+    const first = Array.from({ length: 32 }).fill('AE').join(':')
+    const second = Array.from({ length: 32 }).fill('4C').join(':')
+    const input = captureBuildInput(root, {})
+    generate()
+    copyWebOutput(root, input, {
+      environment: { COOK_ANDROID_LINKS_SHA256: `${first.toLowerCase()}, ${first}, ${second}` },
+      now,
+    })
+    assert.deepEqual(JSON.parse(read(assetLinksPath)), [{
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'fun.yunle.cook',
+        sha256_cert_fingerprints: [first, second],
+      },
+    }])
+
+    copyWebOutput(root, input, { environment: {}, now })
+    assert.equal(existsSync(join(root, assetLinksPath)), false)
+  })
+})
+
+test('invalid Android certificate configuration preserves the previous deployable output', () => {
+  fixture(({ root, write, generate, read }) => {
+    const input = captureBuildInput(root, {})
+    write('dist/index.html', 'last successful build')
+    generate()
+    assert.throws(() => copyWebOutput(root, input, {
+      environment: { COOK_ANDROID_LINKS_SHA256: '44:zz' },
+      now,
+    }), /COOK_ANDROID_LINKS_SHA256/)
+    assert.equal(read('dist/index.html'), 'last successful build')
   })
 })
 

@@ -65,6 +65,12 @@ GitHub Release 工作流在正式版标签（如 `v2.0.1`）通过版本校验�
 
 Git 部署使用根目录 `edgeone.json`，保留授权回调的 `no-store` / `no-referrer` 等响应头。`scripts/copy-web-output.ts` 仍把该配置复制到 `dist`，使下载的发布产物也能用于直接上传。官网的 `dist-site` 不应发布到此项目，网页版和审核中的 `/about/` 保持独立。
 
+### Android App Links
+
+在两个 EdgeOne 生产项目的构建环境中设置 `COOK_ANDROID_LINKS_SHA256`，使用实际分发的 `fun.yunle.cook` 安装包签名证书的 SHA-256 指纹。多个发布证书可用逗号分隔，每个指纹由 32 个冒号分隔的两位十六进制数构成。通过 Google Play 分发时使用 Play 应用签名证书。
+
+网页版构建生成 `dist/.well-known/assetlinks.json`，官网组合构建将同一文件带入 `dist-site`。未设置变量的构建不会生成关联文件。发布后确认两个域名都以 HTTPS 直接返回 200 和 JSON，再在正式签名的 Android 包上用 `adb shell pm get-app-links fun.yunle.cook` 检查域名验证状态。从外部打开菜谱分享链接验收详情。在 Android 15 及以上分别检查原生账号回跳和浏览器 Web 登录，在 Android 14 及以下检查从回调页复制链接后在 App 粘贴。
+
 ### 旧文档域名退役
 
 `docs.cook.yunle.fun` 已通过 YunLeFun 账户中独立的 Cloudflare Worker `cook-docs-redirect` 返回 HTTP 301，目标固定为 `https://cook.yunle.fun`，保留请求路径与查询参数。例如 `/guide/ios-beta?source=legacy` 跳到 `https://cook.yunle.fun/guide/ios-beta?source=legacy`，不统一跳到首页，也不依赖已删除的 Pages 项目。
