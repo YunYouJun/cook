@@ -3,6 +3,10 @@ title: 云食册 iOS 体验测试
 description: 通过 TestFlight 公开链接加入云食册首批 30 人 iPhone / iPad 外测，了解安装方式、测试范围和反馈渠道。
 ---
 
+<script setup lang="ts">
+import BetaFeedbackGroup from '../.vitepress/theme/components/BetaFeedbackGroup.vue'
+</script>
+
 # 云食册 iOS 体验测试
 
 有什么食材，就做什么菜。云食册是「食用手册」的原生 iPhone / iPad 应用：选食材和厨具找菜、查看做法、收藏菜谱，也可以记录冰箱和自己的菜谱。
@@ -82,6 +86,10 @@ iOS 版目前通过 TestFlight 提供小范围测试，尚未在 App Store 正�
 使用 TestFlight 测试版时，也可以通过系统截屏反馈附上画面和问题说明。完整操作与入口缺失时的处理方式见[截图反馈指引](https://support.yunle.fun/testflight)，也可查看 [Apple 官方 TestFlight 指引](https://testflight.apple.com/)。
 
 反馈时请附上：应用版本和构建号、设备及系统版本、操作步骤、预期与实际结果；截图中的个人信息请先遮挡。数据保存或同步异常请尽量提供发生时间，并保留备份。
+
+测试交流和一般问题也可以在 QQ 群里聊。
+
+<BetaFeedbackGroup />
 
 也可以访问 [云乐坊支持中心](https://support.yunle.fun/?product=cook)。适合公开讨论的功能建议可提交到 [需求墙](https://support.yunle.fun/feedback?product=cook)，不要在那里发布私人菜谱、联系方式或账号信息。
 
