@@ -129,6 +129,12 @@
   outline: 3px solid var(--vp-c-brand-1);
   outline-offset: 4px;
 }
+
+/* VitePress starts centering the sidebar at 90rem. Use the same width for the header. */
+.Layout:has(.VPNavBar.has-sidebar) {
+  --vp-layout-max-width: 90rem;
+}
+
 /* Keep the full navigation usable before the mobile menu breakpoint. */
 @media (min-width: 768px) and (max-width: 959px) {
   .VPNavBarSearch .VPNavBarSearchButton {
