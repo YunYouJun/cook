@@ -48,6 +48,16 @@ function getApp() {
   return app
 }
 
+async function accountDeletionBlocksSync(uid) {
+  const { data } = await getApp().database().collection('user_profiles').doc(uid).get()
+  const profile = Array.isArray(data) ? data[0] : data
+  return profile && (profile.deletionStatus === 'pending'
+    || profile.deletionStatus === 'finalizing'
+    || profile.deletionStatus === 'completed'
+    || profile.deletedAt
+    || profile.authDeletedAt)
+}
+
 /** The signed-in, non-anonymous caller, or '' when there is none. */
 function callerUid() {
   try {
@@ -136,6 +146,10 @@ async function main(event = {}) {
     return fail('SESSION_CHANGED')
 
   try {
+    // A still-valid token must not read or recreate an account's sync copy
+    // during the cooling-off period or after the deletion worker removes it.
+    if (await accountDeletionBlocksSync(uid))
+      return fail('LOGIN_REQUIRED')
     if (!await activeMembership(uid, Date.now()))
       return fail('MEMBERSHIP_REQUIRED')
     switch (event.action) {
