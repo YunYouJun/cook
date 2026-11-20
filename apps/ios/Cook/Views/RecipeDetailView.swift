@@ -69,10 +69,6 @@ struct RecipeDetailView: View {
         recipe.videoURL ?? textURL
     }
 
-    private var shareURL: URL? {
-        dietaryReview == nil ? webURL : textURL
-    }
-
     /// 图文做法链接（recipe.csv 的 link 列）
     private var textURL: URL? {
         guard let link = recipe.link, !link.isEmpty else { return nil }
@@ -111,6 +107,11 @@ struct RecipeDetailView: View {
                     Text(review.reason(for: goal))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                    if let textURL {
+                        ShareLink(item: textURL, subject: Text(recipe.name)) {
+                            Label("分享已核对原文", systemImage: "square.and.arrow.up")
+                        }
+                    }
                 }
                 Button {
                     kitchenRecipe = recipe
@@ -191,9 +192,9 @@ struct RecipeDetailView: View {
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                if let shareURL {
+                if let shareURL = CookUniversalLink.recipeURL(id: recipe.id) {
                     ShareLink(item: shareURL, subject: Text(recipe.name)) {
-                        Label("分享", systemImage: "square.and.arrow.up")
+                        Label("分享菜谱", systemImage: "square.and.arrow.up")
                     }
                 }
             }

@@ -10,7 +10,8 @@
         "appIDs": ["QT792GAY4C.fun.yunle.cook"],
         "components": [
           { "/": "/auth/wechat/*" },
-          { "/": "/auth/callback", "?": { "platform": "native" }, "#": "ylf_sso=*" }
+          { "/": "/auth/callback", "?": { "platform": "native" }, "#": "ylf_sso=*" },
+          { "/": "/recipes/share/", "?": { "id": "?*" } }
         ]
       }
     ]

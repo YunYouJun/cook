@@ -257,10 +257,21 @@ final class AppRouter {
     var tab: AppTab = .cook
     /// 每次要显示冰箱首页时加一，冰箱页看到变化就清掉已经点进去的页面和 sheet
     private(set) var fridgeHomeRequests = 0
+    private(set) var sharedRecipeID: Int?
 
     func showFridgeHome() {
         tab = .fridge
         fridgeHomeRequests += 1
+    }
+
+    func showSharedRecipe(_ id: Int) {
+        sharedRecipeID = id
+        tab = .library
+    }
+
+    func takeSharedRecipeID() -> Int? {
+        defer { sharedRecipeID = nil }
+        return sharedRecipeID
     }
 }
 

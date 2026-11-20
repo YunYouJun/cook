@@ -36,4 +36,31 @@ final class CookUniversalLinkTests: XCTestCase {
         XCTAssertEqual(router.tab, .settings)
         XCTAssertEqual(router.fridgeHomeRequests, 1)
     }
+
+    @MainActor
+    func testSharedRecipeOpensLibraryWithAConsumableRecipeID() throws {
+        let router = AppRouter()
+        let url = try XCTUnwrap(CookUniversalLink.recipeURL(id: 0))
+        XCTAssertEqual(url.absoluteString, "https://cook.yunle.fun/recipes/share/?id=0")
+        XCTAssertTrue(router.openUniversalLink(url))
+        XCTAssertEqual(router.tab, .library)
+        XCTAssertEqual(router.takeSharedRecipeID(), 0)
+        XCTAssertNil(router.takeSharedRecipeID())
+        XCTAssertTrue(router.openUniversalLink(url))
+        XCTAssertEqual(router.takeSharedRecipeID(), 0)
+    }
+
+    func testSharedRecipeRejectsAmbiguousAndInvalidIDs() throws {
+        for value in ["https://cook.yunle.fun/recipes/share/",
+                      "https://cook.yunle.fun/recipes/share/?id=1&id=2",
+                      "https://cook.yunle.fun/recipes/share/?id",
+                      "https://cook.yunle.fun/recipes/share/?id=-1",
+                      "https://cook.yunle.fun/recipes/share/?id=01",
+                      "https://cook.yunle.fun/recipes/share/?id=9007199254740992",
+                      "https://cook.yunle.fun/recipes/%73hare/?id=1",
+                      "https://cook.yunle.fun:444/recipes/share/?id=1",
+                      "https://cook.yunyoujun.cn/recipes/share/?id=1"] {
+            XCTAssertNil(CookUniversalLink.recipeID(try XCTUnwrap(URL(string: value))), value)
+        }
+    }
 }

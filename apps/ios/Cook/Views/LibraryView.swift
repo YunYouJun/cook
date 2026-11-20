@@ -15,6 +15,8 @@ struct LibraryView: View {
     }
 
     @Environment(RecipeStore.self) private var store
+    @Environment(AppRouter.self) private var router
+    @Environment(\.openURL) private var openURL
     @Environment(\.modelContext) private var context
     @Environment(FavoriteActions.self) private var favoriteActions
     @Environment(\.accountUserData) private var accountData
@@ -25,6 +27,8 @@ struct LibraryView: View {
     @State private var scope: Scope = .all
     @State private var query = ""
     @State private var selection: RecipeRoute?
+    @State private var detailPath = NavigationPath()
+    @State private var unavailableShareID: Int?
     @State private var confirmingClear = false
     @State private var compactColumn: NavigationSplitViewColumn = .sidebar
     @State private var decideRequest: CookDecideRequest?
@@ -102,7 +106,7 @@ struct LibraryView: View {
                 }
             }
         } detail: {
-            NavigationStack {
+            NavigationStack(path: $detailPath) {
                 if let selection {
                     RecipeDetailView(route: selection)
                 } else {
@@ -113,6 +117,27 @@ struct LibraryView: View {
         .cookDecideSheet(request: $decideRequest, lastDecidedID: $lastDecidedID) { route in
             selection = route
             compactColumn = .detail
+        }
+        .onChange(of: router.sharedRecipeID, initial: true) {
+            guard router.tab == .library, let id = router.takeSharedRecipeID() else { return }
+            guard let recipe = store.recipesById[id] else {
+                unavailableShareID = id
+                return
+            }
+            detailPath = NavigationPath()
+            selection = RecipeRoute(recipe: recipe)
+            compactColumn = .detail
+        }
+        .alert("当前版本找不到这道菜", isPresented: Binding(
+            get: { unavailableShareID != nil },
+            set: { if !$0 { unavailableShareID = nil } }
+        ), presenting: unavailableShareID) { id in
+            if let url = CookUniversalLink.recipeURL(id: id) {
+                Button("在网页查看") { openURL(url) }
+            }
+            Button("关闭", role: .cancel) {}
+        } message: { _ in
+            Text("可以在网页版查看，或更新云食册后重试。")
         }
     }
 

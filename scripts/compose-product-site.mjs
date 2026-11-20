@@ -22,6 +22,7 @@ const legacyRoutes = [
   '/recipes/history',
   '/recipes/mine',
   '/recipes/new',
+  '/recipes/share',
   '/cookbooks',
   '/cookbooks/new',
   '/catalog',

@@ -92,10 +92,7 @@ struct RootView: View {
         .onOpenURL { url in
             if accounts.handleWeChat(url) { return }
             if accounts.handleYunlefunCallback(url) { return }
-            if router.openUniversalLink(url) {
-                // Never log query parameters, which may contain authorization codes.
-                Logger(subsystem: "fun.yunle.cook", category: "UniversalLink").notice("Opened account area from WeChat universal link")
-            }
+            router.openUniversalLink(url)
         }
         .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
             if accounts.handleWeChat(activity) { return }
