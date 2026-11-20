@@ -130,6 +130,18 @@ test('queries later deployment pages to locate the project current deployment', 
   assert.deepEqual(state.calls.filter(call => call.body?.Action === 'DescribePagesDeployments' && call.body.ProjectId === current.ProjectId).map(call => call.body.Offset), [0, 1, 0, 1])
 })
 
+test('accepts the Web release branch only for the Web production project', async () => {
+  const { fetch, state } = mockNetwork()
+  state.projects[0].RepoBranch = 'web-production'
+  state.deployments[0].RepoBranch = 'web-production'
+  assert.equal((await verify(fetch)).targets[0].deploymentId, 'dp-production-0')
+
+  state.deployments[1].RepoBranch = 'web-production'
+  await assert.rejects(verify(fetch), { reason: 'deployment_source_mismatch' })
+  state.projects[1].RepoBranch = 'web-production'
+  await assert.rejects(verify(fetch), { reason: 'project_source_mismatch' })
+})
+
 test('rejects Vercel, preview, wrong branch, another repository or stale production SHA', async () => {
   for (const change of [
     data => data.projects[0].Provider = 'Vercel',
