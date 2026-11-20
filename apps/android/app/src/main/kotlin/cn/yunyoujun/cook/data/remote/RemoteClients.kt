@@ -415,13 +415,36 @@ class DeepSeekByokClient(
     private val endpoint: String = DEEPSEEK_CHAT_ENDPOINT,
     private val model: String = DEFAULT_MODEL,
     private val transport: HttpPostTransport = IsolatedHttpPostTransport,
+    private val connectionTransport: HttpTransport = IsolatedHttpPostTransport,
 ) {
+    suspend fun checkConnection(apiKey: String): Boolean {
+        val key = apiKey.trim()
+        require(validKey(key)) { "请输入有效的 DeepSeek API Key。" }
+        val response = connectionTransport.request(
+            method = "GET",
+            url = "https://api.deepseek.com/user/balance",
+            headers = mapOf("Authorization" to "Bearer $key"),
+            maxResponseBytes = 8192,
+        )
+        return when (response.statusCode) {
+            200 -> runCatching {
+                Json.parseToJsonElement(response.bodyText).jsonObject["is_available"]?.jsonPrimitive?.booleanOrNull
+            }.getOrNull() ?: error("未收到有效的余额状态。")
+            401, 403 -> error("DeepSeek 未接受此 Key，请核对后重试。")
+            402 -> false
+            429 -> error("检查过于频繁，请稍后再试。")
+            else -> error("暂时无法连接 DeepSeek，请稍后再试。")
+        }
+    }
+
+    fun validKey(value: String): Boolean = value.length in 1..512 && value.all { it.code in 33..126 }
+
     suspend fun requestStepGuidance(
         apiKey: String,
         prompt: StepGuidancePrompt,
     ): StepGuidanceDraft {
         val cleanKey = apiKey.trim()
-        if (cleanKey.isEmpty()) throw StepGuidanceException.NotConfigured()
+        if (!validKey(cleanKey)) throw StepGuidanceException.NotConfigured()
         val body = JsonObject(
             mapOf(
                 "model" to JsonPrimitive(model),
@@ -472,7 +495,7 @@ class DeepSeekByokClient(
         availableGoals: List<DietaryGoal>,
     ): SearchIntent {
         val cleanKey = apiKey.trim()
-        if (cleanKey.isEmpty()) {
+        if (!validKey(cleanKey)) {
             throw SearchIntentException.InvalidResponse()
         }
         val validator = SearchIntentValidator(data, availableGoals)

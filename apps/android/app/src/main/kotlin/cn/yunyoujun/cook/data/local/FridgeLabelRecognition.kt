@@ -7,13 +7,15 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
 import java.time.LocalDate
 import java.util.UUID
+import kotlin.coroutines.coroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 /**
  * 估算日期始终是食用计划，不能由照片判断食物是否安全。
@@ -34,7 +36,7 @@ enum class FridgeExpiryBasis(
 
     fun toDateKind(): FridgeDateKind = when (this) {
         PACKAGE -> FridgeDateKind.PACKAGE_EXPIRY
-        CALCULATED -> FridgeDateKind.PACKAGE_EXPIRY
+        CALCULATED -> FridgeDateKind.CALCULATED
         ESTIMATED -> FridgeDateKind.ADVISORY
         MANUAL -> FridgeDateKind.MANUAL
     }
@@ -287,8 +289,7 @@ object FridgeLabelParser {
 }
 
 /**
- * 照片仅在内存中检查尺寸、保留 EXIF 方向并运行端侧中文 OCR（<= 30 MB、最长边 <= 2400 px），
- * 绝不落盘保存原始照片或 OCR 原文。
+ * 照片仅在内存中缩小处理并保留 EXIF 方向。优先识别包装文字，没有匹配的食材时再运行本机蔬果分类。
  */
 object FridgePhotoInspector {
     const val MAX_PHOTO_BYTES = 30 * 1024 * 1024
@@ -307,6 +308,7 @@ object FridgePhotoInspector {
     data class InMemoryRecognitionResult(
         val summary: InMemoryPhotoSummary,
         val recognizedText: String,
+        val classifications: List<Pair<String, Float>>,
     )
 
     fun readExifRotationDegrees(bytes: ByteArray): Int = runCatching {
@@ -359,25 +361,44 @@ object FridgePhotoInspector {
         return summary
     }
 
-    suspend fun recognizeInMemoryBytes(bytes: ByteArray): InMemoryRecognitionResult = withContext(Dispatchers.Default) {
+    suspend fun recognizeInMemoryBytes(
+        bytes: ByteArray,
+        knownNames: Collection<String>,
+        classify: (Bitmap, Int) -> List<Pair<String, Float>>,
+    ): InMemoryRecognitionResult = withContext(Dispatchers.Default) {
         val (summary, bitmap) = decodeBoundedInMemory(bytes)
         try {
-            val recognizedText = recognizeBitmapText(bitmap, summary.rotationDegrees)
-            InMemoryRecognitionResult(summary = summary, recognizedText = recognizedText)
+            recognizePhoto(bitmap, summary, knownNames, classify)
         } finally {
             bitmap.recycle()
         }
     }
 
-    suspend fun recognizeInMemoryBitmap(bitmap: Bitmap): InMemoryRecognitionResult = withContext(Dispatchers.Default) {
+    suspend fun recognizeInMemoryBitmap(
+        bitmap: Bitmap,
+        knownNames: Collection<String>,
+        classify: (Bitmap, Int) -> List<Pair<String, Float>>,
+    ): InMemoryRecognitionResult = withContext(Dispatchers.Default) {
         val summary = InMemoryPhotoSummary(
             width = bitmap.width,
             height = bitmap.height,
             byteCount = bitmap.allocationByteCount,
-            rotationDegrees = 0,
         )
-        val recognizedText = recognizeBitmapText(bitmap, rotationDegrees = 0)
-        InMemoryRecognitionResult(summary = summary, recognizedText = recognizedText)
+        recognizePhoto(bitmap, summary, knownNames, classify)
+    }
+
+    private suspend fun recognizePhoto(
+        bitmap: Bitmap,
+        summary: InMemoryPhotoSummary,
+        knownNames: Collection<String>,
+        classify: (Bitmap, Int) -> List<Pair<String, Float>>,
+    ): InMemoryRecognitionResult {
+        val text = recognizeBitmapText(bitmap, summary.rotationDegrees)
+        coroutineContext.ensureActive()
+        val matches = FridgeLabelParser.matchKnownNames(text, knownNames)
+        val classifications = if (matches.isEmpty()) classify(bitmap, summary.rotationDegrees) else emptyList()
+        coroutineContext.ensureActive()
+        return InMemoryRecognitionResult(summary, text, classifications)
     }
 
     @Volatile
@@ -390,17 +411,12 @@ object FridgePhotoInspector {
         val recognizer = TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
         val image = InputImage.fromBitmap(bitmap, rotationDegrees)
         return try {
-            suspendCancellableCoroutine { cont ->
+            // ML Kit uses the bitmap asynchronously. Wait for completion before the caller recycles it.
+            suspendCoroutine { cont ->
                 recognizer.process(image)
-                    .addOnSuccessListener { result ->
-                        if (cont.isActive) {
-                            cont.resume(result.text.trim())
-                        }
-                    }
-                    .addOnFailureListener { err ->
-                        if (cont.isActive) {
-                            cont.resumeWithException(err)
-                        }
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) cont.resume(task.result.text.trim())
+                        else cont.resumeWithException(task.exception ?: UnreadableImageException())
                     }
             }
         } finally {

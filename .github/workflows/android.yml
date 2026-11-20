@@ -5,6 +5,10 @@ on:
     branches: [main, dev]
     paths: &android_paths
       - 'apps/android/**'
+      - apps/ios/Cook/Resources/showcase-packs.json
+      - apps/ios/Cook/Resources/CloudKitchenManifest.json
+      - 'assets/android/**'
+      - 'assets/showcase/**/image.webp'
       - 'packages/cook/**'
       - 'packages/data/**'
       - 'packages/shared/**'

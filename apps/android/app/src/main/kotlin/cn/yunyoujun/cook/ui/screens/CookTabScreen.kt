@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -29,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,6 +47,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cn.yunyoujun.cook.AppContainer
@@ -62,6 +68,7 @@ import cn.yunyoujun.cook.ui.components.DietaryGoalBar
 import cn.yunyoujun.cook.ui.components.RecipeSummaryCard
 import cn.yunyoujun.cook.ui.components.SearchIntentReviewDialog
 import cn.yunyoujun.cook.ui.components.TagFlowChips
+import cn.yunyoujun.cook.ui.components.buildDecideContextSummary
 import cn.yunyoujun.cook.ui.state.CookSessionController
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -86,13 +93,61 @@ fun CookTabScreen(
     var showIngredientPicker by rememberSaveable { mutableStateOf(false) }
     var showFilterDialog by rememberSaveable { mutableStateOf(false) }
     var showDecideDialog by rememberSaveable { mutableStateOf(false) }
-    var decidedRecipe by remember { mutableStateOf<Recipe?>(null) }
+    var showCompleteKitchenResults by rememberSaveable { mutableStateOf(false) }
+    val listState = rememberLazyListState()
     var sceneBatch by remember { mutableStateOf<List<Recipe>>(emptyList()) }
-    var pendingIntent by remember { mutableStateOf<SearchIntent?>(null) }
+    var pendingIntent by remember { mutableStateOf<Pair<String, SearchIntent>?>(null) }
+    var pendingAiConsent by remember { mutableStateOf<Pair<String, AiProviderMode>?>(null) }
+    var queryText by rememberSaveable { mutableStateOf(conditions.keyword) }
+    var showRecentSearches by rememberSaveable { mutableStateOf(false) }
+    val focus = LocalFocusManager.current
     var intentError by remember { mutableStateOf<String?>(null) }
     var isAiSearching by remember { mutableStateOf(false) }
-    var aiSearchRevision by remember { mutableIntStateOf(0) }
     var aiSearchJob by remember { mutableStateOf<Job?>(null) }
+    val account by container.yunlefunSessionManager.state.collectAsState()
+    LaunchedEffect(prefs.aiProviderMode, account.credential) {
+        aiSearchJob?.cancel()
+        pendingAiConsent = null
+        pendingIntent = null
+    }
+
+    fun submitKeyword() {
+        val text = queryText.trim()
+        sessionController.setKeyword(text)
+        container.preferencesStore.recordSearch(text)
+        focus.clearFocus()
+    }
+
+    fun sendIntent(query: String, mode: AiProviderMode) {
+        isAiSearching = true
+        aiSearchJob = scope.launch {
+            try {
+                val draft = when (mode) {
+                    AiProviderMode.BYOK_DEEPSEEK -> {
+                        val key = container.vault.readSecret(AndroidKeystoreVault.KEY_DEEPSEEK_API_KEY)
+                            ?: error("请先在 AI 设置中保存个人 DeepSeek Key。")
+                        container.deepSeekClient.requestSearchIntent(key, query, snapshot.data, snapshot.availableDietaryGoals)
+                    }
+                    AiProviderMode.MANAGED_MEMBERSHIP -> {
+                        val credential = container.yunlefunSessionManager.state.value.credential
+                            ?.takeIf { it.isValid() } ?: error("请先登录有效的云乐坊会员账号。")
+                        val result = container.managedAiService.parse(query, credential, snapshot.data, snapshot.availableDietaryGoals)
+                        if (container.yunlefunSessionManager.state.value.credential != credential) return@launch
+                        result
+                    }
+                    AiProviderMode.DISABLED -> sessionController.parseLocalIntent(snapshot, query)
+                }
+                pendingIntent = query to draft
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                intentError = e.message ?: "联网识别暂不可用，已切换到本机识别。"
+                pendingIntent = query to sessionController.parseLocalIntent(snapshot, query)
+            } finally {
+                isAiSearching = false
+            }
+        }
+    }
     var favoriteError by remember { mutableStateOf<String?>(null) }
 
     val candidateResult = remember(snapshot, conditions, prefs) {
@@ -119,28 +174,25 @@ fun CookTabScreen(
         }
     }
 
+    val canDecide by rememberUpdatedState(candidateResult.recipes.isNotEmpty())
     val shakeDetector = remember(context) {
-        DeviceShakeDetector(context) {
-            if (showDecideDialog && candidateResult.recipes.isNotEmpty()) {
-                decidedRecipe = candidateResult.recipes.random()
-            } else if (!showDecideDialog && candidateResult.recipes.isNotEmpty()) {
-                decidedRecipe = candidateResult.recipes.random()
-                showDecideDialog = true
-            }
-        }
+        DeviceShakeDetector(context) { if (canDecide) showDecideDialog = true }
     }
-    DisposableEffect(shakeDetector) {
-        shakeDetector.start()
+    DisposableEffect(shakeDetector, showDecideDialog) {
+        if (!showDecideDialog) shakeDetector.start()
         onDispose { shakeDetector.stop() }
     }
 
-    val displayedRecipes = if (conditions.discoveryScene != null && conditions.selectedStuff.isEmpty() && conditions.keyword.isBlank()) {
+    val displayedRecipes = if (prefs.cloudKitchen && showCompleteKitchenResults) {
+        candidateResult.recipes
+    } else if (conditions.discoveryScene != null && conditions.selectedStuff.isEmpty() && conditions.keyword.isBlank()) {
         sceneBatch
     } else {
         candidateResult.recipes.take(120)
     }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -152,14 +204,21 @@ fun CookTabScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "今天做什么菜",
+                    text = if (prefs.cloudKitchen) "云厨房" else "今天做什么菜",
+                    modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(
+                        onClick = {
+                            showCompleteKitchenResults = false
+                            container.preferencesStore.setCloudKitchen(!prefs.cloudKitchen)
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp),
+                    ) { Text(if (prefs.cloudKitchen) "列表" else "云厨房") }
                     OutlinedButton(
                         onClick = {
-                            decidedRecipe = candidateResult.recipes.randomOrNull()
                             showDecideDialog = true
                         },
                         enabled = candidateResult.recipes.isNotEmpty(),
@@ -170,19 +229,50 @@ fun CookTabScreen(
             }
         }
 
+        if (prefs.cloudKitchen) {
+            item("cloud-kitchen") {
+                CloudKitchenCard(
+                    selected = conditions.selectedStuff.toSet(),
+                    hidden = personalCatalog.hiddenBuiltInNames,
+                    normalize = snapshot.data.normalizer::normalize,
+                    allowRotation = prefs.cloudKitchenRotation,
+                    onRotationChanged = container.preferencesStore::setCloudKitchenRotation,
+                    onPick = sessionController::toggleStuff,
+                    resultCount = candidateResult.recipes.size,
+                    onShowResults = {
+                        // The results heading is immediately before the recipe rows or the empty-result item.
+                        val heading = (listState.layoutInfo.totalItemsCount - displayedRecipes.size.coerceAtLeast(1) - 1)
+                            .coerceAtLeast(0)
+                        showCompleteKitchenResults = true
+                        scope.launch { listState.animateScrollToItem(heading) }
+                    },
+                )
+            }
+        }
+
         item {
             OutlinedTextField(
-                value = conditions.keyword,
-                onValueChange = { sessionController.setKeyword(it) },
+                value = queryText,
+                onValueChange = { queryText = it.take(300) },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("搜菜名，或输入一句话让我挑菜") },
                 placeholder = { Text("例：番茄炒蛋，或：家里有土豆、别放香菜") },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { submitKeyword() }),
                 trailingIcon = {
-                    if (conditions.keyword.isNotEmpty()) {
-                        TextButton(onClick = { sessionController.setKeyword("") }) {
-                            Text("清空")
+                    if (queryText.isNotEmpty() || conditions.keyword.isNotEmpty()) {
+                        Row {
+                            if (queryText.isNotBlank() && queryText != conditions.keyword) {
+                                TextButton(onClick = ::submitKeyword) { Text("搜索") }
+                            }
+                            TextButton(onClick = {
+                                queryText = ""
+                                sessionController.setKeyword("")
+                            }) { Text("清空") }
                         }
+                    } else if (prefs.recentSearches.isNotEmpty()) {
+                        TextButton(onClick = { showRecentSearches = true }) { Text("最近搜索") }
                     }
                 },
             )
@@ -202,98 +292,23 @@ fun CookTabScreen(
                     Text(if (count == 0) "筛选与模式" else "筛选 ($count)")
                 }
                 OutlinedButton(
+                    enabled = !isAiSearching && queryText.isNotBlank(),
                     onClick = {
+                        val query = queryText.trim()
+                        val mode = prefs.aiProviderMode
                         intentError = null
-                        val queryText = conditions.keyword.trim()
-                        if (queryText.isEmpty()) {
-                            intentError = "请先在上方输入想吃的条件或自然语句。"
-                            return@OutlinedButton
-                        }
-                        aiSearchJob?.cancel()
-                        val reqRevision = ++aiSearchRevision
-                        when (prefs.aiProviderMode) {
-                            AiProviderMode.BYOK_DEEPSEEK -> {
-                                isAiSearching = true
-                                aiSearchJob = scope.launch {
-                                    try {
-                                        val key = runCatching { container.vault.readSecret(AndroidKeystoreVault.KEY_DEEPSEEK_API_KEY) }.getOrNull()
-                                        if (key.isNullOrBlank()) {
-                                            if (reqRevision == aiSearchRevision) {
-                                                pendingIntent = sessionController.parseLocalIntent(snapshot, queryText)
-                                            }
-                                        } else {
-                                            val result = runCatching {
-                                                container.deepSeekClient.requestSearchIntent(
-                                                    apiKey = key,
-                                                    naturalQuery = queryText,
-                                                    data = snapshot.data,
-                                                    availableGoals = snapshot.availableDietaryGoals,
-                                                )
-                                            }
-                                            if (reqRevision == aiSearchRevision) {
-                                                result.onSuccess { pendingIntent = it }
-                                                    .onFailure { err ->
-                                                        if (err !is CancellationException) {
-                                                            intentError = err.message
-                                                            pendingIntent = sessionController.parseLocalIntent(snapshot, queryText)
-                                                        }
-                                                    }
-                                            }
-                                        }
-                                    } finally {
-                                        if (reqRevision == aiSearchRevision) {
-                                            isAiSearching = false
-                                        }
-                                    }
-                                }
-                            }
-                            AiProviderMode.MANAGED_MEMBERSHIP -> {
-                                isAiSearching = true
-                                aiSearchJob = scope.launch {
-                                    try {
-                                        val cred = container.yunlefunSessionManager.state.value.credential
-                                        if (cred == null || !cred.isValid()) {
-                                            if (reqRevision == aiSearchRevision) {
-                                                intentError = "尚未登录云乐坊账号或会话已过期，已自动回退为本地识别。"
-                                                pendingIntent = sessionController.parseLocalIntent(snapshot, queryText)
-                                            }
-                                        } else {
-                                            val result = runCatching {
-                                                container.managedAiService.parse(
-                                                    text = queryText,
-                                                    credential = cred,
-                                                    data = snapshot.data,
-                                                    availableGoals = snapshot.availableDietaryGoals,
-                                                )
-                                            }
-                                            if (reqRevision == aiSearchRevision) {
-                                                result.onSuccess { pendingIntent = it }
-                                                    .onFailure { err ->
-                                                        if (err !is CancellationException) {
-                                                            intentError = err.message
-                                                            pendingIntent = sessionController.parseLocalIntent(snapshot, queryText)
-                                                        }
-                                                    }
-                                            }
-                                        }
-                                    } finally {
-                                        if (reqRevision == aiSearchRevision) {
-                                            isAiSearching = false
-                                        }
-                                    }
-                                }
-                            }
-                            AiProviderMode.DISABLED -> {
-                                isAiSearching = false
-                                pendingIntent = sessionController.parseLocalIntent(snapshot, queryText)
-                            }
+                        if (mode == AiProviderMode.DISABLED) {
+                            pendingIntent = query to sessionController.parseLocalIntent(snapshot, query)
+                        } else {
+                            pendingAiConsent = query to mode
                         }
                     },
-                ) {
-                    Text(if (isAiSearching) "识别中…" else "智能识别语句")
-                }
+                ) { Text(if (isAiSearching) "识别中…" else "智能识别语句") }
                 if (conditions.selectedStuff.isNotEmpty() || conditions.isFilterActive(prefs) || conditions.keyword.isNotEmpty()) {
-                    TextButton(onClick = { sessionController.clearSessionConditions() }) {
+                    TextButton(onClick = {
+                        queryText = ""
+                        sessionController.clearSessionConditions()
+                    }) {
                         Text("清空本次条件")
                     }
                 }
@@ -308,7 +323,7 @@ fun CookTabScreen(
             }
         }
 
-        val fridgeNames = fridgeDoc.items.map { it.ingredientName }.distinct()
+        val fridgeNames = fridgeDoc.stock.map { it.ingredientName }.distinct()
         if (fridgeNames.isNotEmpty()) {
             item {
                 Card(
@@ -410,6 +425,7 @@ fun CookTabScreen(
                                 ) {
                                     TextButton(
                                         onClick = {
+                                            showCompleteKitchenResults = false
                                             sceneBatch = CookDiscovery.sample(
                                                 candidateResult.recipes,
                                                 count = 3,
@@ -652,16 +668,9 @@ fun CookTabScreen(
 
     if (showDecideDialog) {
         DecideRandomDialog(
-            selectedRecipe = decidedRecipe,
-            poolSize = candidateResult.recipes.size,
-            hasAccelerometer = shakeDetector.hasAccelerometer,
-            onReroll = {
-                val pool = candidateResult.recipes
-                if (pool.size > 1) {
-                    val currentId = decidedRecipe?.id
-                    decidedRecipe = pool.filter { it.id != currentId }.random()
-                }
-            },
+            recipes = candidateResult.recipes,
+            matchesById = candidateResult.matchesById,
+            contextSummary = buildDecideContextSummary(conditions, prefs, ignoringKeyword = false),
             onOpenRecipe = { id ->
                 showDecideDialog = false
                 onOpenRecipe(id)
@@ -670,10 +679,63 @@ fun CookTabScreen(
         )
     }
 
-    pendingIntent?.let { draft ->
+    if (showRecentSearches) {
+        AlertDialog(
+            onDismissRequest = { showRecentSearches = false },
+            title = { Text("最近搜索") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    if (prefs.recentSearches.isEmpty()) Text("暂无搜索记录")
+                    prefs.recentSearches.forEach { text ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = { queryText = text; showRecentSearches = false },
+                            ) { Text(text) }
+                            TextButton(onClick = { container.preferencesStore.removeSearch(text) }) { Text("删除") }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showRecentSearches = false }) { Text("关闭") } },
+            dismissButton = {
+                TextButton(onClick = { container.preferencesStore.clearSearches() }) { Text("清空记录") }
+            },
+        )
+    }
+
+    pendingAiConsent?.let { (query, mode) ->
+        val recipient = if (mode == AiProviderMode.BYOK_DEEPSEEK) "DeepSeek" else "云乐坊的腾讯云 CloudBase 与 DeepSeek"
+        AlertDialog(
+            onDismissRequest = { pendingAiConsent = null },
+            title = { Text("发送本次搜索？") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("以下文字将发送给$recipient。")
+                    Text(query)
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    pendingAiConsent = null
+                    sendIntent(query, mode)
+                }) { Text("同意并识别") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    pendingAiConsent = null
+                    pendingIntent = query to sessionController.parseLocalIntent(snapshot, query)
+                }) { Text("用本机识别") }
+            },
+        )
+    }
+
+    pendingIntent?.let { (query, draft) ->
         SearchIntentReviewDialog(
             intent = draft,
             onConfirm = { confirmed ->
+                container.preferencesStore.recordSearch(query)
+                queryText = ""
                 val suggestedGoal = sessionController.applySearchIntent(confirmed)
                 if (suggestedGoal != null && suggestedGoal in snapshot.availableDietaryGoals) {
                     container.preferencesStore.selectDietaryGoal(suggestedGoal)

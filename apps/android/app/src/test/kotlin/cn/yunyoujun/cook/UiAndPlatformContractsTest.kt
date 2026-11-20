@@ -7,12 +7,18 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
+import cn.yunyoujun.cook.core.model.Recipe
 import cn.yunyoujun.cook.core.model.RecommendationMode
+import cn.yunyoujun.cook.core.recommend.RecipeMatch
 import cn.yunyoujun.cook.core.recommend.RecommendationOptions
 import cn.yunyoujun.cook.data.local.FridgeBatchItem
 import cn.yunyoujun.cook.data.local.FridgeLabelParser
@@ -23,6 +29,7 @@ import cn.yunyoujun.cook.platform.AlarmSchedulePrecision
 import cn.yunyoujun.cook.platform.FridgeDailyReminderScheduler
 import cn.yunyoujun.cook.platform.KitchenNotificationHelper
 import cn.yunyoujun.cook.platform.KitchenTimerScheduler
+import cn.yunyoujun.cook.ui.components.DecideRandomDialog
 import cn.yunyoujun.cook.ui.screens.KitchenWorkbenchScreen
 import cn.yunyoujun.cook.ui.theme.CookTheme
 import kotlinx.coroutines.runBlocking
@@ -186,7 +193,9 @@ class UiAndPlatformContractsTest {
             "新鲜番茄 250g\n保质期至 2026-11-17"
         }
         try {
-            val recognition = FridgePhotoInspector.recognizeInMemoryBytes(pngBytes)
+            val recognition = FridgePhotoInspector.recognizeInMemoryBytes(pngBytes, snapshot.allBuiltInStuffNames) { _, _ ->
+                error("Packaging with a known ingredient should bypass the image model")
+            }
             assertEquals(240 to 160, observedDimensions)
             assertEquals(240, recognition.summary.width)
             assertEquals(160, recognition.summary.height)
@@ -208,6 +217,16 @@ class UiAndPlatformContractsTest {
             )
             assertTrue("Expected recipes using scanned ingredient", matched.isNotEmpty())
             assertTrue(matched.any { "番茄" in it.recipe.stuff })
+
+            FridgePhotoInspector.textRecognizerOverride = { _, _ -> "保质期至 2026-11-17" }
+            val produce = FridgePhotoInspector.recognizeInMemoryBytes(pngBytes, snapshot.allBuiltInStuffNames) { _, _ ->
+                listOf("fruit" to .99f, "apple" to .92f, "banana" to .12f)
+            }
+            val produceNames = FridgeLabelParser.matchKnownNames(
+                produce.recognizedText, snapshot.allBuiltInStuffNames, produce.classifications,
+            )
+            assertEquals(listOf("苹果"), produceNames)
+            assertEquals(LocalDate.of(2026, 11, 17), FridgeLabelParser.parse(produce.recognizedText, produceNames).expiryDay)
         } finally {
             FridgePhotoInspector.textRecognizerOverride = null
         }
@@ -216,5 +235,103 @@ class UiAndPlatformContractsTest {
         val cacheAfter = app.cacheDir.walkTopDown().filter { it.isFile }.map { it.absolutePath }.toSet()
         assertEquals(filesBefore, filesAfter)
         assertEquals(cacheBefore, cacheAfter)
+    }
+
+    @Test
+    fun decideRandomSheet_keepsConstantPagerHeightAcrossShortAndLongRecipes_andSupportsHistory() {
+        val shortRecipe = Recipe(
+            id = 101,
+            name = "白灼菜心",
+            stuff = listOf("菜心"),
+            emojis = listOf("🥬"),
+        )
+        val longRecipe = Recipe(
+            id = 102,
+            name = "秘制超级豪华全家福麻辣香锅炖杂烩煲",
+            stuff = listOf(
+                "土豆", "莲藕", "木耳", "腐竹", "午餐肉",
+                "肥牛", "大虾", "鱿鱼", "千叶豆腐", "宽粉",
+                "金针菇", "香菜", "葱", "姜", "蒜",
+            ),
+            emojis = listOf("🍲"),
+            difficulty = "困难",
+            tools = listOf("一口大锅", "砂锅"),
+        )
+        val matchesById = mapOf(
+            longRecipe.id to RecipeMatch(
+                recipe = longRecipe,
+                sourceIndex = 0,
+                requiredStuff = longRecipe.stuff,
+                matchedStuff = listOf("土豆"),
+                pantryStuff = emptyList(),
+                missingStuff = longRecipe.stuff.drop(1),
+                optionalStuff = emptyList(),
+            ),
+        )
+        var openedId: Int? = null
+
+        composeRule.setContent {
+            CookTheme {
+                DecideRandomDialog(
+                    recipes = listOf(shortRecipe, longRecipe),
+                    matchesById = matchesById,
+                    contextSummary = "已有食材：土豆",
+                    onOpenRecipe = { openedId = it },
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("1 / 1").assertIsDisplayed()
+        composeRule.onNodeWithText("上一道").performScrollTo().assertIsDisplayed().assertIsNotEnabled()
+        composeRule.onNodeWithText("换一道").performScrollTo().assertIsDisplayed().assertIsEnabled()
+        composeRule.onNodeWithText("看做法").performScrollTo().assertIsDisplayed().assertIsEnabled()
+
+        val pager0 = composeRule.onNodeWithTag("decide.pager").performScrollTo().fetchSemanticsNode()
+        val pagerBounds0 = pager0.boundsInRoot
+        val heightPage0 = pager0.size.height
+        assertTrue("Expected positive pager height, got $heightPage0", heightPage0 > 0)
+
+        val shortNodeBounds = composeRule.onAllNodesWithText(shortRecipe.name)
+            .fetchSemanticsNodes()
+            .firstOrNull()?.boundsInRoot
+        val page0IsShort = shortNodeBounds != null &&
+            shortNodeBounds.width > 0f &&
+            kotlin.math.abs(shortNodeBounds.center.x - pagerBounds0.center.x) < pagerBounds0.width / 4f
+
+        composeRule.onNodeWithText("换一道").performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("2 / 2").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("上一道").assertIsEnabled()
+
+        val heightPage1 = composeRule.onNodeWithTag("decide.pager").fetchSemanticsNode().size.height
+        assertEquals(heightPage0, heightPage1)
+
+        composeRule.onNodeWithText("上一道").performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("1 / 2").performScrollTo().assertIsDisplayed()
+
+        composeRule.onNodeWithText("看做法").performScrollTo().performClick()
+        composeRule.waitForIdle()
+        assertEquals(if (page0IsShort) shortRecipe.id else longRecipe.id, openedId)
+    }
+
+    @Test
+    fun decideRandomSheet_emptyPoolShowsEmptyMessageAndHidesOpenAction() {
+        composeRule.setContent {
+            CookTheme {
+                DecideRandomDialog(
+                    recipes = emptyList(),
+                    contextSummary = "已有食材：龙虾",
+                    onOpenRecipe = {},
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("当前候选池为空，请放宽条件后再随机决定。").assertIsDisplayed()
+        assertTrue(composeRule.onAllNodesWithText("看做法").fetchSemanticsNodes().isEmpty())
     }
 }

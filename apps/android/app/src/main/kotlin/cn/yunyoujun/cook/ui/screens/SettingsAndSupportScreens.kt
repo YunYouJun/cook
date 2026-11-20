@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +57,8 @@ import cn.yunyoujun.cook.data.local.AiProviderMode
 import cn.yunyoujun.cook.data.local.AndroidKeystoreVault
 import cn.yunyoujun.cook.data.local.AppThemeMode
 import cn.yunyoujun.cook.data.local.SignalConsentState
+import cn.yunyoujun.cook.data.remote.YunlefunAccountWebHandoff
+import cn.yunyoujun.cook.data.remote.AccountWebsitePurpose
 import cn.yunyoujun.cook.data.remote.AppFeedbackCategory
 import cn.yunyoujun.cook.data.remote.FeedbackClient
 import cn.yunyoujun.cook.data.remote.FeedbackReceipt
@@ -69,12 +72,14 @@ fun SettingsTabScreen(
     snapshot: CookCatalogSnapshot,
     container: AppContainer,
     onOpenAccountSync: () -> Unit = {},
+    onOpenMembership: () -> Unit = {},
     onOpenPrivateRecipes: () -> Unit,
     onOpenPersonalCatalog: () -> Unit,
     onOpenAiSettings: () -> Unit,
     onOpenFeedback: () -> Unit,
     onOpenRecipeData: () -> Unit,
     onOpenPrivacy: () -> Unit,
+    onOpenCookingJournal: () -> Unit,
 ) {
     val prefs by container.preferencesStore.state.collectAsState()
     val accountState by container.yunlefunSessionManager.state.collectAsState()
@@ -191,7 +196,11 @@ fun SettingsTabScreen(
                     }
                     SettingsNavRow("云乐坊账号与跨端同步", accountSubtitle, onOpenAccountSync)
                     HorizontalDivider()
+                    SettingsNavRow("云乐坊会员", "查看和核对会员权益", onOpenMembership)
+                    HorizontalDivider()
                     SettingsNavRow("AI 辅助与 DeepSeek Key", prefs.aiProviderMode.title, onOpenAiSettings)
+                    HorizontalDivider()
+                    SettingsNavRow("做菜足迹", "回看做过和学会的菜", onOpenCookingJournal)
                     HorizontalDivider()
                     SettingsNavRow("我的私房菜", "自建做法与 JSON 备份", onOpenPrivateRecipes)
                     HorizontalDivider()
@@ -245,7 +254,8 @@ fun AiSettingsScreen(
     onBack: () -> Unit,
 ) {
     val prefs by container.preferencesStore.state.collectAsState()
-    var keyInput by rememberSaveable { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    var keyInput by remember { mutableStateOf("") }
     var hasStoredKey by remember {
         mutableStateOf(
             runCatching { !container.vault.readSecret(AndroidKeystoreVault.KEY_DEEPSEEK_API_KEY).isNullOrBlank() }
@@ -253,6 +263,7 @@ fun AiSettingsScreen(
         )
     }
     var vaultMessage by remember { mutableStateOf<String?>(null) }
+    var checkingKey by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -287,15 +298,15 @@ fun AiSettingsScreen(
                     )
                     OutlinedTextField(
                         value = keyInput,
-                        onValueChange = { keyInput = it },
+                        onValueChange = { keyInput = it.take(512) },
                         label = { Text("输入新的 DeepSeek API Key (sk-...)") },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            enabled = keyInput.trim().isNotEmpty(),
+                            enabled = !checkingKey && container.deepSeekClient.validKey(keyInput.trim()),
                             onClick = {
                                 runCatching {
                                     container.vault.writeSecret(AndroidKeystoreVault.KEY_DEEPSEEK_API_KEY, keyInput.trim())
@@ -309,8 +320,38 @@ fun AiSettingsScreen(
                                 }
                             },
                         ) { Text("加密保存 Key") }
+                        OutlinedButton(
+                            enabled = !checkingKey && (hasStoredKey || container.deepSeekClient.validKey(keyInput.trim())),
+                            onClick = {
+                                val key = keyInput.trim()
+                                checkingKey = true
+                                scope.launch {
+                                    try {
+                                        val active = key.ifEmpty {
+                                            container.vault.readSecret(AndroidKeystoreVault.KEY_DEEPSEEK_API_KEY).orEmpty()
+                                        }
+                                        vaultMessage = if (container.deepSeekClient.checkConnection(active)) {
+                                            "连接成功，当前余额可用。"
+                                        } else {
+                                            "Key 可用，当前余额不足。"
+                                        }
+                                    } catch (e: kotlinx.coroutines.CancellationException) {
+                                        throw e
+                                    } catch (e: Exception) {
+                                        vaultMessage = if (e is IllegalStateException || e is IllegalArgumentException) {
+                                            e.message ?: "连接测试失败。"
+                                        } else {
+                                            "连接测试失败，请检查网络后重试。"
+                                        }
+                                    } finally {
+                                        checkingKey = false
+                                    }
+                                }
+                            },
+                        ) { Text(if (checkingKey) "测试中…" else "测试连接") }
                         if (hasStoredKey) {
                             OutlinedButton(
+                                enabled = !checkingKey,
                                 onClick = {
                                     runCatching { container.vault.deleteSecret(AndroidKeystoreVault.KEY_DEEPSEEK_API_KEY) }
                                         .onSuccess {
@@ -508,7 +549,7 @@ fun PrivacySettingsScreen(onBack: () -> Unit) {
         ) {
             Text("1. 本地设备库与账号库隔离", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(
-                "本机匿名收藏、最近浏览、冰箱库存、私房菜与个人词典均保存在独立的设备本地域；未来接入账号云同步时，也绝不会未授权自动上传本机旧数据。",
+                "设备库和账号库分开保存。跨端同步需主动开启；冰箱、做菜足迹、搜索历史、私房菜和个人词典保存在设备上。",
                 style = MaterialTheme.typography.bodySmall,
             )
             Text("2. 安全密钥库", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -518,7 +559,7 @@ fun PrivacySettingsScreen(onBack: () -> Unit) {
             )
             Text("3. 网络请求隔离", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(
-                "DeepSeek BYOK、云乐坊会员托管 AI 与意见反馈各自使用独立连接，禁止自动跨站重定向、禁用 Cookie 与缓存；菜谱原文仅随白名单校验后的当前步上下文发送，不上传你的冰箱库存或私房菜库。",
+                "在 AI 设置点按「测试连接」会用所选 Key 查询 DeepSeek 余额。联网识别须确认发送本次输入；批量识图会先展示照片和接收方，确认后才上传去除元数据的照片。",
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -530,11 +571,40 @@ fun PrivacySettingsScreen(onBack: () -> Unit) {
 fun AccountAndSyncScreen(
     container: AppContainer,
     onBack: () -> Unit,
+    onOpenWeChatSignup: () -> Unit = {},
+    onOpenMembership: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val state by container.yunlefunSessionManager.state.collectAsState()
-    var manualCallbackUrl by rememberSaveable { mutableStateOf("") }
+    val sessions = container.yunlefunSessionManager
+    val state by sessions.state.collectAsState()
+    var manualCallbackUrl by remember { mutableStateOf("") }
+    var websiteCallback by remember { mutableStateOf("") }
+    var openingWebsite by remember { mutableStateOf(false) }
+    var accountWebsiteMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(state.awaitingAccountWebsite) {
+        if (!state.awaitingAccountWebsite) websiteCallback = ""
+    }
+
+    fun openAccountWebsite(callback: String? = null) {
+        openingWebsite = true
+        accountWebsiteMessage = null
+        scope.launch {
+            try {
+                val open: (String) -> Unit = { url -> context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+                if (callback == null) open(sessions.beginAccountWebsite())
+                else sessions.openAccountWebsiteFromCallback(callback, AccountWebsitePurpose.ACCOUNT_SETTINGS, open)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (e is android.content.ActivityNotFoundException) sessions.cancelAccountWebsite()
+                accountWebsiteMessage = "暂时无法打开账号管理，请检查网络或重新打开。"
+            } finally {
+                openingWebsite = false
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -605,16 +675,27 @@ fun AccountAndSyncScreen(
                         )
                         state.entitlement?.let { ent ->
                             Text(
-                                text = if (ent.isActive) {
-                                    "云乐坊会员：有效（AccountToken: ${ent.accountToken}）"
+                                text = if (ent.isActiveAt()) {
+                                    ent.expiresAtEpochMs?.let {
+                                        "云乐坊会员 · 有效期至 ${java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.systemDefault()).toLocalDate()}"
+                                    } ?: "云乐坊会员：有效"
                                 } else {
-                                    "云乐坊会员：未开通或已到期（AccountToken: ${ent.accountToken}）"
+                                    "云乐坊会员：未开通或已到期"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (ent.isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (ent.isActiveAt()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                enabled = !openingWebsite && !state.awaitingAccountWebsite,
+                                onClick = { openAccountWebsite() },
+                            ) { Text(if (openingWebsite) "正在打开…" else "管理云乐坊账号") }
+                            TextButton(onClick = {
+                                val url = Uri.parse(YunlefunAccountWebHandoff.SETTINGS_URL)
+                                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url)) }
+                                    .onFailure { Toast.makeText(context, "未找到可用的系统浏览器", Toast.LENGTH_SHORT).show() }
+                            }) { Text("申请注销账号") }
                             OutlinedButton(
                                 onClick = {
                                     scope.launch { container.yunlefunSessionManager.refreshProfileAndEntitlement() }
@@ -626,7 +707,31 @@ fun AccountAndSyncScreen(
                                 },
                             ) { Text("退出登录") }
                         }
+                        if (state.awaitingAccountWebsite) {
+                            Text("浏览器若停留在授权回调页，请复制回调链接并在这里继续。")
+                            OutlinedTextField(
+                                value = websiteCallback,
+                                onValueChange = { websiteCallback = it.take(256) },
+                                label = { Text("账号管理回调链接") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(enabled = websiteCallback.isNotBlank() && !openingWebsite, onClick = {
+                                    openAccountWebsite(websiteCallback.trim())
+                                }) { Text("继续打开") }
+                                TextButton(onClick = { scope.launch { sessions.cancelAccountWebsite() } }) { Text("取消") }
+                            }
+                        }
+                        accountWebsiteMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     }
+                    TextButton(onClick = onOpenMembership) { Text("会员与权益") }
+                    WeChatAccountActions(
+                        authorization = container.weChatAuthorization,
+                        sessions = sessions,
+                        subject = state.credential?.subject,
+                        onOpenSignup = onOpenWeChatSignup,
+                    )
                 }
             }
 

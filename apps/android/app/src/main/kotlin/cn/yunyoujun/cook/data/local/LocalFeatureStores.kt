@@ -152,9 +152,13 @@ data class FridgeCategory(
 @Serializable
 enum class FridgeDateKind(val label: String) {
     PACKAGE_EXPIRY("包装保质期"),
+    CALCULATED("生产日期与保质期推算"),
     ESTIMATED("按常见天数推算"),
     ADVISORY("建议尽早食用"),
-    MANUAL("手动修改"),
+    MANUAL("自设食用计划"),
+    ;
+
+    val isSuggested: Boolean get() = this != PACKAGE_EXPIRY && this != CALCULATED
 }
 
 @Serializable
@@ -166,6 +170,8 @@ data class FridgeBatchItem(
     val addedAtMs: Long = System.currentTimeMillis(),
     val expiresOnIsoDate: String? = null,
     val dateKind: FridgeDateKind = FridgeDateKind.ESTIMATED,
+    val consumedAtMs: Long? = null,
+    val productionIsoDate: String? = null,
 ) {
     fun daysRemaining(today: LocalDate = LocalDate.now()): Int? {
         val iso = expiresOnIsoDate ?: return null
@@ -183,6 +189,9 @@ data class FridgeDocument(
     val categories: List<FridgeCategory> = defaultCategories(),
     val items: List<FridgeBatchItem> = emptyList(),
 ) {
+    val stock: List<FridgeBatchItem> get() = items.filter { it.consumedAtMs == null }
+    val consumed: List<FridgeBatchItem> get() = items.filter { it.consumedAtMs != null }.sortedByDescending { it.consumedAtMs }
+
     companion object {
         fun defaultCategories(): List<FridgeCategory> = listOf(
             FridgeCategory("veg", "蔬菜水果", isDefault = true),
@@ -210,24 +219,31 @@ class FridgeStore(context: Context) {
         shelfLifeDays: Int,
         explicitIsoDate: String? = null,
         dateKind: FridgeDateKind = FridgeDateKind.ESTIMATED,
+        productionIsoDate: String? = null,
     ) {
         val trimmed = ingredientName.trim()
         if (trimmed.isEmpty()) return
-        val effectiveCategoryId = if (_state.value.categories.any { it.id == categoryId }) {
-            categoryId
-        } else {
-            FridgeBatchItem.DEFAULT_CATEGORY_ID
-        }
         val expires = explicitIsoDate ?: LocalDate.now().plusDays(shelfLifeDays.coerceIn(1, 365).toLong()).toString()
         val item = FridgeBatchItem(
             ingredientName = trimmed,
-            categoryId = effectiveCategoryId,
+            categoryId = categoryId,
             quantityText = quantityText.trim(),
             addedAtMs = System.currentTimeMillis(),
             expiresOnIsoDate = expires,
             dateKind = dateKind,
+            productionIsoDate = productionIsoDate,
         )
-        update { prev -> prev.copy(items = listOf(item) + prev.items) }
+        addItems(listOf(item))
+    }
+
+    fun addItems(items: List<FridgeBatchItem>) {
+        update { doc ->
+            val categoryIds = doc.categories.mapTo(mutableSetOf()) { it.id }
+            val additions = items.map { item ->
+                if (item.categoryId in categoryIds) item else item.copy(categoryId = FridgeBatchItem.DEFAULT_CATEGORY_ID)
+            }
+            doc.copy(items = additions + doc.items)
+        }
     }
 
     fun updateItemDate(itemId: String, expiresOnIsoDate: String?, dateKind: FridgeDateKind) {
@@ -242,6 +258,22 @@ class FridgeStore(context: Context) {
 
     fun removeItem(itemId: String) {
         update { prev -> prev.copy(items = prev.items.filterNot { it.id == itemId }) }
+    }
+
+    fun markConsumed(itemId: String, nowMs: Long = System.currentTimeMillis()) {
+        update { doc ->
+            doc.copy(items = doc.items.map { item ->
+                if (item.id == itemId && item.consumedAtMs == null) item.copy(consumedAtMs = nowMs) else item
+            })
+        }
+    }
+
+    fun restoreItem(itemId: String) {
+        update { doc ->
+            doc.copy(items = doc.items.map { item ->
+                if (item.id == itemId) item.copy(consumedAtMs = null) else item
+            })
+        }
     }
 
     fun addCategory(name: String) {
@@ -262,6 +294,7 @@ class FridgeStore(context: Context) {
         val trimmed = newName.trim().take(20)
         if (trimmed.isEmpty()) return
         update { prev ->
+            require(prev.categories.none { it.id != categoryId && it.name == trimmed }) { "已有同名分类。" }
             prev.copy(
                 categories = prev.categories.map {
                     if (it.id == categoryId) it.copy(name = trimmed) else it
@@ -286,9 +319,9 @@ class FridgeStore(context: Context) {
     }
 
     fun dueSoonCount(today: LocalDate = LocalDate.now()): Int =
-        _state.value.items.count { item ->
+        _state.value.stock.count { item ->
             val days = item.daysRemaining(today) ?: return@count false
-            days in -1..2
+            days in 0..1
         }
 
     fun formatLocalDate(epochMs: Long): String =
@@ -297,6 +330,7 @@ class FridgeStore(context: Context) {
     private fun update(transform: (FridgeDocument) -> FridgeDocument) {
         synchronized(this) {
             val next = transform(_state.value)
+            if (next == _state.value) return
             AtomicJsonFiles.writeAtomic(file, next)
             _state.value = next
         }

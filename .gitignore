@@ -69,3 +69,8 @@ apps/web/ionic.config.json
 
 # 图文做法配图（pnpm howtocook 生成，pnpm images:upload 上传）
 .cache/
+
+# Android model exports published to COS
+/assets/android/*.glb
+/assets/android/produce/classifier.onnx
+/assets/showcase/*/model.glb

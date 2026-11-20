@@ -14,6 +14,9 @@ tinkAndroid = "1.24.0"
 mlkitTextRecognitionChinese = "16.0.1"
 robolectric = "4.18.1"
 androidxTestCore = "1.7.0"
+filament = "1.81.0"
+onnxRuntime = "1.23.2"
+wechatOpenSdk = "6.8.40"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -37,6 +40,9 @@ androidx-room-testing = { group = "androidx.room", name = "room-testing", versio
 androidx-test-core-ktx = { group = "androidx.test", name = "core-ktx", version.ref = "androidxTestCore" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 mlkit-text-recognition-chinese = { group = "com.google.mlkit", name = "text-recognition-chinese", version.ref = "mlkitTextRecognitionChinese" }
+filament-gltfio = { group = "com.google.android.filament", name = "gltfio-android", version.ref = "filament" }
+onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxRuntime" }
+wechat-opensdk = { group = "com.tencent.mm.opensdk", name = "wechat-sdk-android", version.ref = "wechatOpenSdk" }
 tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tinkAndroid" }
 junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }

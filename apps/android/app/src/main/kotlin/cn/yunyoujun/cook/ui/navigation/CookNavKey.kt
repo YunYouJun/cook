@@ -1,6 +1,7 @@
 package cn.yunyoujun.cook.ui.navigation
 
 import androidx.navigation3.runtime.NavKey
+import cn.yunyoujun.cook.data.local.JournalRecipeId
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -24,7 +25,10 @@ sealed interface CookNavKey : NavKey {
     data class KitchenWorkbench(val recipeId: Int) : CookNavKey
 
     @Serializable
-    data object PrivateRecipesScreen : CookNavKey
+    data class PrivateRecipesScreen(val targetId: String? = null) : CookNavKey
+
+    @Serializable
+    data class CookingJournal(val recipeId: JournalRecipeId? = null) : CookNavKey
 
     @Serializable
     data object PersonalCatalogScreen : CookNavKey
@@ -43,4 +47,10 @@ sealed interface CookNavKey : NavKey {
 
     @Serializable
     data object AccountAndSyncScreen : CookNavKey
+
+    @Serializable
+    data object Membership : CookNavKey
+
+    @Serializable
+    data object WeChatSignup : CookNavKey
 }

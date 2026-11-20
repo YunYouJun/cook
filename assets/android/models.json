@@ -1,0 +1,32 @@
+{
+  "android/cloud-kitchen.glb": {
+    "file": "cloud-kitchen-7a0d567b4619bf01646698ee85fbcf65a7849bfd0daa746451f877da104c5057.glb",
+    "bytes": 3946336,
+    "sha256": "7a0d567b4619bf01646698ee85fbcf65a7849bfd0daa746451f877da104c5057"
+  },
+  "android/showcase-plate.glb": {
+    "file": "showcase-plate-acd503335c452fddec691edb4027609c67a999e7859dedcdd7f68af5e894942c.glb",
+    "bytes": 61828,
+    "sha256": "acd503335c452fddec691edb4027609c67a999e7859dedcdd7f68af5e894942c"
+  },
+  "android/produce/classifier.onnx": {
+    "file": "classifier-c50ebd4bf147b36871fcc28151cefa23d212328c1b7c95ed0e1dc858f08cbaab.onnx",
+    "bytes": 26466887,
+    "sha256": "c50ebd4bf147b36871fcc28151cefa23d212328c1b7c95ed0e1dc858f08cbaab"
+  },
+  "showcase/smashed-cucumber-clay/model.glb": {
+    "file": "smashed-cucumber-clay-0b97b1a765525d4e7e4d4ea0ae822e915ce1cf43523547a4980a1c5fe36a4ec8.glb",
+    "bytes": 112312,
+    "sha256": "0b97b1a765525d4e7e4d4ea0ae822e915ce1cf43523547a4980a1c5fe36a4ec8"
+  },
+  "showcase/steamed-egg-clay/model.glb": {
+    "file": "steamed-egg-clay-d13ba07d162a0c766db509649ad0c66c42449d301ee479f08e65f57839506eb8.glb",
+    "bytes": 149216,
+    "sha256": "d13ba07d162a0c766db509649ad0c66c42449d301ee479f08e65f57839506eb8"
+  },
+  "showcase/tomato-egg-clay/model.glb": {
+    "file": "tomato-egg-clay-5b7a9eb5caef80aed589e3586d6ca2bb92ca803173414639f182f2aaff28b99e.glb",
+    "bytes": 881128,
+    "sha256": "5b7a9eb5caef80aed589e3586d6ca2bb92ca803173414639f182f2aaff28b99e"
+  }
+}

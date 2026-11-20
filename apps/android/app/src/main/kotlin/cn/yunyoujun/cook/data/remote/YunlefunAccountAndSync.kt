@@ -23,6 +23,9 @@ import cn.yunyoujun.cook.data.local.SecretVault
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,6 +37,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -48,6 +52,9 @@ import java.net.UnknownHostException
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.coroutines.coroutineContext
 
 /**
  * 与 @yunlefun/sso 的 SSO v3 协议一致；不接收 URL 中的会话或长期凭据。
@@ -191,6 +198,8 @@ class YunlefunSSO(
 
 sealed class YunlefunAccountException(message: String) : Exception(message) {
     class InvalidCallback : YunlefunAccountException("授权结果无效或已过期，请重新登录。")
+    class InvalidWebsiteCallback : YunlefunAccountException("账号管理授权无效或已过期，请重新打开账号管理。")
+    class CheckoutUnavailable : YunlefunAccountException("当前无法打开云乐坊会员购买入口，请稍后重试。")
     class AuthorizationFailed : YunlefunAccountException("云乐坊授权未完成，请重新登录。")
     class InvalidResponse : YunlefunAccountException("登录服务返回了无效结果，请稍后重试。")
     class ExpiredSession : YunlefunAccountException("登录已过期，请重新登录。")
@@ -254,6 +263,114 @@ class YunlefunAccountService(
         return exchangeTicket(bodyText, deviceID = deviceID)
     }
 
+    internal suspend fun signInWithWeChat(code: String, deviceID: String): YunlefunCredential {
+        validateWeChatCode(code)
+        val response = weChatRequest("exchangeCookWeChatCode", mapOf("code" to code))
+        return exchangeWeChatTicket(response, deviceID, subjectRequired = true)
+    }
+
+    internal suspend fun bindWeChat(code: String, credential: YunlefunCredential) {
+        validateWeChatCode(code)
+        if (!credential.isValid()) throw YunlefunAccountException.ExpiredSession()
+        val response = weChatRequest("bindCookWeChat", mapOf("code" to code), credential = credential)
+        if (response.keys != setOf("ok")) throw YunlefunAccountException.InvalidResponse()
+    }
+
+    internal suspend fun weChatSignupCaptcha(deviceID: String): WeChatSignupCaptcha {
+        val response = weChatRequest("cookSignupCaptcha", deviceID = deviceID)
+        val image = response.requiredWeChatString("image", 200_050)
+        return WeChatSignupCaptcha(image, response.requiredWeChatString("challenge", 4096))
+    }
+
+    internal suspend fun sendWeChatSignupSms(
+        phone: String,
+        captcha: Pair<String, String>?,
+        deviceID: String,
+    ): String {
+        if (!WECHAT_SIGNUP_PHONE.matches(phone)) throw YunlefunAccountException.InvalidResponse()
+        val fields = buildMap {
+            put("phone", phone)
+            if (captcha != null) {
+                put("captchaChallenge", captcha.first)
+                put("captchaAnswer", captcha.second)
+            }
+        }
+        return weChatRequest("sendCookSignupSms", fields, deviceID)
+            .requiredWeChatString("challenge", 4096)
+    }
+
+    internal suspend fun verifyWeChatSignupSms(challenge: String, otp: String, deviceID: String): WeChatSignupNext {
+        if (!otp.matches(Regex("[0-9]{6}")) || challenge.length !in 1..4096) {
+            throw WeChatAccountException(WeChatAccountException.Reason.INVALID_OTP)
+        }
+        val response = weChatRequest("verifyCookSignupSms", mapOf("challenge" to challenge, "otp" to otp), deviceID)
+        return when (response["next"]) {
+            JsonPrimitive("existing") -> {
+                if ("proof" in response) throw YunlefunAccountException.InvalidResponse()
+                WeChatSignupNext.ExistingAccount
+            }
+            JsonPrimitive("confirm") -> WeChatSignupNext.Confirm(response.requiredWeChatString("proof", 4096))
+            else -> throw YunlefunAccountException.InvalidResponse()
+        }
+    }
+
+    internal suspend fun registerWithWeChat(proof: String, code: String, deviceID: String): YunlefunCredential {
+        validateWeChatCode(code)
+        if (proof.length !in 1..4096) throw WeChatAccountException(WeChatAccountException.Reason.RESTART_SIGNUP)
+        val response = weChatRequest("registerCookWeChat", mapOf("proof" to proof, "code" to code), deviceID)
+        return try {
+            exchangeWeChatTicket(response, deviceID, subjectRequired = false)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            throw WeChatAccountException(WeChatAccountException.Reason.ACCOUNT_CREATED)
+        }
+    }
+
+    private suspend fun weChatRequest(
+        action: String,
+        fields: Map<String, String> = emptyMap(),
+        deviceID: String? = null,
+        credential: YunlefunCredential? = null,
+    ): JsonObject {
+        val data = sendAccountRequest(
+            url = TICKET_URL,
+            fields = fields + mapOf("action" to action, "clientId" to YunlefunSSO.CLIENT_ID),
+            credential = credential,
+            deviceID = deviceID,
+            origin = COOK_ORIGIN,
+            weChat = true,
+        )
+        val response = runCatching { Json.parseToJsonElement(data).jsonObject }
+            .getOrElse { throw YunlefunAccountException.InvalidResponse() }
+        if (response["ok"] != JsonPrimitive(true)) throw YunlefunAccountException.InvalidResponse()
+        return response
+    }
+
+    private suspend fun exchangeWeChatTicket(
+        payload: JsonObject,
+        deviceID: String,
+        subjectRequired: Boolean,
+    ): YunlefunCredential {
+        if (payload.keys.any { it !in setOf("ok", "ticket", "subject") }) throw YunlefunAccountException.InvalidResponse()
+        val subject = if (subjectRequired || "subject" in payload) payload.requiredWeChatString("subject", 512) else null
+        val credential = exchangeCustomTicket(payload.requiredWeChatString("ticket", 32_768), deviceID)
+        if (subject != null && credential.subject != subject) {
+            runCatching { signOut(credential) }
+            throw YunlefunAccountException.InvalidResponse()
+        }
+        return credential
+    }
+
+    private fun JsonObject.requiredWeChatString(key: String, maxSize: Int): String =
+        (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf {
+            it.isNotBlank() && it.toByteArray(Charsets.UTF_8).size <= maxSize
+        } ?: throw YunlefunAccountException.InvalidResponse()
+
+    private fun validateWeChatCode(code: String) {
+        if (!isWeChatAuthorizationCode(code)) throw WeChatAccountException(WeChatAccountException.Reason.AUTHORIZATION_FAILED)
+    }
+
     suspend fun refresh(credential: YunlefunCredential): YunlefunCredential {
         val next = requestToken(
             path = "token",
@@ -292,6 +409,45 @@ class YunlefunAccountService(
         )
     }
 
+    suspend fun supportsAccountWebHandoff(): Boolean {
+        val response = try {
+            transport.request(
+                method = "GET",
+                url = YunlefunAccountWebHandoff.ENDPOINT,
+                maxResponseBytes = 1024,
+                connectTimeoutMs = 10_000,
+                readTimeoutMs = 10_000,
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            throw YunlefunAccountException.Unavailable()
+        }
+        if (response.statusCode == 404) return false
+        if (response.statusCode != 200) throw YunlefunAccountException.Unavailable()
+        val wire = runCatching { json.decodeFromString<WebHandoffCapability>(response.bodyText) }
+            .getOrElse { throw YunlefunAccountException.InvalidResponse() }
+        return wire.supported && wire.systemBrowser
+    }
+
+    suspend fun approveAccountWebHandoff(fields: Map<String, String>, credential: YunlefunCredential) {
+        if (!credential.isValid()) throw YunlefunAccountException.ExpiredSession()
+        val data = sendAccountRequest(
+            url = TICKET_URL,
+            fields = fields,
+            credential = credential,
+            origin = COOK_ORIGIN,
+        )
+        val approved = runCatching { json.decodeFromString<WebHandoffApproval>(data).ok }.getOrDefault(false)
+        if (!approved) throw YunlefunAccountException.InvalidResponse()
+    }
+
+    @Serializable
+    private data class WebHandoffCapability(val supported: Boolean, val systemBrowser: Boolean = false)
+
+    @Serializable
+    private data class WebHandoffApproval(val ok: Boolean)
+
     private suspend fun exchangeTicket(bodyText: String, deviceID: String): YunlefunCredential {
         val obj = runCatching { Json.parseToJsonElement(bodyText).jsonObject }
             .getOrElse { throw YunlefunAccountException.InvalidResponse() }
@@ -301,12 +457,15 @@ class YunlefunAccountService(
         if (!ok || ticket.isEmpty() || forbiddenKeys.any { it in obj }) {
             throw YunlefunAccountException.InvalidResponse()
         }
-        return requestToken(
+        return exchangeCustomTicket(ticket, deviceID)
+    }
+
+    private suspend fun exchangeCustomTicket(ticket: String, deviceID: String): YunlefunCredential =
+        requestToken(
             path = "signin/custom",
             fields = mapOf("provider_id" to "custom", "ticket" to ticket),
             deviceID = deviceID,
         )
-    }
 
     private suspend fun requestToken(
         path: String,
@@ -346,6 +505,7 @@ class YunlefunAccountService(
         credential: YunlefunCredential? = null,
         deviceID: String? = null,
         origin: String? = null,
+        weChat: Boolean = false,
     ): String {
         val headers = LinkedHashMap<String, String>()
         (deviceID ?: credential?.deviceID)?.let { headers["x-device-id"] = it }
@@ -370,6 +530,16 @@ class YunlefunAccountService(
         }
 
         if (response.statusCode !in 200..299) {
+            if (weChat) {
+                val reason = runCatching {
+                    Json.parseToJsonElement(response.bodyText).jsonObject.requiredWeChatString("reason", 128)
+                }.getOrNull()
+                if (reason == "not_authenticated") throw YunlefunAccountException.ExpiredSession()
+                throw WeChatAccountException(
+                    WeChatAccountException.Reason.entries.firstOrNull { it.wire == reason }
+                        ?: WeChatAccountException.Reason.UNAVAILABLE,
+                )
+            }
             val errCode = runCatching {
                 Json.parseToJsonElement(response.bodyText).jsonObject["error"]
                     ?.jsonPrimitive?.takeIf { it.isString }?.content
@@ -840,7 +1010,12 @@ data class MembershipEntitlement(
     val accountToken: java.util.UUID,
     val isActive: Boolean,
     val expiresAtEpochMs: Long?,
-)
+) {
+    fun isActiveAt(nowMs: Long = System.currentTimeMillis()): Boolean =
+        isActive && expiresAtEpochMs?.let { it > nowMs } == true
+}
+
+enum class MembershipCheckReason { SCREEN, RESTORE, CHECKOUT_RETURN }
 
 /**
  * 会员权益读取服务 (`account-api` -> `getAccount`)，对齐 iOS `MembershipService.swift`。
@@ -869,15 +1044,15 @@ class MembershipService(
         if (body["code"] != null) {
             throw YunlefunAccountException.Unavailable()
         }
-        val membership = body["membership"]?.jsonObject
+        val membership = body["membership"] as? JsonObject
             ?: throw YunlefunAccountException.InvalidResponse()
-        val isActive = membership["isActive"]?.jsonPrimitive?.booleanOrNull
+        val isActive = (membership["isActive"] as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull
             ?: throw YunlefunAccountException.InvalidResponse()
-        val expireAtMs = membership["expireAt"]?.jsonPrimitive?.doubleOrNull?.let { ms ->
-            if (!ms.isFinite() || ms < 0.0 || ms > 253_402_300_799_000.0) {
-                throw YunlefunAccountException.InvalidResponse()
-            }
-            ms.toLong()
+        val expiry = membership["expireAt"]
+        val expireAtMs = if (expiry == null || expiry == JsonNull) null else {
+            (expiry as? JsonPrimitive)?.takeUnless { it.isString }?.doubleOrNull?.takeIf { ms ->
+                ms.isFinite() && ms in 0.0..253_402_300_799_000.0
+            }?.toLong() ?: throw YunlefunAccountException.InvalidResponse()
         }
         if (isActive && (expireAtMs == null || expireAtMs <= 0L)) {
             throw YunlefunAccountException.InvalidResponse()
@@ -905,9 +1080,15 @@ data class AccountSyncUiState(
     val lastSyncedAtMs: Long? = null,
     val accountDocument: UserDataDocument = UserDataDocument(),
     val statusMessage: String? = null,
+    val pendingWebsitePurpose: AccountWebsitePurpose? = null,
+    val awaitingMembershipReturn: Boolean = false,
+    val isCheckingMembership: Boolean = false,
+    val membershipMessage: String? = null,
 ) {
     val usesAccountLibrary: Boolean
         get() = credential != null && syncEnabled
+
+    val awaitingAccountWebsite: Boolean get() = pendingWebsitePurpose == AccountWebsitePurpose.ACCOUNT_SETTINGS
 }
 
 /**
@@ -931,13 +1112,23 @@ class YunlefunSessionManager(
     private val hydratedSubjects = HashSet<String>()
     private val hydrationMutex = Mutex()
     private val mutationMutex = Mutex()
+    private val tokenRefreshMutex = Mutex()
+    private val membershipCheckMutex = Mutex()
     private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
     @Volatile
     private var initialHydrationJob: Job? = null
     @Volatile
     internal var beforeAccountPersistCommitHook: (suspend () -> Unit)? = null
 
-    private var pendingSso: YunlefunSSO? = null
+    private val pendingSso = AtomicReference<YunlefunSSO?>()
+    private class PendingAccountWebsite(
+        val handoff: YunlefunAccountWebHandoff,
+        val subject: String,
+        val revision: Long,
+        val purpose: AccountWebsitePurpose,
+    )
+
+    private var pendingAccountWebsite: PendingAccountWebsite? = null
     private val _state = MutableStateFlow(AccountSyncUiState())
     val state: StateFlow<AccountSyncUiState> = _state.asStateFlow()
 
@@ -1009,29 +1200,177 @@ class YunlefunSessionManager(
         }
     }
 
+    private suspend fun credentialForAccountRequest(revision: Long, subject: String): YunlefunCredential =
+        tokenRefreshMutex.withLock {
+            val current = mutationMutex.withLock {
+                assertSessionUnchanged(revision, subject)
+                requireNotNull(_state.value.credential)
+            }
+            if (current.isValid()) return@withLock current
+            val fresh = accountService.refresh(current)
+            if (!fresh.isValid()) throw YunlefunAccountException.ExpiredSession()
+            mutationMutex.withLock {
+                assertSessionUnchanged(revision, subject)
+                vault.writeSecret(AndroidKeystoreVault.KEY_YUNLEFUN_SESSION_JSON, json.encodeToString(fresh))
+                _state.value = _state.value.copy(credential = fresh)
+            }
+            fresh
+        }
+
     fun beginSsoAuthorization(): String {
         val sso = YunlefunSSO()
-        pendingSso = sso
+        pendingSso.set(sso)
         return sso.authorizationUrl
+    }
+
+    suspend fun beginAccountWebsite(purpose: AccountWebsitePurpose = AccountWebsitePurpose.ACCOUNT_SETTINGS): String {
+        val (revision, subject) = mutationMutex.withLock {
+            val credential = _state.value.credential ?: throw YunlefunAccountException.ExpiredSession()
+            sessionRevision.get() to credential.subject
+        }
+        val supported = accountService.supportsAccountWebHandoff()
+        return mutationMutex.withLock {
+            assertSessionUnchanged(revision, subject)
+            clearPendingAccountWebsite()
+            if (!supported) {
+                if (purpose == AccountWebsitePurpose.MEMBERSHIP_PURCHASE) throw YunlefunAccountException.CheckoutUnavailable()
+                return@withLock YunlefunAccountWebHandoff.SETTINGS_URL
+            }
+
+            val pending = PendingAccountWebsite(YunlefunAccountWebHandoff(), subject, revision, purpose)
+            pendingAccountWebsite = pending
+            _state.value = _state.value.copy(pendingWebsitePurpose = purpose)
+            scope.launch {
+                delay(YunlefunAccountWebHandoff.LIFETIME_MS)
+                mutationMutex.withLock {
+                    if (pendingAccountWebsite === pending) clearPendingAccountWebsite()
+                }
+            }
+            pending.handoff.startUrl
+        }
+    }
+
+    suspend fun cancelAccountWebsite(purpose: AccountWebsitePurpose = AccountWebsitePurpose.ACCOUNT_SETTINGS): Unit =
+        mutationMutex.withLock {
+            if (pendingAccountWebsite?.purpose == purpose) clearPendingAccountWebsite()
+        }
+
+    suspend fun openAccountWebsiteFromCallback(
+        callbackUrl: String,
+        expectedPurpose: AccountWebsitePurpose? = null,
+        open: (String) -> Unit,
+    ) {
+        val (pending, completion) = mutationMutex.withLock {
+            val current = pendingAccountWebsite ?: throw YunlefunAccountException.InvalidWebsiteCallback()
+            if (expectedPurpose != null && current.purpose != expectedPurpose) {
+                throw YunlefunAccountException.InvalidWebsiteCallback()
+            }
+            assertSessionUnchanged(current.revision, current.subject)
+            val completion = current.handoff.complete(callbackUrl)
+            clearPendingAccountWebsite()
+            current to completion
+        }
+        val credential = credentialForAccountRequest(pending.revision, pending.subject)
+        accountService.approveAccountWebHandoff(completion.approval, credential)
+        mutationMutex.withLock {
+            assertSessionUnchanged(pending.revision, pending.subject)
+            open(completion.url)
+            if (pending.purpose == AccountWebsitePurpose.MEMBERSHIP_PURCHASE) {
+                _state.value = _state.value.copy(awaitingMembershipReturn = true, membershipMessage = null)
+            }
+        }
+    }
+
+    private fun clearPendingAccountWebsite() {
+        pendingAccountWebsite = null
+        _state.value = _state.value.copy(pendingWebsitePurpose = null)
     }
 
     suspend fun handleSsoCallbackUrl(callbackUrl: String): Result<YunlefunAccount> = withContext(Dispatchers.IO) {
         runCatching {
-            val sso = pendingSso ?: throw YunlefunAccountException.InvalidCallback()
-            pendingSso = null // 一次性消费
+            val (sso, revision) = mutationMutex.withLock {
+                (pendingSso.getAndSet(null) ?: throw YunlefunAccountException.InvalidCallback()) to sessionRevision.get()
+            }
             val fields = sso.exchangeFields(callbackUrl)
-            val deviceID = java.util.UUID.randomUUID().toString().lowercase()
-            val credential = accountService.signIn(fields, deviceID = deviceID)
-            val profile = accountService.account(credential)
-            val entitlement = runCatching { membershipService.queryEntitlement(credential) }.getOrNull()
+            val credential = accountService.signIn(fields, deviceID = UUID.randomUUID().toString())
+            establishSession(credential, revision)
+        }
+    }
+
+    internal suspend fun signInWithWeChat(authorize: suspend () -> String?): Boolean =
+        signInWithWeChat(authorize, signupProof = null, deviceID = UUID.randomUUID().toString())
+
+    internal suspend fun registerWithWeChat(proof: String, deviceID: String, authorize: suspend () -> String?): Boolean =
+        signInWithWeChat(authorize, signupProof = proof, deviceID = deviceID)
+
+    private suspend fun signInWithWeChat(
+        authorize: suspend () -> String?,
+        signupProof: String?,
+        deviceID: String,
+    ): Boolean {
+        val revision = mutationMutex.withLock {
+            if (_state.value.credential != null) throw YunlefunAccountException.ExpiredSession()
+            sessionRevision.get()
+        }
+        val code = authorize() ?: return false
+        withContext(Dispatchers.IO) {
             mutationMutex.withLock {
-                sessionRevision.incrementAndGet()
-                clearHydrated()
-                vault.writeSecret(AndroidKeystoreVault.KEY_YUNLEFUN_SESSION_JSON, json.encodeToString(credential))
+                if (sessionRevision.get() != revision) throw YunlefunAccountException.ExpiredSession()
+            }
+            val credential = if (signupProof == null) accountService.signInWithWeChat(code, deviceID)
+            else accountService.registerWithWeChat(signupProof, code, deviceID)
+            try {
+                establishSession(credential, revision)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                if (signupProof != null) throw WeChatAccountException(WeChatAccountException.Reason.ACCOUNT_CREATED)
+                throw error
+            }
+        }
+        return true
+    }
+
+    internal suspend fun bindWeChat(authorize: suspend () -> String?): Boolean {
+        val (subject, revision) = mutationMutex.withLock {
+            val credential = _state.value.credential ?: throw YunlefunAccountException.ExpiredSession()
+            if (!credential.isValid()) throw YunlefunAccountException.ExpiredSession()
+            credential.subject to sessionRevision.get()
+        }
+        val code = authorize() ?: return false
+        withContext(Dispatchers.IO) {
+            val credential = mutationMutex.withLock {
+                assertSessionUnchanged(revision, subject)
+                _state.value.credential ?: throw YunlefunAccountException.ExpiredSession()
+            }
+            accountService.bindWeChat(code, credential)
+            assertSessionUnchanged(revision, subject)
+        }
+        return true
+    }
+
+    private suspend fun establishSession(credential: YunlefunCredential, revision: Long): YunlefunAccount {
+        try {
+            val profile = accountService.account(credential)
+            val entitlement = try {
+                membershipService.queryEntitlement(credential)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                null
+            }
+            mutationMutex.withLock {
+                if (sessionRevision.get() != revision) throw YunlefunAccountException.ExpiredSession()
                 val syncState = accountDao.getSyncState(credential.subject)
                 val cachedDoc = syncState?.lastSyncedDocumentJson?.takeIf { it.isNotBlank() }?.let {
                     runCatching { UserDataDocument.decode(it) }.getOrNull()
                 } ?: UserDataDocument()
+                coroutineContext.ensureActive()
+                vault.writeSecret(AndroidKeystoreVault.KEY_YUNLEFUN_SESSION_JSON, json.encodeToString(credential))
+                sessionRevision.incrementAndGet()
+                pendingSso.set(null)
+                pendingAccountWebsite = null
+                clearHydrated()
                 markHydrated(credential.subject)
                 _state.value = AccountSyncUiState(
                     credential = credential,
@@ -1044,38 +1383,96 @@ class YunlefunSessionManager(
                     statusMessage = "已登录 ${profile.displayName}",
                 )
             }
-            profile
+            return profile
+        } catch (error: Exception) {
+            withContext(NonCancellable) { runCatching { accountService.signOut(credential) } }
+            throw error
         }
     }
 
     suspend fun refreshProfileAndEntitlement(): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            val currentCred = _state.value.credential ?: throw YunlefunAccountException.ExpiredSession()
-            val capturedRev = sessionRevision.get()
-            val capturedUid = currentCred.subject
-            ensureHydrated(capturedUid, capturedRev)
-            val validCred = if (currentCred.isValid()) currentCred else {
-                accountService.refresh(currentCred)
+            val (revision, subject) = mutationMutex.withLock {
+                val credential = _state.value.credential ?: throw YunlefunAccountException.ExpiredSession()
+                sessionRevision.get() to credential.subject
             }
-            val profile = accountService.account(validCred)
-            val entitlement = runCatching { membershipService.queryEntitlement(validCred) }.getOrNull()
-            mutationMutex.withLock {
-                assertSessionUnchanged(capturedRev, capturedUid)
-                if (validCred != currentCred) {
-                    vault.writeSecret(AndroidKeystoreVault.KEY_YUNLEFUN_SESSION_JSON, json.encodeToString(validCred))
+            membershipCheckMutex.withLock {
+                ensureHydrated(subject, revision)
+                val credential = credentialForAccountRequest(revision, subject)
+                val profile = accountService.account(credential)
+                val entitlement = try {
+                    membershipService.queryEntitlement(credential)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    null
                 }
-                val syncState = accountDao.getSyncState(validCred.subject)
-                val cachedDoc = syncState?.lastSyncedDocumentJson?.takeIf { it.isNotBlank() }?.let {
-                    runCatching { UserDataDocument.decode(it) }.getOrNull()
-                }?.merging(_state.value.accountDocument) ?: _state.value.accountDocument
-                _state.value = _state.value.copy(
-                    credential = validCred,
-                    account = profile,
-                    entitlement = entitlement,
-                    syncEnabled = syncState?.syncEnabled == true || _state.value.syncEnabled,
-                    accountDocument = cachedDoc,
-                    statusMessage = "已刷新账号与会员状态",
-                )
+                mutationMutex.withLock {
+                    assertSessionUnchanged(revision, subject)
+                    val syncState = accountDao.getSyncState(subject)
+                    val cachedDoc = syncState?.lastSyncedDocumentJson?.takeIf { it.isNotBlank() }?.let {
+                        runCatching { UserDataDocument.decode(it) }.getOrNull()
+                    }?.merging(_state.value.accountDocument) ?: _state.value.accountDocument
+                    _state.value = _state.value.copy(
+                        account = profile,
+                        entitlement = entitlement ?: _state.value.entitlement,
+                        syncEnabled = syncState?.syncEnabled == true || _state.value.syncEnabled,
+                        accountDocument = cachedDoc,
+                        statusMessage = if (entitlement == null) "已刷新账号资料，暂时无法核对会员权益。" else "已刷新账号与会员状态",
+                    )
+                }
+            }
+        }
+    }
+
+    suspend fun checkMembership(reason: MembershipCheckReason) = withContext(Dispatchers.IO) {
+        val identity = mutationMutex.withLock {
+            val subject = _state.value.credential?.subject ?: return@withLock null
+            if (reason == MembershipCheckReason.CHECKOUT_RETURN) {
+                if (!_state.value.awaitingMembershipReturn) return@withLock null
+                _state.value = _state.value.copy(awaitingMembershipReturn = false)
+            }
+            sessionRevision.get() to subject
+        } ?: return@withContext
+
+        val (revision, subject) = identity
+        membershipCheckMutex.withLock {
+            mutationMutex.withLock {
+                assertSessionUnchanged(revision, subject)
+                _state.value = _state.value.copy(isCheckingMembership = true, membershipMessage = null)
+            }
+            try {
+                val credential = credentialForAccountRequest(revision, subject)
+                val entitlement = membershipService.queryEntitlement(credential)
+                mutationMutex.withLock {
+                    assertSessionUnchanged(revision, subject)
+                    _state.value = _state.value.copy(
+                        entitlement = entitlement,
+                        membershipMessage = when {
+                            reason == MembershipCheckReason.SCREEN -> null
+                            entitlement.isActiveAt() -> "当前账号的会员权益已核对。"
+                            else -> "当前账号尚无有效会员。若网页订单正在处理，可以稍后再核对。"
+                        },
+                    )
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                mutationMutex.withLock {
+                    assertSessionUnchanged(revision, subject)
+                    _state.value = _state.value.copy(
+                        membershipMessage = if (error is YunlefunAccountException.ExpiredSession) error.message
+                        else "暂时无法核对会员权益，请重试。",
+                    )
+                }
+            } finally {
+                withContext(NonCancellable) {
+                    mutationMutex.withLock {
+                        if (sessionRevision.get() == revision && _state.value.credential?.subject == subject) {
+                            _state.value = _state.value.copy(isCheckingMembership = false)
+                        }
+                    }
+                }
             }
         }
     }
@@ -1299,6 +1696,7 @@ class YunlefunSessionManager(
         val credToRevoke = mutationMutex.withLock {
             val currentCred = _state.value.credential
             sessionRevision.incrementAndGet()
+            clearPendingAccountWebsite()
             clearHydrated()
             _state.value = AccountSyncUiState(statusMessage = "已退出登录，当前使用本机收藏与历史")
             // 在持锁状态下立即吊销本地凭据，避免延迟网络登出完成时误删后来登录的新会话

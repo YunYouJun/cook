@@ -68,12 +68,14 @@ import cn.yunyoujun.cook.core.recipe.RecipeText
 import cn.yunyoujun.cook.core.recipe.RecipeTextBlock
 import cn.yunyoujun.cook.data.local.AiProviderMode
 import cn.yunyoujun.cook.data.local.AndroidKeystoreVault
+import cn.yunyoujun.cook.data.local.JournalRecipeId
 import cn.yunyoujun.cook.data.local.RecipeTimerState
 import cn.yunyoujun.cook.data.remote.FeedbackLinkIssue
 import cn.yunyoujun.cook.data.remote.RecipeIssueKind
 import cn.yunyoujun.cook.data.repository.CookCatalogSnapshot
 import cn.yunyoujun.cook.platform.AlarmSchedulePrecision
 import cn.yunyoujun.cook.platform.KitchenTimerScheduler
+import cn.yunyoujun.cook.platform.RecipeShareLinks
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -86,6 +88,7 @@ fun RecipeDetailScreen(
     container: AppContainer,
     onBack: () -> Unit,
     onOpenWorkbench: (Int) -> Unit,
+    onOpenJournal: (JournalRecipeId) -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -240,14 +243,24 @@ fun RecipeDetailScreen(
                     Button(
                         onClick = { onOpenWorkbench(recipe.id) },
                         modifier = Modifier.weight(1f),
-                        enabled = presentation != null,
                     ) {
-                        Text(if (presentation != null) "进入厨房工作台" else "暂无步骤原文")
+                        Text("进入厨房工作台")
                     }
                     OutlinedButton(onClick = { showFeedbackDialog = true }) {
                         Text("报错/反馈")
                     }
                 }
+            }
+            item {
+                TextButton(onClick = {
+                    val share = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, "${recipe.name}\n${RecipeShareLinks.url(recipe.id)}")
+                    }
+                    context.startActivity(Intent.createChooser(share, "分享菜谱"))
+                }) { Text("分享菜谱") }
+                val journalId = JournalRecipeId.Catalog(recipe.id)
+                CookingRecordActions(container.cookingJournalStore, journalId, recipe.name) { onOpenJournal(journalId) }
             }
 
             if (amounts != null && amounts.supportsServings) {
@@ -559,6 +572,7 @@ fun KitchenWorkbenchScreen(
     snapshot: CookCatalogSnapshot,
     container: AppContainer,
     onBack: () -> Unit,
+    onOpenJournal: (JournalRecipeId) -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -588,6 +602,7 @@ fun KitchenWorkbenchScreen(
     var guidanceStep by remember { mutableStateOf<RecipePresentation.Step?>(null) }
     var contextRevision by remember { mutableStateOf(UUID.randomUUID().toString().lowercase()) }
     var lastScheduledPrecision by remember { mutableStateOf<AlarmSchedulePrecision?>(null) }
+    var showCompletion by rememberSaveable(recipeId) { mutableStateOf(false) }
 
     fun buildTimerHint(precision: AlarmSchedulePrecision, hasNotificationPermission: Boolean): String {
         if (!hasNotificationPermission) {
@@ -608,7 +623,7 @@ fun KitchenWorkbenchScreen(
         }
     }
 
-    if (recipe == null || recipeText == null || presentation == null) {
+    if (recipe == null) {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -623,15 +638,15 @@ fun KitchenWorkbenchScreen(
                     .padding(inner)
                     .padding(24.dp),
             ) {
-                Text("当前菜谱没有可用于工作台的步骤原文。")
+                Text("这道菜谱已不可用。")
             }
         }
         return
     }
 
-    val amounts = remember(presentation, entry.servings) { RecipeAmounts(presentation.allQuantities, entry.servings) }
+    val amounts = remember(presentation, entry.servings) { RecipeAmounts(presentation?.allQuantities.orEmpty(), entry.servings) }
     val usagePlan = remember(presentation, amounts) {
-        RecipeStepUsagePlan(presentation.steps, amounts, presentation.amountAnnotations)
+        presentation?.let { RecipeStepUsagePlan(it.steps, amounts, it.amountAnnotations) }
     }
 
     Scaffold(
@@ -643,6 +658,7 @@ fun KitchenWorkbenchScreen(
                     TextButton(onClick = { container.workbenchStore.resetRecipeChecks(recipeId) }) {
                         Text("重置勾选")
                     }
+                    TextButton(onClick = { showCompletion = true }) { Text("做完了") }
                 },
             )
         },
@@ -734,7 +750,7 @@ fun KitchenWorkbenchScreen(
                 }
             }
 
-            if (amounts.supportsServings) {
+            if (presentation != null && amounts.supportsServings) {
                 item {
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Row(
@@ -766,7 +782,7 @@ fun KitchenWorkbenchScreen(
                 }
             }
 
-            if (presentation.allQuantities.isNotEmpty()) {
+            if (presentation != null && presentation.allQuantities.isNotEmpty()) {
                 item {
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -797,13 +813,45 @@ fun KitchenWorkbenchScreen(
                 }
             }
 
+            if (presentation?.allQuantities.isNullOrEmpty() && recipe.stuff.isNotEmpty()) {
+                item {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("备料清单", style = MaterialTheme.typography.titleMedium)
+                            recipe.stuff.distinct().forEach { name ->
+                                val key = "catalog:$name"
+                                val checked = key in entry.checkedIngredients
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(
+                                        checked = checked,
+                                        onCheckedChange = { container.workbenchStore.toggleIngredient(recipeId, key) },
+                                    )
+                                    Text(name, textDecoration = if (checked) TextDecoration.LineThrough else TextDecoration.None)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("制作步骤", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        presentation.steps.forEachIndexed { idx, step ->
+                        val steps = presentation?.steps.orEmpty()
+                        if (steps.isEmpty()) {
+                            Text("暂无图文步骤，可以先备料和计时。")
+                            val source = recipe.videoUrl ?: recipe.link?.takeIf { it.startsWith("https://") || it.startsWith("http://") }
+                            source?.let {
+                                TextButton(onClick = {
+                                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it))) }
+                                        .onFailure { Toast.makeText(context, "没有可打开链接的应用", Toast.LENGTH_SHORT).show() }
+                                }) { Text("查看原做法") }
+                            }
+                        }
+                        steps.forEachIndexed { idx, step ->
                             val checked = step.id in entry.checkedSteps
-                            val displayText = usagePlan.instruction(step)?.text ?: step.text
+                            val displayText = usagePlan?.instruction(step)?.text ?: step.text
                             Column {
                                 Row(
                                     modifier = Modifier
@@ -839,7 +887,7 @@ fun KitchenWorkbenchScreen(
                                         }
                                     }
                                 }
-                                if (idx < presentation.steps.lastIndex) {
+                                if (idx < steps.lastIndex) {
                                     HorizontalDivider()
                                 }
                             }
@@ -850,7 +898,22 @@ fun KitchenWorkbenchScreen(
         }
     }
 
-    guidanceStep?.let { activeStep ->
+    if (showCompletion) {
+        val journalId = JournalRecipeId.Catalog(recipe.id)
+        AlertDialog(
+            onDismissRequest = { showCompletion = false },
+            title = { Text(recipe.name) },
+            text = {
+                CookingRecordActions(container.cookingJournalStore, journalId, recipe.name) {
+                    showCompletion = false
+                    onOpenJournal(journalId)
+                }
+            },
+            confirmButton = { TextButton(onClick = { showCompletion = false }) { Text("关闭") } },
+        )
+    }
+
+    (guidanceStep.takeIf { recipeText != null })?.let { activeStep ->
         var question by rememberSaveable(activeStep.id) { mutableStateOf("") }
         var loading by remember { mutableStateOf(false) }
         var errorText by remember { mutableStateOf<String?>(null) }
@@ -865,7 +928,7 @@ fun KitchenWorkbenchScreen(
                 runCatching {
                     val prompt = StepGuidancePrompt(
                         recipe = recipe,
-                        text = recipeText,
+                        text = requireNotNull(recipeText),
                         dataVersion = snapshot.data.meta.dataVersion,
                         step = activeStep,
                         servings = entry.servings,

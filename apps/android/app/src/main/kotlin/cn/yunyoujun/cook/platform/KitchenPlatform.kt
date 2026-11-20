@@ -247,11 +247,7 @@ object FridgeDailyReminderScheduler {
         if (prefs.current.lastFridgeReminderDate == todayIso) {
             return false
         }
-        val items = app.container.fridgeStore.state.value.items
-        val dueCount = items.count { item ->
-            val rem = item.daysRemaining(today)
-            rem != null && rem <= 2L
-        }
+        val dueCount = app.container.fridgeStore.dueSoonCount(today)
         if (dueCount <= 0) return false
         KitchenNotificationHelper.showFridgeDueNotification(context, dueCount)
         prefs.recordFridgeReminderSent(todayIso)

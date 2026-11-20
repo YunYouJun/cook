@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.text.Normalizer
+import java.util.Locale
 
 @Serializable
 enum class AppThemeMode(val title: String) {
@@ -45,6 +47,9 @@ data class DevicePreferencesSnapshot(
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val aiProviderMode: AiProviderMode = AiProviderMode.DISABLED,
     val lastFridgeReminderDate: String? = null,
+    val recentSearches: List<String> = emptyList(),
+    val cloudKitchen: Boolean = false,
+    val cloudKitchenRotation: Boolean = false,
 )
 
 class DevicePreferencesStore(
@@ -124,6 +129,10 @@ class DevicePreferencesStore(
         update { it.copy(themeMode = themeMode) }
     }
 
+    fun setCloudKitchen(enabled: Boolean) = update { it.copy(cloudKitchen = enabled) }
+
+    fun setCloudKitchenRotation(enabled: Boolean) = update { it.copy(cloudKitchenRotation = enabled) }
+
     fun setAiProviderMode(mode: AiProviderMode) {
         update { it.copy(aiProviderMode = mode) }
     }
@@ -131,6 +140,21 @@ class DevicePreferencesStore(
     fun recordFridgeReminderSent(isoLocalDate: String) {
         update { it.copy(lastFridgeReminderDate = isoLocalDate) }
     }
+
+    fun recordSearch(raw: String) {
+        val text = raw.trim().split(Regex("\\s+")).joinToString(" ").take(300)
+        if (text.isBlank()) return
+        fun identity(value: String): String =
+            Normalizer.normalize(value, Normalizer.Form.NFKC).lowercase(Locale.ROOT)
+        val key = identity(text)
+        update { prev ->
+            prev.copy(recentSearches = (listOf(text) + prev.recentSearches.filterNot { identity(it) == key }).take(10))
+        }
+    }
+
+    fun removeSearch(text: String) = update { it.copy(recentSearches = it.recentSearches - text) }
+
+    fun clearSearches() = update { it.copy(recentSearches = emptyList()) }
 
     private fun update(transform: (DevicePreferencesSnapshot) -> DevicePreferencesSnapshot) {
         synchronized(this) {
