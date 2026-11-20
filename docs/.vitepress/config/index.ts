@@ -18,8 +18,9 @@ export default defineConfig(withYunlefun({
   description: '有什么食材，就做什么菜。云食册产品官网、iOS 发布信息与食用手册使用文档。',
   srcExclude: [...(vpConfig.srcExclude ?? []), 'public/**/*.md'],
   head: [
-    ...(vpConfig.head ?? []),
-    ['link', { rel: 'icon', href: '/favicon.ico', sizes: 'any' }],
+    ...(vpConfig.head ?? []).filter(([tag, attrs]) => tag !== 'link' || attrs.rel !== 'icon'),
+    ['link', { rel: 'icon', href: '/favicon.ico?v=2', sizes: 'any' }],
+    ['link', { rel: 'icon', href: '/brand/cook-favicon.svg', type: 'image/svg+xml', sizes: 'any' }],
   ],
   sitemap: {
     hostname: 'https://cook.yunle.fun',
