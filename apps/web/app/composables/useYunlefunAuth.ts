@@ -7,7 +7,7 @@ import {
   createCloudbaseIdentityAdapter,
   createWebYunlefunAuthorizationAdapter,
 } from '~/adapters/yunlefunAuth'
-import { isAuthCallbackUrl } from '~/utils/authInitialization'
+import { isAuthCallbackUrl, nativeReturnUrl } from '~/utils/authInitialization'
 import { createYunlefunAuthController } from '~/utils/yunlefunAuth'
 import { resolveYunlefunSsoConfig } from '~/utils/yunlefunSsoConfig'
 
@@ -35,15 +35,22 @@ export function useYunlefunAuth() {
     status: 'idle',
   }))
   const configurationMessage = useState<string>('yunlefun:auth:configuration-message', () => '')
+  const nativeReturnLink = useState<string>('yunlefun:auth:native-return-link', () => '')
   const isConfigured = computed(() => !configurationMessage.value)
   const isAuthenticated = computed(() => snapshot.value.status === 'signed-in' && Boolean(snapshot.value.account))
 
   async function initialize(): Promise<void> {
     if (!initialization)
-      initialization = initializeOnce(runtimeConfig, snapshot, configurationMessage)
+      initialization = initializeOnce(runtimeConfig, snapshot, configurationMessage, rememberNativeReturnLink)
     publishSnapshot(snapshot)
     await initialization
     publishSnapshot(snapshot)
+  }
+
+  function rememberNativeReturnLink(href: string) {
+    const callback = nativeReturnUrl(href)
+    if (callback)
+      nativeReturnLink.value = callback
   }
 
   async function signIn(): Promise<void> {
@@ -80,6 +87,9 @@ export function useYunlefunAuth() {
     initialize,
     isAuthenticated,
     isConfigured,
+    nativeReturnLink: readonly(nativeReturnLink),
+    rememberNativeReturnLink,
+    clearNativeReturnLink: () => { nativeReturnLink.value = '' },
     signIn,
     signOut,
     status: computed(() => snapshot.value.status),
@@ -90,6 +100,7 @@ async function initializeOnce(
   runtimeConfig: YunlefunRuntimeConfig,
   snapshot: Ref<YunlefunAuthSnapshot>,
   configurationMessage: Ref<string>,
+  rememberNativeReturnLink: (href: string) => void,
 ): Promise<void> {
   if (import.meta.server)
     return
@@ -97,6 +108,7 @@ async function initializeOnce(
   // Native HTTPS callbacks (including SwiftUI) must not become Web transactions.
   if (isAuthCallbackUrl(window.location.href)
     && new URLSearchParams(window.location.search).get('platform') === 'native') {
+    rememberNativeReturnLink(window.location.href)
     window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`)
     configurationMessage.value = '未能返回云食册，请在应用中重新授权，或返回网页版登录'
     snapshot.value = {

@@ -1,32 +1,61 @@
 <script lang="ts" setup>
+import { onIonViewWillLeave } from '@ionic/vue'
 import { isAuthCallbackUrl } from '~/utils/authInitialization'
 
 const {
+  clearNativeReturnLink,
   configurationMessage,
   errorMessage,
   initialize,
+  nativeReturnLink,
+  rememberNativeReturnLink,
   status,
 } = useYunlefunAuth()
 
 const router = useRouter()
+const copyMessage = shallowRef('')
 
 // Ionic restores its captured initial URL on Nuxt ready, after this page mounts.
 watch(() => router.currentRoute.value, async (route) => {
-  if (isAuthCallbackUrl(route.path) && route.query.platform === 'native' && route.hash)
+  if (import.meta.client && isAuthCallbackUrl(route.path) && route.query.platform === 'native' && route.hash) {
+    rememberNativeReturnLink(window.location.origin + route.fullPath)
     await router.replace({ path: route.path, query: route.query, hash: '' })
+  }
 }, { immediate: true })
 
 onMounted(() => {
   void initialize()
 })
 
-const message = computed(() => configurationMessage.value
-  || errorMessage.value
-  || (status.value === 'signed-in'
-    ? '登录成功，正在返回'
-    : status.value === 'error'
-      ? '登录未完成，请返回后重试'
-      : '正在验证云乐坊授权'))
+function clearNativeReturnState() {
+  clearNativeReturnLink()
+  copyMessage.value = ''
+}
+
+onIonViewWillLeave(clearNativeReturnState)
+onBeforeUnmount(clearNativeReturnState)
+
+async function copyNativeReturnLink() {
+  try {
+    await navigator.clipboard.writeText(nativeReturnLink.value)
+    copyMessage.value = '已复制，请返回云食册粘贴'
+  }
+  catch {
+    copyMessage.value = '无法复制链接，请返回云食册重试'
+  }
+}
+
+const message = computed(() => {
+  if (nativeReturnLink.value)
+    return '请返回云食册继续。如未自动跳转，可复制回调链接并粘贴到应用。'
+  return configurationMessage.value
+    || errorMessage.value
+    || (status.value === 'signed-in'
+      ? '登录成功，正在返回'
+      : status.value === 'error'
+        ? '登录未完成，请返回后重试'
+        : '正在验证云乐坊授权')
+})
 </script>
 
 <template>
@@ -54,6 +83,12 @@ const message = computed(() => configurationMessage.value
           <ion-label class="ion-text-wrap">
             {{ message }}
           </ion-label>
+        </ion-item>
+        <ion-item v-if="nativeReturnLink" button @click="copyNativeReturnLink">
+          <ion-label>复制回调链接</ion-label>
+        </ion-item>
+        <ion-item v-if="copyMessage" role="status">
+          <ion-label>{{ copyMessage }}</ion-label>
         </ion-item>
         <ion-item v-if="configurationMessage || errorMessage" href="/my" detail>
           <ion-label>返回我的</ion-label>
