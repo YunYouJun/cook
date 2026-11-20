@@ -17,6 +17,7 @@ const fn = require('../cloudfunctions/cook-user-data/index.js') as FunctionModul
 
 function createApp(userInfo: Record<string, unknown> | (() => never), expiry = Date.now() + 86_400_000) {
   const docs = new Map<string, Record<string, unknown>>()
+  const profiles = new Map<string, Record<string, unknown>>()
   const doc = vi.fn((id: string) => ({
     get: async () => ({ data: docs.has(id) ? [{ _id: id, _openid: 'x', ...docs.get(id) }] : [] }),
     set: async (data: Record<string, unknown>) => {
@@ -24,11 +25,13 @@ function createApp(userInfo: Record<string, unknown> | (() => never), expiry = D
       return { updated: 1 }
     },
   }))
-  const collection = vi.fn((name: string) => name === 'user_memberships'
-    ? {
-        doc: () => ({ get: async () => ({ data: [{ expireAt: expiry }] }) }),
-      }
-    : { doc })
+  const collection = vi.fn((name: string) => {
+    if (name === 'user_memberships')
+      return { doc: () => ({ get: async () => ({ data: [{ expireAt: expiry }] }) }) }
+    if (name === 'user_profiles')
+      return { doc: (id: string) => ({ get: async () => ({ data: profiles.get(id) }) }) }
+    return { doc }
+  })
   let previous = Promise.resolve()
   const runTransaction = vi.fn((run: (transaction: unknown) => Promise<unknown>) => {
     const result = previous.then(() => run({ collection }))
@@ -41,7 +44,7 @@ function createApp(userInfo: Record<string, unknown> | (() => never), expiry = D
     database: () => ({ collection, runTransaction }),
   }
   fn._internal.setAppForTest(app)
-  return { collection, doc, docs, runTransaction }
+  return { collection, doc, docs, profiles, runTransaction }
 }
 
 const document = {
@@ -152,6 +155,28 @@ describe('cook-user-data function', () => {
     for (const action of ['get', 'set', 'sync', 'capabilities'])
       await expect(fn.main({ action, document, membership: { isActive: true } })).resolves.toEqual({ ok: false, code: 'MEMBERSHIP_REQUIRED' })
     expect(doc).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { deletionStatus: 'pending' },
+    { deletionStatus: 'finalizing' },
+    { deletionStatus: 'completed' },
+    { deletedAt: 1 },
+    { authDeletedAt: 1 },
+  ])('blocks sync with an old login when the profile is %j', async (profile) => {
+    const { doc, docs, profiles } = createApp({ uid: 'u1' })
+    profiles.set('u1', profile)
+    for (const action of ['get', 'set', 'sync', 'capabilities'])
+      await expect(fn.main({ action, document })).resolves.toEqual({ ok: false, code: 'LOGIN_REQUIRED' })
+    expect(doc).not.toHaveBeenCalled()
+    expect(docs.size).toBe(0)
+  })
+
+  it('allows an active member to resume sync after cancelling deletion', async () => {
+    const { docs, profiles } = createApp({ uid: 'u1' })
+    docs.set('u1', document)
+    profiles.set('u1', { deletionStatus: null, deletionScheduledAt: null })
+    await expect(fn.main({ action: 'get' })).resolves.toEqual({ ok: true, document })
   })
 
   it('does not overwrite an unsupported existing version', async () => {
