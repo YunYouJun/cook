@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { iosVersion, links } from '../constants'
 import { productFaq } from '../structured-data'
+import BetaFeedbackGroup from './BetaFeedbackGroup.vue'
 
 const docs = [
   { title: '使用指南', text: '从选食材到打开做法', link: '/guide/getting-started' },
@@ -25,6 +26,7 @@ const docs = [
         <a class="service-link" :href="links.betaGuide">查看测试说明</a>
         <a class="service-link vp-raw" :href="links.web" target="_self">打开网页版</a>
       </div>
+      <BetaFeedbackGroup />
       <p class="service-note">
         以前在 cook.yunle.fun 用过网页版？<a class="service-link" href="/guide/web-domain">查看旧版数据导出与迁移说明</a>。
       </p>
