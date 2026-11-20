@@ -9,6 +9,7 @@ import { isNonIndexableProductPage, productPagePath, publicProductSitemapItems }
 import { guideArticleJsonLd, serializeJsonLd, serializeProductJsonLd } from '../theme/structured-data.ts'
 
 const repo = 'https://github.com/YunYouJun/cook'
+const brandIcon = '/brand/cook-favicon.svg'
 const taskLists: (md: MarkdownRenderer) => void = createRequire(import.meta.url)('markdown-it-task-lists')
 const noindex: HeadConfig = ['meta', { name: 'robots', content: 'noindex' }]
 
@@ -23,7 +24,7 @@ export default defineConfig(withYunlefun({
   head: [
     ['meta', { name: 'author', content: 'YunYouJun' }],
     ['link', { rel: 'icon', href: '/favicon.ico?v=2', sizes: 'any' }],
-    ['link', { rel: 'icon', href: '/brand/cook-favicon.svg', type: 'image/svg+xml', sizes: 'any' }],
+    ['link', { rel: 'icon', href: brandIcon, type: 'image/svg+xml', sizes: 'any' }],
   ],
   sitemap: {
     hostname: 'https://cook.yunle.fun',
@@ -86,8 +87,8 @@ export default defineConfig(withYunlefun({
   },
 
   themeConfig: {
-    logo: '/favicon.svg',
     ...zhThemeConfig,
+    logo: brandIcon,
     editLink: {
       pattern: `${repo}/edit/main/docs/:path`,
       text: '在 GitHub 上编辑此页',
