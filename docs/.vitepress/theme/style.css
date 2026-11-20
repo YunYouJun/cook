@@ -135,6 +135,89 @@
   --vp-layout-max-width: 90rem;
 }
 
+/* VitePress already offsets headings for the sticky navigation. */
+:root:has(.VPDoc.has-sidebar) {
+  scroll-padding-top: 0;
+}
+
+.VPNavBarTitle.has-sidebar .title {
+  gap: 0.625rem;
+}
+.VPNavBarTitle.has-sidebar .logo {
+  margin-inline-end: 0;
+}
+.VPLocalNav.has-sidebar .menu,
+.VPLocalNav.has-sidebar .VPLocalNavOutlineDropdown > button {
+  min-block-size: 2.75rem;
+  padding-block: 0;
+}
+.VPDoc.has-sidebar {
+  padding-block-start: 1.5rem;
+}
+.VPDoc.has-sidebar .vp-doc h1 {
+  padding-block-end: 1rem;
+}
+.VPDoc.has-sidebar .vp-doc h1 + p {
+  margin-block: 1.25rem 1.5rem;
+}
+.VPDoc.has-sidebar .vp-doc h2 {
+  margin-block-start: 2.25rem;
+  padding-block-start: 1.25rem;
+}
+
+@media (min-width: 60rem) {
+  .VPDoc.has-sidebar {
+    --cook-doc-top-spacing: 2rem;
+    padding-block-start: var(--cook-doc-top-spacing);
+  }
+  .VPDoc.has-sidebar .aside-container {
+    --cook-doc-outline-offset: calc(
+      var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + var(--vp-doc-top-height, 0px) +
+        var(--cook-doc-top-spacing)
+    );
+    padding-block-start: var(--cook-doc-outline-offset);
+  }
+  .VPDoc.has-sidebar .aside-content {
+    min-height: calc(100vh - var(--cook-doc-outline-offset));
+  }
+  .VPSidebar > .nav {
+    padding-block-start: 1.25rem;
+  }
+}
+
+@media (width < 48rem) {
+  :root {
+    --cook-doc-mobile-gutter: 1.25rem;
+  }
+  .VPNavBar.has-sidebar .wrapper {
+    padding-inline-start: var(--cook-doc-mobile-gutter);
+  }
+  .VPLocalNav.has-sidebar .menu,
+  .VPLocalNav.has-sidebar .VPLocalNavOutlineDropdown > button {
+    padding-inline: var(--cook-doc-mobile-gutter);
+  }
+  .VPLocalNav.has-sidebar .VPLocalNavOutlineDropdown .items {
+    inset-inline: var(--cook-doc-mobile-gutter);
+  }
+  .VPDoc.has-sidebar,
+  .VPSidebar {
+    padding-inline: var(--cook-doc-mobile-gutter);
+  }
+  .VPSidebar .VPSidebarItem.level-1 > .item {
+    min-block-size: 2.75rem;
+  }
+  .VPDoc.has-sidebar .vp-doc h1 + p {
+    margin-block: 1rem 1.25rem;
+  }
+  .VPDoc.has-sidebar .vp-doc h2 {
+    margin-block-start: 1.75rem;
+    padding-block-start: 1rem;
+  }
+  .VPDoc.has-sidebar .vp-doc h3 {
+    margin-block-start: 1.5rem;
+  }
+}
+
 /* Keep the full navigation usable before the mobile menu breakpoint. */
 @media (min-width: 768px) and (max-width: 959px) {
   .VPNavBarSearch .VPNavBarSearchButton {
