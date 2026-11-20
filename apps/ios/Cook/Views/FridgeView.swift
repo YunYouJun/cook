@@ -23,15 +23,14 @@ struct FridgeView: View {
     private enum Route: Hashable { case history }
 
     private enum Sheet: Identifiable {
-        case manual, photo, vision, categories, edit(FridgeItem)
+        case manual, photo, categories, edit(FridgeItem)
 
-        enum ID: Hashable { case manual, photo, vision, categories, edit(PersistentIdentifier) }
+        enum ID: Hashable { case manual, photo, categories, edit(PersistentIdentifier) }
 
         var id: ID {
             switch self {
             case .manual: return .manual
             case .photo: return .photo
-            case .vision: return .vision
             case .categories: return .categories
             case let .edit(item): return .edit(item.persistentModelID)
             }
@@ -47,8 +46,6 @@ struct FridgeView: View {
         let fresh = groups[1] ?? []
         let expired = groups[2] ?? []
         let usable = soon + fresh
-        let visionAvailable = FridgeVisionSheet.isAvailable
-
         NavigationStack(path: $path) {
             Group {
                 if items.isEmpty {
@@ -100,12 +97,6 @@ struct FridgeView: View {
             .navigationTitle("冰箱")
             .fridgeSaveError(isPresented: $saveError)
             .toolbar {
-                if visionAvailable {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("AI 识图") { sheet = .vision }
-                            .accessibilityIdentifier("fridge.vision.open")
-                    }
-                }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button("冰箱历史", systemImage: "clock.arrow.circlepath") { path.append(Route.history) }
                         .accessibilityIdentifier("fridge.history")
@@ -113,6 +104,7 @@ struct FridgeView: View {
                     Button { sheet = .photo } label: {
                         Label("拍照识别", systemImage: "camera")
                     }
+                    .accessibilityIdentifier("fridge.photo.open")
                     Button {
                         sheet = .manual
                     } label: {
@@ -131,7 +123,6 @@ struct FridgeView: View {
                 switch route {
                 case .manual: AddFridgeSheet()
                 case .photo: FridgePhotoSheet()
-                case .vision: FridgeVisionSheet(onUseOffline: { sheet = .photo })
                 case .categories: FridgeCategoryManager()
                 case let .edit(item): FridgeItemSheet(item: item)
                 }

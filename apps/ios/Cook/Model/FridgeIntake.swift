@@ -69,6 +69,10 @@ struct FridgeLabelScan: Identifiable, Sendable {
     var basis: FridgeExpiryBasis = .estimated
     var dateCandidates: [Date] = []
     var messages: [String] = []
+
+    var suggestsBatchReview: Bool {
+        names.count != 1 && productionDay == nil && expiryDay == nil && dateCandidates.isEmpty
+    }
 }
 
 /// 只接受带完整年份的日期。无标签、多个相互冲突的日期或非法日期都留给用户确认。

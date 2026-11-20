@@ -49,7 +49,7 @@ final class FridgeVisionTests: XCTestCase {
             let body = try XCTUnwrap(request.httpBody)
             let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
             XCTAssertEqual(Set(json.keys), ["image", "schemaVersion", "consentVersion", "provider"])
-            XCTAssertEqual(json["provider"] as? String, "deepseek")
+            XCTAssertEqual(json["provider"] as? String, "cloudbase")
             XCTAssertEqual(json["image"] as? String, photo.jpeg.base64EncodedString())
             XCTAssertLessThan(body.count, 4 * ((photo.jpeg.count + 2) / 3) + 128)
             XCTAssertLessThan(body.count, 94 * 1024, "Leave room under the measured HTTP gateway limit")
@@ -60,7 +60,7 @@ final class FridgeVisionTests: XCTestCase {
         }
         let credential = YunlefunCredential(accessToken: "access", refreshToken: "refresh", subject: "subject",
                                             expiresAt: .now.addingTimeInterval(600), deviceID: "device")
-        let result = try await service.recognize(photo, provider: .deepSeek, credential: credential)
+        let result = try await service.recognize(photo, provider: .cloudBase, credential: credential)
         XCTAssertEqual(result, ["鸡蛋", "牛奶"])
     }
 
@@ -71,11 +71,12 @@ final class FridgeVisionTests: XCTestCase {
             XCTAssertNil(request.httpBody)
             XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
             XCTAssertEqual(request.cachePolicy, .reloadIgnoringLocalCacheData)
-            let reply = Data(#"{"ok":true,"schemaVersion":1,"provider":"deepseek"}"#.utf8)
+            let reply = Data(#"{"ok":true,"schemaVersion":1,"provider":"cloudbase"}"#.utf8)
             return (reply, HTTPURLResponse(url: endpoint, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
         let provider = try await service.activeProvider()
-        XCTAssertEqual(provider, .deepSeek)
+        XCTAssertEqual(provider, .cloudBase)
+        XCTAssertTrue(provider.photoProcessingDescription.contains("腾讯云 CloudBase"))
     }
 
     func testChecksMembershipWithOnlyTheAccountTokenBeforeAPhotoIsSelected() async throws {

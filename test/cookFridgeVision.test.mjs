@@ -35,6 +35,9 @@ test('disabled or partially configured deployment cannot call the vision model',
   const deepSeekEnv = { ...env, COOK_FRIDGE_VISION_PROVIDER: 'deepseek' }
   assert.equal(readConfig(deepSeekEnv).enabled, false, 'The Qwen key is never used for DeepSeek')
   assert.equal(readConfig({ ...deepSeekEnv, COOK_FRIDGE_VISION_DEEPSEEK_API_KEY: 'test-deepseek-key' }).enabled, true)
+  const cloudBaseEnv = { ...env, COOK_FRIDGE_VISION_PROVIDER: 'cloudbase', COOK_FRIDGE_VISION_API_KEY: undefined }
+  assert.equal(readConfig(cloudBaseEnv).enabled, true)
+  assert.equal(readConfig({ ...cloudBaseEnv, COOK_FRIDGE_VISION_QUOTA_SALT: undefined }).enabled, false)
   const handler = createHandler({ config: readConfig({}) })
   assert.equal((await handler(event())).statusCode, 503)
 })
@@ -154,6 +157,77 @@ test('DeepSeek receives the photo only after consent names DeepSeek; discovery a
   assert.deepEqual(body.thinking, { type: 'disabled' })
   assert.deepEqual(body.response_format, { type: 'json_object' })
   assert.deepEqual(body.messages[0].content[1], { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${image}` } })
+})
+
+test('CloudBase vision uses the managed model and requires consent for that channel', async () => {
+  const config = { enabled: true, provider: 'cloudbase' }
+  const modelRequests = []
+  const accountRequests = []
+  let admissions = 0
+  const adapters = createAdapters(
+    config,
+    async (url) => {
+      accountRequests.push(url)
+      assert(url === IDENTITY_URL || url === ACCOUNT_URL)
+      return url === IDENTITY_URL
+        ? Response.json({ sub: 'verified-user' })
+        : Response.json({ membership: activeMembership })
+    },
+    () => ({
+      async generateText(request) {
+        modelRequests.push(request)
+        return { rawResponses: [{ choices: [{ finish_reason: 'stop', message: { content: '{"ingredients":["鸡蛋","番茄"]}' } }] }] }
+      },
+    }),
+  )
+  const handler = createHandler({
+    config,
+    ...adapters,
+    async admit() { admissions++ },
+  })
+  const discovery = await handler({ httpMethod: 'GET', headers: event().headers })
+  assert.deepEqual(JSON.parse(discovery.body), { ok: true, schemaVersion: 1, provider: 'cloudbase', member: true })
+
+  const stale = await handler(event({ provider: 'deepseek' }))
+  assert.equal(stale.statusCode, 409)
+  assert.equal(admissions, 0)
+  assert.equal(modelRequests.length, 0)
+
+  const result = await handler(event({ provider: 'cloudbase' }))
+  assert.equal(result.statusCode, 200)
+  assert.deepEqual(JSON.parse(result.body), { ok: true, schemaVersion: 1, ingredients: ['鸡蛋', '番茄'] })
+  assert.deepEqual(accountRequests, [IDENTITY_URL, ACCOUNT_URL, IDENTITY_URL, ACCOUNT_URL])
+  assert.equal(admissions, 1)
+  assert.equal(modelRequests.length, 1)
+  const [request] = modelRequests
+  assert.equal(request.model, 'deepseek-v4.1-flash-1017')
+  assert.equal(request.maxSteps, 1)
+  assert.deepEqual(request.thinking, { type: 'disabled' })
+  assert.deepEqual(request.response_format, { type: 'json_object' })
+  assert.deepEqual(request.messages[0].content[1], { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${image}` } })
+  assert(!JSON.stringify(request).includes(token) && !JSON.stringify(request).includes('private-context'))
+})
+
+test('CloudBase failures produce bounded error responses and do not fall back to direct API calls', async () => {
+  for (const [reply, statusCode, code] of [
+    [{ rawResponses: [] }, 502, 'INVALID_MODEL_RESPONSE'],
+    [{ rawResponses: [{ choices: [{ finish_reason: 'length', message: { content: '{"ingredients":[]}' } }] }] }, 502, 'INVALID_MODEL_RESPONSE'],
+    [{ error: { code: 'ETIMEDOUT', message: 'provider error detail' } }, 504, 'MODEL_TIMEOUT'],
+    [{ error: { code: 'EXCEED_REQUEST_LIMIT', message: 'provider error detail' } }, 429, 'RATE_LIMITED'],
+  ]) {
+    const config = { enabled: true, provider: 'cloudbase' }
+    let directCalls = 0
+    const { recognize } = createAdapters(
+      config,
+      async () => { directCalls++ },
+      () => ({ generateText: async () => reply }),
+    )
+    const handler = createHandler({ config, verifyIdentity: async () => 'test', readMembership: readActiveMembership, admit: async () => {}, recognize })
+    const result = await handler(event({ provider: 'cloudbase' }))
+    assert.equal(result.statusCode, statusCode)
+    assert.deepEqual(JSON.parse(result.body), { ok: false, code })
+    assert.equal(directCalls, 0)
+  }
 })
 
 test('eligibility is established without a photo; nonmembers and expired members cannot spend quota or reach a model', async () => {

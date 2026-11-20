@@ -1,22 +1,16 @@
-import AVFoundation
-import PhotosUI
 import SwiftData
 import SwiftUI
 import UIKit
 
 struct FridgeVisionSheet: View {
+    let sourcePhoto: Data
     let onUseOffline: () -> Void
+    let onRetake: () -> Void
+    let onSaved: () -> Void
     @Environment(RecipeStore.self) private var store
     @Environment(YunlefunAccountStore.self) private var accounts
     @Environment(\.modelContext) private var context
-    @Environment(\.dismiss) private var dismiss
-    @State private var selection: PhotosPickerItem?
-    @State private var photoInput: PhotoInput?
     @State private var photo: FridgeVisionPhoto?
-    @State private var loadingPhoto = false
-    @State private var cameraOpen = false
-    @State private var cameraData: Data?
-    @State private var cameraDenied = false
     @State private var provider: FridgeVisionProvider?
     @State private var providerQueryID: UUID?
     @State private var upload: Upload?
@@ -28,11 +22,6 @@ struct FridgeVisionSheet: View {
     @State private var showingMembership = false
 
     private enum Access { case checking, signIn, member, membershipRequired, unavailable }
-
-    private struct PhotoInput: Identifiable {
-        let id = UUID()
-        let data: Data
-    }
 
     private struct Upload: Identifiable {
         let id = UUID()
@@ -47,7 +36,7 @@ struct FridgeVisionSheet: View {
     static var isAvailable: Bool { FridgeVisionService.configuredEndpoint != nil }
 
     // Both the in-memory photo and the no-network recognizer are restricted to explicit debug UI tests.
-    private static var testPhoto: Data? {
+    static var testPhoto: Data? {
         #if DEBUG
             let process = ProcessInfo.processInfo
             if process.arguments.contains("-ui-testing"), let value = process.environment["COOK_UI_TEST_FRIDGE_VISION_JPEG"],
@@ -59,14 +48,7 @@ struct FridgeVisionSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                if access == .checking {
-                    checkingAccess
-                } else {
-                    form
-                }
-            }
+        content
             .overlay(alignment: .top) {
                 if let failureToast {
                     HStack(spacing: 8) {
@@ -86,24 +68,13 @@ struct FridgeVisionSheet: View {
                     .allowsHitTesting(false)
                 }
             }
-            .navigationTitle(candidates?.isEmpty == false ? "确认食材" : "AI 识图")
+            .navigationTitle(candidates?.isEmpty == false ? "确认食材" : "批量识图")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $showingMembership) { MembershipView() }
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } } }
-            .fullScreenCover(isPresented: $cameraOpen, onDismiss: acceptCameraPhoto) {
-                FridgeCamera { cameraData = $0 }.ignoresSafeArea()
+            .task(id: accessQueryID) {
+                await checkAccess()
+                await preparePhoto()
             }
-            .alert("相机没有打开", isPresented: $cameraDenied) {
-                Button("取消", role: .cancel) {}
-                Button("去设置") {
-                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
-                }
-            } message: {
-                Text("允许相机权限后可以拍照，也可以直接从照片选择。")
-            }
-            .task(id: accessQueryID) { await checkAccess() }
-            .task(id: selection) { await loadSelection() }
-            .task(id: photoInput?.id) { await preparePhoto() }
             .task(id: providerQueryID) { await loadProvider() }
             .task(id: upload?.id) { await recognize() }
             .task(id: failureToast?.id) {
@@ -114,6 +85,26 @@ struct FridgeVisionSheet: View {
             }
             .onChange(of: accounts.sessionRevision) { refreshAccess() }
             .onChange(of: showingMembership) { _, showing in if !showing { refreshAccess() } }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if access == .checking {
+            checkingAccess
+        } else if candidates?.isEmpty == false {
+            form.bottomActionBar {
+                Button(action: save) {
+                    Text("加入冰箱（\(saveNames?.count ?? 0) 样）").frame(maxWidth: .infinity)
+                }
+                .prominentButtonStyle()
+                .controlSize(.large)
+                .disabled(saveNames?.isEmpty != false)
+                .accessibilityIdentifier("fridge.vision.save")
+            }
+        } else if photo != nil {
+            form.bottomActionBar { uploadAction }
+        } else {
+            form
         }
     }
 
@@ -145,14 +136,17 @@ struct FridgeVisionSheet: View {
                                                description: Text("试着拍清冰箱里能看见的食材，或手动添加。"))
                     }
                 } else {
-                    FridgeVisionReview(candidates: $candidates, names: saveNames, action: save)
+                    FridgeVisionReview(candidates: $candidates, names: saveNames)
                 }
-                Section { Button("换一张照片", action: reset) }
+                Section { Button("换一张照片", action: onRetake) }
             } else if access == .member {
                 if let photo {
                     preview(photo)
                 } else {
-                    photoPicker
+                    Section {
+                        if error == nil { ProgressView("正在准备照片…") }
+                        Button("换一张照片", action: onRetake)
+                    }
                 }
             } else {
                 accessPrompt
@@ -165,7 +159,7 @@ struct FridgeVisionSheet: View {
     }
 
     private var offlineAction: some View {
-        Button("继续使用离线拍照", action: onUseOffline)
+        Button("返回本机识别", action: onUseOffline)
             .accessibilityIdentifier("fridge.vision.offline")
     }
 
@@ -191,25 +185,10 @@ struct FridgeVisionSheet: View {
         }
     }
 
-    private var photoPicker: some View {
-        Section {
-            Button("拍一张照片", systemImage: "camera", action: openCamera)
-            PhotosPicker(selection: $selection, matching: .images, preferredItemEncoding: .compatible) {
-                Label("从照片选择", systemImage: "photo")
-            }
-            if loadingPhoto || photoInput != nil { ProgressView("正在准备照片…") }
-        } header: {
-            Text("拍清冰箱里看得见的食材")
-        } footer: {
-            Text("你可以先预览照片。只有同意后才上传，识别出的食材可逐项核对。")
-        }
-        .disabled(loadingPhoto || photoInput != nil)
-    }
-
     private func preview(_ photo: FridgeVisionPhoto) -> some View {
         Group {
             if let image = UIImage(data: photo.jpeg) {
-                Section("将要上传的照片") {
+                Section("所选照片") {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFit()
@@ -218,30 +197,46 @@ struct FridgeVisionSheet: View {
                 }
             }
             Section {
-                if let provider {
-                    Text("这张照片会去除位置等信息，经云乐坊（腾讯云 CloudBase）发送给\(provider.name) 识别。照片不会存入冰箱。请避开人物、地址等私密内容。")
-                        .accessibilityIdentifier("fridge.vision.recipient")
-                    NavigationLink("隐私政策") { PrivacyPolicyView() }
-                }
-                if upload != nil {
-                    ProgressView("正在识别照片里的食材…")
-                } else if providerQueryID != nil {
-                    ProgressView("正在确认照片接收方…")
-                } else if let provider {
-                    Button("同意并上传识别") {
-                        clearFailure()
-                        upload = Upload(provider: provider)
-                    }
-                    .fontWeight(.semibold)
-                    .accessibilityIdentifier("fridge.vision.upload")
-                } else {
-                    Button("重新连接识图服务") {
-                        clearFailure()
-                        providerQueryID = UUID()
-                    }
-                }
-                if upload == nil { Button("换一张照片", action: reset) }
+                Text("上传前会移除位置等信息。请避开人物、地址等私密内容。")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                NavigationLink("隐私政策") { PrivacyPolicyView() }
+                if upload == nil { Button("换一张照片", action: onRetake) }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var uploadAction: some View {
+        if upload != nil {
+            ProgressView("正在识别食材…").frame(maxWidth: .infinity)
+        } else if providerQueryID != nil {
+            ProgressView("正在确认照片接收方…").frame(maxWidth: .infinity)
+        } else if let provider {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("照片将\(provider.photoProcessingDescription)。")
+                    .font(.footnote)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("fridge.vision.recipient")
+                Button {
+                    clearFailure()
+                    upload = Upload(provider: provider)
+                } label: {
+                    Text("同意并识别").frame(maxWidth: .infinity)
+                }
+                .prominentButtonStyle()
+                .controlSize(.large)
+                .accessibilityIdentifier("fridge.vision.upload")
+            }
+        } else {
+            Button {
+                clearFailure()
+                providerQueryID = UUID()
+            } label: {
+                Text("重新连接识图服务").frame(maxWidth: .infinity)
+            }
+            .prominentButtonStyle()
+            .controlSize(.large)
         }
     }
 
@@ -250,15 +245,14 @@ struct FridgeVisionSheet: View {
     }
 
     private func checkAccess() async {
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, access == .checking else { return }
         #if DEBUG
-            if let testPhoto = Self.testPhoto {
+            if Self.testPhoto != nil {
                 if ProcessInfo.processInfo.environment["COOK_UI_TEST_FRIDGE_VISION_ACCESS_PENDING"] == "1" { return }
                 if ProcessInfo.processInfo.environment["COOK_UI_TEST_FRIDGE_VISION_NONMEMBER"] == "1" {
                     access = .membershipRequired
                 } else {
                     access = .member
-                    photoInput = PhotoInput(data: testPhoto)
                 }
                 return
             }
@@ -284,38 +278,18 @@ struct FridgeVisionSheet: View {
         }
     }
 
-    private func loadSelection() async {
-        guard access == .member, let selection else { return }
-        loadingPhoto = true
-        clearFailure()
-        defer { if self.selection == selection { loadingPhoto = false } }
-        do {
-            guard let data = try await selection.loadTransferable(type: Data.self) else { throw FridgeVisionError.unreadablePhoto }
-            try Task.checkCancellation()
-            photoInput = PhotoInput(data: data)
-        } catch {
-            if !Task.isCancelled {
-                showFailure(FridgeVisionError.unreadablePhoto.localizedDescription)
-                loadingPhoto = false
-                self.selection = nil
-            }
-        }
-    }
-
     private func preparePhoto() async {
-        guard access == .member, let photoInput else { return }
-        defer { if self.photoInput?.id == photoInput.id { self.photoInput = nil } }
+        guard !Task.isCancelled, access == .member, photo == nil, candidates == nil else { return }
+        let query = accessQueryID
         do {
-            let prepared = try await FridgeVisionPhoto.prepare(photoInput.data)
+            let prepared = try await FridgeVisionPhoto.prepare(sourcePhoto)
             try Task.checkCancellation()
+            guard accessQueryID == query, access == .member else { return }
             photo = prepared
             providerQueryID = UUID()
         } catch {
-            if !Task.isCancelled { showFailure(FridgeVisionError.unreadablePhoto.localizedDescription) }
-        }
-        if !Task.isCancelled {
-            selection = nil
-            loadingPhoto = false
+            guard !Task.isCancelled, accessQueryID == query else { return }
+            showFailure(FridgeVisionError.unreadablePhoto.localizedDescription)
         }
     }
 
@@ -325,7 +299,7 @@ struct FridgeVisionSheet: View {
         do {
             let active: FridgeVisionProvider
             if Self.testPhoto != nil {
-                active = .deepSeek
+                active = .cloudBase
             } else {
                 guard let endpoint = FridgeVisionService.configuredEndpoint else { throw FridgeVisionError.unavailable }
                 active = try await FridgeVisionService(endpoint: endpoint).activeProvider()
@@ -393,7 +367,7 @@ struct FridgeVisionSheet: View {
         guard let names = saveNames, !names.isEmpty else { return }
         do {
             try context.addEstimatedFridgeItems(names, shelfLife: store.data.shelfLife)
-            dismiss()
+            onSaved()
         } catch {
             showFailure("没有保存成功，请重试。")
         }
@@ -411,12 +385,7 @@ struct FridgeVisionSheet: View {
     }
 
     private func reset() {
-        selection = nil
-        photoInput = nil
         photo = nil
-        loadingPhoto = false
-        cameraData = nil
-        cameraOpen = false
         provider = nil
         providerQueryID = nil
         upload = nil
@@ -429,32 +398,11 @@ struct FridgeVisionSheet: View {
         access = .checking
         accessQueryID = UUID()
     }
-
-    private func acceptCameraPhoto() {
-        guard access == .member, let cameraData else { return }
-        photoInput = PhotoInput(data: cameraData)
-        self.cameraData = nil
-    }
-
-    private func openCamera() {
-        guard access == .member else { return }
-        clearFailure()
-        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
-            error = "这台设备暂时无法拍照，可以从照片选择。"
-            return
-        }
-        Task {
-            let granted = await AVCaptureDevice.requestAccess(for: .video)
-            guard access == .member else { return }
-            if granted { cameraOpen = true } else { cameraDenied = true }
-        }
-    }
 }
 
 private struct FridgeVisionReview: View {
     @Binding var candidates: [FridgeVisionCandidate]?
     let names: [String]?
-    let action: () -> Void
 
     var body: some View {
         if let rows = Binding($candidates) {
@@ -479,15 +427,11 @@ private struct FridgeVisionReview: View {
             } header: {
                 Text("核对名称，取消勾选识别错的食材")
             } footer: {
-                Text("每种食材记一份。日期使用冰箱的食用建议或通用估算，可在入库后调整。包装日期请以包装为准。")
-            }
-            Section {
-                Button("加入冰箱（\(names?.count ?? 0) 样）", action: action)
-                    .fontWeight(.semibold)
-                    .disabled(names?.isEmpty != false)
-                    .accessibilityIdentifier("fridge.vision.save")
-            } footer: {
-                if names == nil { Text("请修正勾选的食材名称，每项填写一个不超过 30 字的名称。") }
+                if names == nil {
+                    Text("请修正勾选的食材名称，每项填写一个不超过 30 字的名称。")
+                } else {
+                    Text("每种记一份，日期按食用建议估算，入库后可调整。")
+                }
             }
         }
     }

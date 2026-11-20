@@ -5,7 +5,7 @@ import SwiftData
 import SwiftUI
 import UIKit
 
-/// 一次处理一份食材；系统选图器只交给 App 用户选中的照片。
+/// 同一次选图可用于本机单份录入或经用户确认的会员批量识图。
 struct FridgePhotoSheet: View {
     @Environment(RecipeStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -18,6 +18,8 @@ struct FridgePhotoSheet: View {
     @State private var cameraData: Data?
     @State private var cameraDenied = false
     @State private var error: String?
+    @State private var showingBatch = false
+    @State private var showingSingleItem = false
     #if DEBUG
         @State private var fixtureLoaded = false
     #endif
@@ -27,15 +29,20 @@ struct FridgePhotoSheet: View {
         let data: Data
     }
 
+    private var canUseBatch: Bool { FridgeVisionSheet.isAvailable && input != nil }
+    private var suggestsBatch: Bool { canUseBatch && result?.suggestsBatchReview == true && !showingSingleItem }
+
     var body: some View {
         NavigationStack {
             Group {
                 if let result {
-                    FridgePhotoReview(scan: result) {
-                        self.result = nil
-                        selectedPhoto = nil
+                    if suggestsBatch {
+                        batchSuggestion
+                    } else {
+                        FridgePhotoReview(scan: result, onRetake: resetPhoto,
+                                          onBatch: canUseBatch ? { showingBatch = true } : nil)
+                            .id(result.id)
                     }
-                    .id(result.id)
                 } else {
                     Form {
                         Section {
@@ -49,9 +56,13 @@ struct FridgePhotoSheet: View {
                                 ProgressView(loadingPhoto ? "正在读取照片…" : "正在识别食材和日期…")
                             }
                         } header: {
-                            Text("拍包装或一份蔬果")
+                            Text(FridgeVisionSheet.isAvailable ? "拍食材或包装" : "拍包装或一份蔬果")
                         } footer: {
-                            Text("包装请拍清生产日期、保质期或到期日。一次识别一份食材；照片仅在本机处理，不保存或上传。")
+                            if FridgeVisionSheet.isAvailable {
+                                Text("先在本机识别食材和日期。照片里有多种食材时，可用同一张照片继续批量识图。")
+                            } else {
+                                Text("包装请拍清生产日期、保质期或到期日。一次识别一份食材；照片仅在本机处理，不保存或上传。")
+                            }
                         }
                         .disabled(loadingPhoto || recognizing)
 
@@ -68,11 +79,17 @@ struct FridgePhotoSheet: View {
                     }
                 }
             }
-            .navigationTitle(result == nil ? "拍照识别" : "确认识别结果")
+            .navigationTitle(result == nil ? "拍照识别" : suggestsBatch ? "选择录入方式" : "确认识别结果")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }
+                }
+            }
+            .navigationDestination(isPresented: $showingBatch) {
+                if let input {
+                    FridgeVisionSheet(sourcePhoto: input.data, onUseOffline: showSingleItem,
+                                      onRetake: resetPhoto, onSaved: { dismiss() })
                 }
             }
             .fullScreenCover(
@@ -128,7 +145,7 @@ struct FridgePhotoSheet: View {
                     try Task.checkCancellation()
                     selectedPhoto = nil
                     result = scan
-                    self.input = nil
+                    if !FridgeVisionSheet.isAvailable { self.input = nil }
                 } catch is CancellationError {
                     return
                 } catch {
@@ -142,8 +159,7 @@ struct FridgePhotoSheet: View {
                 .task {
                     // UI tests exercise the same Vision pipeline with a generated label image.
                     if !fixtureLoaded, ProcessInfo.processInfo.arguments.contains("-ui-testing"),
-                        let encoded = ProcessInfo.processInfo.environment["COOK_FRIDGE_PHOTO_FIXTURE"],
-                        encoded.count <= 2 * 1024 * 1024, let data = Data(base64Encoded: encoded)
+                        let data = Self.fixturePhoto
                     {
                         fixtureLoaded = true
                         input = ScanInput(data: data)
@@ -152,6 +168,52 @@ struct FridgePhotoSheet: View {
             #endif
         }
     }
+
+    private var batchSuggestion: some View {
+        Form {
+            Section {
+                Text("本机还没确认单份食材。照片里有多种食材时，可以试试批量识图。")
+            }
+            Section {
+                Button("按一份食材录入", action: showSingleItem)
+                Button("换一张照片", action: resetPhoto)
+            }
+        }
+        .bottomActionBar {
+            Button {
+                showingBatch = true
+            } label: {
+                Text("批量识图（会员）").frame(maxWidth: .infinity)
+            }
+            .prominentButtonStyle()
+            .controlSize(.large)
+            .accessibilityIdentifier("fridge.scan.batch")
+        }
+    }
+
+    private func showSingleItem() {
+        showingSingleItem = true
+        showingBatch = false
+    }
+
+    private func resetPhoto() {
+        showingBatch = false
+        showingSingleItem = false
+        selectedPhoto = nil
+        input = nil
+        result = nil
+        error = nil
+    }
+
+    #if DEBUG
+        private static var fixturePhoto: Data? {
+            if let data = FridgeVisionSheet.testPhoto { return data }
+            guard let encoded = ProcessInfo.processInfo.environment["COOK_FRIDGE_PHOTO_FIXTURE"],
+                encoded.count <= 2 * 1024 * 1024
+            else { return nil }
+            return Data(base64Encoded: encoded)
+        }
+    #endif
 
     private func openCamera() {
         guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
@@ -193,6 +255,7 @@ private struct FridgePhotoReview: View {
     @Environment(\.dismiss) private var dismiss
     let scan: FridgeLabelScan
     let onRetake: () -> Void
+    let onBatch: (() -> Void)?
     @State private var name: String
     @State private var startDay = Date()
     @State private var cut = false
@@ -204,9 +267,10 @@ private struct FridgePhotoReview: View {
     @State private var saveError = false
     @State private var category = FridgeCategoryChoice.automatic
 
-    init(scan: FridgeLabelScan, onRetake: @escaping () -> Void) {
+    init(scan: FridgeLabelScan, onRetake: @escaping () -> Void, onBatch: (() -> Void)? = nil) {
         self.scan = scan
         self.onRetake = onRetake
+        self.onBatch = onBatch
         _name = State(initialValue: scan.names.count == 1 ? scan.names[0] : "")
         _expiresAt = State(initialValue: scan.expiryDay ?? Date())
         _basis = State(initialValue: scan.basis)
@@ -233,6 +297,10 @@ private struct FridgePhotoReview: View {
                 }
                 Text("图像识别可能出错，请核对食材种类和包装原文。")
                     .font(.footnote).foregroundStyle(.secondary)
+                if let onBatch {
+                    Button("改用批量识图（会员）", action: onBatch)
+                        .accessibilityIdentifier("fridge.scan.batch")
+                }
             }
             Section {
                 FridgeCategoryPicker(

@@ -7,52 +7,57 @@ final class FridgeVisionUITests: XCTestCase {
         let app = openVision(accessPending: true)
         let progress = app.staticTexts["正在核对会员资格…"]
         XCTAssertTrue(progress.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.navigationBars["AI 识图"].buttons["取消"].isHittable)
+        XCTAssertTrue(app.navigationBars["批量识图"].buttons.firstMatch.isHittable)
         keepScreenshot("核对会员资格", in: app)
 
         app.buttons["fridge.vision.offline"].tap()
-        XCTAssertTrue(app.buttons["fridge.camera"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.textFields["fridge.scan.name"].waitForExistence(timeout: 10))
         XCTAssertFalse(progress.exists)
     }
 
     @MainActor
-    func testSignedOutUserCanOpenVisionFromToolbarWithoutFixture() {
+    func testSignedOutUserCanOpenTheUnifiedPhotoEntry() {
         let app = openFridge()
-        let entry = app.navigationBars["冰箱"].buttons["fridge.vision.open"]
+        let entry = app.navigationBars["冰箱"].buttons["fridge.photo.open"]
         XCTAssertTrue(entry.isHittable)
-        XCTAssertEqual(entry.label, "AI 识图")
+        XCTAssertEqual(entry.label, "拍照识别")
+        XCTAssertFalse(app.navigationBars["冰箱"].buttons["AI 识图"].exists)
         keepScreenshot("冰箱识图入口", in: app)
         entry.tap()
-        XCTAssertTrue(app.buttons["登录云乐坊账号"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["fridge.vision.offline"].exists)
+        XCTAssertTrue(app.buttons["fridge.camera"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["fridge.photoLibrary"].exists)
     }
 
     @MainActor
     func testCancelFromPreviewLeavesFridgeEmptyAndOfflineEntryAvailable() {
         let app = openPreview()
         XCTAssertFalse(app.buttons["fridge.vision.save"].exists)
+        app.navigationBars["批量识图"].buttons.firstMatch.tap()
+        XCTAssertTrue(app.buttons["fridge.scan.batch"].waitForExistence(timeout: 10))
         app.buttons["取消"].tap()
         XCTAssertTrue(app.staticTexts["冰箱是空的"].waitForExistence(timeout: 10))
-        app.buttons["拍照识别"].firstMatch.tap()
-        XCTAssertTrue(app.buttons["fridge.camera"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["fridge.photoLibrary"].exists)
     }
 
     @MainActor
     func testConfirmedBatchStoresOnlyCheckedNames() {
         let app = openPreview()
+        XCTAssertTrue(app.buttons["fridge.vision.upload"].isHittable)
+        XCTAssertTrue(app.staticTexts["fridge.vision.recipient"].isHittable)
+        keepScreenshot("批量识图预览", in: app)
         app.buttons["fridge.vision.upload"].tap()
         let milk = app.buttons["取消勾选牛奶"]
         XCTAssertTrue(milk.waitForExistence(timeout: 10))
         milk.tap()
         let save = app.buttons["fridge.vision.save"]
         XCTAssertEqual(save.label, "加入冰箱（2 样）")
+        XCTAssertTrue(save.isHittable)
+        keepScreenshot("批量识图确认食材", in: app)
         save.tap()
 
         XCTAssertTrue(fridgeRow("番茄", in: app).waitForExistence(timeout: 10))
         XCTAssertTrue(fridgeRow("鸡蛋", in: app).exists)
         XCTAssertFalse(fridgeRow("牛奶", in: app).exists)
-        XCTAssertTrue(app.navigationBars["冰箱"].buttons["fridge.vision.open"].isHittable,
+        XCTAssertTrue(app.navigationBars["冰箱"].buttons["fridge.photo.open"].isHittable,
                       "已有食材时仍可通过工具栏识图")
     }
 
@@ -102,26 +107,28 @@ final class FridgeVisionUITests: XCTestCase {
         let offline = app.buttons["fridge.vision.offline"]
         XCTAssertTrue(offline.waitForExistence(timeout: 10))
         offline.tap()
-        XCTAssertTrue(app.buttons["fridge.camera"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["fridge.photoLibrary"].exists)
+        XCTAssertTrue(app.textFields["fridge.scan.name"].waitForExistence(timeout: 10))
     }
 
     @MainActor
     private func openPreview(result: String = "success") -> XCUIApplication {
         let app = openVision(result: result)
         XCTAssertTrue(app.buttons["fridge.vision.upload"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts["fridge.vision.recipient"].label.contains("DeepSeek"))
+        XCTAssertTrue(app.staticTexts["fridge.vision.recipient"].label.contains("托管的 DeepSeek"))
         return app
     }
 
     @MainActor
     private func openVision(result: String = "success", nonmember: Bool = false, accessPending: Bool = false) -> XCUIApplication {
         let app = openFridge(result: result, nonmember: nonmember, accessPending: accessPending)
-        let entry = app.navigationBars["冰箱"].buttons["fridge.vision.open"]
+        let entry = app.navigationBars["冰箱"].buttons["fridge.photo.open"]
         XCTAssertTrue(entry.waitForExistence(timeout: 10))
         XCTAssertTrue(entry.isHittable)
-        XCTAssertEqual(entry.label, "AI 识图")
         entry.tap()
+        let batch = app.buttons["fridge.scan.batch"]
+        XCTAssertTrue(batch.waitForExistence(timeout: 15))
+        XCTAssertFalse(app.buttons["fridge.vision.upload"].exists)
+        batch.tap()
         return app
     }
 

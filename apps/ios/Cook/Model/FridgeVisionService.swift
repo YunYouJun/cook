@@ -24,11 +24,13 @@ enum FridgeVisionError: LocalizedError {
 enum FridgeVisionProvider: String, Codable, Sendable {
     case qwen
     case deepSeek = "deepseek"
+    case cloudBase = "cloudbase"
 
-    var name: String {
+    var photoProcessingDescription: String {
         switch self {
-        case .qwen: return "阿里云百炼"
-        case .deepSeek: return "DeepSeek"
+        case .qwen: return "经云乐坊（腾讯云 CloudBase）发送给阿里云百炼识别"
+        case .deepSeek: return "经云乐坊（腾讯云 CloudBase）发送给 DeepSeek 识别"
+        case .cloudBase: return "发送到云乐坊使用的腾讯云 CloudBase，由托管的 DeepSeek 模型识别"
         }
     }
 }

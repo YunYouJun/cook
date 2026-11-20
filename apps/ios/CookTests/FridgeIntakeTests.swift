@@ -20,6 +20,15 @@ final class FridgeIntakeTests: XCTestCase {
         FridgeLabelParser.parse(text, now: day(11, 10), calendar: calendar)
     }
 
+    func testBatchSuggestionKeepsRecognizedDatesAndSingleFoodInLocalReview() {
+        XCTAssertTrue(scan("").suggestsBatchReview)
+        XCTAssertTrue(FridgeLabelScan(text: "", names: ["鸡蛋", "番茄"]).suggestsBatchReview)
+        XCTAssertFalse(FridgeLabelScan(text: "", names: ["苹果"]).suggestsBatchReview)
+        XCTAssertFalse(scan("生产日期：2026-10-01").suggestsBatchReview)
+        XCTAssertFalse(scan("EXP: 2026-11-20").suggestsBatchReview)
+        XCTAssertFalse(scan("2026.10.01").suggestsBatchReview)
+    }
+
     func testPackageExpiryTakesPrecedenceOverCalculation() {
         let result = scan("生产日期：2026年10月01日\n保质期：30天\n有效期至：2026-10-29")
         XCTAssertEqual(result.productionDay, day(10, 1))

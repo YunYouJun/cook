@@ -6,11 +6,13 @@ const ENV_ID = 'yunlefun-8g7ybcxc7345c490'
 const IDENTITY_URL = `https://${ENV_ID}.api.tcloudbasegateway.com/auth/v1/user/me`
 const ACCOUNT_URL = `https://${ENV_ID}.api.tcloudbasegateway.com/v1/functions/account-api`
 const PROVIDERS = Object.freeze({
-  qwen: { url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: 'qwen-vl-plus' },
-  deepseek: { url: 'https://api.deepseek.com/chat/completions', model: 'deepseek-flash' },
+  qwen: { url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: 'qwen-vl-plus', apiKeyVariable: 'COOK_FRIDGE_VISION_API_KEY' },
+  deepseek: { url: 'https://api.deepseek.com/chat/completions', model: 'deepseek-flash', apiKeyVariable: 'COOK_FRIDGE_VISION_DEEPSEEK_API_KEY' },
+  cloudbase: { model: 'deepseek-v4.1-flash-1017' },
 })
 const MAX_JPEG_BYTES = 70 * 1024
 const MAX_IMAGE_LENGTH = 4 * Math.ceil(MAX_JPEG_BYTES / 3)
+const MODEL_TIMEOUT_MS = 23_000
 const STATUS = {
   INVALID_REQUEST: 400,
   LOGIN_REQUIRED: 401,
@@ -26,11 +28,13 @@ const STATUS = {
 
 function readConfig(env = process.env) {
   const provider = env.COOK_FRIDGE_VISION_PROVIDER ?? 'qwen'
-  const apiKey = (provider === 'deepseek' ? env.COOK_FRIDGE_VISION_DEEPSEEK_API_KEY : env.COOK_FRIDGE_VISION_API_KEY) ?? ''
+  const selected = Object.hasOwn(PROVIDERS, provider) ? PROVIDERS[provider] : undefined
+  const apiKey = selected?.apiKeyVariable ? env[selected.apiKeyVariable] ?? '' : ''
   const quotaSalt = env.COOK_FRIDGE_VISION_QUOTA_SALT ?? ''
   const userDailyLimit = parseLimit(env.COOK_FRIDGE_VISION_USER_DAILY_LIMIT ?? '8', 50)
   const dailyRequestBudget = parseLimit(env.COOK_FRIDGE_VISION_DAILY_BUDGET ?? '150', 5000)
-  const enabled = env.COOK_FRIDGE_VISION_ENABLED === 'true' && Object.hasOwn(PROVIDERS, provider) && /^[\x21-\x7E]{1,512}$/.test(apiKey)
+  const enabled = env.COOK_FRIDGE_VISION_ENABLED === 'true' && Boolean(selected)
+    && (!selected?.apiKeyVariable || /^[\x21-\x7E]{1,512}$/.test(apiKey))
     && quotaSalt.length >= 32 && quotaSalt.length <= 512 && userDailyLimit > 0 && dailyRequestBudget > 0
   return { enabled, provider, apiKey, quotaSalt, userDailyLimit, dailyRequestBudget }
 }
@@ -159,7 +163,7 @@ function parseModel(body) {
   return validateNames(decoded.ingredients)
 }
 
-function createAdapters({ apiKey, provider }, fetchImpl = globalThis.fetch) {
+function createAdapters({ apiKey, provider }, fetchImpl = globalThis.fetch, getModel = getCloudBaseModel) {
   async function fixedFetch(url, request, ms) {
     const result = await fetchImpl(url, { ...request, redirect: 'error', credentials: 'omit', cache: 'no-store', signal: AbortSignal.timeout(ms) })
     if (result.redirected || (result.url && result.url !== url))
@@ -200,19 +204,27 @@ function createAdapters({ apiKey, provider }, fetchImpl = globalThis.fetch) {
         const { url, model } = PROVIDERS[provider]
         const photoBlock = { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${image}` } }
         const instructionBlock = { type: 'text', text: instruction }
-        const deepseek = provider === 'deepseek'
+        const request = {
+          model,
+          stream: false,
+          max_tokens: 600,
+          temperature: 0.1,
+          ...(provider === 'qwen' ? {} : { thinking: { type: 'disabled' }, response_format: { type: 'json_object' } }),
+          messages: [{ role: 'user', content: provider === 'qwen' ? [photoBlock, instructionBlock] : [instructionBlock, photoBlock] }],
+        }
+        if (provider === 'cloudbase') {
+          const result = await getModel().generateText({ ...request, maxSteps: 1 })
+          if (result?.error)
+            throw result.error
+          if (!Array.isArray(result?.rawResponses) || result.rawResponses.length !== 1)
+            throw new VisionError('INVALID_MODEL_RESPONSE')
+          return parseModel(result.rawResponses[0])
+        }
         const http = await fixedFetch(url, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model,
-            stream: false,
-            max_tokens: 600,
-            temperature: 0.1,
-            ...(deepseek ? { thinking: { type: 'disabled' }, response_format: { type: 'json_object' } } : {}),
-            messages: [{ role: 'user', content: deepseek ? [instructionBlock, photoBlock] : [photoBlock, instructionBlock] }],
-          }),
-        }, 23_000)
+          body: JSON.stringify(request),
+        }, MODEL_TIMEOUT_MS)
         if ([408, 504].includes(http.status))
           throw new VisionError('MODEL_TIMEOUT')
         if (http.status === 429)
@@ -222,8 +234,12 @@ function createAdapters({ apiKey, provider }, fetchImpl = globalThis.fetch) {
         return parseModel(await boundedJSON(http, 32_768, 'INVALID_MODEL_RESPONSE'))
       }
       catch (error) {
-        if (['AbortError', 'TimeoutError'].includes(error?.name))
+        if (['AbortError', 'TimeoutError'].includes(error?.name)
+          || ['408', '504', 'ETIMEDOUT', 'ESOCKETTIMEDOUT', 'ECONNABORTED'].includes(String(error?.code))) {
           throw new VisionError('MODEL_TIMEOUT')
+        }
+        if (['429', 'EXCEED_CONCURRENT_REQUEST_LIMIT', 'EXCEED_REQUEST_LIMIT', 'RATE_LIMIT_EXCEEDED', 'rate_limit_exceeded'].includes(String(error?.code)))
+          throw new VisionError('RATE_LIMITED')
         throw error
       }
     },
@@ -269,6 +285,16 @@ function createHandler({ config, verifyIdentity, readMembership, admit, recogniz
       return response(STATUS[code], { ok: false, code })
     }
   }
+}
+
+let cloudBaseModel
+function getCloudBaseModel() {
+  if (!cloudBaseModel) {
+    const cloudbase = require('@cloudbase/node-sdk')
+    const modelApp = cloudbase.init({ env: ENV_ID, timeout: MODEL_TIMEOUT_MS })
+    cloudBaseModel = modelApp.ai().createModel('cloudbase')
+  }
+  return cloudBaseModel
 }
 
 const config = Object.freeze(readConfig())
