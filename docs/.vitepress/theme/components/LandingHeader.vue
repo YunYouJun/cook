@@ -11,7 +11,7 @@ const toggleAppearance = inject('toggle-appearance', () => {
 <template>
   <header class="landing-header">
     <a class="landing-brand" href="/" aria-label="云食册首页">
-      <img src="/brand/cook-app-icon.svg" width="36" height="36" alt="">
+      <img src="/brand/cook-favicon.svg" width="36" height="36" alt="">
       <span>云食册</span>
     </a>
     <nav class="landing-nav" aria-label="产品导航">
