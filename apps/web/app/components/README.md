@@ -1,6 +1,6 @@
 ## Components
 
-Components in this dir will be auto-registered and on-demand, powered by [`unplugin-vue-components`](https://github.com/antfu/unplugin-vue-components).
+Nuxt auto-imports components from this directory on demand.
 
 ### Icons
 

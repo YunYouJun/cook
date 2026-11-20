@@ -2,7 +2,7 @@
 import PackageDescription
 
 #if os(Linux)
-    let cryptoPackages: [Package.Dependency] = [.package(url: "https://github.com/apple/swift-crypto.git", from: "3.9.0")]
+    let cryptoPackages: [Package.Dependency] = [.package(url: "https://github.com/apple/swift-crypto.git", from: "5.1.2")]
     let coreDependencies: [Target.Dependency] = [.product(name: "Crypto", package: "swift-crypto")]
 #else
     // Apple builds use the system CryptoKit without fetching a separate implementation.

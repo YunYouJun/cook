@@ -1,12 +1,12 @@
 {
   "name": "cook",
   "type": "module",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
-  "packageManager": "pnpm@11.21.0",
+  "packageManager": "pnpm@12.21.0",
   "engines": {
-    "node": "^24.15.0",
-    "pnpm": "11.21.0"
+    "node": "^24.18.0 || ^26.13.1",
+    "pnpm": "12.21.0"
   },
   "scripts": {
     "build": "node scripts/build-web-output.mjs build",
@@ -42,34 +42,31 @@
     "pack:skill": "tsx scripts/pack-skill.ts"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^8.3.0",
-    "@types/node": "^24.19.2",
-    "@unocss/eslint-config": "^66.7.5",
-    "@vitejs/plugin-vue": "6.0.8",
-    "@vue/test-utils": "^2.4.11",
-    "@vueuse/core": "^14.4.0",
+    "@antfu/eslint-config": "^10.0.0",
+    "@types/node": "^26.6.6",
+    "@unocss/eslint-config": "^66.13.0",
+    "@vitejs/plugin-vue": "6.0.11",
+    "@vue/devtools-api": "^8.2.1",
+    "@vue/test-utils": "^2.6.0",
+    "@vueuse/core": "^15.0.0",
     "@yunlefun/sso": "0.7.0",
     "ajv": "^8.20.0",
-    "baseline-browser-mapping": "^2.11.13",
-    "bumpp": "^11.1.0",
+    "baseline-browser-mapping": "^2.11.38",
+    "bumpp": "^12.3.0",
     "consola": "^3.4.2",
     "cos-nodejs-sdk-v5": "^3.0.0",
-    "eslint": "^10.8.1",
+    "eslint": "^10.15.0",
     "eslint-plugin-format": "^2.0.1",
-    "fake-indexeddb": "^6.2.5",
-    "jsdom": "^29.1.1",
-    "lint-staged": "^16.4.0",
-    "pinia": "^3.0.4",
-    "serve": "^14.2.6",
+    "fake-indexeddb": "^6.2.8",
+    "jsdom": "^31.0.1",
+    "lint-staged": "^17.6.1",
+    "pinia": "^4.1.0",
+    "serve": "^14.2.8",
     "sharp": "^0.35.5",
-    "simple-git-hooks": "^2.13.1",
-    "tsx": "^4.23.12",
-    "typescript": "^5.9.3",
-    "vitest": "^4.1.12"
-  },
-  "resolutions": {
-    "unplugin": "^3.0.0",
-    "vite": "^8.0.8"
+    "simple-git-hooks": "^2.14.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.1"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"

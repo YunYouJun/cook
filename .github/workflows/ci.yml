@@ -137,7 +137,7 @@ jobs:
       - run: pnpm run test
       - name: Install pinned artifact SDK for runtime contract verification
         if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (needs.changes.result != 'success' || needs.changes.outputs.skip_artifact != 'true')
-        run: npm install --prefix "$RUNNER_TEMP/cook-artifact-contract" --ignore-scripts --no-audit --no-fund @actions/artifact@6.3.1 @azure/core-xml@1.6.0
+        run: npm install --prefix "$RUNNER_TEMP/cook-artifact-contract" --ignore-scripts --no-audit --no-fund @actions/artifact@6.3.1 @azure/core-xml@1.6.1
       - name: Verify finalized checkpoints with the real Actions artifact runtime
         if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (needs.changes.result != 'success' || needs.changes.outputs.skip_artifact != 'true')
         uses: actions/github-script@v9
@@ -181,7 +181,7 @@ jobs:
       - name: Install Swift
         uses: swift-actions/setup-swift@364295d9c23900ce04d4e5cc708387921b4e50f9 # v3
         with:
-          swift-version: 6.2.2
+          swift-version: 6.4.2
       - run: swift --version
       - run: swift test --package-path apps/ios/CookCore
       - run: bash scripts/test-private-recipe-roundtrip.sh

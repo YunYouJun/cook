@@ -1,19 +1,19 @@
 [versions]
-agp = "8.13.2"
-kotlin = "2.3.0"
-ksp = "2.3.0"
-composeBom = "2026.03.01"
-activityCompose = "1.12.4"
-coreKtx = "1.17.0"
-lifecycle = "2.10.0"
-navigation3 = "1.2.1"
+agp = "9.5.1"
+kotlin = "2.4.21"
+ksp = "2.3.14"
+composeBom = "2026.11.01"
+activityCompose = "1.13.0"
+coreKtx = "1.19.1"
+lifecycle = "2.11.1"
+navigation3 = "1.2.2"
 room = "2.8.5"
-kotlinxSerialization = "1.10.0"
+kotlinxSerialization = "1.13.0"
 junit4 = "4.13.2"
-tinkAndroid = "1.15.0"
+tinkAndroid = "1.24.0"
 mlkitTextRecognitionChinese = "16.0.1"
-robolectric = "4.14.1"
-androidxTestCore = "1.6.1"
+robolectric = "4.18.1"
+androidxTestCore = "1.7.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -43,7 +43,6 @@ robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

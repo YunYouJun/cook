@@ -10,14 +10,14 @@ options:
 packages:
   YunleSupport:
     url: https://github.com/YunLeFun/ylf.git
-    revision: 5ce0ad76461256f055669aceb2c3b093724459ac
+    revision: 115d4d3959b72d78d097f7cfca5789cb1473caae
   CookCore:
     path: CookCore
 settings:
   base:
     SWIFT_VERSION: '5.0'
-    MARKETING_VERSION: 2.0.0
-    CURRENT_PROJECT_VERSION: '27'
+    MARKETING_VERSION: 2.0.1
+    CURRENT_PROJECT_VERSION: '28'
     DEVELOPMENT_TEAM: ${APPLE_DEVELOPMENT_TEAM}
     CODE_SIGN_STYLE: Automatic
 targets:

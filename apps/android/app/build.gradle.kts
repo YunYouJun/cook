@@ -6,12 +6,10 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.File
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -109,14 +107,19 @@ abstract class SyncCookAssetsTask : DefaultTask() {
 
 android {
     namespace = "cn.yunyoujun.cook"
-    compileSdk = 36
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 2
+        }
+    }
+    buildToolsVersion = "37.0.0"
 
     defaultConfig {
         applicationId = "fun.yunle.cook"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "2.0.0-alpha.1"
+        versionCode = 2
+        versionName = "2.0.0-alpha.2"
 
         val feedbackUrl = (project.findProperty("cook.feedback.url") as? String
             ?: System.getenv("COOK_FEEDBACK_URL")
@@ -162,12 +165,6 @@ android {
                 project.projectDir.resolve("schemas").canonicalPath,
             )
         }
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 

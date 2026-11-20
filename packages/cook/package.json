@@ -1,7 +1,7 @@
 {
   "name": "@yunyoujun/cook",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Cook CLI - 食用手册命令行工具，菜谱检索/数据管理",
   "author": "YunYouJun <me@yunyoujun.cn>",
   "license": "MIT",
@@ -59,16 +59,17 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "@clack/prompts": "^1.7.0",
-    "@larksuiteoapi/node-sdk": "^1.73.0",
-    "cac": "^7.0.0",
+    "@clack/prompts": "^1.9.0",
+    "@larksuiteoapi/node-sdk": "^1.76.0",
+    "cac": "^7.1.0",
     "consola": "^3.4.2",
-    "papaparse": "^5.5.4"
+    "papaparse": "^5.7.1"
   },
   "devDependencies": {
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.6",
     "@types/papaparse": "^5.5.2",
-    "tsx": "^4.23.12",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
     "unbuild": "^3.6.1"
   },
   "publishConfig": {

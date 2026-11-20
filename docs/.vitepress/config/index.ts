@@ -1,24 +1,27 @@
-import type { HeadConfig } from 'vitepress'
-import { getVitepressConfig } from '@yunyoujun/docs'
+import type { HeadConfig, MarkdownRenderer } from 'vitepress'
+import { createRequire } from 'node:module'
+import { transformerTwoslash } from '@shikijs/vitepress-twoslash'
+import { createFileSystemTypesCache } from '@shikijs/vitepress-twoslash/cache-fs'
 import { defineConfig } from 'vitepress'
+import { groupIconMdPlugin } from 'vitepress-plugin-group-icons'
 import { withYunlefun, yunlefunMarkdown, zhThemeConfig } from 'vitepress-theme-yunlefun/config'
 import { isNonIndexableProductPage, productPagePath, publicProductSitemapItems } from '../theme/indexing.ts'
 import { guideArticleJsonLd, serializeJsonLd, serializeProductJsonLd } from '../theme/structured-data.ts'
 
-const vpConfig = getVitepressConfig({
-  repo: 'https://github.com/YunYouJun/cook',
-})
+const repo = 'https://github.com/YunYouJun/cook'
+const taskLists: (md: MarkdownRenderer) => void = createRequire(import.meta.url)('markdown-it-task-lists')
 const noindex: HeadConfig = ['meta', { name: 'robots', content: 'noindex' }]
 
 export default defineConfig(withYunlefun({
-  ...vpConfig,
   lang: 'zh-CN',
   title: '云食册',
   cleanUrls: true,
   description: '有什么食材，就做什么菜。云食册产品官网、iOS 发布信息与食用手册使用文档。',
-  srcExclude: [...(vpConfig.srcExclude ?? []), 'public/**/*.md'],
+  lastUpdated: true,
+  ignoreDeadLinks: 'localhostLinks',
+  srcExclude: ['public/**/*.md'],
   head: [
-    ...(vpConfig.head ?? []).filter(([tag, attrs]) => tag !== 'link' || attrs.rel !== 'icon'),
+    ['meta', { name: 'author', content: 'YunYouJun' }],
     ['link', { rel: 'icon', href: '/favicon.ico?v=2', sizes: 'any' }],
     ['link', { rel: 'icon', href: '/brand/cook-favicon.svg', type: 'image/svg+xml', sizes: 'any' }],
   ],
@@ -72,20 +75,24 @@ export default defineConfig(withYunlefun({
     )
   },
   markdown: {
-    ...vpConfig.markdown,
     config(md) {
-      vpConfig.markdown?.config?.(md)
+      md.use(taskLists)
+      md.use(groupIconMdPlugin, { titleBar: { includeSnippet: true } })
       md.use(yunlefunMarkdown)
     },
+    codeTransformers: [transformerTwoslash({ typesCache: createFileSystemTypesCache() })],
+    languages: ['ts'],
+    lineNumbers: true,
   },
 
   themeConfig: {
-    ...vpConfig.themeConfig,
+    logo: '/favicon.svg',
     ...zhThemeConfig,
     editLink: {
-      ...vpConfig.themeConfig?.editLink,
+      pattern: `${repo}/edit/main/docs/:path`,
       text: '在 GitHub 上编辑此页',
     },
+    socialLinks: [{ icon: 'github', link: repo }],
 
     footer: {
       message: '运营主体：海州区云乐坊信息技术工作室<br><a href="/terms">用户协议</a> · <a href="/privacy">iOS 隐私政策</a> · <a href="mailto:me@yunyoujun.cn">联系开发者</a>',

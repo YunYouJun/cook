@@ -1,7 +1,7 @@
-FROM node:24.22.2-alpine AS builder
+FROM node:26.13.1-alpine AS builder
 
 RUN apk add --no-cache git
-RUN npm install -g pnpm@11.21.0
+RUN npm install -g pnpm@12.21.0
 
 WORKDIR /app
 COPY . .

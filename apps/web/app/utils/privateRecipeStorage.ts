@@ -8,7 +8,7 @@ export function readPrivateRecipeStorage(storage: Pick<Storage, 'getItem'>, key:
     return []
   const value: unknown = JSON.parse(raw)
   if (!Array.isArray(value))
-    throw new Error('本机菜谱数据无法识别，请先保留原始数据。')
+    throw new TypeError('本机菜谱数据无法识别，请先保留原始数据。')
   value.forEach(validatePrivateRecipe)
   return value
 }
