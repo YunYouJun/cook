@@ -30,7 +30,7 @@ struct HelpSettingsView: View {
                 }
                 .supportMenuRow()
                     .accessibilityIdentifier("help.support")
-                externalLink("需求墙", subtitle: "查看公开建议，为想要的功能投票", icon: .system("lightbulb"),
+                externalLink("需求墙", subtitle: "查看建议、投票与进度", icon: .system("lightbulb"),
                              url: "https://support.yunle.fun/feedback?product=cook")
                     .accessibilityIdentifier("help.requests")
             }

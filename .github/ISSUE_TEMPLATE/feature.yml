@@ -1,11 +1,16 @@
-name: 功能建议
-description: 想要的新功能或改进
-title: '[建议] '
+name: 功能实现或改进
+description: 跟踪目标和验收条件已明确的开发任务
+title: '[功能] '
 labels: [enhancement]
 body:
   - type: markdown
     attributes:
-      value: 提交前先搜一下有没有人提过，有的话点个 👍 或补充使用场景。请不要在公开 Issue 中填写联系方式等个人信息。
+      value: 汇总已有讨论，写清本次交付范围。新建议可在 [Cook 需求墙](https://support.yunle.fun/feedback?product=cook) 讨论。公开 Issue 只填写可公开的信息，私密工单及其内容留在 Support。
+  - type: input
+    id: demand
+    attributes:
+      label: 公开需求墙链接（可选）
+      placeholder: https://support.yunle.fun/feedback/…
   - type: textarea
     id: problem
     attributes:
@@ -16,7 +21,17 @@ body:
   - type: textarea
     id: idea
     attributes:
-      label: 希望怎么解决
+      label: 本次交付范围
+      description: 要支持哪些场景和入口，有哪些边界或依赖
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收条件
+      description: 写出用户能验证的结果，以及需要核验的平台或版本
+    validations:
+      required: true
   - type: dropdown
     id: platform
     attributes:
@@ -25,4 +40,5 @@ body:
       options:
         - 网页版
         - 云食册（iOS App）
+        - Android 预览版
         - 菜谱数据

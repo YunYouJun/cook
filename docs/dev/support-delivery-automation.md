@@ -2,6 +2,12 @@
 
 Support 是工单状态、用户沟通和送达回执的权威来源。GitHub 只提供公开开发引用；Issue 按需关联，不自动创建 Issue，也不镜像 Discussion。
 
+## 从需求到开发
+
+1. 在 [Cook 需求池](https://support.yunle.fun/manage?product=cook#demand-pool) 将同一诉求汇总为一条草稿。可以从工单详情打开需求池，关联多张同产品工单，记录评估进度。公开前审核标题和描述，来源工单与关联 Issue 保存在内部字段。
+2. 适合公开讨论的建议发布到[需求墙](https://support.yunle.fun/feedback?product=cook)。范围明确的功能通过 GitHub「功能实现或改进」模板建立 Issue，写好用户场景、交付范围和验收条件。已复现的缺陷可以直接用 Bug 模板。Issue 可引用公开需求，把 Issue 链接写回需求池的「内部关联」。
+3. PR 合并后继续跟踪实际发布。Web 使用下文的生产验收链路。原生改动记录可用的应用版本、构建和真机验收结果。发布并验证后，推进需求状态，并到各来源工单回复用户。
+
 ## 执行链路
 
 `.github/workflows/support-sync.yml` 从 `main` 运行，生产凭据只由限定 `main` 的 `support-cook` 环境提供，仅在维护者按需手动触发时读取私密绑定，不再随主分支提交或定时运行。PR 无需合并即可关联；同步只读取 PR 元数据，不执行 PR 源码或解释正文中的指令。合并时采用最终 merge/squash SHA，并通过 GitHub compare 核对它确实属于当前主分支。

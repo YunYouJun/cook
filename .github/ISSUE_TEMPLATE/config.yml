@@ -7,4 +7,7 @@ contact_links:
     about: 网页版或云食册「我的 → 问题反馈」，不用登录，私密发送至云乐坊支持中心
   - name: 参与讨论
     url: https://github.com/YunYouJun/cook/discussions
-    about: 还没想清楚的想法、使用心得，先在 Discussions 聊
+    about: 分享使用心得和开发交流
+  - name: 需求墙与路线图
+    url: https://support.yunle.fun/feedback?product=cook
+    about: 提议或为现有需求投票，查看产品进度
