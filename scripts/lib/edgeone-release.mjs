@@ -98,12 +98,17 @@ async function queryEdgeOne(fetcher, token, body) {
   return result.Data.Response
 }
 
+function isProductionBranch(projectId, branch) {
+  return branch === 'main'
+    || (projectId === EDGEONE_PRODUCTION_TARGETS[0].projectId && branch === 'web-production')
+}
+
 function productionDeployment(deployment, projectId, expectedSha, requireCurrent = false) {
   requireCondition(isRecord(deployment), 'deployment_missing')
   requireCondition(deployment.ProjectId === projectId, 'deployment_project_mismatch')
   requireCondition(typeof deployment.DeploymentId === 'string' && /^[\w-]{1,128}$/.test(deployment.DeploymentId), 'deployment_id_invalid')
   requireCondition(deployment.Status === 'Success' && deployment.Env === 'Production', 'deployment_not_production_success')
-  requireCondition(deployment.ViaMeta === 'Github' && deployment.DplRepoUrl === REPOSITORY_URL && deployment.RepoBranch === 'main', 'deployment_source_mismatch')
+  requireCondition(deployment.ViaMeta === 'Github' && deployment.DplRepoUrl === REPOSITORY_URL && isProductionBranch(projectId, deployment.RepoBranch), 'deployment_source_mismatch')
   requireCondition(deployment.RepoCommitHash === expectedSha, 'deployment_sha_mismatch')
   if (requireCurrent)
     requireCondition(deployment.UsedInProd === true, 'deployment_not_current')
@@ -122,7 +127,7 @@ async function projectsSnapshot(query, targets) {
     const matches = result.Projects.filter(project => project?.ProjectId === target.projectId)
     requireCondition(matches.length === 1, 'production_project_missing')
     const project = matches[0]
-    requireCondition(project.Provider === 'Github' && project.RepoUrl === REPOSITORY_URL && project.RepoBranch === 'main', 'project_source_mismatch')
+    requireCondition(project.Provider === 'Github' && project.RepoUrl === REPOSITORY_URL && isProductionBranch(target.projectId, project.RepoBranch), 'project_source_mismatch')
     requireCondition(Array.isArray(project.CustomDomains) && project.CustomDomains.some(domain => domain?.Domain === new URL(target.origin).hostname), 'production_domain_mismatch')
     return target
   })

@@ -14,7 +14,7 @@ Support 是工单状态、用户沟通和送达回执的权威来源。GitHub �
 
 1. 将 commit、PR 和可选 Issue 写入工单的 `changeRefs` 与内部处理记录；不因此解决或关闭工单。
 2. 锁定同一主分支 SHA 对应的 `ci.yml` 最新 main push 运行及当前 attempt，要求其中全部 lint、typecheck、build、test（含所有矩阵任务）成功；必须同时通过依赖这四项的 `web-acceptance` 聚合任务，以证明整个矩阵均已结束；其他工作流的同名 job 和旧运行结果不能替代。
-3. 查询真实 EdgeOne API；项目概览仅用于仓库和域名信息，当前生产指针从完整部署列表中唯一的 `UsedInProd` 记录取得，忽略较新的预览部署。核实下面两个固定项目的当前生产部署为 `Success`、`UsedInProd`、`Production`、`Github`、`main`，且 SHA 与待验收版本一致。
+3. 查询真实 EdgeOne API；项目概览仅用于仓库和域名信息，当前生产指针从完整部署列表中唯一的 `UsedInProd` 记录取得，忽略较新的预览部署。核实下面两个固定项目的当前生产部署为 `Success`、`UsedInProd`、`Production`、`Github`，且 SHA 与待验收版本一致。网页版接受 `web-production` 或切换前的 `main` 部署，官网只接受 `main`。
 4. 读取两个正式域名的 `/.well-known/cook-build.json`，核对完整 SHA、产品、仓库、版本及 `dirty: false`，再检查实际应用 HTML 的 `feedbackBuild` 和启动资源。浏览器执行绑定指定的验收流程，结束后重新核对部署指针。
 5. 将真实部署及浏览器证据写入 `work.verification`，根据经过核对的修复事实和实际通过的验收项目生成解决回复；默认保存草稿，获得发送授权后自动发布。
 6. 对本次自动化草稿发布产生的解决回复推进 `resolved`；匹配这条回复的真实用户端 portal `delivered` / `read` 回执可推进 `closed`。无联系方式访客也可使用 Support 管理详情计算的严格 `closeWithoutDelivery === true` 资格关闭；该资格要求当前验证、已发布解决回复和合法状态。缺失或非 `true` 时继续等待回执。Support 保存“关闭时未确认送达”的依据，实际 `available` 和微信通知回执保持原义，运行器不伪造回执。
@@ -24,7 +24,7 @@ Support 是工单状态、用户沟通和送达回执的权威来源。GitHub �
 | `pages-d3ggorpihuk6` | `https://cook.yunyoujun.cn` | `/`                       |
 | `pages-izqbljwk91wt` | `https://cook.yunle.fun`    | `/home`，同时检查产品首页 |
 
-GitHub 中现有 `Production – cook` 部署记录来自 Vercel，不作为 EdgeOne 上线证据。tag Release 也不更新这两个正式站点。
+GitHub 中现有 `Production – cook` 部署记录来自 Vercel，不作为 EdgeOne 上线证据。网页版等待正式版标签部署，官网随 `main` 更新。两站 SHA 一致时再执行送达验收，版本错开时保持待验收。
 
 ## 私密绑定
 

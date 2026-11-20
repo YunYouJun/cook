@@ -51,7 +51,7 @@ pnpm build:site
 ### 网页版：EdgeOne `yunyoujun-cook`
 
 - 项目 ID：`pages-d3ggorpihuk6`，Git 仓库 `YunYouJun/cook`。
-- 生产环境关联 `main`，自动部署开启；其他分支自动预览关闭，按需在控制台新建预览部署。
+- 生产环境关联 `web-production`，自动部署开启；其他分支自动预览关闭，按需在控制台新建预览部署。
 - 框架预设：`Other`，根目录：`./`。
 - Node.js：`24.18.0`；安装命令：`pnpm install --frozen-lockfile`。
 - 构建命令：`pnpm run build`，输出目录：`dist`。
@@ -59,7 +59,9 @@ pnpm build:site
 
 2026-10-26 在原 Upload 项目的「项目设置 → Git 管理」中关联了已有授权的 GitHub 仓库，保留项目 ID、域名、证书和部署历史。控制台实际支持该关联操作；不需要删除项目或迁移域名。
 
-`main` 的新提交由 EdgeOne Git 集成构建并发布；仓库 Release workflow 仅生成版本发布和构建附件，不再通过 CLI 向生产项目上传，避免标签发布覆盖已上线的 `main`。首次接入或调整构建配置后，可在「构建部署 → 新建部署」选择目标分支验证；配置保存本身不会更新线上产物。
+GitHub Release 工作流在正式版标签（如 `v2.0.1`）通过版本校验并发布附件后，只把该标签对应的 `main` 提交快进到 `web-production`。EdgeOne 构建该分支，工作流轮询线上构建信息，确认版本和 SHA。请从 `main` 打标签，日常开发合并到 `main`，预发布标签只生成 Release 附件。
+
+切换时从当前线上 SHA 创建 `web-production`，在 `yunyoujun-cook` 的「设置 → 环境管理 → 生产 → 编辑」选择该分支并保存。若 EdgeOne 构建失败且分支已指向该标签，在「构建部署」重新部署该提交，再重跑 GitHub 部署任务核对。站点回滚可在 EdgeOne 重新发布上一个成功部署。
 
 Git 部署使用根目录 `edgeone.json`，保留授权回调的 `no-store` / `no-referrer` 等响应头。`scripts/copy-web-output.ts` 仍把该配置复制到 `dist`，使下载的发布产物也能用于直接上传。官网的 `dist-site` 不应发布到此项目，网页版和审核中的 `/about/` 保持独立。
 

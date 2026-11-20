@@ -44,9 +44,6 @@ jobs:
       - name: Build
         run: pnpm build
 
-      # EdgeOne builds and deploys main through its Git integration.
-      # Tags publish release artifacts without replacing the production website.
-
       - name: Package web assets
         run: |
           mkdir release-assets
@@ -71,3 +68,44 @@ jobs:
       - run: npx changelogithub # or changelogithub@0.12 if ensure the stable result
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+  deploy-web:
+    if: github.repository == 'YunYouJun/cook' && !contains(github.ref_name, '-')
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    concurrency:
+      group: cook-web-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Publish the tagged commit to the EdgeOne production branch
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor HEAD FETCH_HEAD; then
+            echo '::error::The release tag must reference a commit on main.'
+            exit 1
+          fi
+          git push origin HEAD:refs/heads/web-production
+
+      - name: Verify the live Web release
+        run: |
+          commit=$(git rev-parse HEAD)
+          version=${GITHUB_REF_NAME#v}
+          for attempt in {1..60}; do
+            if curl -fsS --max-time 5 -H 'Cache-Control: no-cache' \
+              "https://cook.yunyoujun.cn/.well-known/cook-build.json?release=${commit}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${attempt}" \
+              | jq -e --arg commit "$commit" --arg version "$version" \
+                '.productId == "cook" and .repository == "YunYouJun/cook" and .commitSha == $commit and .version == $version' >/dev/null; then
+              echo "cook.yunyoujun.cn is serving ${GITHUB_REF_NAME} (${commit})."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo '::error::EdgeOne did not serve the tagged build in time. Check the web-production deployment in EdgeOne.'
+          exit 1
