@@ -2,7 +2,7 @@
 # requires-python = ">=3.12,<3.13"
 # dependencies = ["onnx==1.22.0", "onnxruntime==1.23.2", "tokenizers==0.23.3", "numpy==2.5.5"]
 # ///
-"""Build the bundled Android produce classifier from the MIT-licensed TinyCLIP model."""
+"""Export the on-demand Android produce classifier from the MIT-licensed TinyCLIP model."""
 
 import hashlib
 import tempfile

@@ -9,11 +9,6 @@
     "bytes": 61828,
     "sha256": "acd503335c452fddec691edb4027609c67a999e7859dedcdd7f68af5e894942c"
   },
-  "android/produce/classifier.onnx": {
-    "file": "classifier-c50ebd4bf147b36871fcc28151cefa23d212328c1b7c95ed0e1dc858f08cbaab.onnx",
-    "bytes": 26466887,
-    "sha256": "c50ebd4bf147b36871fcc28151cefa23d212328c1b7c95ed0e1dc858f08cbaab"
-  },
   "showcase/smashed-cucumber-clay/model.glb": {
     "file": "smashed-cucumber-clay-0b97b1a765525d4e7e4d4ea0ae822e915ce1cf43523547a4980a1c5fe36a4ec8.glb",
     "bytes": 112312,

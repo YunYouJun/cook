@@ -44,11 +44,11 @@ abstract class DownloadCookModelsTask : DefaultTask() {
             val name = model["file"] as String
             val bytes = (model["bytes"] as Number).toLong()
             val sha256 = model["sha256"] as String
-            require(path.matches(Regex("(?:[a-z0-9-]+/)+[a-z0-9-]+\\.(?:glb|onnx)"))) { "Invalid model path: $path" }
+            require(path.matches(Regex("(?:[a-z0-9-]+/)+[a-z0-9-]+\\.glb"))) { "Invalid model path: $path" }
             require(sha256.matches(Regex("[a-f0-9]{64}")) && bytes in 1L..64L * 1024 * 1024) {
                 "Invalid model checksum or size: $path"
             }
-            require(name.matches(Regex("[a-z0-9-]+-$sha256\\.(?:glb|onnx)"))) { "Invalid model object: $name" }
+            require(name.matches(Regex("[a-z0-9-]+-$sha256\\.glb"))) { "Invalid model object: $name" }
 
             val destination = outputDir.file(path).get().asFile
             if (matches(destination, bytes, sha256)) continue
@@ -213,9 +213,7 @@ abstract class SyncCookAssetsTask : DefaultTask() {
         for (model in listOf("cloud-kitchen.glb", "showcase-plate.glb")) {
             modelsDir.file("android/$model").get().asFile.copyTo(File(cookOut, "scenes/$model"), overwrite = true)
         }
-        modelsDir.file("android/produce/classifier.onnx").get().asFile
-            .copyTo(File(cookOut, "produce/classifier.onnx"), overwrite = true)
-        for (asset in listOf("labels.txt", "TinyCLIP-LICENSE.txt")) {
+        for (asset in listOf("model.json", "labels.txt", "TinyCLIP-LICENSE.txt")) {
             androidAssetsDir.file("produce/$asset").get().asFile.copyTo(File(cookOut, "produce/$asset"), overwrite = true)
         }
     }
@@ -229,7 +227,6 @@ android {
         }
     }
     buildToolsVersion = "37.0.0"
-    androidResources.noCompress += "onnx"
 
     defaultConfig {
         applicationId = "fun.yunle.cook"

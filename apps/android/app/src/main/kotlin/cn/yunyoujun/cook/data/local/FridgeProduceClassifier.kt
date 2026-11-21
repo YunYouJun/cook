@@ -10,19 +10,19 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
+import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
-import java.nio.channels.FileChannel
 
 internal class FridgeProduceClassifier(private val assets: AssetManager) {
     private val labels by lazy {
         assets.open("cook/produce/labels.txt").bufferedReader().use { it.readLines() }
     }
 
-    fun classify(bitmap: Bitmap, rotationDegrees: Int): List<Pair<String, Float>> = try {
-        runModel(bitmap, rotationDegrees)
+    fun classify(bitmap: Bitmap, rotationDegrees: Int, model: File): List<Pair<String, Float>> = try {
+        runModel(bitmap, rotationDegrees, model)
     } catch (_: IOException) {
         emptyList()
     } catch (_: OrtException) {
@@ -31,17 +31,12 @@ internal class FridgeProduceClassifier(private val assets: AssetManager) {
         emptyList()
     }
 
-    private fun runModel(bitmap: Bitmap, rotationDegrees: Int): List<Pair<String, Float>> {
+    private fun runModel(bitmap: Bitmap, rotationDegrees: Int, model: File): List<Pair<String, Float>> {
         val environment = OrtEnvironment.getEnvironment().also { it.setTelemetry(false) }
         val pixels = imageTensor(bitmap, rotationDegrees)
-        val mapping = assets.openFd("cook/produce/classifier.onnx").let { asset ->
-            asset.createInputStream().use { input ->
-                input.channel.map(FileChannel.MapMode.READ_ONLY, asset.startOffset, asset.declaredLength)
-            }
-        }
         val session = OrtSession.SessionOptions().use { options ->
             options.setIntraOpNumThreads(2)
-            environment.createSession(mapping, options)
+            environment.createSession(model.absolutePath, options)
         }
         return session.use {
             OnnxTensor.createTensor(environment, pixels, longArrayOf(1, 3, SIDE.toLong(), SIDE.toLong())).use { tensor ->

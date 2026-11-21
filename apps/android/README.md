@@ -31,9 +31,9 @@ Debug APK 位于 `app/build/outputs/apk/debug/app-debug.apk`，包名为 `fun.yu
 
 3D 场景采用 Filament 渲染，应用内置云厨房、通用餐盘和三道特色菜模型。更新 iOS 的 USDZ 后，可在仓库根目录用 Blender 4.4 运行 `blender -b --factory-startup --python-exit-code 1 --python scripts/export-android-scenes.py`，生成对应的 GLB。
 
-离线分类随 App 安装约 25 MiB 的 TinyCLIP 图像模型，照片和包装文字均在内存中处理。模型可用 `uv run --script scripts/export-android-produce.py` 重新导出。[模型来源与许可证](https://huggingface.co/wkcn/TinyCLIP-ViT-39M-16-Text-19M-YFCC15M)
+首次进入「拍照识别」时，App 提示下载约 25 MiB 的 TinyCLIP 蔬果模型。用户确认后，App 根据 [蔬果模型清单](../../assets/android/produce/model.json) 从 EdgeOne 下载，校验文件大小和 SHA-256 后保存在 App 私有目录，之后可离线识别蔬果。包装文字识别和手动录入随时可用。照片和包装文字均在手机内存中处理。可用 `uv run --script scripts/export-android-produce.py` 重新导出模型。[模型来源与许可证](https://huggingface.co/wkcn/TinyCLIP-ViT-39M-16-Text-19M-YFCC15M)
 
-Gradle 根据 [模型清单](../../assets/android/models.json) 从 `https://assets.yunle.fun/cook/android/` 下载 ONNX 和 GLB，校验文件大小及 SHA-256 后打进 APK。下载后的文件缓存到 `app/build/downloaded/cookModels`，保留缓存即可用 `--offline` 构建。
+Gradle 根据 [3D 模型清单](../../assets/android/models.json) 从 `https://assets.yunle.fun/cook/android/` 下载 GLB，校验文件大小及 SHA-256 后打进 APK。下载后的文件缓存到 `app/build/downloaded/cookModels`，保留缓存即可用 `--offline` 构建。APK 仅包含蔬果模型的清单、标签和许可。
 
 更新模型时，上传新导出文件到现有 COS 桶的 `cook/android/` 前缀，文件名使用 `<模型名>-<sha256>.<扩展名>`。从 EdgeOne 下载验证后，更新清单里的文件名、字节数和哈希。Git 保留导出脚本、许可、标签和清单。
 

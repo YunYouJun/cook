@@ -6,6 +6,8 @@ import cn.yunyoujun.cook.data.local.CookDatabase
 import cn.yunyoujun.cook.data.local.CookingJournalStore
 import cn.yunyoujun.cook.data.local.DevicePreferencesStore
 import cn.yunyoujun.cook.data.local.FridgeProduceClassifier
+import cn.yunyoujun.cook.data.local.FridgeProduceModel
+import cn.yunyoujun.cook.data.local.FridgeProduceModelStore
 import cn.yunyoujun.cook.data.local.FridgeStore
 import cn.yunyoujun.cook.data.local.KitchenWorkbenchStore
 import cn.yunyoujun.cook.data.local.PersonalCatalogStore
@@ -26,6 +28,8 @@ import cn.yunyoujun.cook.platform.KitchenNotificationHelper
 import cn.yunyoujun.cook.platform.KitchenTimerScheduler
 import cn.yunyoujun.cook.platform.WeChatAuthorization
 import cn.yunyoujun.cook.platform.WeChatOpenSdkDriver
+import kotlinx.serialization.json.Json
+import java.io.File
 
 class AppContainer(application: Application) {
     val database: CookDatabase by lazy { CookDatabase.create(application) }
@@ -53,6 +57,13 @@ class AppContainer(application: Application) {
     val feedbackClient: FeedbackClient by lazy { FeedbackClient() }
     val fridgeVisionService: FridgeVisionService by lazy { FridgeVisionService() }
     internal val fridgeProduceClassifier: FridgeProduceClassifier by lazy { FridgeProduceClassifier(application.assets) }
+    internal val fridgeProduceModelStore by lazy {
+        val manifest = application.assets.open("cook/produce/model.json").bufferedReader().use { it.readText() }
+        FridgeProduceModelStore(
+            directory = File(application.noBackupFilesDir, "produce-model"),
+            model = Json.decodeFromString<FridgeProduceModel>(manifest),
+        )
+    }
     val deepSeekClient: DeepSeekByokClient by lazy { DeepSeekByokClient() }
     val managedAiService: ManagedCookAIService by lazy { ManagedCookAIService() }
     val managedStepGuidanceService: ManagedStepGuidanceService by lazy { ManagedStepGuidanceService() }

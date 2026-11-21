@@ -7,6 +7,7 @@ import cn.yunyoujun.cook.data.local.FridgeBatchItem
 import cn.yunyoujun.cook.data.local.FridgeDateKind
 import cn.yunyoujun.cook.data.local.FridgeLabelParser
 import cn.yunyoujun.cook.data.local.FridgeProduceClassifier
+import cn.yunyoujun.cook.data.local.FridgeProduceModel
 import cn.yunyoujun.cook.data.local.FridgeStore
 import cn.yunyoujun.cook.data.local.JournalRecipeId
 import cn.yunyoujun.cook.data.remote.FridgeVisionException
@@ -37,7 +38,7 @@ import java.nio.ByteOrder
 @Config(sdk = [35])
 class NativeParityTest {
     @Test
-    fun bundledProduceModelLabelsMapToIngredientsAndUnknownResultsAreOmitted() {
+    fun produceModelMetadataShipsWithoutWeightsAndLabelsMapToIngredients() {
         val assets = ApplicationProvider.getApplicationContext<Context>().assets
         val labels = assets.open("cook/produce/labels.txt").bufferedReader().use { it.readLines() }
         val produce = labels.filterNot { it.startsWith("other_") }
@@ -45,7 +46,9 @@ class NativeParityTest {
         assertEquals(produce.size, produce.toSet().size)
         val names = produce.map { name -> FridgeLabelParser.imageNames(listOf(name to 1f)).single() }
         assertEquals(22, names.toSet().size)
-        assertTrue(assets.open("cook/produce/classifier.onnx").use { it.read() != -1 })
+        val manifest = assets.open("cook/produce/model.json").bufferedReader().use { it.readText() }
+        assertTrue(Json.decodeFromString<FridgeProduceModel>(manifest).file.endsWith(".onnx"))
+        assertFalse(assets.list("cook/produce").orEmpty().any { it.endsWith(".onnx") })
 
         val candidates = listOf("apple", "banana", "other_0")
         val values = floatArrayOf(.32f, .31f, .3f)

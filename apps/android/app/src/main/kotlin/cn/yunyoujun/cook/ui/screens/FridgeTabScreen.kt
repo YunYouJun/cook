@@ -30,6 +30,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -40,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -67,6 +69,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.IOException
 import java.time.LocalDate
 import java.time.Instant
 import java.time.ZoneOffset
@@ -429,6 +433,11 @@ fun FridgeTabScreen(
 
     if (showPhotoIntakeDialog) {
         val photoScope = rememberCoroutineScope()
+        val modelStore = container.fridgeProduceModelStore
+        var produceModel by remember { mutableStateOf<File?>(null) }
+        var checkedModel by remember { mutableStateOf(false) }
+        var downloadingModel by remember { mutableStateOf(false) }
+        var downloadFailed by remember { mutableStateOf(false) }
         var labelText by remember { mutableStateOf("") }
         var imageClassifications by remember { mutableStateOf<List<Pair<String, Float>>>(emptyList()) }
         var manualName by remember { mutableStateOf("") }
@@ -439,6 +448,16 @@ fun FridgeTabScreen(
         var working by remember { mutableStateOf(false) }
         var prepareUpload by remember { mutableStateOf<(suspend () -> ByteArray)?>(null) }
         var uploadJpeg by remember { mutableStateOf<ByteArray?>(null) }
+
+        LaunchedEffect(modelStore) {
+            produceModel = modelStore.installedModel()
+            checkedModel = true
+        }
+
+        fun classifyProduce(bitmap: Bitmap, rotation: Int): List<Pair<String, Float>> {
+            val model = produceModel ?: return emptyList()
+            return container.fridgeProduceClassifier.classify(bitmap, rotation, model)
+        }
 
         fun readPhoto(read: suspend () -> FridgePhotoInspector.InMemoryRecognitionResult) {
             photoInfo = null
@@ -484,7 +503,7 @@ fun FridgeTabScreen(
                 }
                 prepareUpload = { container.fridgeVisionService.prepare(bytes) }
                 FridgePhotoInspector.recognizeInMemoryBytes(
-                    bytes, snapshot.allBuiltInStuffNames, container.fridgeProduceClassifier::classify,
+                    bytes, snapshot.allBuiltInStuffNames, ::classifyProduce,
                 )
             }
         }
@@ -495,7 +514,7 @@ fun FridgeTabScreen(
             if (bitmap != null) readPhoto {
                 prepareUpload = { container.fridgeVisionService.prepare(bitmap) }
                 FridgePhotoInspector.recognizeInMemoryBitmap(
-                    bitmap, snapshot.allBuiltInStuffNames, container.fridgeProduceClassifier::classify,
+                    bitmap, snapshot.allBuiltInStuffNames, ::classifyProduce,
                 )
             }
         }
@@ -552,16 +571,45 @@ fun FridgeTabScreen(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    if (checkedModel && produceModel == null) {
+                        val modelSize = (modelStore.model.bytes + 524_288) / 1_048_576
+                        Text("首次识别蔬果需下载约 ${modelSize} MiB 的模型。下载后可离线识别。")
+                        when {
+                            downloadingModel -> {
+                                Text("正在下载蔬果模型…")
+                                LinearProgressIndicator(Modifier.fillMaxWidth())
+                            }
+                            downloadFailed -> Text(
+                                "模型下载失败。请检查网络和可用空间，也可以继续识别包装文字或手动录入。",
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                        if (!downloadingModel) {
+                            OutlinedButton(enabled = !working, onClick = {
+                                downloadingModel = true
+                                downloadFailed = false
+                                photoScope.launch {
+                                    try {
+                                        produceModel = modelStore.download()
+                                    } catch (_: IOException) {
+                                        downloadFailed = true
+                                    } finally {
+                                        downloadingModel = false
+                                    }
+                                }
+                            }) { Text(if (downloadFailed) "重试下载" else "下载蔬果模型") }
+                        }
+                    }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedButton(enabled = !working, onClick = {
+                        OutlinedButton(enabled = !working && !downloadingModel, onClick = {
                             galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                         }) { Text("选相册图片") }
-                        OutlinedButton(enabled = !working, onClick = {
+                        OutlinedButton(enabled = !working && !downloadingModel, onClick = {
                             runCatching { cameraLauncher.launch(null) }
                                 .onFailure { photoError = "相机不可用，请从相册选图。" }
                         }) { Text("拍照") }
                         prepareUpload?.let { prepare ->
-                            TextButton(enabled = !working, onClick = {
+                            TextButton(enabled = !working && !downloadingModel, onClick = {
                                 working = true
                                 photoError = null
                                 photoScope.launch {
