@@ -18,6 +18,23 @@ export function isAuthCallbackUrl(href: string) {
   return new URL(href, 'https://cook.invalid').pathname.replace(/\/+$/, '') === '/auth/callback'
 }
 
+export function isNativeAuthCallbackUrl(href: string) {
+  const url = new URL(href, 'https://cook.invalid')
+  return isAuthCallbackUrl(url.href) && url.searchParams.get('platform') === 'native'
+}
+
+export function nativeReturnUrl(href: string): string | undefined {
+  const prefix = 'https://cook.yunyoujun.cn/auth/callback?platform=native#'
+  if (!href.startsWith(prefix) || href.length >= prefix.length + 4096 || href.trim() !== href)
+    return
+
+  const fragment = href.slice(prefix.length)
+  if (/^cook_handoff=[\w-]{43}\.[\w-]{43}$/.test(fragment)
+    || /^ylf_sso=[\w-]+$/.test(fragment)) {
+    return href
+  }
+}
+
 /** Leave the first paint to the recipe UI; authorization callbacks stay immediate. */
 export function scheduleAuthInitialization(options: AuthInitializationOptions) {
   const { initialize, onReady, scheduler } = options

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { isAuthCallbackUrl, scheduleAuthInitialization } from '../apps/web/app/utils/authInitialization'
+import { isAuthCallbackUrl, nativeReturnUrl, scheduleAuthInitialization } from '../apps/web/app/utils/authInitialization'
 
 describe('auth callback path recognition', () => {
   it.each([
@@ -13,6 +13,30 @@ describe('auth callback path recognition', () => {
 
   it.each(['/home', '/auth/callback-other', '/auth/callback/other'])('keeps other paths deferred: %s', (path) => {
     expect(isAuthCallbackUrl(path)).toBe(false)
+  })
+})
+
+describe('native callback copy fallback', () => {
+  const callback = 'https://cook.yunyoujun.cn/auth/callback?platform=native'
+  const handoff = `cook_handoff=${'a'.repeat(43)}.${'b'.repeat(43)}`
+
+  it('accepts the existing native login and account handoff fragments', () => {
+    for (const fragment of [handoff, 'ylf_sso=example_base64url-42']) {
+      expect(nativeReturnUrl(`${callback}#${fragment}`)).toBe(`${callback}#${fragment}`)
+    }
+  })
+
+  it('requires the exact registered origin and callback and rejects malformed or oversized fragments', () => {
+    for (const href of [
+      `${callback.replace('cook.yunyoujun.cn', 'cook.yunle.fun')}#${handoff}`,
+      `${callback}&next=/my#${handoff}`,
+      `${callback}#${handoff}.extra`,
+      `${callback}#${handoff}\n`,
+      `${callback}#ylf_sso=${'a'.repeat(4096)}`,
+      `${callback}#sso-result=web-only`,
+    ]) {
+      expect(nativeReturnUrl(href)).toBeUndefined()
+    }
   })
 })
 
