@@ -60,15 +60,6 @@ struct CookApp: App {
         _cookedRecipes = State(initialValue: CookedRecipeRecords(defaults: cookingDefaults))
         let accounts = YunlefunAccountStore(vault: inMemory ? MemoryYunlefunAccountVault() : KeychainYunlefunAccountVault())
         _accounts = State(initialValue: accounts)
-        #if DEBUG
-            if uiTesting, ProcessInfo.processInfo.arguments.contains("-ui-testing-membership") {
-                _membership = State(initialValue: MembershipUIFixture.makeStore())
-            } else {
-                _membership = State(initialValue: MembershipStore.live(accounts: accounts, isolated: inMemory))
-            }
-        #else
-            _membership = State(initialValue: MembershipStore.live(accounts: accounts, isolated: false))
-        #endif
         let disabledSyncTransport: UserDataSyncService.Transport = { _ in throw URLError(.notConnectedToInternet) }
         var syncTransport: UserDataSyncService.Transport? = inMemory ? disabledSyncTransport : nil
         var syncCredential: () async throws -> YunlefunCredential = { try await accounts.credentialForRequest() }
@@ -85,8 +76,20 @@ struct CookApp: App {
             }
         #endif
         let userData = AccountUserDataStore(cache: inMemory ? MemoryAccountUserDataCache() : AccountUserDataCache(),
-                                           service: UserDataSyncService(transport: syncTransport), credential: syncCredential)
+                                           service: UserDataSyncService(transport: syncTransport), credential: syncCredential,
+                                           renewCredential: { try await accounts.credentialForRequest(rejecting: $0) })
         _userData = State(initialValue: userData)
+        #if DEBUG
+            if uiTesting, ProcessInfo.processInfo.arguments.contains("-ui-testing-membership") {
+                _membership = State(initialValue: MembershipUIFixture.makeStore())
+            } else {
+                _membership = State(initialValue: MembershipStore.live(accounts: accounts, isolated: inMemory,
+                                                                       onProductionEntitlement: userData.membershipDidCheck))
+            }
+        #else
+            _membership = State(initialValue: MembershipStore.live(accounts: accounts, isolated: false,
+                                                                   onProductionEntitlement: userData.membershipDidCheck))
+        #endif
         let actions = FavoriteActions(context: container.mainContext)
         actions.accountData = userData
         _favoriteActions = State(initialValue: actions)

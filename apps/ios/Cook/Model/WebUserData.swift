@@ -8,19 +8,27 @@ struct WebUserData: Equatable {
     static let version = 1
 
     struct FavoriteItem: Equatable {
-        var recipeId: Int
-        var time: Date
+        let recipeId: Int
+        let timeMillis: Double
+        var time: Date { Date(timeIntervalSince1970: timeMillis / 1000) }
     }
 
-    struct VisitItem: Equatable {
-        var name: String
-        var time: Date
+    struct VisitItem: Hashable {
+        let name: String
+        let timeMillis: Double
+        var time: Date { Date(timeIntervalSince1970: timeMillis / 1000) }
     }
 
     /// 生效的收藏（已经去掉被取消的），按收藏时间从早到晚
     var favorites: [FavoriteItem]
-    /// 生效的浏览记录（已经去掉被删除和清空的），每道菜只留最近一次，从早到晚
+    /// 生效的浏览记录，按菜名和时间去重，从早到晚。
     var visits: [VisitItem]
+
+    /// SwiftData 本机库每道菜只保留最近一次浏览。
+    var latestVisits: [VisitItem] {
+        var seen = Set<String>()
+        return Array(visits.reversed().filter { seen.insert($0.name).inserted }.reversed())
+    }
 
     /// 解析网页版导出的文本；不是食用手册导出的数据时返回 nil，坏掉的条目直接跳过
     static func parse(_ text: String) -> WebUserData? {
@@ -33,44 +41,40 @@ struct WebUserData: Equatable {
         }
 
         // 同一道菜以最后一次操作为准，取消收藏和收藏同一时刻时算取消（和网页版的合并规则一致）
-        var added: [Int: Date] = [:]
+        var added: [Int: Double] = [:]
         for item in list(object["favorites"]) {
-            if let id = recipeId(item["id"]), let time = time(item["time"]), time > added[id] ?? .distantPast {
+            if let id = recipeId(item["id"]), let time = time(item["time"]), time > (added[id] ?? -1) {
                 added[id] = time
             }
         }
-        var removed: [Int: Date] = [:]
+        var removed: [Int: Double] = [:]
         for item in list(object["favoriteRemovals"]) {
-            if let id = recipeId(item["id"]), let time = time(item["time"]), time > removed[id] ?? .distantPast {
+            if let id = recipeId(item["id"]), let time = time(item["time"]), time > (removed[id] ?? -1) {
                 removed[id] = time
             }
         }
         let favorites = added
-            .filter { id, time in (removed[id] ?? .distantPast) < time }
-            .map { FavoriteItem(recipeId: $0.key, time: $0.value) }
-            .sorted { ($0.time, $0.recipeId) < ($1.time, $1.recipeId) }
+            .filter { id, time in (removed[id] ?? -1) < time }
+            .map { FavoriteItem(recipeId: $0.key, timeMillis: $0.value) }
+            .sorted { ($0.timeMillis, $0.recipeId) < ($1.timeMillis, $1.recipeId) }
 
-        let clearedAt = time(object["historyClearedAt"]) ?? Date(timeIntervalSince1970: 0)
-        let removedVisits = Set(list(object["historyRemovals"]).compactMap { item -> String? in
+        let clearedAt = time(object["historyClearedAt"]) ?? 0
+        let removedVisits = Set(list(object["historyRemovals"]).compactMap { item -> VisitItem? in
             guard let name = name(item["name"]), let time = time(item["time"]) else {
                 return nil
             }
-            return key(name, time)
+            return VisitItem(name: name, timeMillis: time)
         })
-        var latest: [String: Date] = [:]
-        for item in list(object["histories"]) {
+        let visits = Set(list(object["histories"]).compactMap { item -> VisitItem? in
             guard let recipe = item["recipe"] as? [String: Any], let name = name(recipe["name"]), let time = time(item["time"]),
-                  time > clearedAt, !removedVisits.contains(key(name, time))
+                  time > clearedAt
             else {
-                continue
+                return nil
             }
-            if time > latest[name] ?? .distantPast {
-                latest[name] = time
-            }
-        }
-        let visits = latest
-            .map { VisitItem(name: $0.key, time: $0.value) }
-            .sorted { ($0.time, $0.name) < ($1.time, $1.name) }
+            return VisitItem(name: name, timeMillis: time)
+        })
+            .subtracting(removedVisits)
+            .sorted { ($0.timeMillis, $0.name) < ($1.timeMillis, $1.name) }
 
         return WebUserData(favorites: favorites, visits: visits)
     }
@@ -116,7 +120,7 @@ struct WebUserData: Equatable {
         return Int(double)
     }
 
-    private static func time(_ value: Any?) -> Date? {
+    private static func time(_ value: Any?) -> Double? {
         guard let number = value as? NSNumber else {
             return nil
         }
@@ -124,7 +128,7 @@ struct WebUserData: Equatable {
         guard double.isFinite, double >= 0 else {
             return nil
         }
-        return Date(timeIntervalSince1970: double / 1000)
+        return double
     }
 
     private static func name(_ value: Any?) -> String? {
@@ -132,9 +136,5 @@ struct WebUserData: Equatable {
             return nil
         }
         return name
-    }
-
-    private static func key(_ name: String, _ time: Date) -> String {
-        "\(name)\u{0}\(milliseconds(time))"
     }
 }

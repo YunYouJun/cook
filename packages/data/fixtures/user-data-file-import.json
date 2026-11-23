@@ -1,0 +1,34 @@
+{
+  "file": {
+    "app": "cook",
+    "version": 1,
+    "exportedAt": 1700000000010,
+    "favorites": [
+      { "id": 250, "time": 1700000000001 },
+      { "id": 588, "time": 1700000000002 },
+      { "id": 497, "time": 1700000000008 }
+    ],
+    "favoriteRemovals": [
+      { "id": 250, "time": 1700000000002 },
+      { "id": 588, "time": 1700000000002 },
+      { "id": 497, "time": 1700000000007 },
+      { "id": 588, "time": 1700000000001 }
+    ],
+    "histories": [
+      { "recipe": { "name": "番茄炒蛋", "stuff": ["番茄"], "tools": [] }, "time": 1700000000003 },
+      { "recipe": { "name": "蒸蛋羹", "stuff": ["鸡蛋"], "tools": [] }, "time": 1700000000005.125 },
+      { "recipe": { "name": "蒸蛋羹", "stuff": ["鸡蛋"], "tools": [] }, "time": 1700000000005.25 },
+      { "recipe": { "name": "蒸蛋羹", "stuff": ["鸡蛋"], "tools": [] }, "time": 1700000000005.25 },
+      { "recipe": { "name": "蒸蛋羹", "stuff": ["鸡蛋"], "tools": [] }, "time": 1700000000005.375 },
+      { "recipe": { "name": "拍黄瓜", "stuff": ["黄瓜"], "tools": [] }, "time": 1700000000007 }
+    ],
+    "historyRemovals": [{ "name": "蒸蛋羹", "time": 1700000000005.125 }],
+    "historyClearedAt": 1700000000003
+  },
+  "expectedFavorites": [{ "id": 497, "time": 1700000000008 }],
+  "expectedHistories": [
+    { "name": "蒸蛋羹", "time": 1700000000005.25 },
+    { "name": "蒸蛋羹", "time": 1700000000005.375 },
+    { "name": "拍黄瓜", "time": 1700000000007 }
+  ]
+}

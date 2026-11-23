@@ -1,4 +1,5 @@
 import CryptoKit
+import Darwin
 import Foundation
 import Security
 
@@ -108,17 +109,47 @@ struct YunlefunAccountWebHandoff {
 
     struct BrowserCompletion {
         let approvalFields: [String: String]
-        let url: URL
+        let destination: BrowserDestination
+    }
+
+    struct BrowserDestination: Codable, Equatable {
+        let request: String
+        let binding: String
+
+        var url: URL? {
+            guard YunlefunAccountWebHandoff.isBinding(request),
+                  YunlefunAccountWebHandoff.isBinding(binding) else { return nil }
+            var page = URLComponents(string: YunlefunSSO.issuer + "/auth/cook-account")!
+            page.queryItems = [.init(name: "request", value: request), .init(name: "binding", value: binding)]
+            return page.url
+        }
+    }
+
+    struct Validity: Codable, Equatable {
+        let createdAt: Date
+        let startedAt: UInt64
+
+        init(now: Date, uptime: UInt64 = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW)) {
+            createdAt = now
+            startedAt = uptime
+        }
+
+        func remaining(at date: Date = .now, uptime: UInt64 = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW)) -> TimeInterval {
+            let wallAge = date.timeIntervalSince(createdAt)
+            guard wallAge >= 0, uptime >= startedAt else { return 0 }
+            let elapsed = TimeInterval(uptime - startedAt) / 1_000_000_000
+            return max(0, YunlefunAccountWebHandoff.lifetime - max(wallAge, elapsed))
+        }
     }
 
     private let verifier: String
     private let request: String
-    private let createdAt: Date
+    let validity: Validity
 
     init(now: Date = Date()) throws {
         verifier = try YunlefunSSO.randomToken()
         request = Data(SHA256.hash(data: Data(verifier.utf8))).base64URL
-        createdAt = now
+        validity = Validity(now: now)
     }
 
     var startURL: URL {
@@ -159,18 +190,16 @@ struct YunlefunAccountWebHandoff {
               fragment.hasPrefix(prefix) else { return nil }
         let binding = String(fragment.dropFirst(prefix.count))
         guard Self.isBinding(binding) else { return nil }
-        var page = URLComponents(string: YunlefunSSO.issuer + "/auth/cook-account")!
-        page.queryItems = [.init(name: "request", value: request), .init(name: "binding", value: binding)]
-        return BrowserCompletion(approvalFields: approvalFields(binding: binding), url: page.url!)
+        return BrowserCompletion(approvalFields: approvalFields(binding: binding),
+                                 destination: BrowserDestination(request: request, binding: binding))
     }
 
-    private func isCurrent(at date: Date) -> Bool {
-        let age = date.timeIntervalSince(createdAt)
-        return age >= 0 && age < Self.lifetime
+    func isCurrent(at date: Date = .now) -> Bool {
+        validity.remaining(at: date) > 0
     }
 
     private static func isBinding(_ value: String) -> Bool {
-        value.range(of: "^[a-zA-Z0-9_-]{43}$", options: .regularExpression) != nil
+        value.range(of: #"\A[a-zA-Z0-9_-]{43}\z"#, options: .regularExpression) != nil
     }
 
     private func approvalFields(binding: String) -> [String: String] {

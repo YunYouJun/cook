@@ -1,6 +1,7 @@
 import type { RecipeItem } from '~/types'
 import { useStorage } from '@vueuse/core'
 import { namespace } from '~/constants'
+import { clearUserDataHistory } from '~/utils/userData'
 import { userDataMeta } from './userDataMeta'
 
 export interface RecipeHistoryItem {
@@ -11,7 +12,14 @@ export interface RecipeHistoryItem {
 export const recipeHistories = useStorage<RecipeHistoryItem[]>(`${namespace}:history`, [])
 
 export function addRecipeHistory(recipe: RecipeItem) {
-  recipeHistories.value.push({ recipe, time: Date.now() })
+  const { historyClearedAt, historyRemovals } = userDataMeta.value
+  const latestVisit = recipeHistories.value.reduce((latest, visit) => {
+    return visit.recipe.name === recipe.name ? Math.max(latest, visit.time) : latest
+  }, historyClearedAt)
+  const latestRemoval = historyRemovals.reduce((latest, removal) => {
+    return removal.name === recipe.name ? Math.max(latest, removal.time) : latest
+  }, latestVisit)
+  recipeHistories.value.push({ recipe, time: Math.max(Date.now(), latestRemoval + 1) })
 }
 
 export function removeRecipeHistory(history: RecipeHistoryItem) {
@@ -26,11 +34,11 @@ export function removeRecipeHistory(history: RecipeHistoryItem) {
 }
 
 export function clearRecipeHistories() {
-  const latest = recipeHistories.value.reduce((max, h) => Math.max(max, h.time), Date.now())
-  recipeHistories.value = []
+  const cleared = clearUserDataHistory({ ...userDataMeta.value, histories: recipeHistories.value })
   userDataMeta.value = {
     ...userDataMeta.value,
-    historyClearedAt: latest,
-    historyRemovals: [],
+    historyClearedAt: cleared.historyClearedAt,
+    historyRemovals: cleared.historyRemovals,
   }
+  recipeHistories.value = cleared.histories
 }

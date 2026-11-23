@@ -148,6 +148,12 @@ targets:
     platform: iOS
     sources:
       - path: CookTests
+      - path: ../../packages/data/fixtures/fridge-vision-names.json
+        type: file
+        buildPhase: resources
+      - path: ../../packages/data/fixtures/user-data-file-import.json
+        type: file
+        buildPhase: resources
     dependencies:
       - target: Cook
     settings:

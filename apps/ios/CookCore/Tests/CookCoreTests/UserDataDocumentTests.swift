@@ -19,6 +19,29 @@ final class UserDataDocumentTests: XCTestCase {
         }
     }
 
+    func testSharedHistoryClearCases() throws {
+        struct ClearCase: Decodable {
+            let name: String
+            let now: Double
+            let current: UserDataDocument
+            let peer: UserDataDocument
+            let expectedCutoff: Double
+            let expectedRemovals: [UserDataDocument.Removal]
+            let expectedVisits: [UserDataDocument.Removal]
+        }
+        for fixture in try SharedFixtureTests.fixture([ClearCase].self, "user-data-history-clear.json") {
+            let cleared = fixture.current.clearingHistory(now: fixture.now)
+            XCTAssertTrue(cleared.histories.isEmpty, fixture.name)
+            XCTAssertEqual(cleared.historyClearedAt, fixture.expectedCutoff, fixture.name)
+            XCTAssertEqual(cleared.historyRemovals, fixture.expectedRemovals, fixture.name)
+            XCTAssertEqual(cleared.clearingHistory(now: fixture.now), cleared, fixture.name)
+            let merged = cleared.merging(fixture.peer, now: fixture.now)
+            let visits = merged.histories.map { UserDataDocument.Removal(name: $0.recipe.name, time: $0.time) }
+            XCTAssertEqual(visits, fixture.expectedVisits, fixture.name)
+            XCTAssertEqual(merged.favorites, fixture.current.favorites, fixture.name)
+        }
+    }
+
     func testUnknownVersionAndInvalidTimeAreRejected() throws {
         var value = UserDataDocument()
         value.version = 99

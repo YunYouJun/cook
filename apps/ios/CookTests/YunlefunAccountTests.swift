@@ -119,9 +119,10 @@ final class YunlefunSSOTests: XCTestCase {
         let verifier = try XCTUnwrap(result.approvalFields["verifier"])
         let safari = URL(string: "https://www.yunle.fun/api/session/cook-handoff/\(request)/\(binding)")!
         XCTAssertEqual(result.approvalFields, handoff.approvalFields(for: safari, now: now))
-        XCTAssertEqual(result.url.absoluteString, "https://www.yunle.fun/auth/cook-account?request=\(request)&binding=\(binding)")
+        let url = try XCTUnwrap(result.destination.url)
+        XCTAssertEqual(url.absoluteString, "https://www.yunle.fun/auth/cook-account?request=\(request)&binding=\(binding)")
         XCTAssertFalse(start.string!.contains(verifier))
-        XCTAssertFalse(result.url.absoluteString.contains(verifier))
+        XCTAssertFalse(url.absoluteString.contains(verifier))
         XCTAssertNil(handoff.approvalFields(for: URL(string: callback)!, now: now))
         XCTAssertNil(handoff.systemBrowserCompletion(for: safari, now: now))
         XCTAssertNil(handoff.systemBrowserCompletion(for: URL(string: callback)!, now: now.addingTimeInterval(45)))
@@ -135,6 +136,16 @@ final class YunlefunSSOTests: XCTestCase {
             XCTAssertNil(handoff.systemBrowserCompletion(for: URL(string: invalid)!, now: now))
         }
     }
+
+    func testWebsiteHandoffDeadlineCannotBeExtendedByChangingTheSystemClock() {
+        let now = Date()
+        let validity = YunlefunAccountWebHandoff.Validity(now: now, uptime: 60_000_000_000)
+        XCTAssertEqual(validity.remaining(at: now.addingTimeInterval(10), uptime: 80_000_000_000), 25)
+        XCTAssertEqual(validity.remaining(at: now.addingTimeInterval(10), uptime: 105_000_000_000), 0)
+        XCTAssertEqual(validity.remaining(at: now.addingTimeInterval(45), uptime: 80_000_000_000), 0)
+        XCTAssertEqual(validity.remaining(at: now.addingTimeInterval(-1), uptime: 80_000_000_000), 0)
+        XCTAssertEqual(validity.remaining(at: now, uptime: 1_000_000_000), 0)
+    }
 }
 
 @MainActor
@@ -147,6 +158,9 @@ private final class AccountServiceStub: YunlefunAccountServing {
     var signOutCount = 0
     var failure: Error?
     var profileFailure: Error?
+    var onRefresh: (() -> Void)?
+    var websiteApprovals: [([String: String], YunlefunCredential)] = []
+    var onWebsiteApproval: (() async throws -> Void)?
     var weChatSignInCount = 0
     var weChatBindingCount = 0
     var boundSubject: String?
@@ -158,6 +172,7 @@ private final class AccountServiceStub: YunlefunAccountServing {
     func refresh(_ credential: YunlefunCredential) async throws -> YunlefunCredential {
         refreshCount += 1
         if let failure { throw failure }
+        onRefresh?()
         return self.credential
     }
     func account(_ credential: YunlefunCredential) async throws -> YunlefunAccount {
@@ -177,6 +192,10 @@ private final class AccountServiceStub: YunlefunAccountServing {
     func bindWeChat(code: String, credential: YunlefunCredential) async throws {
         weChatBindingCount += 1
         boundSubject = credential.subject
+    }
+    func approveAccountWebHandoff(fields: [String: String], credential: YunlefunCredential) async throws {
+        websiteApprovals.append((fields, credential))
+        try await onWebsiteApproval?()
     }
 }
 
@@ -330,10 +349,253 @@ private final class FailingAccountVault: YunlefunAccountVault {
         if failClear { throw YunlefunAccountError.secureStorage }
         credential = nil
     }
+    func loadApprovedWebsite() throws -> YunlefunAccountStore.ApprovedWebsite? { nil }
+    func saveApprovedWebsite(_ website: YunlefunAccountStore.ApprovedWebsite?) throws {
+        throw YunlefunAccountError.secureStorage
+    }
 }
 
 @MainActor
 final class YunlefunAccountStoreTests: XCTestCase {
+    func testRejectedBrowserLaunchRestoresAndOpensTheSameApprovedDeletionRequest() async throws {
+        let service = AccountServiceStub()
+        let vault = MemoryYunlefunAccountVault()
+        let store = YunlefunAccountStore(service: service, vault: vault, authorization: AuthorizationStub())
+        await store.signIn()
+        let session = try XCTUnwrap(store.websiteSession)
+        let handoff = try YunlefunAccountWebHandoff()
+        let start = URLComponents(url: handoff.systemBrowserStartURL, resolvingAgainstBaseURL: false)
+        let request = try XCTUnwrap(start?.queryItems?.first { $0.name == "request" }?.value)
+        let binding = String(repeating: "b", count: 43)
+        let callback = try XCTUnwrap(URL(string: "\(YunlefunSSO.redirectURI)#cook_handoff=\(request).\(binding)"))
+        let completion = try XCTUnwrap(handoff.systemBrowserCompletion(for: callback))
+        let website = try await store.approveAccountWebsiteForBrowser(completion, handoff: handoff, for: session, entry: .delete)
+        XCTAssertEqual(vault.approvedWebsite, website)
+        let saved = try JSONEncoder().encode(website)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: saved) as? [String: Any])
+        XCTAssertEqual(Set(json.keys), ["subject", "deviceID", "entry", "destination", "validity"])
+        XCTAssertEqual(Set((json["destination"] as? [String: String] ?? [:]).keys), ["request", "binding"])
+        vault.approvedWebsite = try JSONDecoder().decode(YunlefunAccountStore.ApprovedWebsite.self, from: saved)
+
+        var opened: [URL] = []
+        await store.openApprovedAccountWebsite(website) { url in
+            opened.append(url)
+            return false
+        }
+        XCTAssertEqual(store.approvedWebsite, website)
+
+        let restored = YunlefunAccountStore(service: service, vault: vault, authorization: AuthorizationStub())
+        await restored.restore()
+        let recovered = try XCTUnwrap(restored.approvedWebsite)
+        XCTAssertEqual(recovered, website)
+        XCTAssertEqual(recovered.entry, .delete)
+        await restored.openApprovedAccountWebsite(recovered) { url in
+            opened.append(url)
+            return true
+        }
+        await restored.openApprovedAccountWebsite(recovered) { _ in
+            XCTFail("A dispatched website must not open again")
+            return true
+        }
+        XCTAssertEqual(opened, Array(repeating: try XCTUnwrap(completion.destination.url), count: 2))
+        XCTAssertEqual(service.websiteApprovals.count, 1)
+        XCTAssertNil(restored.approvedWebsite)
+        XCTAssertNil(vault.approvedWebsite)
+    }
+
+    func testRestoringAnExpiredOrMismatchedBrowserApprovalDiscardsIt() async throws {
+        let service = AccountServiceStub()
+        let vault = MemoryYunlefunAccountVault()
+        try vault.save(service.credential)
+        let token = String(repeating: "b", count: 43)
+        let now = Date()
+        let valid = YunlefunAccountWebHandoff.Validity(now: now)
+        for (subject, deviceID, binding, validity) in [
+            ("other-user", service.credential.deviceID, token, valid),
+            (service.credential.subject, "another-session", token, valid),
+            (service.credential.subject, service.credential.deviceID, token + "\n", valid),
+            (service.credential.subject, service.credential.deviceID, token,
+             YunlefunAccountWebHandoff.Validity(now: now.addingTimeInterval(-46))),
+        ] {
+            let website = YunlefunAccountStore.ApprovedWebsite(subject: subject, deviceID: deviceID, entry: .manage,
+                destination: .init(request: token, binding: binding), validity: validity)
+            vault.approvedWebsite = website
+            let store = YunlefunAccountStore(service: service, vault: vault, authorization: AuthorizationStub())
+            await store.restore()
+            XCTAssertNil(store.approvedWebsite)
+            XCTAssertNil(vault.approvedWebsite)
+            await store.openApprovedAccountWebsite(website) { _ in
+                XCTFail("An invalid approval must not open a browser")
+                return true
+            }
+        }
+        XCTAssertTrue(service.websiteApprovals.isEmpty)
+    }
+
+    func testWebsiteApprovalRejectsACallbackFromBeforeSigningBackIntoTheSameAccount() async throws {
+        let service = AccountServiceStub()
+        let store = YunlefunAccountStore(service: service, vault: MemoryYunlefunAccountVault(), authorization: AuthorizationStub())
+        let handoff = try YunlefunAccountWebHandoff()
+        await store.signIn()
+        let original = try XCTUnwrap(store.websiteSession)
+        await store.signOut()
+        await store.signIn()
+        let current = try XCTUnwrap(store.websiteSession)
+        XCTAssertEqual(original.subject, current.subject)
+        XCTAssertNotEqual(original, current)
+
+        let fields = ["action": "approveCookWebHandoff"]
+        do {
+            try await store.approveAccountWebHandoff(fields: fields, handoff: handoff, for: original)
+            XCTFail("A callback from the old session cannot approve browser access")
+        } catch YunlefunAccountError.expiredSession {}
+        XCTAssertTrue(service.websiteApprovals.isEmpty)
+        try await store.approveAccountWebHandoff(fields: fields, handoff: YunlefunAccountWebHandoff(), for: current)
+        XCTAssertEqual(service.websiteApprovals.map { $0.0 }, [fields])
+    }
+
+    func testWebsiteApprovalRetriesARejectedTokenOnlyWhileTheOriginalRequestIsCurrent() async throws {
+        for expiresDuringRefresh in [false, true] {
+            let service = AccountServiceStub()
+            let store = YunlefunAccountStore(service: service, vault: MemoryYunlefunAccountVault(), authorization: AuthorizationStub())
+            await store.signIn()
+            let session = try XCTUnwrap(store.websiteSession)
+            let start = Date()
+            var clock = start
+            let handoff = try YunlefunAccountWebHandoff(now: start)
+            let initial = service.credential
+            let renewed = YunlefunCredential(accessToken: "renewed", refreshToken: "rotated", subject: initial.subject,
+                                            expiresAt: initial.expiresAt, deviceID: initial.deviceID)
+            var rejected = false
+            service.onWebsiteApproval = {
+                if !rejected {
+                    rejected = true
+                    throw YunlefunAccountError.expiredSession
+                }
+            }
+            service.credential = renewed
+            service.onRefresh = {
+                if expiresDuringRefresh { clock = start.addingTimeInterval(YunlefunAccountWebHandoff.lifetime) }
+            }
+            let fields = ["action": "approveCookWebHandoff", "binding": "same-browser"]
+
+            do {
+                try await store.approveAccountWebHandoff(fields: fields, handoff: handoff, for: session, now: { clock })
+                XCTAssertFalse(expiresDuringRefresh)
+            } catch YunlefunAccountError.invalidCallback {
+                XCTAssertTrue(expiresDuringRefresh)
+            }
+            XCTAssertEqual(service.refreshCount, 1)
+            XCTAssertEqual(service.websiteApprovals.map { $0.1 }, expiresDuringRefresh ? [initial] : [initial, renewed])
+            XCTAssertTrue(service.websiteApprovals.allSatisfy { $0.0 == fields })
+        }
+    }
+
+    func testInterruptedWebsiteApprovalResendsTheSameBrowserRequestWithOneOptionalRenewal() async throws {
+        for renewFirst in [false, true] {
+            let service = AccountServiceStub()
+            let store = YunlefunAccountStore(service: service, vault: MemoryYunlefunAccountVault(), authorization: AuthorizationStub())
+            await store.signIn()
+            let session = try XCTUnwrap(store.websiteSession)
+            let handoff = try YunlefunAccountWebHandoff()
+            let initial = service.credential
+            let renewed = YunlefunCredential(accessToken: "renewed", refreshToken: "rotated", subject: initial.subject,
+                                            expiresAt: initial.expiresAt, deviceID: initial.deviceID)
+            service.credential = renewed
+            var failures: [Error] = renewFirst
+                ? [YunlefunAccountError.expiredSession, AccountWebHandoffError.interrupted]
+                : [AccountWebHandoffError.interrupted, YunlefunAccountError.expiredSession]
+            service.onWebsiteApproval = {
+                if !failures.isEmpty { throw failures.removeFirst() }
+            }
+            let fields = ["action": "approveCookWebHandoff", "binding": "same-browser", "verifier": "same-verifier"]
+
+            try await store.approveAccountWebHandoff(fields: fields, handoff: handoff, for: session)
+
+            XCTAssertEqual(service.websiteApprovals.map { $0.0 }, [fields, fields, fields])
+            XCTAssertEqual(service.websiteApprovals.map { $0.1 }, renewFirst ? [initial, renewed, renewed] : [initial, initial, renewed])
+            XCTAssertEqual(service.refreshCount, 1)
+        }
+    }
+
+    func testInterruptedWebsiteApprovalStopsAfterOneRetryOrAtTheOriginalDeadline() async throws {
+        for expiresDuringRequest in [false, true] {
+            let service = AccountServiceStub()
+            let store = YunlefunAccountStore(service: service, vault: MemoryYunlefunAccountVault(), authorization: AuthorizationStub())
+            await store.signIn()
+            let session = try XCTUnwrap(store.websiteSession)
+            let start = Date()
+            var clock = start
+            let handoff = try YunlefunAccountWebHandoff(now: start)
+            service.onWebsiteApproval = {
+                if expiresDuringRequest { clock = start.addingTimeInterval(YunlefunAccountWebHandoff.lifetime) }
+                throw AccountWebHandoffError.interrupted
+            }
+
+            do {
+                try await store.approveAccountWebHandoff(fields: ["action": "approveCookWebHandoff"], handoff: handoff,
+                                                         for: session, now: { clock })
+                XCTFail("An interrupted approval must end with an error when it cannot continue")
+            } catch YunlefunAccountError.invalidCallback {
+                XCTAssertTrue(expiresDuringRequest)
+            } catch AccountWebHandoffError.interrupted {
+                XCTAssertFalse(expiresDuringRequest)
+            }
+            XCTAssertEqual(service.websiteApprovals.count, expiresDuringRequest ? 1 : 2)
+            XCTAssertEqual(service.refreshCount, 0)
+        }
+    }
+
+    func testInterruptedWebsiteApprovalDoesNotRetryACancelledOperation() async throws {
+        let service = AccountServiceStub()
+        let store = YunlefunAccountStore(service: service, vault: MemoryYunlefunAccountVault(), authorization: AuthorizationStub())
+        await store.signIn()
+        let session = try XCTUnwrap(store.websiteSession)
+        let handoff = try YunlefunAccountWebHandoff()
+        service.onWebsiteApproval = {
+            withUnsafeCurrentTask { $0?.cancel() }
+            throw AccountWebHandoffError.interrupted
+        }
+        let operation = Task {
+            try await store.approveAccountWebHandoff(fields: ["action": "approveCookWebHandoff"], handoff: handoff, for: session)
+        }
+        do {
+            try await operation.value
+            XCTFail("Cancellation must stop the approval")
+        } catch is CancellationError {}
+        XCTAssertEqual(service.websiteApprovals.count, 1)
+    }
+
+    func testDelayedWebsiteApprovalCannotOpenAfterSigningBackIntoTheSameAccount() async throws {
+        for interrupted in [false, true] {
+            let service = AccountServiceStub()
+            let store = YunlefunAccountStore(service: service, vault: MemoryYunlefunAccountVault(), authorization: AuthorizationStub())
+            await store.signIn()
+            let session = try XCTUnwrap(store.websiteSession)
+            let started = expectation(description: "website approval sent")
+            let (reply, finish) = AsyncStream<Void>.makeStream()
+            service.onWebsiteApproval = {
+                started.fulfill()
+                for await _ in reply { break }
+                if interrupted { throw AccountWebHandoffError.interrupted }
+            }
+            let handoff = try YunlefunAccountWebHandoff()
+            let operation = Task {
+                try await store.approveAccountWebHandoff(fields: ["action": "approveCookWebHandoff"], handoff: handoff, for: session)
+            }
+            defer { finish.finish(); operation.cancel() }
+            await fulfillment(of: [started], timeout: 2)
+            await store.signOut()
+            await store.signIn()
+            finish.finish()
+            do {
+                try await operation.value
+                XCTFail("The old browser must not continue after relogin")
+            } catch YunlefunAccountError.expiredSession {}
+            XCTAssertEqual(service.websiteApprovals.count, 1)
+        }
+    }
+
     func testWeChatBindingRequiresCurrentAccountAndKeepsItsSession() async {
         let service = AccountServiceStub()
         let weChat = WeChatAuthorizationStub()
@@ -482,6 +744,46 @@ private actor AccountTransportStub {
 
 @MainActor
 final class YunlefunAccountServiceTests: XCTestCase {
+    func testWebsiteApprovalDistinguishesTemporaryFailuresFromDefinitiveRejections() async throws {
+        let responses: [(Int, String, Bool)] = [
+            (408, "{}", true),
+            (503, #"{"reason":"identity_unavailable"}"#, true),
+            (504, "{}", true),
+            (409, #"{"reason":"handoff_already_approved"}"#, false),
+            (429, #"{"reason":"rate_limited"}"#, false),
+            (503, #"{"reason":"not_configured"}"#, false),
+        ]
+        let transport = AccountTransportStub(responses.map { ($0.0, $0.1) })
+        let service = YunlefunAccountService(transport: { try await transport.send($0) })
+        let fields = ["action": "approveCookWebHandoff", "clientId": "cook-mobile"]
+        for (status, _, retryable) in responses {
+            do {
+                try await service.approveAccountWebHandoff(fields: fields, credential: AccountServiceStub().credential)
+                XCTFail("HTTP \(status) did not approve the browser")
+            } catch AccountWebHandoffError.interrupted {
+                XCTAssertTrue(retryable, "HTTP \(status)")
+            } catch YunlefunAccountError.unavailable {
+                XCTAssertFalse(retryable, "HTTP \(status)")
+            }
+        }
+    }
+
+    func testWebsiteApprovalClassifiesLostConnectionAndPreservesTLSAndCancellationErrors() async throws {
+        for code: URLError.Code in [.networkConnectionLost, .serverCertificateUntrusted, .cancelled] {
+            let service = YunlefunAccountService(transport: { _ in throw URLError(code) })
+            do {
+                try await service.approveAccountWebHandoff(fields: ["action": "approveCookWebHandoff"],
+                                                           credential: AccountServiceStub().credential)
+                XCTFail("A transport error is not an approval")
+            } catch AccountWebHandoffError.interrupted {
+                XCTAssertEqual(code, .networkConnectionLost)
+            } catch let error as URLError {
+                XCTAssertNotEqual(code, .networkConnectionLost)
+                XCTAssertEqual(error.code, code)
+            }
+        }
+    }
+
     func testWebsiteHandoffCapabilityDoesNotSendCredentialsAndApprovalUsesCurrentBearer() async throws {
         let transport = AccountTransportStub([(200, #"{"supported":true}"#), (200, #"{"ok":true}"#)])
         let service = YunlefunAccountService(transport: { try await transport.send($0) })
@@ -541,6 +843,125 @@ final class YunlefunAccountServiceTests: XCTestCase {
         XCTAssertTrue(requests.allSatisfy { $0.value(forHTTPHeaderField: "x-device-id") == "device" })
     }
 
+    func testWeChatSignupSendsOnlyCompletePhoneNumbersAndSMSCodes() async throws {
+        let transport = AccountTransportStub([
+            (200, #"{"challenge":"sms-challenge"}"#),
+            (200, #"{"next":"existing"}"#),
+        ])
+        let form = WeChatSignupForm(service: YunlefunAccountService(transport: { try await transport.send($0) }))
+
+        for invalid in ["+86 139 0000 00001", "13900000000 ext 1", "+85 139 0000 0000"] {
+            form.changePhone(invalid)
+            XCTAssertEqual(form.phone, invalid)
+            XCTAssertFalse(form.canSubmitPhone)
+            do {
+                try await form.sendSMS()
+                XCTFail("An invalid number must not request SMS")
+            } catch YunlefunAccountError.invalidResponse {}
+        }
+        let invalidPhoneRequests = await transport.requests
+        XCTAssertTrue(invalidPhoneRequests.isEmpty)
+        form.changePhone("+86\u{00a0}(139) 0000-0000")
+        XCTAssertEqual(form.phone, "13900000000")
+        XCTAssertTrue(form.canSubmitPhone)
+        try await form.sendSMS()
+
+        for invalid in ["1234567", "12A345", "１２３４５６"] {
+            form.changeOTP(invalid)
+            XCTAssertEqual(form.otp, invalid)
+            XCTAssertFalse(form.canVerifySMS)
+            do {
+                try await form.verifySMS(challenge: "sms-challenge")
+                XCTFail("An invalid code must not reach verification")
+            } catch WeChatSignupError.invalidOTP {}
+        }
+        let invalidCodeRequests = await transport.requests
+        XCTAssertEqual(invalidCodeRequests.count, 1)
+        form.changeOTP("123\u{202f}456")
+        XCTAssertTrue(form.canVerifySMS)
+        try await form.verifySMS(challenge: "sms-challenge")
+
+        let requests = await transport.requests
+        XCTAssertEqual(requests.count, 2)
+        let payloads = try requests.map { try JSONDecoder().decode([String: String].self, from: XCTUnwrap($0.httpBody)) }
+        XCTAssertEqual(payloads[0]["phone"], "13900000000")
+        XCTAssertEqual(payloads[1]["otp"], "123456")
+    }
+
+    func testWeChatSignupCanVerifyTheOriginalSMSWhileCaptchaIsRequiredForResend() async throws {
+        let transport = AccountTransportStub([
+            (200, #"{"challenge":"original-sms"}"#),
+            (400, #"{"reason":"signup_captcha_required"}"#),
+            (200, #"{"challenge":"picture","image":"fixture"}"#),
+            (200, #"{"next":"confirm","proof":"phone-proof"}"#),
+        ])
+        let form = WeChatSignupForm(service: YunlefunAccountService(transport: { try await transport.send($0) }))
+        form.phone = "13900000000"
+        try await form.sendSMS()
+        form.otp = "123456"
+        let retryAt = form.retrySMSAt
+
+        try await form.sendSMS()
+        guard case .sms(let challenge) = form.step else { return XCTFail("The original SMS step should remain usable") }
+        XCTAssertEqual(challenge, "original-sms")
+        XCTAssertEqual(form.otp, "123456")
+        XCTAssertEqual(form.retrySMSAt, retryAt)
+        XCTAssertEqual(form.captcha?.challenge, "picture")
+        XCTAssertFalse(form.canSubmitCaptcha)
+
+        try await form.verifySMS(challenge: challenge)
+        guard case .confirm(let proof) = form.step else { return XCTFail("The original code should verify the phone") }
+        XCTAssertEqual(proof, "phone-proof")
+        XCTAssertTrue(form.otp.isEmpty)
+        XCTAssertNil(form.captcha)
+        let requests = await transport.requests
+        let body = try XCTUnwrap(requests.last?.httpBody)
+        let fields = try JSONDecoder().decode([String: String].self, from: body)
+        XCTAssertEqual(fields["challenge"], "original-sms")
+        XCTAssertEqual(fields["otp"], "123456")
+    }
+
+    func testWeChatSignupReplacesTheOriginalSMSOnlyAfterAnAcceptedCaptchaResend() async throws {
+        let transport = AccountTransportStub([
+            (200, #"{"challenge":"original-sms"}"#),
+            (400, #"{"reason":"signup_captcha_required"}"#),
+            (200, #"{"challenge":"first-picture","image":"fixture"}"#),
+            (400, #"{"reason":"signup_captcha_invalid"}"#),
+            (200, #"{"challenge":"second-picture","image":"fixture"}"#),
+            (200, #"{"challenge":"replacement-sms"}"#),
+        ])
+        let form = WeChatSignupForm(service: YunlefunAccountService(transport: { try await transport.send($0) }))
+        form.phone = "13900000000"
+        try await form.sendSMS()
+        form.otp = "123456"
+        try await form.sendSMS()
+
+        form.captchaAnswer = "WRONG"
+        do {
+            try await form.sendSMS()
+            XCTFail("A rejected picture answer should display an error")
+        } catch WeChatSignupError.captchaInvalid {}
+        guard case .sms(let original) = form.step else { return XCTFail("The original SMS step should remain usable") }
+        XCTAssertEqual(original, "original-sms")
+        XCTAssertEqual(form.otp, "123456")
+        XCTAssertEqual(form.captcha?.challenge, "second-picture")
+        XCTAssertTrue(form.captchaAnswer.isEmpty)
+
+        form.captchaAnswer = "RIGHT"
+        XCTAssertTrue(form.canSubmitCaptcha)
+        try await form.sendSMS()
+        guard case .sms(let replacement) = form.step else { return XCTFail("The replacement SMS should be active") }
+        XCTAssertEqual(replacement, "replacement-sms")
+        XCTAssertTrue(form.otp.isEmpty)
+        XCTAssertNil(form.captcha)
+        XCTAssertTrue(form.captchaAnswer.isEmpty)
+        let requests = await transport.requests
+        let body = try XCTUnwrap(requests.last?.httpBody)
+        let fields = try JSONDecoder().decode([String: String].self, from: body)
+        XCTAssertEqual(fields["captchaChallenge"], "second-picture")
+        XCTAssertEqual(fields["captchaAnswer"], "RIGHT")
+    }
+
     func testExplicitWeChatSignupExchangesOnlyTheNewAccountTicket() async throws {
         let transport = AccountTransportStub([
             (200, #"{"ok":true,"ticket":"new-ticket","subject":"new-user"}"#),
@@ -554,6 +975,58 @@ final class YunlefunAccountServiceTests: XCTestCase {
         let fields = try JSONDecoder().decode([String: String].self, from: body)
         XCTAssertEqual(fields, ["action": "registerCookWeChat", "clientId": "cook-mobile", "proof": "phone-proof", "code": "wechat-code"])
         XCTAssertEqual(requests[1].url?.path, "/auth/v1/signin/custom")
+    }
+
+    func testWeChatSignupKeepsUnconfirmedRepliesSeparateFromAnAccountCreationReceipt() async throws {
+        for (status, body) in [(408, "request timeout"), (502, "gateway response"), (200, "incomplete reply")] {
+            let transport = AccountTransportStub([(status, body)])
+            let service = YunlefunAccountService(transport: { try await transport.send($0) })
+            do {
+                _ = try await service.registerWithWeChat(proof: "phone-proof", code: "wechat-code", deviceID: "device")
+                XCTFail("Expected an unconfirmed registration for HTTP \(status)")
+            } catch WeChatSignupError.unconfirmed {}
+            let requests = await transport.requests
+            XCTAssertEqual(requests.count, 1)
+        }
+
+        let transport = AccountTransportStub([(200, #"{"ok":true,"ticket":"new-ticket"}"#)])
+        let service = YunlefunAccountService(transport: { try await transport.send($0) })
+        do {
+            _ = try await service.registerWithWeChat(proof: "phone-proof", code: "wechat-code", deviceID: "device")
+            XCTFail("Expected an account creation receipt that could not complete sign-in")
+        } catch WeChatSignupError.accountCreated {}
+        let requests = await transport.requests
+        XCTAssertEqual(requests.count, 1)
+    }
+
+    func testWeChatSignupDistinguishesLostConnectionFromDisabledRegistration() async throws {
+        let lost = YunlefunAccountService(transport: { _ in throw URLError(.networkConnectionLost) })
+        do {
+            _ = try await lost.registerWithWeChat(proof: "phone-proof", code: "wechat-code", deviceID: "device")
+            XCTFail("Expected an unconfirmed registration after losing the connection")
+        } catch WeChatSignupError.unconfirmed {}
+
+        let transport = AccountTransportStub([(503, #"{"ok":false,"reason":"not_configured"}"#)])
+        let disabled = YunlefunAccountService(transport: { try await transport.send($0) })
+        do {
+            _ = try await disabled.registerWithWeChat(proof: "phone-proof", code: "wechat-code", deviceID: "device")
+            XCTFail("Expected the service to report that registration was disabled")
+        } catch WeChatAccountError.unavailable {}
+    }
+
+    func testWeChatSignupRevokesASessionThatDoesNotMatchTheNewAccount() async throws {
+        let transport = AccountTransportStub([
+            (200, #"{"ok":true,"ticket":"new-ticket","subject":"new-user"}"#),
+            (200, #"{"access_token":"access","refresh_token":"refresh","sub":"wrong-user","expires_in":7200}"#),
+            (200, "{}"),
+        ])
+        let service = YunlefunAccountService(transport: { try await transport.send($0) })
+        do {
+            _ = try await service.registerWithWeChat(proof: "phone-proof", code: "wechat-code", deviceID: "device")
+            XCTFail("Registration ticket opened a different account")
+        } catch WeChatSignupError.accountCreated {}
+        let requests = await transport.requests
+        XCTAssertEqual(requests.map { $0.url?.path }, ["/sso-ticket", "/auth/v1/signin/custom", "/auth/v1/user/signout"])
     }
 
     func testWeChatExchangesCodeWithYunlefunAndUsesExistingUIDTicket() async throws {

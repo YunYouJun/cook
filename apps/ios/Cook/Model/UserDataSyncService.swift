@@ -2,11 +2,11 @@ import CookCore
 import CryptoKit
 import Foundation
 
-enum UserDataSyncFailure: LocalizedError {
-    case loginRequired, membershipRequired, unavailable, invalidResponse, localStorage
+enum UserDataSyncFailure: LocalizedError, Equatable {
+    case loginRequired, accessTokenRejected, membershipRequired, unavailable, invalidResponse, localStorage
     var errorDescription: String? {
         switch self {
-        case .loginRequired: return "请重新登录后同步，离线记录已保留。"
+        case .loginRequired, .accessTokenRejected: return "请重新登录后同步，离线记录已保留。"
         case .membershipRequired: return "跨平台同步需要有效的云乐坊会员，已有记录仍可在本机使用。"
         case .unavailable: return "暂时无法同步，恢复联网后会重试。"
         case .invalidResponse: return "同步服务或数据版本暂不兼容，已停止覆盖，请稍后重试。"
@@ -72,11 +72,17 @@ struct UserDataSyncService: UserDataSyncServing {
         let (data, response) = try await transport(request)
         try Task.checkCancellation()
         guard let http = response as? HTTPURLResponse, http.url == Self.endpoint, data.count <= 300 * 1024,
-              !(300..<400).contains(http.statusCode),
-              let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw UserDataSyncFailure.invalidResponse }
-        if http.statusCode == 401 || ["LOGIN_REQUIRED", "SESSION_CHANGED"].contains(body["code"] as? String ?? "") { throw UserDataSyncFailure.loginRequired }
-        if body["code"] as? String == "MEMBERSHIP_REQUIRED" { throw UserDataSyncFailure.membershipRequired }
-        if ["INVALID_REMOTE", "INVALID_DOCUMENT", "DOCUMENT_LIMIT", "UNKNOWN_ACTION"].contains(body["code"] as? String ?? "") {
+              !(300..<400).contains(http.statusCode) else { throw UserDataSyncFailure.invalidResponse }
+        if http.statusCode == 408 || http.statusCode == 429 || (500..<600).contains(http.statusCode) {
+            throw UserDataSyncFailure.unavailable
+        }
+        let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let code = body?["code"] as? String
+        if code == "SESSION_CHANGED" { throw UserDataSyncFailure.loginRequired }
+        if http.statusCode == 401 || code == "LOGIN_REQUIRED" { throw UserDataSyncFailure.accessTokenRejected }
+        guard let body else { throw UserDataSyncFailure.invalidResponse }
+        if code == "MEMBERSHIP_REQUIRED" { throw UserDataSyncFailure.membershipRequired }
+        if ["INVALID_REMOTE", "INVALID_DOCUMENT", "DOCUMENT_LIMIT", "UNKNOWN_ACTION"].contains(code ?? "") {
             throw UserDataSyncFailure.invalidResponse
         }
         guard (200..<300).contains(http.statusCode), body["ok"] as? Bool == true else { throw UserDataSyncFailure.unavailable }

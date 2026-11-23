@@ -54,7 +54,7 @@ final class FavoriteSaveTests: XCTestCase {
     func testFailedRevivalRestoresTheDeletionTimestamp() throws {
         let container = Persistence.makeContainer(inMemory: true)
         let context = container.mainContext
-        try context.setFavorite(42, isFavorite: true)
+        try context.setFavorite(42, isFavorite: true, at: Date(timeIntervalSince1970: 99))
         let removedAt = Date(timeIntervalSince1970: 100)
         try context.setFavorite(42, isFavorite: false, at: removedAt)
         XCTAssertThrowsError(try context.setFavorite(42, isFavorite: true, save: { _ in throw self.diskFull }))
@@ -62,6 +62,29 @@ final class FavoriteSaveTests: XCTestCase {
         XCTAssertEqual(record.deletedAt, removedAt)
         XCTAssertEqual(record.updatedAt, removedAt)
         XCTAssertFalse(try context.isFavorite(42))
+    }
+
+    func testReimportAfterLocalDeletionWithAnEarlierDeviceClock() throws {
+        let container = Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let file = try XCTUnwrap(WebUserData.parse("""
+        {"app":"cook","version":1,"favorites":[{"id":1,"time":2000000000000}],
+         "histories":[{"recipe":{"name":"蒸蛋羹"},"time":2000000000000}]}
+        """))
+        let recipes = ["蒸蛋羹": 1]
+        let added = try context.importWebData(file, recipeIdByName: recipes, validIds: [1])
+        XCTAssertEqual(added.favorites, 1)
+        XCTAssertEqual(added.visits, 1)
+
+        let deviceTime = Date(timeIntervalSince1970: 1800000000)
+        try context.setFavorite(1, isFavorite: false, at: deviceTime)
+        context.clearHistory(at: deviceTime)
+
+        let again = try context.importWebData(file, recipeIdByName: recipes, validIds: [1])
+        XCTAssertEqual(again.favorites, 0)
+        XCTAssertEqual(again.visits, 0)
+        XCTAssertFalse(try context.isFavorite(1))
+        XCTAssertTrue(try XCTUnwrap(context.fetch(FetchDescriptor<HistoryEntry>()).first).deletedAt != nil)
     }
 
     func testPreflightFailureDoesNotDiscardUnrelatedPendingChanges() throws {

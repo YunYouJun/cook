@@ -35,10 +35,9 @@ enum FridgeVisionProvider: String, Codable, Sendable {
     }
 }
 
-struct FridgeVisionPhoto: Identifiable, Sendable {
+struct FridgeVisionPhoto: Sendable {
     // The production HTTP gateway accepts a 96 KiB JSON body. Base64 and the envelope need room too.
     static let maxJPEGBytes = 70 * 1024
-    let id = UUID()
     let jpeg: Data
 
     static func prepare(_ data: Data) async throws -> Self {
@@ -84,14 +83,26 @@ struct FridgeVisionCandidate: Identifiable, Equatable {
 
     static func names(_ candidates: [Self], normalizer: StuffNormalizer) -> [String]? {
         let names = normalizer.normalize(candidates.filter(\.included).map(\.name))
+            .map(\.precomposedStringWithCanonicalMapping)
         guard names.allSatisfy(validName) else { return nil }
         var seen = Set<String>()
         return names.filter { seen.insert($0).inserted }
     }
 
     static func validName(_ name: String) -> Bool {
-        !name.isEmpty && name.count <= 30 && name.contains(where: { $0.isLetter || $0.isNumber })
-            && name.allSatisfy { $0.isLetter || $0.isNumber || " ·-（）()".contains($0) }
+        let scalars = name.unicodeScalars
+        return (1...30).contains(scalars.count) && scalars.contains(where: isLetterOrNumber)
+            && scalars.allSatisfy { isLetterOrNumber($0) || " ·-（）()".unicodeScalars.contains($0) }
+    }
+
+    private static func isLetterOrNumber(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.properties.generalCategory {
+        case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter,
+             .decimalNumber, .letterNumber, .otherNumber:
+            return true
+        default:
+            return false
+        }
     }
 }
 
@@ -114,18 +125,35 @@ struct FridgeVisionService: Sendable {
         self.transport = transport ?? { try await Self.sendLive($0) }
     }
 
-    func activeProvider() async throws -> FridgeVisionProvider {
-        let data = try await send(request(method: "GET", timeout: 8))
-        guard let wire = try? JSONDecoder().decode(ProviderResponse.self, from: data), wire.ok, wire.schemaVersion == 1
-        else { throw FridgeVisionError.invalidResponse }
-        return wire.provider
+    @MainActor
+    func memberProvider(using accounts: YunlefunAccountStore,
+                        rejecting rejected: YunlefunCredential? = nil) async throws -> FridgeVisionProvider? {
+        let revision = accounts.sessionRevision
+        func validateSession() throws {
+            try Task.checkCancellation()
+            guard accounts.sessionRevision == revision else { throw CancellationError() }
+        }
+
+        let credential = try await accounts.credentialForRequest(rejecting: rejected)
+        try validateSession()
+        let provider: FridgeVisionProvider?
+        do {
+            provider = try await memberProvider(credential: credential)
+        } catch FridgeVisionError.loginRequired where rejected == nil {
+            try validateSession()
+            let renewed = try await accounts.credentialForRequest(rejecting: credential)
+            try validateSession()
+            provider = try await memberProvider(credential: renewed)
+        }
+        try validateSession()
+        return provider
     }
 
-    func hasMembership(credential: YunlefunCredential) async throws -> Bool {
+    func memberProvider(credential: YunlefunCredential) async throws -> FridgeVisionProvider? {
         let data = try await send(request(method: "GET", timeout: 15, credential: credential))
         guard let wire = try? JSONDecoder().decode(MembershipResponse.self, from: data), wire.ok, wire.schemaVersion == 1
         else { throw FridgeVisionError.invalidResponse }
-        return wire.member
+        return wire.member ? wire.provider : nil
     }
 
     func recognize(_ photo: FridgeVisionPhoto, provider: FridgeVisionProvider, credential: YunlefunCredential) async throws -> [String] {
@@ -144,7 +172,7 @@ struct FridgeVisionService: Sendable {
         return wire.ingredients
     }
 
-    private func request(method: String, timeout: TimeInterval, credential: YunlefunCredential? = nil) throws -> URLRequest {
+    private func request(method: String, timeout: TimeInterval, credential: YunlefunCredential) throws -> URLRequest {
         guard endpoint == Self.productionURL else { throw FridgeVisionError.unavailable }
         var request = URLRequest(url: endpoint)
         request.httpMethod = method
@@ -152,11 +180,9 @@ struct FridgeVisionService: Sendable {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("no-store", forHTTPHeaderField: "Cache-Control")
-        if let credential {
-            guard credential.expiresAt > Date(), (1...8192).contains(credential.accessToken.utf8.count),
-                  credential.accessToken.utf8.allSatisfy({ (33...126).contains($0) }) else { throw FridgeVisionError.loginRequired }
-            request.setValue("Bearer \(credential.accessToken)", forHTTPHeaderField: "Authorization")
-        }
+        guard credential.expiresAt > Date(), (1...8192).contains(credential.accessToken.utf8.count),
+              credential.accessToken.utf8.allSatisfy({ (33...126).contains($0) }) else { throw FridgeVisionError.loginRequired }
+        request.setValue("Bearer \(credential.accessToken)", forHTTPHeaderField: "Authorization")
         return request
     }
 
@@ -198,16 +224,11 @@ struct FridgeVisionService: Sendable {
         let image: Data
     }
 
-    private struct ProviderResponse: Decodable {
-        let ok: Bool
-        let schemaVersion: Int
-        let provider: FridgeVisionProvider
-    }
-
     private struct MembershipResponse: Decodable {
         let ok: Bool
         let schemaVersion: Int
         let member: Bool
+        let provider: FridgeVisionProvider
     }
 
     private struct ErrorResponse: Decodable { let code: String }

@@ -2,7 +2,9 @@ package cn.yunyoujun.cook.core.sync
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
@@ -30,6 +32,24 @@ class UserDataDocumentTest {
         val expectedCount: Int,
     )
 
+    @Serializable
+    private data class FileImportCase(
+        val file: JsonObject,
+        val expectedFavorites: List<UserDataDocument.Favorite>,
+        val expectedHistories: List<UserDataDocument.Removal>,
+    )
+
+    @Serializable
+    private data class HistoryClearCase(
+        val name: String,
+        val now: Double,
+        val current: UserDataDocument,
+        val peer: UserDataDocument,
+        val expectedCutoff: Double,
+        val expectedRemovals: List<UserDataDocument.Removal>,
+        val expectedVisits: List<UserDataDocument.Removal>,
+    )
+
     private fun fixturesDir(): File {
         val path = System.getProperty("cook.fixtures.dir")
             ?: error("Missing system property cook.fixtures.dir")
@@ -45,6 +65,22 @@ class UserDataDocumentTest {
             val ba = case.b.merging(case.a, nowMillis = case.now)
             assertEquals("Case failed (a->b): ${case.name}", case.expected, ab)
             assertEquals("Case failed (b->a): ${case.name}", case.expected, ba)
+        }
+    }
+
+    @Test
+    fun passesSharedHistoryClearFixtures() {
+        val raw = File(fixturesDir(), "user-data-history-clear.json").readText(Charsets.UTF_8)
+        for (case in strictJson.decodeFromString<List<HistoryClearCase>>(raw)) {
+            val cleared = case.current.clearingHistory(case.now)
+            assertTrue(case.name, cleared.histories.isEmpty())
+            assertEquals(case.name, case.expectedCutoff, cleared.historyClearedAt, 0.0)
+            assertEquals(case.name, case.expectedRemovals, cleared.historyRemovals)
+            assertEquals(case.name, cleared, cleared.clearingHistory(case.now))
+            val merged = cleared.merging(case.peer, nowMillis = case.now)
+            val visits = merged.histories.map { UserDataDocument.Removal(it.recipe.name, it.time) }
+            assertEquals(case.name, case.expectedVisits, visits)
+            assertEquals(case.name, case.current.favorites, merged.favorites)
         }
     }
 
@@ -99,6 +135,37 @@ class UserDataDocumentTest {
                 else -> error("Unknown boundary kind: ${case.kind}")
             }
         }
+    }
+
+    @Test
+    fun manualImportCopiesOnlyActiveFileRecords() {
+        val fixture = strictJson.decodeFromString<FileImportCase>(File(fixturesDir(), "user-data-file-import.json").readText())
+        val file = fixture.file.toString()
+        val rawDocument = UserDataExportFile.parse(file)
+        assertEquals(4, rawDocument.favoriteRemovals.size)
+        assertEquals(1, rawDocument.historyRemovals.size)
+
+        val imported = UserDataDocument().importMerging(rawDocument)
+        assertEquals(fixture.expectedFavorites, imported.favorites)
+        assertEquals(
+            fixture.expectedHistories.map { it.name to it.time },
+            imported.histories.map { it.recipe.name to it.time },
+        )
+        assertEquals(UserDataDocument(), imported.copy(favorites = emptyList(), histories = emptyList()))
+    }
+
+    @Test
+    fun aFullImportPreservesExistingHistoryAndFavoriteTimestamps() {
+        val existing = UserDataDocument.Visit(UserDataDocument.RecipeSnapshot("旧记录"), 1.0)
+        val favorite = UserDataDocument.Favorite(3, 2.0)
+        val added = List(UserDataDocument.MAX_HISTORIES) { index ->
+            UserDataDocument.Visit(UserDataDocument.RecipeSnapshot("新记录"), index + 10.0)
+        }
+        val merged = UserDataDocument(favorites = listOf(favorite), histories = listOf(existing)).importMerging(
+            UserDataDocument(favorites = listOf(favorite.copy(time = 100.0)), histories = added),
+        )
+        assertEquals(listOf(favorite), merged.favorites)
+        assertEquals(listOf(existing) + added.drop(1), merged.histories)
     }
 
     @Test

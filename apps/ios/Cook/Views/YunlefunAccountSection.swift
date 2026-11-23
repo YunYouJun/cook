@@ -36,11 +36,13 @@ struct YunlefunAccountSection: View {
 }
 
 struct YunlefunAccountView: View {
+    private typealias WebsiteEntry = YunlefunAccountStore.WebsiteEntry
+
     @Environment(YunlefunAccountStore.self) private var accounts
     @Environment(\.openURL) private var openURL
     @State private var browser = SettingsWebsitePresenter()
     @State private var browserAuthorization = SystemYunlefunAuthorization()
-    @State private var preparingWebsite: Task<Void, Never>?
+    @State private var preparingWebsite: (entry: WebsiteEntry, task: Task<Void, Never>)?
     @State private var handoffDelegate: AccountWebHandoffDelegate?
     @State private var websiteUnavailable = false
     private static let settingsURL = URL(string: "https://www.yunle.fun/settings?tab=account")!
@@ -66,9 +68,12 @@ struct YunlefunAccountView: View {
                     .listRowBackground(Color.clear)
                 }
                 Section {
-                    websiteRow("管理云乐坊账号", symbol: "person.crop.circle", color: .indigo,
-                               subtitle: "个人资料与登录方式", isOpening: preparingWebsite != nil,
-                               action: openAccountWebsite)
+                    let canResume = accounts.approvedWebsite?.entry == .manage
+                    websiteRow(canResume ? "继续打开账号管理" : "管理云乐坊账号", symbol: "person.crop.circle", color: .indigo,
+                               subtitle: canResume ? "沿用本次浏览器授权" : "个人资料与登录方式",
+                               isOpening: preparingWebsite?.entry == .manage) {
+                        openAccountWebsite(.manage)
+                    }
                         .disabled(accounts.isBusy || preparingWebsite != nil)
                         .accessibilityIdentifier("account.manage")
                     if accounts.canUseWeChat {
@@ -94,22 +99,39 @@ struct YunlefunAccountView: View {
             }
             if accounts.account != nil {
                 Section {
-                    websiteRow("申请注销账号", symbol: "person.crop.circle.badge.minus", color: .gray) {
-                        browser.open(Self.settingsURL)
+                    let canResume = accounts.approvedWebsite?.entry == .delete
+                    websiteRow(canResume ? "继续打开注销入口" : "申请注销账号", symbol: "person.crop.circle.badge.minus", color: .gray,
+                               subtitle: canResume ? "沿用本次浏览器授权" : nil,
+                               isOpening: preparingWebsite?.entry == .delete) {
+                        openAccountWebsite(.delete)
                     }
+                        .disabled(accounts.isBusy || preparingWebsite != nil)
                         .accessibilityIdentifier("account.delete")
                     Button("退出登录", role: .destructive) { Task { await accounts.signOut() } }
                         .disabled(accounts.isBusy)
                         .accessibilityIdentifier("account.signOut")
                 } footer: {
-                    Text("注销需要在云乐坊网站确认。退出登录仅影响这台设备，保留现有的收藏、冰箱和私人菜谱。")
+                    Text("注销需要在云乐坊网站核对账号并确认。退出登录仅影响这台设备，保留现有的收藏、冰箱和私人菜谱。")
                 }
             }
         }
         .navigationTitle("云乐坊账号")
         .navigationBarTitleDisplayMode(.inline)
         .background { browser.presentationAnchor }
-        .onDisappear { preparingWebsite?.cancel() }
+        .onDisappear { preparingWebsite?.task.cancel() }
+        .onChange(of: accounts.sessionRevision) {
+            preparingWebsite?.task.cancel()
+            handoffDelegate?.cancel()
+            handoffDelegate = nil
+        }
+        .task(id: accounts.approvedWebsite?.destination.request) {
+            guard let website = accounts.approvedWebsite else { return }
+            do {
+                try await Task.sleep(for: .seconds(website.validity.remaining()))
+                try Task.checkCancellation()
+                accounts.discardApprovedWebsite(website)
+            } catch {}
+        }
         .alert("暂时无法打开账号管理", isPresented: $websiteUnavailable) {
             Button("好", role: .cancel) {}
         } message: {
@@ -117,38 +139,48 @@ struct YunlefunAccountView: View {
         }
     }
 
-    private func openAccountWebsite() {
-        guard preparingWebsite == nil, let subject = accounts.account?.id else { return }
+    private func openAccountWebsite(_ entry: WebsiteEntry) {
+        guard preparingWebsite == nil, let session = accounts.websiteSession else { return }
         let transport: YunlefunAccountWebHandoff.Transport = ProcessInfo.processInfo.isiOSAppOnMac ? .systemBrowser : .inAppSafari
-        preparingWebsite = Task {
+        let task = Task {
             defer { preparingWebsite = nil }
             do {
+                if transport == .systemBrowser, let website = accounts.approvedWebsite, website.entry == entry {
+                    if website.canResume(in: session) {
+                        await openApprovedWebsite(website)
+                        return
+                    }
+                    accounts.discardApprovedWebsite(website)
+                }
                 let supportsHandoff = try await accounts.supportsAccountWebHandoff(in: transport)
-                guard !Task.isCancelled, accounts.account?.id == subject else { return }
+                guard !Task.isCancelled, accounts.websiteSession == session else { return }
                 guard supportsHandoff else {
-                    browser.open(Self.settingsURL)
+                    if transport == .systemBrowser { openURL(Self.settingsURL) }
+                    else if !browser.open(Self.settingsURL) { websiteUnavailable = true }
                     return
                 }
                 let handoff = try YunlefunAccountWebHandoff()
                 if transport == .systemBrowser {
-                    try await openAccountInSystemBrowser(handoff, subject: subject)
+                    try await openAccountInSystemBrowser(handoff, session: session, entry: entry)
                     return
                 }
                 let delegate = AccountWebHandoffDelegate(handoff: handoff) { fields in
-                    try await accounts.approveAccountWebHandoff(fields: fields, for: subject)
+                    try await accounts.approveAccountWebHandoff(fields: fields, handoff: handoff, for: session)
                 }
                 if browser.open(handoff.startURL, delegate: delegate) {
                     handoffDelegate = delegate // Safari's delegate is weak.
-                }
+                } else { websiteUnavailable = true }
             } catch is CancellationError {
                 // The user closed the system authorization window.
             } catch {
-                if !Task.isCancelled, accounts.account?.id == subject { websiteUnavailable = true }
+                if !Task.isCancelled, accounts.websiteSession == session { websiteUnavailable = true }
             }
         }
+        preparingWebsite = (entry, task)
     }
 
-    private func openAccountInSystemBrowser(_ handoff: YunlefunAccountWebHandoff, subject: String) async throws {
+    private func openAccountInSystemBrowser(_ handoff: YunlefunAccountWebHandoff, session: YunlefunAccountStore.WebsiteSession,
+                                            entry: WebsiteEntry) async throws {
         let callback = try await browserAuthorization.authorizeInBrowser(
             handoff.systemBrowserStartURL, expiresAfter: YunlefunAccountWebHandoff.lifetime
         )
@@ -156,10 +188,16 @@ struct YunlefunAccountView: View {
         guard let completion = handoff.systemBrowserCompletion(for: callback) else {
             throw YunlefunAccountError.invalidCallback
         }
-        try await accounts.approveAccountWebHandoff(fields: completion.approvalFields, for: subject)
-        try Task.checkCancellation()
-        guard accounts.account?.id == subject else { return }
-        openURL(completion.url)
+        let website = try await accounts.approveAccountWebsiteForBrowser(completion, handoff: handoff, for: session, entry: entry)
+        await openApprovedWebsite(website)
+    }
+
+    private func openApprovedWebsite(_ website: YunlefunAccountStore.ApprovedWebsite) async {
+        await accounts.openApprovedAccountWebsite(website) { url in
+            await withCheckedContinuation { continuation in
+                openURL(url) { continuation.resume(returning: $0) }
+            }
+        }
     }
 
     private func websiteRow(_ title: String, symbol: String, color: Color, subtitle: String? = nil,
@@ -180,7 +218,7 @@ struct YunlefunAccountView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityHint("在 App 内打开云乐坊网站")
+        .accessibilityHint(ProcessInfo.processInfo.isiOSAppOnMac ? "在默认浏览器打开云乐坊网站" : "在 App 内打开云乐坊网站")
     }
 }
 
@@ -205,6 +243,10 @@ private final class AccountWebHandoffDelegate: NSObject, SFSafariViewControllerD
     }
 
     func safariViewControllerDidFinish(_ controller: SFSafariViewController) {
+        cancel()
+    }
+
+    func cancel() {
         handoff = nil
         approval?.cancel()
         approval = nil

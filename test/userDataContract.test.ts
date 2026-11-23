@@ -1,7 +1,9 @@
 import { execFileSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
-import { createEmptyUserData, mergeUserData, normalizeUserData } from '../apps/web/app/utils/userData'
+import { clearUserDataHistory, createEmptyUserData, mergeUserData, normalizeUserData, parseUserDataExport } from '../apps/web/app/utils/userData'
+import importFixture from '../packages/data/fixtures/user-data-file-import.json'
+import historyClearFixtures from '../packages/data/fixtures/user-data-history-clear.json'
 import boundaries from '../packages/data/fixtures/user-data-sync-boundaries.json'
 import fixtures from '../packages/data/fixtures/user-data-sync.json'
 
@@ -15,6 +17,13 @@ describe('shared user data contract', () => {
     execFileSync(process.execPath, ['scripts/generate-user-data-contract.mjs', '--check'])
   })
 
+  it('identifies the same active file records as the native clients', () => {
+    const file = parseUserDataExport(JSON.stringify(importFixture.file))!
+    const result = mergeUserData(file, createEmptyUserData(), importFixture.file.exportedAt)
+    expect(result.favorites).toEqual(importFixture.expectedFavorites)
+    expect(result.histories.map(({ recipe, time }) => ({ name: recipe.name, time }))).toEqual(importFixture.expectedHistories)
+  })
+
   it.each(fixtures)('$name', ({ a, b, now, expected }) => {
     for (const implementation of [{ mergeUserData, normalizeUserData }, server]) {
       const left = implementation.normalizeUserData(a)!
@@ -23,6 +32,20 @@ describe('shared user data contract', () => {
       expect(implementation.mergeUserData(left, right, now)).toEqual(result)
       expect(implementation.mergeUserData(right, left, now)).toEqual(result)
       expect(implementation.mergeUserData(result, left, now)).toEqual(result)
+    }
+  })
+
+  it.each(historyClearFixtures)('$name', ({ current, peer, now, expectedCutoff, expectedRemovals, expectedVisits }) => {
+    const local = normalizeUserData(current)!
+    const cleared = { ...local, ...clearUserDataHistory(local, now) }
+    expect(cleared.histories).toEqual([])
+    expect(cleared.historyClearedAt).toBe(expectedCutoff)
+    expect(cleared.historyRemovals).toEqual(expectedRemovals)
+    expect(clearUserDataHistory(cleared, now)).toEqual(clearUserDataHistory(local, now))
+    for (const implementation of [mergeUserData, server.mergeUserData]) {
+      const merged = implementation(cleared, normalizeUserData(peer)!, now)
+      expect(merged.histories.map(({ recipe, time }) => ({ name: recipe.name, time }))).toEqual(expectedVisits)
+      expect(merged.favorites).toEqual(local.favorites)
     }
   })
 

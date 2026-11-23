@@ -4,6 +4,29 @@ import Observation
 /// 云乐坊身份与 SwiftData / CloudKit 完全独立，不以登录、退出或切换账号迁移做菜数据。
 @MainActor @Observable
 final class YunlefunAccountStore {
+    struct WebsiteSession: Equatable {
+        let subject: String
+        let deviceID: String
+        let revision: UUID
+    }
+
+    enum WebsiteEntry: String, Codable {
+        case manage, delete
+    }
+
+    struct ApprovedWebsite: Codable, Equatable {
+        let subject: String
+        let deviceID: String
+        let entry: WebsiteEntry
+        let destination: YunlefunAccountWebHandoff.BrowserDestination
+        let validity: YunlefunAccountWebHandoff.Validity
+
+        func canResume(in session: WebsiteSession?) -> Bool {
+            subject == session?.subject && deviceID == session?.deviceID
+                && validity.remaining() > 0 && destination.url != nil
+        }
+    }
+
     private(set) var account: YunlefunAccount?
     private(set) var isBusy = false
     private(set) var message: String?
@@ -11,17 +34,24 @@ final class YunlefunAccountStore {
     private(set) var sessionRevision = UUID()
     private(set) var offlineSubject: String?
     private(set) var weChatBindingMessage: String?
+    private(set) var approvedWebsite: ApprovedWebsite?
     @ObservationIgnored private let service: YunlefunAccountServing
     @ObservationIgnored private let vault: YunlefunAccountVault
     @ObservationIgnored private let authorization: YunlefunAuthorizing
     @ObservationIgnored private let weChat: WeChatAuthorizing
     @ObservationIgnored private let appAuthorization: YunlefunAppAuthorization
     @ObservationIgnored private var credential: YunlefunCredential?
+    @ObservationIgnored private var rejectedAccessToken: String?
     @ObservationIgnored private var didRestore = false
+    @ObservationIgnored private var isOpeningApprovedWebsite = false
 
     /// A previously verified session may keep its own offline library visible.
     /// Sign-out/invalid credentials clear this identity before any async work.
     var dataAccountID: String? { account?.id ?? offlineSubject }
+    var websiteSession: WebsiteSession? {
+        guard let account, let credential, account.id == credential.subject else { return nil }
+        return WebsiteSession(subject: account.id, deviceID: credential.deviceID, revision: sessionRevision)
+    }
     var canUseWeChat: Bool { weChat.isAvailable }
     var isAwaitingYunlefunApp: Bool { appAuthorization.isWaiting }
 
@@ -48,7 +78,8 @@ final class YunlefunAccountStore {
 
     func refreshIfNeeded() async {
         guard didRestore, let credential,
-              account == nil || canRetry || credential.expiresAt.timeIntervalSinceNow < 60 else { return }
+              account == nil || canRetry || credential.accessToken == rejectedAccessToken
+                  || credential.expiresAt.timeIntervalSinceNow < 60 else { return }
         await refreshSession()
     }
 
@@ -61,25 +92,105 @@ final class YunlefunAccountStore {
         try await service.supportsAccountWebHandoff(in: transport)
     }
 
-    func approveAccountWebHandoff(fields: [String: String], for subject: String) async throws {
-        guard account?.id == subject else { throw YunlefunAccountError.expiredSession }
-        let credential = try await credentialForRequest()
-        try Task.checkCancellation()
-        guard credential.subject == subject, account?.id == subject else { throw YunlefunAccountError.expiredSession }
-        try await service.approveAccountWebHandoff(fields: fields, credential: credential)
+    func approveAccountWebsiteForBrowser(_ completion: YunlefunAccountWebHandoff.BrowserCompletion,
+                                         handoff: YunlefunAccountWebHandoff, for session: WebsiteSession,
+                                         entry: WebsiteEntry) async throws -> ApprovedWebsite {
+        try await approveAccountWebHandoff(fields: completion.approvalFields, handoff: handoff, for: session)
+        guard websiteSession == session else { throw YunlefunAccountError.expiredSession }
+        let website = ApprovedWebsite(subject: session.subject, deviceID: session.deviceID, entry: entry,
+                                      destination: completion.destination, validity: handoff.validity)
+        guard website.canResume(in: session) else { throw YunlefunAccountError.invalidCallback }
+        approvedWebsite = website
+        // Keep recovery in memory if an optional Keychain write fails.
+        try? vault.saveApprovedWebsite(website)
+        return website
     }
 
-    func credentialForRequest() async throws -> YunlefunCredential {
+    func openApprovedAccountWebsite(_ website: ApprovedWebsite, open: (URL) async -> Bool) async {
+        guard approvedWebsite == website, !Task.isCancelled, !isBusy, !isOpeningApprovedWebsite else { return }
+        guard website.canResume(in: websiteSession), let url = website.destination.url else {
+            discardApprovedWebsite(website)
+            return
+        }
+        isOpeningApprovedWebsite = true
+        defer { isOpeningApprovedWebsite = false }
+        if await open(url) { discardApprovedWebsite(website) }
+    }
+
+    func discardApprovedWebsite(_ website: ApprovedWebsite) {
+        guard approvedWebsite == website else { return }
+        clearApprovedWebsite()
+    }
+
+    private func clearApprovedWebsite() {
+        approvedWebsite = nil
+        try? vault.saveApprovedWebsite(nil)
+    }
+
+    private func restoreApprovedWebsite() {
+        do {
+            guard let website = try approvedWebsite ?? vault.loadApprovedWebsite() else { return }
+            guard website.canResume(in: websiteSession) else {
+                clearApprovedWebsite()
+                return
+            }
+            approvedWebsite = website
+        } catch is DecodingError {
+            clearApprovedWebsite()
+        } catch {
+            // Recovery storage can be unavailable while the account remains usable.
+        }
+    }
+
+    func approveAccountWebHandoff(fields: [String: String], handoff: YunlefunAccountWebHandoff,
+                                  for session: WebsiteSession, now: () -> Date = Date.init) async throws {
+        func requireCurrent() throws {
+            try Task.checkCancellation()
+            guard websiteSession == session else { throw YunlefunAccountError.expiredSession }
+            guard handoff.isCurrent(at: now()) else { throw YunlefunAccountError.invalidCallback }
+        }
+        try requireCurrent()
+        var credential = try await credentialForRequest()
+        var renewed = false
+        var retried = false
+        while true {
+            try requireCurrent()
+            do {
+                try await service.approveAccountWebHandoff(fields: fields, credential: credential)
+                break
+            } catch YunlefunAccountError.expiredSession where !renewed {
+                try requireCurrent()
+                renewed = true
+                credential = try await credentialForRequest(rejecting: credential)
+            } catch AccountWebHandoffError.interrupted where !retried {
+                try requireCurrent()
+                retried = true
+                try await Task.sleep(for: .milliseconds(400))
+            }
+        }
+        try requireCurrent()
+    }
+
+    func credentialForRequest(rejecting rejected: YunlefunCredential? = nil) async throws -> YunlefunCredential {
         guard !isBusy else { throw YunlefunAccountError.unavailable }
         guard let current = credential else {
             throw YunlefunAccountError.expiredSession
         }
         let subject = current.subject
-        if account?.id != subject || canRetry || current.expiresAt.timeIntervalSinceNow < 60 { await refreshSession() }
+        if let rejected, rejected.subject != subject || rejected.deviceID != current.deviceID {
+            throw YunlefunAccountError.expiredSession
+        }
+        if current.accessToken == rejected?.accessToken { rejectedAccessToken = current.accessToken }
+        if current.accessToken == rejectedAccessToken || account?.id != subject || canRetry || current.expiresAt.timeIntervalSinceNow < 60 {
+            await refreshSession()
+        }
         try Task.checkCancellation()
         guard let next = credential, next.subject == subject else { throw YunlefunAccountError.expiredSession }
-        guard account?.id == subject, next.expiresAt > Date() else {
+        guard account?.id == subject, next.expiresAt > Date(), next.accessToken != rejectedAccessToken else {
             if canRetry { throw YunlefunAccountError.unavailable }
+            throw YunlefunAccountError.expiredSession
+        }
+        if let rejected, next.deviceID != rejected.deviceID || next.accessToken == rejected.accessToken {
             throw YunlefunAccountError.expiredSession
         }
         return next
@@ -178,7 +289,9 @@ final class YunlefunAccountStore {
         let user = try await service.account(next)
         try Task.checkCancellation()
         try vault.save(next)
+        clearApprovedWebsite()
         credential = next
+        rejectedAccessToken = nil
         offlineSubject = next.subject
         account = user
         sessionRevision = UUID()
@@ -198,7 +311,9 @@ final class YunlefunAccountStore {
         do {
             let previous = try vault.load()
             try vault.clear()
+            clearApprovedWebsite()
             credential = nil
+            rejectedAccessToken = nil
             offlineSubject = nil
             account = nil
             sessionRevision = UUID()
@@ -223,33 +338,39 @@ final class YunlefunAccountStore {
         do {
             guard var current = try vault.load() else {
                 if account != nil || credential != nil { sessionRevision = UUID() }
+                clearApprovedWebsite()
                 credential = nil
+                rejectedAccessToken = nil
                 offlineSubject = nil
                 account = nil
                 return
             }
             credential = current
             offlineSubject = current.subject
-            if current.expiresAt.timeIntervalSinceNow < 60 {
+            if current.accessToken == rejectedAccessToken || current.expiresAt.timeIntervalSinceNow < 60 {
                 current = try await service.refresh(current)
                 // 刷新凭据会轮换：取资料前先原子保存，断网后仍可重试。
                 try vault.save(current)
             }
+            if current.accessToken != rejectedAccessToken { rejectedAccessToken = nil }
             credential = current
             offlineSubject = current.subject
             let user = try await service.account(current)
             try Task.checkCancellation()
             if account?.id != user.id { sessionRevision = UUID() }
             account = user
+            restoreApprovedWebsite()
         } catch is CancellationError {
             canRetry = true
         } catch YunlefunAccountError.expiredSession {
             if account != nil || credential != nil { sessionRevision = UUID() }
             account = nil
             credential = nil
+            rejectedAccessToken = nil
             offlineSubject = nil
             do {
                 try vault.clear()
+                clearApprovedWebsite()
                 message = YunlefunAccountError.expiredSession.localizedDescription
             } catch { message = errorMessage(error) }
         } catch {

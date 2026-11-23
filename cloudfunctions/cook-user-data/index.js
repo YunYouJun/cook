@@ -9,6 +9,7 @@
 
 const { Buffer } = require('node:buffer')
 const { createHash } = require('node:crypto')
+const { membershipAccessExpiry } = require('./membership-access')
 const { normalizeUserData, mergeUserData } = require('./user-data.cjs')
 
 const COLLECTION = 'cook_user_data'
@@ -22,19 +23,33 @@ const LIST_LIMITS = {
 }
 const ANON_UIDS = new Set(['', 'anon'])
 
+class AccountDeletionInProgress extends Error {}
+
+async function readStoredDocument(reference) {
+  try {
+    const { data } = await reference.get()
+    return (Array.isArray(data) ? data[0] : data) ?? null
+  }
+  catch (error) {
+    if (error?.code === 'DOCUMENT_NOT_FOUND')
+      return null
+    throw error
+  }
+}
+
 // Same read-only contract as account-api/lib/orders.js: canonical uid first,
 // then legacy userId documents. No client-supplied entitlement is trusted.
 async function activeMembership(uid, now) {
   const collection = getApp().database().collection('user_memberships')
-  const result = await collection.doc(uid).get()
-  const canonical = Array.isArray(result.data) ? result.data[0] : result.data
+  const canonical = await readStoredDocument(collection.doc(uid))
   let membership = canonical && (!canonical.userId || canonical.userId === uid) ? canonical : null
   if (!membership) {
     const legacy = await collection.where({ userId: uid }).limit(10).get()
     if (Array.isArray(legacy.data))
       membership = legacy.data.find(item => item?._id === uid) || legacy.data[0]
   }
-  return Number.isSafeInteger(membership?.expireAt) && membership.expireAt > now
+  const expireAt = membershipAccessExpiry(membership)
+  return Number.isSafeInteger(expireAt) && expireAt > now
 }
 
 let app
@@ -49,8 +64,7 @@ function getApp() {
 }
 
 async function accountDeletionBlocksSync(uid) {
-  const { data } = await getApp().database().collection('user_profiles').doc(uid).get()
-  const profile = Array.isArray(data) ? data[0] : data
+  const profile = await readStoredDocument(getApp().database().collection('user_profiles').doc(uid))
   return profile && (profile.deletionStatus === 'pending'
     || profile.deletionStatus === 'finalizing'
     || profile.deletionStatus === 'completed'
@@ -110,8 +124,7 @@ function stripMeta(doc) {
 }
 
 async function getDocument(uid) {
-  const result = await getApp().database().collection(COLLECTION).doc(uid).get()
-  const doc = result && Array.isArray(result.data) ? result.data[0] : null
+  const doc = await readStoredDocument(getApp().database().collection(COLLECTION).doc(uid))
   return { ok: true, document: stripMeta(doc) }
 }
 
@@ -123,8 +136,7 @@ async function setDocument(uid, input, now) {
   // snapshot read before another device's write can never erase that write.
   return getApp().database().runTransaction(async (transaction) => {
     const reference = transaction.collection(COLLECTION).doc(uid)
-    const response = await reference.get()
-    const raw = Array.isArray(response.data) ? response.data[0] : response.data
+    const raw = await readStoredDocument(reference)
     const previous = raw == null ? readDocument({ version: USER_DATA_VERSION }) : readDocument(stripMeta(raw))
     if (!previous)
       return fail('INVALID_REMOTE')
@@ -132,6 +144,10 @@ async function setDocument(uid, input, now) {
     if (!readDocument(merged))
       return fail('DOCUMENT_LIMIT')
     await reference.set(merged)
+    // Recheck against the current profile while the staged write holds the library lock.
+    // A profile read inside this transaction would still see its earlier snapshot.
+    if (await accountDeletionBlocksSync(uid))
+      throw new AccountDeletionInProgress()
     return { ok: true, document: merged, updatedAt: now, protocolVersion: 2 }
   })
 }
@@ -164,7 +180,9 @@ async function main(event = {}) {
         return fail('UNKNOWN_ACTION')
     }
   }
-  catch {
+  catch (error) {
+    if (error instanceof AccountDeletionInProgress)
+      return fail('LOGIN_REQUIRED')
     // SDK messages can contain document IDs or payloads; keep logs categorical.
     console.error('[cook-user-data]', 'request_failed')
     return fail('INTERNAL_ERROR')
