@@ -1,0 +1,11 @@
+[
+  { "input": " 𫚕鱼 ", "expected": "𫚕鱼" },
+  { "input": "Cafe\u0301（牛奶）", "expected": "Café（牛奶）" },
+  { "input": "e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301e\u0301牛奶", "expected": "éééééééééééééééé牛奶" },
+  { "input": "牛奶 ½", "expected": "牛奶 ½" },
+  { "input": "1\uFE0F\u20E3", "expected": null },
+  { "input": "牛奶x\u0338", "expected": null },
+  { "input": "苹果、香蕉", "expected": null },
+  { "input": "   ", "expected": null },
+  { "input": "（ ·- ）", "expected": null }
+]

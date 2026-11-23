@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { Buffer } from 'node:buffer'
+import { readFileSync } from 'node:fs'
 // eslint-disable-next-line test/no-import-node-test -- The independently deployed function is tested without Vitest or Nuxt.
 import { test } from 'node:test'
 import vision from '../cloudfunctions/cook-fridge-vision/index.js'
@@ -16,6 +17,7 @@ const apiKey = 'test-provider-key'
 const activeMembership = { isActive: true, expireAt: Number.MAX_SAFE_INTEGER }
 
 const readActiveMembership = async () => activeMembership
+const nameCases = JSON.parse(readFileSync(new URL('../packages/data/fixtures/fridge-vision-names.json', import.meta.url), 'utf8'))
 
 function event(fields) {
   return {
@@ -40,6 +42,26 @@ test('disabled or partially configured deployment cannot call the vision model',
   assert.equal(readConfig({ ...cloudBaseEnv, COOK_FRIDGE_VISION_QUOTA_SALT: undefined }).enabled, false)
   const handler = createHandler({ config: readConfig({}) })
   assert.equal((await handler(event())).statusCode, 503)
+})
+
+test('ingredient names use NFC and the same Unicode categories as the mobile clients', async () => {
+  for (const { input, expected } of nameCases) {
+    const handler = createHandler({
+      config: qwenConfig,
+      async verifyIdentity() { return 'verified-user' },
+      readMembership: readActiveMembership,
+      async admit() {},
+      async recognize() { return [input] },
+    })
+    const response = await handler(event())
+    if (expected === null) {
+      assert.equal(JSON.parse(response.body).code, 'INVALID_MODEL_RESPONSE', input)
+    }
+    else {
+      assert.equal(response.statusCode, 200, input)
+      assert.deepEqual(JSON.parse(response.body).ingredients, [expected])
+    }
+  }
 })
 
 test('photo is withheld without consent, valid identity and quota', async () => {
@@ -312,12 +334,16 @@ test('empty results are valid; extra fields, unbounded output and provider failu
   }
 })
 
-test('an over-limit account does not consume space in the shared daily budget', async () => {
+test('missing daily counters start at zero and an over-limit account does not use the shared budget', async () => {
   const rows = new Map()
   const db = {
     async runTransaction(operation) {
       await operation({ collection: () => ({ doc: id => ({
-        get: async () => ({ data: rows.get(id) }),
+        get: async () => {
+          if (!rows.has(id))
+            throw Object.assign(new Error('Document does not exist'), { code: 'DOCUMENT_NOT_FOUND' })
+          return { data: rows.get(id) }
+        },
         set: async value => rows.set(id, value),
       }) }) })
     },
@@ -331,4 +357,35 @@ test('an over-limit account does not consume space in the shared daily budget', 
   assert.equal(rows.size, 3)
   assert.deepEqual([...rows.values()].map(row => row.count).sort(), [1, 1, 2])
   assert([...rows.keys()].every(id => /^[0-9a-f]{64}$/.test(id)))
+})
+
+test('a quota read failure blocks recognition and writes no counters', async () => {
+  for (const code of ['DATABASE_COLLECTION_NOT_EXIST', 'DATABASE_PERMISSION_DENIED', 'DATABASE_TIMEOUT']) {
+    let counterWrites = 0
+    const db = {
+      async runTransaction(operation) {
+        await operation({ collection: () => ({ doc: () => ({
+          async get() { throw Object.assign(new Error('Private database error'), { code }) },
+          async set() { counterWrites++ },
+        }) }) })
+      },
+    }
+    const config = { ...qwenConfig, quotaSalt: 'x'.repeat(32), userDailyLimit: 1, dailyRequestBudget: 2 }
+    let modelCalls = 0
+    const handler = createHandler({
+      config,
+      async verifyIdentity() { return 'verified-user' },
+      readMembership: readActiveMembership,
+      async admit(uid, now) { await reserveQuota(db, config, uid, now) },
+      async recognize() {
+        modelCalls++
+        return ['鸡蛋']
+      },
+    })
+    const response = await handler(event())
+    assert.equal(response.statusCode, 503)
+    assert.deepEqual(JSON.parse(response.body), { ok: false, code: 'SERVICE_UNAVAILABLE' })
+    assert.equal(counterWrites, 0)
+    assert.equal(modelCalls, 0)
+  }
 })
