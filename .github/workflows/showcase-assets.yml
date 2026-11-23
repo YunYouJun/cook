@@ -3,13 +3,15 @@ name: Showcase Assets
 on:
   push:
     branches: [main]
-    paths:
+    paths: &showcase_paths
       - assets/showcase/**
       - apps/ios/Cook/Resources/cooking-badge-*.webp
       - apps/ios/Cook/Resources/showcase-packs.json
       - docs/scripts/showcase/tomato-cut-r2.webp
       - scripts/upload-showcase-assets.mjs
       - .github/workflows/showcase-assets.yml
+  pull_request:
+    paths: *showcase_paths
   workflow_dispatch:
 
 permissions:
@@ -25,9 +27,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-js
+      - run: node scripts/upload-showcase-assets.mjs --check
       - run: node scripts/upload-showcase-assets.mjs
+        if: github.event_name != 'pull_request'
         env:
           COS_BUCKET: ${{ vars.COS_BUCKET || 'yunlefun-assets-prod-1325586649' }}
           COS_REGION: ${{ vars.COS_REGION || 'ap-shanghai' }}
           COS_SECRET_ID: ${{ secrets.COS_SECRET_ID }}
           COS_SECRET_KEY: ${{ secrets.COS_SECRET_KEY }}
+      - name: Verify public showcase downloads
+        if: github.event_name != 'pull_request'
+        run: |
+          for delay in 0 5 15; do
+            sleep "$delay"
+            if node scripts/upload-showcase-assets.mjs --verify-public; then
+              exit 0
+            fi
+          done
+          exit 1
