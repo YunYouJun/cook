@@ -161,12 +161,21 @@ fun PersonalCatalogManageScreen(snapshot: CookCatalogSnapshot, container: AppCon
                 )
                 CatalogCategoryChoices(category) { category = it }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(enabled = !transfer.working, onClick = { save.launch("cook-personal-catalog.json") }) {
+                    OutlinedButton(
+                        enabled = !transfer.working,
+                        onClick = {
+                            runCatching { save.launch("cook-personal-catalog.json") }
+                                .onFailure { status = "无法打开系统文件选择器。" }
+                        },
+                    ) {
                         Text("导出词典 JSON")
                     }
                     OutlinedButton(
                         enabled = !transfer.working,
-                        onClick = { open.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                        onClick = {
+                            runCatching { open.launch(arrayOf("application/json", "text/plain", "*/*")) }
+                                .onFailure { status = "无法打开系统文件选择器。" }
+                        },
                     ) { Text("导入词典 JSON") }
                 }
             }

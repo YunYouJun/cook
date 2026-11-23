@@ -136,6 +136,9 @@ internal class WeChatSignupViewModel(
                     error.reason != WeChatAccountException.Reason.CAPTCHA_INVALID
                 ) throw error
                 coroutineContext.ensureActive()
+                if (error.reason == WeChatAccountException.Reason.CAPTCHA_INVALID) {
+                    mutableState.value = state.value.copy(picture = null)
+                }
                 loadPicture()
                 if (error.reason == WeChatAccountException.Reason.CAPTCHA_INVALID) {
                     mutableState.value = state.value.copy(failure = error.message)

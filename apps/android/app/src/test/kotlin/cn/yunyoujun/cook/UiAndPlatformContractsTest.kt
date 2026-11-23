@@ -176,6 +176,18 @@ class UiAndPlatformContractsTest {
     }
 
     @Test
+    fun sceneCameraIgnoresNonFiniteOrNonPositiveGestureDeltas() {
+        val initial = CookSceneCamera.Initial
+        assertEquals(initial, initial.orbit(Float.NaN, 10f))
+        assertEquals(initial, initial.orbit(10f, Float.POSITIVE_INFINITY))
+        assertEquals(initial, initial.zoom(Float.NaN))
+        assertEquals(initial, initial.zoom(Float.POSITIVE_INFINITY))
+        assertEquals(initial, initial.zoom(0f))
+        assertEquals(initial, initial.zoom(-1f))
+        assertEquals(0, initial.orbit(Float.NaN, Float.NaN).angleDegrees)
+    }
+
+    @Test
     fun cloudKitchenEditsTheBasketAndCancelsAnOutdatedMenu() {
         val selected = mutableStateOf(setOf("洋葱"))
         val recipes = mutableStateOf((1..7).map { Recipe(it, "菜谱 $it") })

@@ -44,7 +44,8 @@ struct ShowcaseViewpoint: Equatable {
             let sum = angle + rotation
             guard sum.isFinite else { return self }
             let remainder = sum.truncatingRemainder(dividingBy: 360)
-            next.angle = remainder < 0 ? remainder + 360 : remainder
+            let wrapped = remainder < 0 ? remainder + 360 : remainder
+            next.angle = wrapped >= 360 ? 0 : wrapped
         }
         return next
     }

@@ -139,6 +139,7 @@ internal fun CookSearchIntentReview(
         AiProviderMode.DISABLED -> false
         AiProviderMode.BYOK_DEEPSEEK -> hasKey
         AiProviderMode.MANAGED_MEMBERSHIP -> account.membershipSession != null &&
+            account.entitlement?.userID == account.membershipSession?.subject &&
             account.entitlement?.isActiveAt() == true && container.managedAiService.isConfigured
     }
 

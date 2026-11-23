@@ -14,12 +14,15 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -318,7 +321,7 @@ fun CookTabScreen(
                 if (conditions.selectedStuff.isNotEmpty() || conditions.isFilterActive(prefs) || conditions.keyword.isNotEmpty()) {
                     TextButton(onClick = {
                         sessionController.clearSessionConditions()
-                        showUpdatedResults()
+                        clearFilters()
                     }) {
                         Text("清空本次条件")
                     }
@@ -394,9 +397,10 @@ fun CookTabScreen(
         }
 
         val avoidsSpicy = conditions.noSpicy || prefs.noSpicy
-        if (conditions.avoid.isNotEmpty() || avoidsSpicy) {
+        val activeAvoid = (prefs.avoid + conditions.avoid).distinct()
+        if (activeAvoid.isNotEmpty() || avoidsSpicy) {
             item {
-                val restrictionLabels = conditions.avoid.map { "忌口：$it" } +
+                val restrictionLabels = activeAvoid.map { "忌口：$it" } +
                     if (avoidsSpicy) listOf("不吃辣") else emptyList()
                 Text(
                     text = "本次限制：${restrictionLabels.joinToString(" · ")}",
@@ -745,11 +749,13 @@ fun CookTabScreen(
                         Spacer(modifier = Modifier.height(4.dp))
                         val (category, currentItems) = categories[safeIdx]
                         val isPantry = category == pantryCategory
-                        TagFlowChips(
-                            items = currentItems,
-                            selectedItems = (conditions.selectedStuff + if (isPantry) prefs.pantry else emptyList()).toSet(),
-                            onToggle = if (isPantry) container.preferencesStore::togglePantryItem else ::toggleIngredient,
-                        )
+                        Box(modifier = Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
+                            TagFlowChips(
+                                items = currentItems,
+                                selectedItems = if (isPantry) prefs.pantry.toSet() else conditions.selectedStuff.toSet(),
+                                onToggle = if (isPantry) container.preferencesStore::togglePantryItem else ::toggleIngredient,
+                            )
+                        }
                     }
                 }
             },

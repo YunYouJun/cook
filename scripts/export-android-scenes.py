@@ -53,11 +53,17 @@ def model_nodes(path):
 def validate_kitchen(path):
     nodes = model_nodes(path)
     by_name = {node.get("name"): node for node in nodes}
-    required = {"CookPot", "PotFood", "StoveFlame", *(f"Steam_{index}" for index in range(6))}
+    manifest = json.loads((IOS_ASSETS / "CloudKitchenManifest.json").read_text())
+    required = {
+        "CookPot",
+        "PotFood",
+        "StoveFlame",
+        *(f"Steam_{index}" for index in range(6)),
+        *(ingredient["node"] for ingredient in manifest["ingredients"]),
+    }
     missing = required - by_name.keys()
     if missing:
         raise RuntimeError(f"Kitchen scene nodes missing: {missing}")
-    manifest = json.loads((IOS_ASSETS / "CloudKitchenManifest.json").read_text())
     for ingredient in manifest["ingredients"]:
         node = by_name[ingredient["node"]]
         ring = f"Selection_{ingredient['id']}"

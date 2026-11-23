@@ -190,8 +190,10 @@ private fun AvoidOptions(
             modifier = Modifier.weight(1f),
         ) {
             item("selected", span = { GridItemSpan(maxLineSpan) }) {
-                Text("已选忌口 · ${selected.size} 种", style = MaterialTheme.typography.titleSmall)
-                if (selected.isEmpty()) Text("还没有设置忌口", style = MaterialTheme.typography.bodyMedium)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("已选忌口 · ${selected.size} 种", style = MaterialTheme.typography.titleSmall)
+                    if (selected.isEmpty()) Text("还没有设置忌口", style = MaterialTheme.typography.bodyMedium)
+                }
             }
             items(selected, key = { "selected.$it" }) { name ->
                 InputChip(

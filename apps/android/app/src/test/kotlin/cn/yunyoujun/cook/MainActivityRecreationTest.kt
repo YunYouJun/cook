@@ -1514,7 +1514,9 @@ class MainActivityRecreationTest {
                     val activity = controller.get()
                     val launched = requireNotNull(shadowOf(activity).nextStartedActivity)
                     assertEquals(url, launched.dataString)
-                    assertEquals(setOf(Intent.CATEGORY_APP_BROWSER), launched.selector?.categories)
+                    assertEquals(Intent.ACTION_VIEW, launched.selector?.action)
+                    assertEquals("http:", launched.selector?.dataString)
+                    assertEquals(setOf(Intent.CATEGORY_BROWSABLE), launched.selector?.categories)
                     assertTrue("A browser-only link should not leave an activity in the app task: $url", activity.isFinishing)
                 }
             }
@@ -1554,8 +1556,9 @@ class MainActivityRecreationTest {
             val launched = requireNotNull(shadowOf(composeRule.activity).nextStartedActivity)
             assertEquals(Intent.ACTION_VIEW, launched.action)
             assertEquals(url, launched.dataString)
-            assertEquals(Intent.ACTION_MAIN, launched.selector?.action)
-            assertEquals(setOf(Intent.CATEGORY_APP_BROWSER), launched.selector?.categories)
+            assertEquals(Intent.ACTION_VIEW, launched.selector?.action)
+            assertEquals("http:", launched.selector?.dataString)
+            assertEquals(setOf(Intent.CATEGORY_BROWSABLE), launched.selector?.categories)
             assertFalse(composeRule.activity.isFinishing)
             composeRule.onNodeWithTag("recipe.detail.250").assertIsDisplayed()
         }
@@ -1593,8 +1596,9 @@ class MainActivityRecreationTest {
         val launch = shadowOf(composeRule.activity).nextStartedActivity
         assertEquals(Intent.ACTION_VIEW, launch.action)
         assertEquals(url, launch.dataString)
-        assertEquals(Intent.ACTION_MAIN, launch.selector?.action)
-        assertEquals(setOf(Intent.CATEGORY_APP_BROWSER), launch.selector?.categories)
+        assertEquals(Intent.ACTION_VIEW, launch.selector?.action)
+        assertEquals("http:", launch.selector?.dataString)
+        assertEquals(setOf(Intent.CATEGORY_BROWSABLE), launch.selector?.categories)
         composeRule.onNodeWithText("找不到分享的菜谱").assertDoesNotExist()
     }
 
@@ -1626,7 +1630,9 @@ class MainActivityRecreationTest {
         composeRule.onNodeWithText("在网页查看").performClick()
         val browser = shadowOf(composeRule.activity).nextStartedActivity
         assertEquals(url, browser.dataString)
-        assertEquals(setOf(Intent.CATEGORY_APP_BROWSER), browser.selector?.categories)
+        assertEquals(Intent.ACTION_VIEW, browser.selector?.action)
+        assertEquals("http:", browser.selector?.dataString)
+        assertEquals(setOf(Intent.CATEGORY_BROWSABLE), browser.selector?.categories)
 
         composeRule.onNodeWithText("重试").performClick()
         composeRule.waitUntil(timeoutMillis = 15_000L) {

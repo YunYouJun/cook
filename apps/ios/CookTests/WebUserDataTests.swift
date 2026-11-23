@@ -37,4 +37,14 @@ final class WebUserDataTests: XCTestCase {
         XCTAssertEqual(imported.latestVisits.map(\.name), ["蒸蛋羹", "拍黄瓜"])
         XCTAssertEqual(imported.latestVisits.map(\.timeMillis), [1700000000005.375, 1700000000007])
     }
+
+    func testRejectsBooleanValuesAndFractionalVersion() throws {
+        XCTAssertNil(WebUserData.parse(#"{"app":"cook","version":true}"#))
+        XCTAssertNil(WebUserData.parse(#"{"app":"cook","version":1.5}"#))
+        let parsed = try XCTUnwrap(WebUserData.parse(
+            #"{"app":"cook","version":1,"favorites":[{"id":true,"time":10},{"id":2,"time":false},{"id":3,"time":20}],"histories":[{"recipe":{"name":"西红柿炒鸡蛋"},"time":true}]}"#
+        ))
+        XCTAssertEqual(parsed.favorites, [WebUserData.FavoriteItem(recipeId: 3, timeMillis: 20)])
+        XCTAssertTrue(parsed.visits.isEmpty)
+    }
 }

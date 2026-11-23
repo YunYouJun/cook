@@ -4,7 +4,9 @@ const MAX_EXPIRY_MS = 253402300799000
 
 /** Use the effective deadline for access checks. Settlement still uses the paid expireAt field. */
 function membershipAccessExpiry(record) {
-  let expireAt = Number.isFinite(record?.expireAt) && record.expireAt > 0 ? record.expireAt : null
+  let expireAt = Number.isSafeInteger(record?.expireAt) && record.expireAt > 0 && record.expireAt <= MAX_EXPIRY_MS
+    ? record.expireAt
+    : null
   if (Array.isArray(record?.playSubscriptionAccess)) {
     for (const entry of record.playSubscriptionAccess) {
       const timestamp = entry?.expiresAt

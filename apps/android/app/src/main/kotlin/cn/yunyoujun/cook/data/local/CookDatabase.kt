@@ -106,9 +106,19 @@ interface DeviceLibraryDao {
     }
 
     @Transaction
-    suspend fun removeFavoriteTransactional(recipeId: Int, removedAtMs: Double) {
+    suspend fun removeFavoriteTransactional(
+        recipeId: Int,
+        removedAtMs: Double,
+        maxRemovals: Int = Int.MAX_VALUE,
+    ) {
         deleteFavorite(recipeId)
         upsertFavoriteRemoval(DeviceFavoriteRemovalEntity(recipeId = recipeId, removedAtMs = removedAtMs))
+        val all = getAllFavoriteRemovals()
+        if (all.size > maxRemovals) {
+            for (overflow in all.drop(maxRemovals)) {
+                deleteFavoriteRemoval(overflow.recipeId)
+            }
+        }
     }
 
     @Query("SELECT * FROM device_histories ORDER BY visitedAtMs DESC, recipeName ASC")

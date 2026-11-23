@@ -35,7 +35,10 @@ struct WebUserData: Equatable {
         guard let data = text.trimmingCharacters(in: .whitespacesAndNewlines).data(using: .utf8),
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               object["app"] as? String == app,
-              (object["version"] as? NSNumber)?.intValue == version
+              let rawVersion = object["version"] as? NSNumber,
+              CFGetTypeID(rawVersion) != CFBooleanGetTypeID(),
+              rawVersion.doubleValue == rawVersion.doubleValue.rounded(),
+              rawVersion.intValue == version
         else {
             return nil
         }
@@ -110,7 +113,9 @@ struct WebUserData: Equatable {
     }
 
     private static func recipeId(_ value: Any?) -> Int? {
-        guard let number = value as? NSNumber else {
+        guard let number = value as? NSNumber,
+              CFGetTypeID(number) != CFBooleanGetTypeID()
+        else {
             return nil
         }
         let double = number.doubleValue
@@ -121,7 +126,9 @@ struct WebUserData: Equatable {
     }
 
     private static func time(_ value: Any?) -> Double? {
-        guard let number = value as? NSNumber else {
+        guard let number = value as? NSNumber,
+              CFGetTypeID(number) != CFBooleanGetTypeID()
+        else {
             return nil
         }
         let double = number.doubleValue

@@ -429,24 +429,36 @@ fun PrivateRecipesManageScreen(
         contract = ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        runCatching {
-            val jsonText = container.privateRecipesStore.exportPortableV1()
-            context.contentResolver.openOutputStream(uri)?.use { it.write(jsonText.toByteArray(Charsets.UTF_8)) }
-                ?: error("无法写入文件")
-        }.onSuccess { bannerText = "已导出跨端通用 v1 私房菜 JSON。" }
-            .onFailure { bannerText = "导出失败：${it.message}" }
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val jsonText = container.privateRecipesStore.exportPortableV1()
+                    context.applicationContext.contentResolver.openOutputStream(uri, "wt")?.use {
+                        it.write(jsonText.toByteArray(Charsets.UTF_8))
+                    } ?: error("无法写入文件")
+                }
+            }
+            result.onSuccess { bannerText = "已导出跨端通用 v1 私房菜 JSON。" }
+                .onFailure { bannerText = "导出失败：${it.message}" }
+        }
     }
 
     val exportBackupLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        runCatching {
-            val jsonText = container.privateRecipesStore.exportBackupV2()
-            context.contentResolver.openOutputStream(uri)?.use { it.write(jsonText.toByteArray(Charsets.UTF_8)) }
-                ?: error("无法写入文件")
-        }.onSuccess { bannerText = "已导出完整备份（含视频元数据）。" }
-            .onFailure { bannerText = "导出失败：${it.message}" }
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val jsonText = container.privateRecipesStore.exportBackupV2()
+                    context.applicationContext.contentResolver.openOutputStream(uri, "wt")?.use {
+                        it.write(jsonText.toByteArray(Charsets.UTF_8))
+                    } ?: error("无法写入文件")
+                }
+            }
+            result.onSuccess { bannerText = "已导出完整备份（含视频元数据）。" }
+                .onFailure { bannerText = "导出失败：${it.message}" }
+        }
     }
 
     val importLauncher = rememberLauncherForActivityResult(
@@ -483,15 +495,24 @@ fun PrivateRecipesManageScreen(
                     } else null,
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedButton(onClick = { exportPortableLauncher.launch("cook-private-recipes.json") }) {
+                    OutlinedButton(onClick = {
+                        runCatching { exportPortableLauncher.launch("cook-private-recipes.json") }
+                            .onFailure { bannerText = "无法打开系统文件选择器。" }
+                    }) {
                         Text("导出通用 JSON (v1)")
                     }
-                    OutlinedButton(onClick = { exportBackupLauncher.launch("cook-private-recipes-backup.json") }) {
+                    OutlinedButton(onClick = {
+                        runCatching { exportBackupLauncher.launch("cook-private-recipes-backup.json") }
+                            .onFailure { bannerText = "无法打开系统文件选择器。" }
+                    }) {
                         Text("导出原生备份 (v2)")
                     }
                     OutlinedButton(
                         enabled = !importer.working,
-                        onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
+                        onClick = {
+                            runCatching { importLauncher.launch(arrayOf("application/json", "*/*")) }
+                                .onFailure { bannerText = "无法打开系统文件选择器。" }
+                        },
                     ) {
                         Text("导入私房菜 JSON")
                     }

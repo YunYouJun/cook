@@ -126,7 +126,14 @@ async function evaluateWebView(url) {
         }))
       }, { once: true })
       socket.addEventListener('message', ({ data }) => {
-        const message = JSON.parse(data)
+        let message
+        try {
+          message = JSON.parse(String(data))
+        }
+        catch (error) {
+          reject(error)
+          return
+        }
         if (message.id !== 1)
           return
         const result = message.result?.result?.value
@@ -142,6 +149,24 @@ async function evaluateWebView(url) {
   }
 }
 
+function parseUrlOrigin(url) {
+  try {
+    return new URL(url).origin
+  }
+  catch {
+    return null
+  }
+}
+
+export function selectLegacyWebViewTarget(targets, local) {
+  const matched = targets.filter(target => target?.type === 'page'
+    && legacyOrigins.includes(parseUrlOrigin(target.url))
+    && target.webSocketDebuggerUrl?.startsWith(`ws://${local}/devtools/page/`))
+  if (matched.length !== 1)
+    throw new Error('请回到旧版食用手册首页，关闭 App 内其他页面后再试')
+  return matched[0]
+}
+
 async function readDeviceLibrary(serial) {
   const adb = (...args) => execFileSync('adb', ['-s', serial, ...args], { encoding: 'utf8', timeout: 15_000, stdio: ['ignore', 'pipe', 'ignore'] }).trim()
   let pid
@@ -154,21 +179,24 @@ async function readDeviceLibrary(serial) {
   if (!/^\d+$/.test(pid))
     throw new Error('无法识别唯一的旧版 App 进程')
   const port = adb('forward', 'tcp:0', `localabstract:webview_devtools_remote_${pid}`)
+  if (!/^\d+$/.test(port))
+    throw new Error('无法建立旧版 WebView 调试转发端口')
   try {
     const local = `127.0.0.1:${port}`
     const response = await fetch(`http://${local}/json/list`, { signal: AbortSignal.timeout(5000) })
       .catch(() => { throw new Error('无法连接旧版 WebView，请确认旧版支持 WebView 调试') })
     if (!response.ok)
       throw new Error('旧版 WebView 调试接口不可用')
-    const targets = (await response.json()).filter(target => target.type === 'page'
-      && legacyOrigins.includes(new URL(target.url).origin)
-      && target.webSocketDebuggerUrl?.startsWith(`ws://${local}/devtools/page/`))
-    if (targets.length !== 1)
-      throw new Error('请回到旧版食用手册首页，关闭 App 内其他页面后再试')
-    return await evaluateWebView(targets[0].webSocketDebuggerUrl)
+    const target = selectLegacyWebViewTarget(await response.json(), local)
+    return await evaluateWebView(target.webSocketDebuggerUrl)
   }
   finally {
-    adb('forward', '--remove', `tcp:${port}`)
+    try {
+      adb('forward', '--remove', `tcp:${port}`)
+    }
+    catch {
+      // ignore cleanup failures
+    }
   }
 }
 

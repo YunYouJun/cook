@@ -63,9 +63,7 @@ private struct WeChatSignupView: View {
             case .confirm(let proof):
                 Section {
                     Button("创建账号并授权微信") {
-                        registering = true
-                        run {
-                            defer { registering = false }
+                        run(registering: true) {
                             try await accounts.registerWithWeChat(proof: proof, deviceID: form.deviceID)
                         }
                     }
@@ -127,11 +125,15 @@ private struct WeChatSignupView: View {
         }
     }
 
-    private func run(_ operation: @escaping @MainActor () async throws -> Void) {
+    private func run(registering: Bool = false, _ operation: @escaping @MainActor () async throws -> Void) {
         guard work == nil else { return }
         error = nil
+        if registering { self.registering = true }
         work = Task {
-            defer { work = nil }
+            defer {
+                if registering { self.registering = false }
+                work = nil
+            }
             do { try await operation() }
             catch is CancellationError {}
             catch WeChatSignupError.existingAccount { form.step = .existing }

@@ -621,15 +621,19 @@ internal class PlayMembershipStore(
             val canChange = !purchase.suspended && result.settlement == PlaySettlement.CONFIRMED &&
                 subscription.state in setOf(PlaySubscriptionState.ACTIVE, PlaySubscriptionState.CANCELLED) &&
                 (subscription.periodExpiresAt ?: 0L) > System.currentTimeMillis()
-            subscriptionTokenForPlanChange = purchase.token.takeIf { canChange }
-            updateState(identity) { it.copy(subscription = subscription, canChangePlan = canChange) }
+            updateState(identity) {
+                subscriptionTokenForPlanChange = purchase.token.takeIf { canChange }
+                it.copy(subscription = subscription, canChangePlan = canChange)
+            }
         }
         return result.settlement
     }
 
     private fun clearVerifiedSubscription(identity: MembershipSession) {
-        subscriptionTokenForPlanChange = null
-        updateState(identity) { it.copy(subscription = null, canChangePlan = false) }
+        updateState(identity) {
+            subscriptionTokenForPlanChange = null
+            it.copy(subscription = null, canChangePlan = false)
+        }
     }
 
     private fun resetForSession(identity: MembershipSession?) {

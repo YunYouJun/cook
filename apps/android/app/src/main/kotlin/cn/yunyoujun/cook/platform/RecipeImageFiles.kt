@@ -60,6 +60,7 @@ internal suspend fun saveRecipeImageToGallery(context: Context, name: String, im
     }
 
 internal suspend fun writeRecipeImage(context: Context, uri: Uri, image: LoadedRecipeImage) = withContext(Dispatchers.IO) {
-    val output = context.contentResolver.openOutputStream(uri) ?: throw IOException("Cannot open image destination")
+    val output = context.contentResolver.openOutputStream(uri, "wt")
+        ?: throw IOException("Cannot open image destination")
     output.use { it.write(image.bytes) }
 }

@@ -80,6 +80,12 @@ object IsolatedHttpPostTransport : HttpTransport {
         connectTimeoutMs: Int,
         readTimeoutMs: Int,
     ): HttpResponsePayload = suspendCancellableCoroutine { continuation ->
+        val parsed = URI(url)
+        val scheme = parsed.scheme?.lowercase()
+        val isLocalLoopback = scheme == "http" && parsed.host == "127.0.0.1"
+        require((scheme == "https" || isLocalLoopback) && !parsed.host.isNullOrEmpty() && parsed.rawUserInfo == null) {
+            "Unsupported transport endpoint"
+        }
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             requestMethod = method
             instanceFollowRedirects = false
@@ -115,7 +121,7 @@ object IsolatedHttpPostTransport : HttpTransport {
                 }
 
                 val status = connection.responseCode
-                val stream = if (status in 200..299) connection.inputStream else (connection.errorStream ?: connection.inputStream)
+                val stream = if (status in 200..299) connection.inputStream else connection.errorStream
                 val buffer = ByteArrayOutputStream()
                 stream?.use { input ->
                     val chunk = ByteArray(4096)
@@ -125,7 +131,7 @@ object IsolatedHttpPostTransport : HttpTransport {
                             throw CancellationException("HTTP request cancelled")
                         }
                         val read = input.read(chunk)
-                        if (read <= 0) break
+                        if (read < 0) break
                         total += read
                         if (total > maxResponseBytes) {
                             throw HttpResponseTooLargeException(maxResponseBytes)
@@ -232,7 +238,12 @@ class FeedbackClient(
                 "mode" to JsonPrimitive(mode.rawValue),
             ),
         )
-        runCatching { post(payload, recipeVersion = recipeVersion, entryPoint = "search") }
+        try {
+            post(payload, recipeVersion = recipeVersion, entryPoint = "search")
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+        }
     }
 
     suspend fun signalOpen(
@@ -258,7 +269,12 @@ class FeedbackClient(
                 "rank" to JsonPrimitive(rank),
             ),
         )
-        runCatching { post(payload, recipeVersion = recipeVersion, entryPoint = "search") }
+        try {
+            post(payload, recipeVersion = recipeVersion, entryPoint = "search")
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+        }
     }
 
     suspend fun reportRecipeIssue(

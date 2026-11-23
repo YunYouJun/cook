@@ -94,6 +94,9 @@ class AiSettingsScreenTest {
 
         compose.onNodeWithText("输入新的 DeepSeek API Key").performScrollTo().performTextReplacement("sk-fixture")
         compose.onNodeWithText("加密保存 Key").performScrollTo().assertIsEnabled().performClick()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            preferences.current.aiProviderMode == AiProviderMode.BYOK_DEEPSEEK && vault.readSecret(keyName) == "sk-fixture"
+        }
         personal.performScrollTo().assertIsSelected()
         assertEquals("sk-fixture", vault.readSecret(keyName))
         assertEquals(AiProviderMode.BYOK_DEEPSEEK, preferences.current.aiProviderMode)
@@ -105,6 +108,9 @@ class AiSettingsScreenTest {
 
         clear.performScrollTo().performClick()
         compose.onNodeWithText("删除 Key").performClick()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            preferences.current.aiProviderMode == AiProviderMode.DISABLED && vault.readSecret(keyName) == null
+        }
         assertNull(vault.readSecret(keyName))
         assertEquals(AiProviderMode.DISABLED, preferences.current.aiProviderMode)
         local.performScrollTo().assertIsSelected()

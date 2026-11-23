@@ -11,14 +11,20 @@ internal data class CookSceneCamera(
 ) {
     val angleDegrees: Int get() = Math.floorMod(Math.toDegrees(heading - Initial.heading).roundToInt(), 360)
 
-    fun orbit(horizontal: Float, vertical: Float): CookSceneCamera = copy(
-        heading = (heading + horizontal * 0.007) % (2 * Math.PI),
-        elevation = (elevation - vertical * 0.006).coerceIn(0.08, 1.43),
-    )
+    fun orbit(horizontal: Float, vertical: Float): CookSceneCamera {
+        if (!horizontal.isFinite() || !vertical.isFinite()) return this
+        return copy(
+            heading = (heading + horizontal * 0.007) % (2 * Math.PI),
+            elevation = (elevation - vertical * 0.006).coerceIn(0.08, 1.43),
+        )
+    }
 
     fun turn(steps: Int): CookSceneCamera = copy(heading = (heading + steps * Math.PI / 6) % (2 * Math.PI))
 
-    fun zoom(scale: Float): CookSceneCamera = copy(magnification = (magnification * scale).coerceIn(0.65, 2.2))
+    fun zoom(scale: Float): CookSceneCamera {
+        if (!scale.isFinite() || scale <= 0f) return this
+        return copy(magnification = (magnification * scale).coerceIn(0.65, 2.2))
+    }
 
     companion object {
         val Initial = CookSceneCamera()

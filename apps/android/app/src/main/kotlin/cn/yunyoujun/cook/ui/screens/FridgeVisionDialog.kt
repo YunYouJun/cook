@@ -17,9 +17,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -30,6 +32,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import cn.yunyoujun.cook.ui.state.FridgeBatchReview
 import cn.yunyoujun.cook.ui.state.FridgeBatchReview.Phase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 internal fun FridgeVisionDialog(
@@ -129,8 +133,10 @@ private fun FridgeVisionContent(
             }
             is Phase.Unavailable -> Text(phase.message, color = MaterialTheme.colorScheme.error)
             is Phase.Ready -> {
-                val preview = remember(review) {
-                    BitmapFactory.decodeByteArray(review.jpeg, 0, review.jpeg.size)?.asImageBitmap()
+                val preview by produceState<ImageBitmap?>(null, review) {
+                    value = withContext(Dispatchers.Default) {
+                        BitmapFactory.decodeByteArray(review.jpeg, 0, review.jpeg.size)?.asImageBitmap()
+                    }
                 }
                 preview?.let {
                     Image(it, contentDescription = "将上传的照片", modifier = Modifier.fillMaxWidth().heightIn(max = 160.dp))

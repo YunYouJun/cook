@@ -211,7 +211,7 @@ class Controller:
             if apply and not errors:
                 save(self.directory / 'invitation.json', {'open': True, 'checkedAt': now(),
                      'buildId': self.c['buildId'], 'url': public_link})
-            return {'open': enabled if apply else None, 'wouldOpen': enabled,
+            return {'open': enabled if apply else None, 'wouldOpen': enabled and not errors,
                     'blockers': errors, 'changed': False}
         try:
             snapshot = self.snapshot()

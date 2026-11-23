@@ -91,7 +91,9 @@ class BetaTests(unittest.TestCase):
             self.assertEqual(c.reconcile(True)['blockers'], [])
             self.assertEqual(beta.read(self.directory / 'invitation.json')['url'], url)
             self.s['publicTesters'] = 31
-            self.assertIn('group.capacity', c.reconcile(True)['blockers'])
+            blocked = c.reconcile(True)
+            self.assertIn('group.capacity', blocked['blockers'])
+            self.assertFalse(blocked['wouldOpen'])
             self.s['group']['attributes']['publicLinkEnabled'] = False
             self.assertIn('group.public_link', c.reconcile(True)['blockers'])
             with self.assertRaises(ValueError):

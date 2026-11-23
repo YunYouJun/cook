@@ -76,4 +76,11 @@ class WeChatCallbackActivity : Activity() {
         (application as CookApplication).container.weChatAuthorization.handle(intent)
         finish()
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        (application as CookApplication).container.weChatAuthorization.handle(intent)
+        finish()
+    }
 }

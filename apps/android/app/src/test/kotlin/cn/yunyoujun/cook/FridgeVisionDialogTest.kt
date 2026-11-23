@@ -17,6 +17,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -91,6 +92,7 @@ class FridgeVisionDialogTest {
                 }
             }
             awaitText("同意并识别")
+            awaitContentDescription("将上传的照片")
             val recipient = "确认后，处理后的照片将发送给云乐坊（腾讯云 CloudBase）和 DeepSeek。"
             val canScroll = SemanticsMatcher.keyIsDefined(SemanticsActions.ScrollBy)
             compose.onNodeWithContentDescription("将上传的照片").assert(hasAnyAncestor(canScroll))
@@ -337,6 +339,7 @@ class FridgeVisionDialogTest {
 
             compose.onNodeWithText("同意并识别").performClick()
             awaitText("确认后，处理后的照片将发送给云乐坊（腾讯云 CloudBase）和阿里云百炼。")
+            awaitContentDescription("将上传的照片")
             compose.onNodeWithContentDescription("将上传的照片").assertIsDisplayed()
             assertEquals(2, transport.providerChecks.get())
             assertEquals(1, transport.refreshes.get())
@@ -415,6 +418,7 @@ class FridgeVisionDialogTest {
             runBlocking { sessions.checkMembership(MembershipCheckReason.RESTORE) }
 
             awaitText("同意并识别")
+            awaitContentDescription("将上传的照片")
             compose.onNodeWithContentDescription("将上传的照片").assertIsDisplayed()
             assertEquals(initialChecks + 1, transport.providerChecks.get())
             assertEquals(0, transport.uploads.get())
@@ -649,6 +653,12 @@ class FridgeVisionDialogTest {
                     )
                 }
             }
+        }
+    }
+
+    private fun awaitContentDescription(label: String) {
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithContentDescription(label).fetchSemanticsNodes().isNotEmpty()
         }
     }
 

@@ -133,8 +133,16 @@ class UserLibraryRepository(
                         val nowMs = System.currentTimeMillis().toDouble()
                         val latest = deviceDao.latestFavoriteChangeTime(recipeId) ?: 0.0
                         if (currentlyFavorite) {
-                            deviceDao.removeFavoriteTransactional(recipeId, removedAtMs = maxOf(nowMs, latest))
+                            deviceDao.removeFavoriteTransactional(
+                                recipeId = recipeId,
+                                removedAtMs = maxOf(nowMs, latest),
+                                maxRemovals = UserDataDocument.MAX_REMOVALS,
+                            )
                         } else {
+                            val existingFavorites = deviceDao.getAllFavorites()
+                            if (existingFavorites.none { it.recipeId == recipeId } && existingFavorites.size >= UserDataDocument.MAX_FAVORITES) {
+                                throw UserDataDocument.InvalidDocumentException("Favorites limit exceeded")
+                            }
                             val time = maxOf(nowMs, latest + 1, Math.nextUp(latest))
                             if (!time.isFinite()) throw UserDataDocument.InvalidDocumentException("Favorite timestamp overflow")
                             deviceDao.addFavoriteTransactional(recipeId, addedAtMs = time)
@@ -218,7 +226,7 @@ class UserLibraryRepository(
         }
         val favRemovals = deviceDao.getAllFavoriteRemovals().map {
             UserDataDocument.Favorite(id = it.recipeId, time = it.removedAtMs)
-        }
+        }.take(UserDataDocument.MAX_REMOVALS)
         val histories = deviceDao.getAllHistories().mapNotNull { entity ->
             runCatching {
                 UserDataDocument.Visit(

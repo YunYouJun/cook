@@ -144,27 +144,44 @@ async function verifyPublicObject({ key, data }) {
 }
 
 async function readVerifiedPublicObject(key, bytes, sha256) {
-  const response = await fetch(`https://assets.yunle.fun/${key}`, {
-    redirect: 'error',
-    headers: { 'Accept-Encoding': 'identity' },
-    signal: AbortSignal.timeout(10_000),
-  })
-  if (response.status !== 200 || !response.body) {
-    await response.body?.cancel()
-    throw new Error(`HTTP ${response.status}`)
+  const retryDelays = [0, 1000, 2500]
+  let lastError
+  for (let attempt = 0; attempt < retryDelays.length; attempt++) {
+    if (retryDelays[attempt] > 0)
+      await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]))
+    try {
+      const response = await fetch(`https://assets.yunle.fun/${key}`, {
+        redirect: 'error',
+        headers: { 'Accept-Encoding': 'identity' },
+        signal: AbortSignal.timeout(30_000),
+      })
+      if (response.status !== 200 || !response.body) {
+        const status = response.status
+        await response.body?.cancel()
+        const error = new Error(`HTTP ${status}`)
+        if (status >= 400 && status < 500)
+          throw Object.assign(error, { nonRetryable: true })
+        throw error
+      }
+      const hash = createHash('sha256')
+      const chunks = []
+      let received = 0
+      for await (const chunk of response.body) {
+        received += chunk.byteLength
+        if (received > bytes)
+          throw Object.assign(new Error('公网文件超过清单大小'), { nonRetryable: true })
+        chunks.push(chunk)
+        hash.update(chunk)
+      }
+      if (received !== bytes || hash.digest('hex') !== sha256)
+        throw Object.assign(new Error('公网文件与预期大小或摘要不一致'), { nonRetryable: true })
+      return Buffer.concat(chunks, received)
+    }
+    catch (error) {
+      if (error?.nonRetryable)
+        throw error
+      lastError = error
+    }
   }
-  const hash = createHash('sha256')
-  const chunks = []
-  let received = 0
-  for await (const chunk of response.body) {
-    received += chunk.byteLength
-    if (received > bytes)
-      throw new Error('公网文件超过清单大小')
-    chunks.push(chunk)
-    hash.update(chunk)
-  }
-  if (received !== bytes || hash.digest('hex') !== sha256) {
-    throw new Error('公网文件与预期大小或摘要不一致')
-  }
-  return Buffer.concat(chunks, received)
+  throw lastError
 }

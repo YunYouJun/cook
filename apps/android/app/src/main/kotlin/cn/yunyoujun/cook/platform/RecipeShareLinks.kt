@@ -40,6 +40,8 @@ object RecipeShareLinks {
 
 internal fun browserLinkIntent(rawUrl: String): Intent =
     Intent(Intent.ACTION_VIEW, Uri.parse(rawUrl)).apply {
-        // Resolve to a browser even when the URL is associated with Cook.
-        selector = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_BROWSER)
+        addCategory(Intent.CATEGORY_BROWSABLE)
+        // Resolve to a browser URL viewer even when the host is associated with Cook.
+        selector = Intent(Intent.ACTION_VIEW, Uri.fromParts("http", "", null))
+            .addCategory(Intent.CATEGORY_BROWSABLE)
     }

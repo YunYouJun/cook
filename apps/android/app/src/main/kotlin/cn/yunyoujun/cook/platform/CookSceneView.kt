@@ -26,7 +26,9 @@ import com.google.android.filament.Filament
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.LightManager
 import com.google.android.filament.Renderer
+import com.google.android.filament.Scene
 import com.google.android.filament.SwapChain
+import com.google.android.filament.View as FilamentView
 import com.google.android.filament.Viewport
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.AssetLoader
@@ -98,7 +100,7 @@ internal class CookSceneView(
             val renderer = renderer ?: return false
             val target = nearestSceneTarget(renderer.geometry.targets, event.x, event.y, targetRadius)
             if (target != null) onIngredient(target.name)
-            else renderer.pick(event.x.toInt(), event.y.toInt(), onIngredient)
+            else renderer.pick(event.x.toInt(), event.y.toInt()) { onIngredient(it) }
             return true
         }
 
@@ -304,20 +306,17 @@ private class CookSceneRenderer(
 ) : UiHelper.RendererCallback {
     private val engine = createEngine(surface.context, retrying)
     private val entities = EntityManager.get()
-    private val hardwareRenderer = engine.createRenderer()
-    private val scene = engine.createScene()
-    private val view = engine.createView()
-    private val cameraEntity = entities.create()
-    private val camera = engine.createCamera(cameraEntity)
-    private val materials = UbershaderProvider(engine)
-    private val models = AssetLoader(engine, materials, entities)
-    private val textures = ResourceLoader(engine)
-    private val helper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
-    private val keyLight = entities.create()
-    private val ambientLight = IndirectLight.Builder()
-        .irradiance(1, floatArrayOf(0.75f, 0.82f, 1f))
-        .intensity(24_000f)
-        .build(engine)
+    private lateinit var hardwareRenderer: Renderer
+    private lateinit var scene: Scene
+    private lateinit var view: FilamentView
+    private var cameraEntity = 0
+    private lateinit var camera: Camera
+    private lateinit var materials: UbershaderProvider
+    private lateinit var models: AssetLoader
+    private lateinit var textures: ResourceLoader
+    private lateinit var helper: UiHelper
+    private var keyLight = 0
+    private lateinit var ambientLight: IndirectLight
     private val choreographer = Choreographer.getInstance()
     private val handler = Handler(Looper.getMainLooper())
     private val frame = Choreographer.FrameCallback { time -> renderSafely { draw(time) } }
@@ -352,18 +351,37 @@ private class CookSceneRenderer(
     private val clipPosition = FloatArray(4)
 
     init {
-        view.scene = scene
-        view.camera = camera
-        view.setScreenSpaceRefractionEnabled(false)
-        camera.setExposure(16f, 1f / 125f, 100f)
-        LightManager.Builder(LightManager.Type.DIRECTIONAL)
-            .color(1f, 0.97f, 0.9f)
-            .intensity(85_000f)
-            .direction(-0.5f, -1f, -0.4f)
-            .castShadows(true)
-            .build(engine, keyLight)
-        scene.addEntity(keyLight)
-        scene.indirectLight = ambientLight
+        try {
+            hardwareRenderer = engine.createRenderer()
+            scene = engine.createScene()
+            view = engine.createView()
+            cameraEntity = entities.create()
+            camera = engine.createCamera(cameraEntity)
+            materials = UbershaderProvider(engine)
+            models = AssetLoader(engine, materials, entities)
+            textures = ResourceLoader(engine)
+            helper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
+            keyLight = entities.create()
+            ambientLight = IndirectLight.Builder()
+                .irradiance(1, floatArrayOf(0.75f, 0.82f, 1f))
+                .intensity(24_000f)
+                .build(engine)
+            view.scene = scene
+            view.camera = camera
+            view.setScreenSpaceRefractionEnabled(false)
+            camera.setExposure(16f, 1f / 125f, 100f)
+            LightManager.Builder(LightManager.Type.DIRECTIONAL)
+                .color(1f, 0.97f, 0.9f)
+                .intensity(85_000f)
+                .direction(-0.5f, -1f, -0.4f)
+                .castShadows(true)
+                .build(engine, keyLight)
+            scene.addEntity(keyLight)
+            scene.indirectLight = ambientLight
+        } catch (t: Throwable) {
+            close()
+            throw t
+        }
     }
 
     fun load(bytes: ByteArray) {
@@ -401,7 +419,7 @@ private class CookSceneRenderer(
         helper.attachTo(surface)
     }
 
-    fun setSelection(selected: Set<String>) {
+    fun setSelection(selected: Set<String>) = renderSafely {
         val transforms = engine.transformManager
         for (target in selectable.values) {
             if (target === pot) continue
@@ -421,7 +439,7 @@ private class CookSceneRenderer(
         requestFrame()
     }
 
-    fun setPreparingMenu(preparing: Boolean) {
+    fun setPreparingMenu(preparing: Boolean) = renderSafely {
         if (setGroupVisible(cookingEffects, preparing)) requestFrame()
     }
 
@@ -434,8 +452,8 @@ private class CookSceneRenderer(
         return true
     }
 
-    fun setCookingProgress(progress: Float) {
-        val target = pot ?: return
+    fun setCookingProgress(progress: Float) = renderSafely {
+        val target = pot ?: return@renderSafely
         val angle = if (progress > 0f && progress < 1f) {
             (5 * sin(Math.PI * progress) * sin(Math.PI * 6 * progress)).toFloat()
         } else 0f
@@ -443,7 +461,7 @@ private class CookSceneRenderer(
         Matrix.rotateM(matrix, 0, angle, 0f, 1f, 0f)
         val transforms = engine.transformManager
         val transform = transforms.getInstance(target.entity)
-        if (transform == 0) return
+        if (transform == 0) return@renderSafely
         transforms.setTransform(transform, matrix)
         requestFrame()
     }
@@ -461,7 +479,7 @@ private class CookSceneRenderer(
         return null
     }
 
-    fun setBackground(color: Int) {
+    fun setBackground(color: Int) = renderSafely {
         hardwareRenderer.clearOptions = Renderer.ClearOptions().apply {
             clear = true
             setClearColor(Color.red(color) / 255.0, Color.green(color) / 255.0, Color.blue(color) / 255.0, 1.0)
@@ -469,7 +487,7 @@ private class CookSceneRenderer(
         requestFrame()
     }
 
-    fun setCamera(pose: CookSceneCamera) {
+    fun setCamera(pose: CookSceneCamera) = renderSafely {
         cameraPose = pose
         updateCamera()
     }
@@ -693,30 +711,41 @@ private class CookSceneRenderer(
     fun close() {
         if (closed) return
         closed = true
-        cancelFrame()
-        helper.detach()
-        releaseSurface()
-        helper.renderCallback = null
-        textures.asyncCancelLoad()
-        textures.evictResourceData()
-        asset?.let {
-            scene.removeEntities(it.entities)
-            models.destroyAsset(it)
+        runCatching { cancelFrame() }
+        if (::helper.isInitialized) {
+            runCatching { helper.detach() }
         }
-        textures.destroy()
-        models.destroy()
-        materials.destroyMaterials()
-        materials.destroy()
-        scene.indirectLight = null
-        engine.destroyIndirectLight(ambientLight)
-        engine.destroyEntity(keyLight)
-        engine.destroyView(view)
-        engine.destroyScene(scene)
-        engine.destroyCameraComponent(cameraEntity)
-        entities.destroy(cameraEntity)
-        entities.destroy(keyLight)
-        engine.destroyRenderer(hardwareRenderer)
-        engine.destroy()
+        runCatching { releaseSurface() }
+        if (::helper.isInitialized) {
+            runCatching { helper.renderCallback = null }
+        }
+        if (::textures.isInitialized) {
+            runCatching { textures.asyncCancelLoad() }
+            runCatching { textures.evictResourceData() }
+        }
+        asset?.let { loadedAsset ->
+            if (::scene.isInitialized) runCatching { scene.removeEntities(loadedAsset.entities) }
+            if (::models.isInitialized) runCatching { models.destroyAsset(loadedAsset) }
+        }
+        asset = null
+        if (::textures.isInitialized) runCatching { textures.destroy() }
+        if (::models.isInitialized) runCatching { models.destroy() }
+        if (::materials.isInitialized) {
+            runCatching { materials.destroyMaterials() }
+            runCatching { materials.destroy() }
+        }
+        if (::scene.isInitialized) runCatching { scene.indirectLight = null }
+        if (::ambientLight.isInitialized) runCatching { engine.destroyIndirectLight(ambientLight) }
+        if (keyLight != 0) runCatching { engine.destroyEntity(keyLight) }
+        if (::view.isInitialized) runCatching { engine.destroyView(view) }
+        if (::scene.isInitialized) runCatching { engine.destroyScene(scene) }
+        if (cameraEntity != 0) {
+            runCatching { engine.destroyCameraComponent(cameraEntity) }
+            runCatching { entities.destroy(cameraEntity) }
+        }
+        if (keyLight != 0) runCatching { entities.destroy(keyLight) }
+        if (::hardwareRenderer.isInitialized) runCatching { engine.destroyRenderer(hardwareRenderer) }
+        runCatching { engine.destroy() }
     }
 
     // Filament can reorder transform instances after a frame; only the entity persists.

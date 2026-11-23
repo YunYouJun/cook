@@ -73,7 +73,7 @@ internal class LibraryTransferViewModel : ViewModel() {
                     val json = container.userLibraryRepository.exportUserDataDocumentJson(scope)
                     withContext(Dispatchers.IO) {
                         checkScope(container, scope)
-                        val stream = resolver.openOutputStream(uri) ?: throw IOException("无法打开写入目标文件。")
+                        val stream = resolver.openOutputStream(uri, "wt") ?: throw IOException("无法打开写入目标文件。")
                         stream.use { it.write(json.toByteArray(Charsets.UTF_8)) }
                     }
                     message = "已保存${scope.label}的收藏与浏览历史。"

@@ -136,8 +136,11 @@ final class AccountUserDataStore {
         guard let data = try? JSONEncoder().encode(snapshot.document),
               var object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return "" }
         object["app"] = "cook"
-        object["exportedAt"] = Date().timeIntervalSince1970 * 1000
-        guard let result = try? JSONSerialization.data(withJSONObject: object, options: .sortedKeys) else { return "" }
+        object["exportedAt"] = WebUserData.milliseconds(Date())
+        guard let result = try? JSONSerialization.data(
+            withJSONObject: object,
+            options: [.sortedKeys, .withoutEscapingSlashes],
+        ) else { return "" }
         return String(decoding: result, as: UTF8.self)
     }
 

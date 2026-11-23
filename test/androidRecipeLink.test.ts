@@ -48,3 +48,21 @@ it.each([
   expect(screen.find('a').exists()).toBe(false)
   screen.unmount()
 })
+
+it('builds an Android browser intent URI for valid Cook HTTPS URLs', async () => {
+  const { cookAndroidIntentUrl } = await import('../apps/web/app/utils/androidBrowserIntent')
+  expect(cookAndroidIntentUrl('https://cook.yunyoujun.cn/recipes/250?tab=steps#top')).toBe(
+    'intent://cook.yunyoujun.cn/recipes/250?tab=steps#top#Intent;scheme=https;package=fun.yunle.cook;S.browser_fallback_url=https%3A%2F%2Fcook.yunyoujun.cn%2Frecipes%2F250%3Ftab%3Dsteps%23top;end',
+  )
+})
+
+it.each([
+  'http://cook.yunyoujun.cn/recipes/250',
+  'https://cook.yunyoujun.cn/recipes/250 extra',
+  'https://cook.yunyoujun.cn/recipes/250\n',
+  'https://cook.yunyoujun.cn/recipes/250\u0000',
+  'https://cook.yunyoujun.cn/recipes/250#Intent;action=test',
+])('rejects invalid Cook URL %j in cookAndroidIntentUrl', async (url) => {
+  const { cookAndroidIntentUrl } = await import('../apps/web/app/utils/androidBrowserIntent')
+  expect(() => cookAndroidIntentUrl(url)).toThrow('Invalid Cook HTTPS URL')
+})

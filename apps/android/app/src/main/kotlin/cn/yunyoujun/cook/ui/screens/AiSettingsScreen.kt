@@ -101,6 +101,7 @@ internal fun AiSettingsScreen(
     var hasStoredKey by remember(vault) { mutableStateOf<Boolean?>(null) }
     var vaultMessage by remember { mutableStateOf<String?>(null) }
     var checkingKey by remember { mutableStateOf(false) }
+    var savingKey by remember { mutableStateOf(false) }
     var confirmDeleteKey by rememberSaveable { mutableStateOf(false) }
     val validInput = deepSeek.validKey(keyInput.trim())
     val savedKeyName = AndroidKeystoreVault.KEY_DEEPSEEK_API_KEY
@@ -189,28 +190,37 @@ internal fun AiSettingsScreen(
                         onValueChange = { keyInput = it.take(512) },
                         label = { Text("输入新的 DeepSeek API Key") },
                         singleLine = true,
-                        enabled = !checkingKey,
+                        enabled = !checkingKey && !savingKey,
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         modifier = Modifier.fillMaxWidth(),
                     )
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            enabled = !checkingKey && validInput && hasStoredKey != null,
+                            enabled = !checkingKey && !savingKey && validInput && hasStoredKey != null,
                             onClick = {
-                                try {
-                                    vault.writeSecret(savedKeyName, keyInput.trim())
-                                    if (hasStoredKey != true) preferences.setAiProviderMode(AiProviderMode.BYOK_DEEPSEEK)
-                                    hasStoredKey = true
-                                    keyInput = ""
-                                    vaultMessage = "已加密保存 Key。"
-                                } catch (_: Exception) {
-                                    vaultMessage = "暂时无法保存 Key，请重试。"
+                                val trimmed = keyInput.trim()
+                                savingKey = true
+                                vaultMessage = null
+                                scope.launch {
+                                    try {
+                                        withContext(Dispatchers.IO) { vault.writeSecret(savedKeyName, trimmed) }
+                                        if (hasStoredKey != true) preferences.setAiProviderMode(AiProviderMode.BYOK_DEEPSEEK)
+                                        hasStoredKey = true
+                                        keyInput = ""
+                                        vaultMessage = "已加密保存 Key。"
+                                    } catch (cancelled: CancellationException) {
+                                        throw cancelled
+                                    } catch (_: Exception) {
+                                        vaultMessage = "暂时无法保存 Key，请重试。"
+                                    } finally {
+                                        savingKey = false
+                                    }
                                 }
                             },
                         ) { Text("加密保存 Key") }
                         OutlinedButton(
-                            enabled = !checkingKey && (if (keyInput.isBlank()) hasStoredKey == true else validInput),
+                            enabled = !checkingKey && !savingKey && (if (keyInput.isBlank()) hasStoredKey == true else validInput),
                             onClick = {
                                 val input = keyInput.trim()
                                 checkingKey = true
@@ -240,7 +250,7 @@ internal fun AiSettingsScreen(
                             },
                         ) { Text(if (checkingKey) "测试中…" else "测试连接") }
                         if (hasStoredKey == true) {
-                            TextButton(enabled = !checkingKey, onClick = { confirmDeleteKey = true }) { Text("清除 Key") }
+                            TextButton(enabled = !checkingKey && !savingKey, onClick = { confirmDeleteKey = true }) { Text("清除 Key") }
                         }
                     }
                     vaultMessage?.let {
@@ -257,19 +267,30 @@ internal fun AiSettingsScreen(
             title = { Text("删除本机 DeepSeek Key？") },
             text = { Text(if (prefs.aiProviderMode == AiProviderMode.BYOK_DEEPSEEK) "删除后将切回本地识别。" else "之后可以重新添加。") },
             confirmButton = {
-                TextButton(onClick = {
-                    confirmDeleteKey = false
-                    try {
-                        vault.deleteSecret(savedKeyName)
-                        if (preferences.current.aiProviderMode == AiProviderMode.BYOK_DEEPSEEK) {
-                            preferences.setAiProviderMode(AiProviderMode.DISABLED)
+                TextButton(
+                    enabled = !savingKey,
+                    onClick = {
+                        confirmDeleteKey = false
+                        savingKey = true
+                        vaultMessage = null
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) { vault.deleteSecret(savedKeyName) }
+                                if (preferences.current.aiProviderMode == AiProviderMode.BYOK_DEEPSEEK) {
+                                    preferences.setAiProviderMode(AiProviderMode.DISABLED)
+                                }
+                                hasStoredKey = false
+                                vaultMessage = "已清除本机 Key。"
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (_: Exception) {
+                                vaultMessage = "暂时无法删除 Key，请重试。"
+                            } finally {
+                                savingKey = false
+                            }
                         }
-                        hasStoredKey = false
-                        vaultMessage = "已清除本机 Key。"
-                    } catch (_: Exception) {
-                        vaultMessage = "暂时无法删除 Key，请重试。"
-                    }
-                }) { Text("删除 Key") }
+                    },
+                ) { Text("删除 Key") }
             },
             dismissButton = { TextButton(onClick = { confirmDeleteKey = false }) { Text("取消") } },
         )

@@ -126,7 +126,7 @@ internal class PlayMembershipService(
         val state = PlaySubscriptionState.entries.firstOrNull { it.wireValue == body.string("state") } ?: invalid()
         val autoRenewing = (body["autoRenewing"] as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull ?: invalid()
         val expiry = when (val value = body["periodExpiresAt"]) {
-            JsonNull -> null
+            null, JsonNull -> null
             is JsonPrimitive -> value.takeUnless { it.isString }?.longOrNull?.takeIf { it > 0 } ?: invalid()
             else -> invalid()
         }

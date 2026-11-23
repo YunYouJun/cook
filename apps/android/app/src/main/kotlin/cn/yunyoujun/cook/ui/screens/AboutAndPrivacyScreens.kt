@@ -1,5 +1,7 @@
 package cn.yunyoujun.cook.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -8,6 +10,7 @@ import android.content.pm.verify.domain.DomainVerificationUserState
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -211,6 +214,7 @@ private const val ANDROID_PRIVACY_PATH = "/privacy-android"
 
 @Composable
 private fun LegalDocumentText(markdown: String, onOpenPrivacy: (() -> Unit)?) {
+    val context = LocalContext.current
     val blocks = remember(markdown) {
         val normalized = markdown.replace("\r\n", "\n")
         val body = if (normalized.startsWith("---\n")) normalized.substringAfter("\n---\n", normalized) else normalized
@@ -238,7 +242,7 @@ private fun LegalDocumentText(markdown: String, onOpenPrivacy: (() -> Unit)?) {
                         style = MaterialTheme.typography.titleMedium,
                     )
                     else -> Text(
-                        remember(block, linkStyles, onOpenPrivacy) {
+                        remember(block, linkStyles, onOpenPrivacy, context) {
                             buildAnnotatedString {
                                 val text = block.replace(legalListMarker, "• ")
                                 var offset = 0
@@ -252,7 +256,9 @@ private fun LegalDocumentText(markdown: String, onOpenPrivacy: (() -> Unit)?) {
                                             LinkAnnotation.Clickable(url, linkStyles) { onOpenPrivacy() }
                                         } else {
                                             val destination = if (url.startsWith('/')) "https://cook.yunle.fun$url" else url
-                                            LinkAnnotation.Url(destination, linkStyles)
+                                            LinkAnnotation.Clickable(destination, linkStyles) {
+                                                openLegalLink(context, destination)
+                                            }
                                         }
                                         withLink(link) { append(label) }
                                     }
@@ -265,5 +271,18 @@ private fun LegalDocumentText(markdown: String, onOpenPrivacy: (() -> Unit)?) {
                 }
             }
         }
+    }
+}
+
+private fun openLegalLink(context: Context, destination: String) {
+    val opened = runCatching {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(destination)))
+    }.isSuccess
+    if (!opened) {
+        val text = destination.removePrefix("mailto:")
+        context.getSystemService(ClipboardManager::class.java)
+            ?.setPrimaryClip(ClipData.newPlainText("链接", text))
+        val message = if (destination.startsWith("mailto:")) "未找到邮件应用，已复制邮箱地址" else "未找到可用的应用，已复制链接"
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 }

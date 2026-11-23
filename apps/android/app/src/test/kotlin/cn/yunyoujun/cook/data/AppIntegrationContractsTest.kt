@@ -1568,6 +1568,33 @@ class AppIntegrationContractsTest {
     }
 
     @Test
+    fun isolatedHttpPostTransport_returnsEmptyBodyErrorStatusWithoutThrowing() = runBlocking {
+        com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0).let { server ->
+            server.createContext("/empty-401") { exchange ->
+                exchange.sendResponseHeaders(401, -1)
+                exchange.close()
+            }
+            server.createContext("/empty-404") { exchange ->
+                exchange.sendResponseHeaders(404, -1)
+                exchange.close()
+            }
+            server.start()
+            try {
+                val base = "http://127.0.0.1:${server.address.port}"
+                val unauthorized = IsolatedHttpPostTransport.request("POST", "$base/empty-401", jsonBody = "{}")
+                assertEquals(401, unauthorized.statusCode)
+                assertEquals("", unauthorized.bodyText)
+
+                val missing = IsolatedHttpPostTransport.request("GET", "$base/empty-404")
+                assertEquals(404, missing.statusCode)
+                assertEquals("", missing.bodyText)
+            } finally {
+                server.stop(0)
+            }
+        }
+    }
+
+    @Test
     fun oversizedCatalogStream_andInvalidPrivateRecipePreserveVideoDraftWithoutDiskMutation() = runBlocking {
         val tempDir = Files.createTempDirectory("cook-stream-private-test").toFile()
         try {

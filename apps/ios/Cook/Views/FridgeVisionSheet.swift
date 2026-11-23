@@ -100,7 +100,7 @@ struct FridgeVisionSheet: View {
                 .disabled(saveNames?.isEmpty != false)
                 .accessibilityIdentifier("fridge.vision.save")
             }
-        } else if photo != nil {
+        } else if access == .member, photo != nil {
             form.bottomActionBar { uploadAction }
         } else {
             form
@@ -253,17 +253,23 @@ struct FridgeVisionSheet: View {
                 if environment["COOK_UI_TEST_FRIDGE_VISION_NONMEMBER"] == "1" { active = nil }
                 else { active = notice == nil ? .cloudBase : .deepSeek }
             } else {
-                guard accounts.dataAccountID != nil else { access = .signIn; return }
+                guard accounts.dataAccountID != nil else {
+                    photo = nil
+                    access = .signIn
+                    return
+                }
                 guard let endpoint = FridgeVisionService.configuredEndpoint else { throw FridgeVisionError.unavailable }
                 active = try await FridgeVisionService(endpoint: endpoint).memberProvider(using: accounts, rejecting: rejected)
             }
             guard !Task.isCancelled, accessQueryID == query, accounts.sessionRevision == revision else { return }
             provider = active
             verifiedRevision = active == nil ? nil : revision
+            if active == nil { photo = nil }
             access = active == nil ? .membershipRequired : .member
             if active != nil, let notice { showFailure(notice) }
         } catch {
             guard !Task.isCancelled, accessQueryID == query, accounts.sessionRevision == revision else { return }
+            photo = nil
             switch (error as? FridgeVisionError, error as? YunlefunAccountError) {
             case (.loginRequired, _), (_, .expiredSession): access = accounts.account == nil ? .signIn : .signInAgain
             case (.membershipRequired, _): access = .membershipRequired

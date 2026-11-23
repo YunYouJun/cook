@@ -518,9 +518,17 @@ class PlayMembershipTest {
             assertEquals(0, fixture.billing.ownedQueries)
             assertTrue(fixture.transport.verificationAttempts.isEmpty())
             fixture.transport.capabilitiesFailure = null
-            withTimeout(5_000) {
-                fixture.store.state.first { !it.busy && fixture.billing.ownedQueries == 1 }
+            val firstQueryAttempted = CompletableDeferred<Unit>()
+            fixture.billing.onPurchasesAttempt = { firstQueryAttempted.complete(Unit) }
+            try {
+                withTimeout(5_000) {
+                    firstQueryAttempted.await()
+                    fixture.store.state.first { !it.busy }
+                }
+            } finally {
+                fixture.billing.onPurchasesAttempt = {}
             }
+            assertEquals(1, fixture.billing.ownedQueries)
             assertTrue(fixture.transport.verificationAttempts.isEmpty())
             fixture.billing.failQuery = false
             fixture.transport.expiry = expiry
@@ -545,12 +553,12 @@ class PlayMembershipTest {
 
     @Test
     fun paidOrderVerificationRetriesStopInBackgroundAndAfterSignOut() = runBlocking {
-        withStore(verificationRetryDelaysMs = listOf(250, 250)) { fixture ->
+        withStore(verificationRetryDelaysMs = listOf(400, 400)) { fixture ->
             fixture.billing.owned = listOf(purchase(pending = true))
             fixture.billing.emit(PlayCheckoutResult.STARTED, purchase(pending = true))
             fixture.waitFor("Google Play 正在等待付款")
             val queriesBeforePayment = fixture.billing.ownedQueries
-            delay(300)
+            delay(450)
             assertEquals(queriesBeforePayment, fixture.billing.ownedQueries)
             assertTrue(fixture.transport.verificationAttempts.isEmpty())
 
@@ -559,16 +567,28 @@ class PlayMembershipTest {
             fixture.billing.emit(PlayCheckoutResult.STARTED, purchase())
             fixture.waitFor("已购订单待核对")
             fixture.store.onBackground()
-            delay(300)
+            delay(450)
             assertEquals(listOf(token), fixture.transport.verificationAttempts)
 
-            fixture.store.onForeground()
-            withTimeout(5_000) {
-                fixture.store.state.first { !it.busy && fixture.transport.verificationAttempts.size == 2 }
+            val secondAttempt = CompletableDeferred<Unit>()
+            fixture.transport.onVerify = {
+                if (fixture.transport.verificationAttempts.size >= 2) {
+                    secondAttempt.complete(Unit)
+                }
             }
+            try {
+                fixture.store.onForeground()
+                withTimeout(5_000) {
+                    secondAttempt.await()
+                    fixture.store.state.first { !it.busy }
+                }
+            } finally {
+                fixture.transport.onVerify = {}
+            }
+            assertEquals(2, fixture.transport.verificationAttempts.size)
             fixture.sessions.signOut()
             withTimeout(5_000) { fixture.store.state.first { it.session == null } }
-            delay(300)
+            delay(450)
             assertEquals(listOf(token, token), fixture.transport.verificationAttempts)
             assertEquals(0, fixture.transport.preparedPurchases)
         }
@@ -1104,9 +1124,17 @@ class PlayMembershipTest {
 
             fixture.billing.owned = emptyList()
             fixture.billing.failQuery = true
-            fixture.store.onForeground()
-            withTimeout(5_000) { fixture.store.state.first { it.busy } }
-            withTimeout(5_000) { fixture.store.state.first { !it.busy } }
+            val failedQueryAttempted = CompletableDeferred<Unit>()
+            fixture.billing.onPurchasesAttempt = { failedQueryAttempted.complete(Unit) }
+            try {
+                fixture.store.onForeground()
+                withTimeout(5_000) {
+                    failedQueryAttempted.await()
+                    fixture.store.state.first { !it.busy }
+                }
+            } finally {
+                fixture.billing.onPurchasesAttempt = {}
+            }
             assertTrue(fixture.store.state.value.message.orEmpty().contains("正在等待付款"))
             assertFalse(fixture.store.state.value.canStartCheckout)
 
@@ -1611,6 +1639,30 @@ class PlayMembershipTest {
         transport.replyToken = "different-receipt-token"
         assertTrue(runCatching { service.settle(credential, PlayMembershipPlan.MONTH, token) }
             .exceptionOrNull() is YunlefunAccountException.InvalidResponse)
+
+        transport.replyToken = token
+        val noPeriodExpiryService = PlayMembershipService(
+            PlayLedger.PRODUCTION,
+            object : HttpTransport {
+                override suspend fun request(
+                    method: String,
+                    url: String,
+                    headers: Map<String, String>,
+                    jsonBody: String?,
+                    maxResponseBytes: Int,
+                    connectTimeoutMs: Int,
+                    readTimeoutMs: Int,
+                ): HttpResponsePayload {
+                    val digest = MessageDigest.getInstance("SHA-256").digest(token.encodeToByteArray())
+                        .joinToString("") { "%02x".format(it) }
+                    return HttpResponsePayload(
+                        200,
+                        """{"application":"cook","packageName":"fun.yunle.cook","ledgerEnvironment":"Production","productId":"$SUBSCRIPTION_PRODUCT_ID","purchaseReference":"$digest","status":"pending","basePlanId":"monthly","cycle":"month","state":"pending","autoRenewing":false}""",
+                    )
+                }
+            },
+        )
+        assertNull(noPeriodExpiryService.verifySubscription(credential, token).subscription.periodExpiresAt)
     }
 
     private suspend fun withStore(
@@ -1718,6 +1770,7 @@ class PlayMembershipTest {
         var failQuery = false
         var failSubscriptionQuery = false
         var ownedQueries = 0
+        var onPurchasesAttempt: () -> Unit = {}
         var afterReadingOwnedPurchases: suspend () -> Unit = {}
         var beforeStartingLaunch: suspend () -> Unit = {}
         var beforeReturningLaunch: suspend () -> Unit = {}
@@ -1727,6 +1780,7 @@ class PlayMembershipTest {
         }
         override suspend fun purchases(): List<PlayMembershipPurchase> {
             ownedQueries++
+            onPurchasesAttempt()
             if (failQuery) throw PlayBillingUnavailable()
             val snapshot = owned
             afterReadingOwnedPurchases()

@@ -375,6 +375,35 @@ class DeviceBackupTest {
         override fun close() = db.close()
     }
 
+    @Test
+    fun cookingJournalRecoversFromBackupWhenPrimaryFileIsCorrupt() {
+        val dir = temporary.newFolder("journal-recovery")
+        val context = object : ContextWrapper(ApplicationProvider.getApplicationContext()) {
+            override fun getApplicationContext(): Context = this
+            override fun getFilesDir(): File = dir
+        }
+        val expected = cn.yunyoujun.cook.data.local.CookingJournal(
+            cooked = listOf(
+                cn.yunyoujun.cook.data.local.CookingRecord(
+                    recipeId = JournalRecipeId.Catalog(250),
+                    recipeName = "番茄炒蛋",
+                    dateMs = 1_000L,
+                    id = "rec-1",
+                ),
+            ),
+        )
+        File(dir, "cooking-journal-v1.json").writeText("{corrupt-json")
+        File(dir, "cooking-journal-v1.json.bak").writeText(
+            cn.yunyoujun.cook.data.local.AtomicJsonFiles.json.encodeToString(
+                cn.yunyoujun.cook.data.local.CookingJournal.serializer(),
+                expected,
+            ),
+        )
+        val store = CookingJournalStore(context)
+        assertFalse(store.loadFailed)
+        assertEquals(expected, store.state.value)
+    }
+
     private fun batch(id: String = "batch-1", consumed: Long? = null) = FridgeBatchItem(
         id = id,
         ingredientName = "西红柿",

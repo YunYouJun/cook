@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseUserDataExport } from '../apps/web/app/utils/userData'
-import { convertLegacyLibrary } from '../scripts/export-legacy-android-library.mjs'
+import { convertLegacyLibrary, selectLegacyWebViewTarget } from '../scripts/export-legacy-android-library.mjs'
 
 describe('legacy Android library export', () => {
   it('resolves old positions by recipe identity and preserves history snapshots', () => {
@@ -48,5 +48,21 @@ describe('legacy Android library export', () => {
       ...source,
       histories: [{ time: 123, recipe: { name: '清蒸鱼', stuff: ['鱼'.repeat(90000)] } }],
     }, [])).toThrow('单文件导入大小上限')
+  })
+
+  it('ignores blank or malformed WebView target URLs when selecting the Cook page', () => {
+    const valid = {
+      type: 'page',
+      url: 'https://cook.yunyoujun.cn/',
+      webSocketDebuggerUrl: 'ws://127.0.0.1:9222/devtools/page/1',
+    }
+    const target = selectLegacyWebViewTarget([
+      { type: 'page', url: '', webSocketDebuggerUrl: 'ws://127.0.0.1:9222/devtools/page/blank' },
+      { type: 'page', url: 'not-a-valid-url', webSocketDebuggerUrl: 'ws://127.0.0.1:9222/devtools/page/bad' },
+      { type: 'page', url: 'https://evil.example/', webSocketDebuggerUrl: 'ws://127.0.0.1:9222/devtools/page/evil' },
+      { type: 'page', url: 'https://cook.yunyoujun.cn/', webSocketDebuggerUrl: 'ws://127.0.0.1:9999/devtools/page/wrong-port' },
+      valid,
+    ], '127.0.0.1:9222')
+    expect(target).toBe(valid)
   })
 })

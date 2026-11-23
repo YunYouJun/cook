@@ -17,12 +17,11 @@ import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 
@@ -72,7 +71,8 @@ internal interface PlayMembershipBilling {
 internal class GooglePlayMembershipBilling(context: Context) : PlayMembershipBilling {
     private val events = Channel<PlayBillingUpdate>(Channel.BUFFERED)
     override val updates = events.receiveAsFlow()
-    private val connectionMutex = Mutex()
+    private val connectionLock = Any()
+    private var activeConnection: CompletableDeferred<BillingResult>? = null
     @Volatile private var checkoutId: PlayCheckoutId? = null
     private val client = BillingClient.newBuilder(context.applicationContext)
         .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
@@ -218,14 +218,40 @@ internal class GooglePlayMembershipBilling(context: Context) : PlayMembershipBil
         return true
     }
 
-    private suspend fun connect() = connectionMutex.withLock {
-        if (client.isReady) return@withLock
-        val result = awaitBilling<BillingResult> { finished ->
-            client.startConnection(object : BillingClientStateListener {
-                override fun onBillingSetupFinished(result: BillingResult) = finished(result)
-                override fun onBillingServiceDisconnected() = Unit
-            })
+    private suspend fun connect() {
+        if (client.isReady) return
+        val deferred = synchronized(connectionLock) {
+            if (client.isReady) return
+            activeConnection?.takeIf { !it.isCompleted } ?: CompletableDeferred<BillingResult>().also { created ->
+                activeConnection = created
+                try {
+                    client.startConnection(object : BillingClientStateListener {
+                        override fun onBillingSetupFinished(result: BillingResult) {
+                            synchronized(connectionLock) {
+                                if (activeConnection === created) activeConnection = null
+                            }
+                            created.complete(result)
+                        }
+
+                        override fun onBillingServiceDisconnected() {
+                            synchronized(connectionLock) {
+                                if (activeConnection === created) activeConnection = null
+                            }
+                            created.complete(
+                                BillingResult.newBuilder()
+                                    .setResponseCode(BillingResponseCode.SERVICE_DISCONNECTED)
+                                    .build(),
+                            )
+                        }
+                    })
+                } catch (t: Throwable) {
+                    if (activeConnection === created) activeConnection = null
+                    created.completeExceptionally(t)
+                    throw t
+                }
+            }
         }
+        val result = withTimeoutOrNull(15_000) { deferred.await() } ?: throw PlayBillingUnavailable()
         requireSuccess(result)
     }
 

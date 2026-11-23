@@ -227,7 +227,9 @@ private fun ShowcasePackCard(pack: ShowcasePackStore, onOpenModel: () -> Unit) {
             if (received != null) {
                 Text("正在下载$name", style = MaterialTheme.typography.bodySmall)
                 LinearProgressIndicator(
-                    progress = { received.toFloat() / asset.bytes },
+                    progress = {
+                        if (asset.bytes > 0) (received.toFloat() / asset.bytes).coerceIn(0f, 1f) else 0f
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

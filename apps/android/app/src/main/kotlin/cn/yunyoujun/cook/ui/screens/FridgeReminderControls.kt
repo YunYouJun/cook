@@ -123,8 +123,9 @@ internal fun FridgeReminderControls(preferences: DevicePreferencesStore) {
     }
 
     if (showTimePicker) {
-        DisposableEffect(context, time) {
+        DisposableEffect(context) {
             val dialog = TimePickerDialog(context, { _, hour, minute ->
+                showTimePicker = false
                 errorMessage = runCatching { preferences.setFridgeReminderMinutes(hour * 60 + minute) }
                     .exceptionOrNull()?.let { "未能保存提醒时间，请重试。" }
             }, time.hour, time.minute, true)

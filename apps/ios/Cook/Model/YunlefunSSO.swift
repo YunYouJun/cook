@@ -71,7 +71,7 @@ struct YunlefunSSO {
             throw YunlefunAccountError.authorizationFailed
         }
         guard payload["reason"] == nil, let code = payload["code"] as? String,
-              code.range(of: "^[A-Za-z0-9_-]{43}$", options: .regularExpression) != nil else {
+              code.range(of: #"\A[A-Za-z0-9_-]{43}\z"#, options: .regularExpression) != nil else {
             throw YunlefunAccountError.invalidCallback
         }
         return .authorized(["action": "exchangeSsoCode", "clientId": Self.clientID,

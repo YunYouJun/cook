@@ -231,10 +231,10 @@ final class YunlefunAccountStore {
         message = nil
         let code = try await weChat.authorize()
         try Task.checkCancellation()
-        let next = try await YunlefunAccountService().registerWithWeChat(proof: proof, code: code, deviceID: deviceID)
+        let next = try await service.registerWithWeChat(proof: proof, code: code, deviceID: deviceID)
         do { try await establishSession(next) }
         catch {
-            try? await service.signOut(next)
+            Task { try? await service.signOut(next) }
             throw WeChatSignupError.accountCreated
         }
     }

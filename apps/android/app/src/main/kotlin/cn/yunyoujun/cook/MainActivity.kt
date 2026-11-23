@@ -13,6 +13,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -305,6 +306,14 @@ private fun CookAppShell(
         else while (backStack.lastIndex > existing) backStack.removeLastOrNull()
     }
 
+    fun pushRoute(route: CookNavKey) {
+        if (backStack.lastOrNull() != route) backStack.add(route)
+    }
+
+    fun popRoute(route: CookNavKey) {
+        if (backStack.size > 1 && backStack.lastOrNull() == route) backStack.removeLastOrNull()
+    }
+
     LaunchedEffect(openFridgeHome) {
         if (openFridgeHome) {
             dismissUnavailableShare()
@@ -473,16 +482,16 @@ private fun CookAppShell(
                             backStack.removeLastOrNull()
                         }
                     },
-                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                    modifier = Modifier.fillMaxSize().padding(innerPadding).consumeWindowInsets(innerPadding),
                     entryProvider = entryProvider {
                         entry<CookNavKey.CookTab> {
                             CookTabScreen(
                                 snapshot = snapshot,
                                 sessionController = sessionController,
                                 container = container,
-                                onOpenRecipe = { route -> backStack.add(route) },
-                                onOpenWorkbench = { backStack.add(it) },
-                                onOpenJournal = { backStack.add(CookNavKey.CookingJournal(it)) },
+                                onOpenRecipe = { route -> pushRoute(route) },
+                                onOpenWorkbench = { pushRoute(it) },
+                                onOpenJournal = { pushRoute(CookNavKey.CookingJournal(it)) },
                                 onOpenRecipeFeedback = { resumeOrOpen(CookNavKey.RecipeFeedback(it)) },
                             )
                         }
@@ -493,9 +502,9 @@ private fun CookAppShell(
                                     container = container,
                                     photoIntake = fridgePhotoIntake,
                                     onChooseGalleryPhoto = onChooseFridgePhoto,
-                                    onOpenAccount = { backStack.add(CookNavKey.AccountAndSyncScreen) },
-                                    onOpenMembership = { backStack.add(CookNavKey.Membership) },
-                                    onOpenPrivacy = { backStack.add(CookNavKey.PrivacySettingsScreen) },
+                                    onOpenAccount = { pushRoute(CookNavKey.AccountAndSyncScreen) },
+                                    onOpenMembership = { pushRoute(CookNavKey.Membership) },
+                                    onOpenPrivacy = { pushRoute(CookNavKey.PrivacySettingsScreen) },
                                     onCookWithIngredients = { ingredients ->
                                         val normalized = snapshot.data.normalizer.unique(ingredients)
                                         sessionController.setSelectedStuff(normalized)
@@ -510,28 +519,28 @@ private fun CookAppShell(
                                 snapshot = snapshot,
                                 container = container,
                                 sessionController = sessionController,
-                                onOpenRecipe = { route -> backStack.add(route) },
-                                onOpenPrivateRecipes = { backStack.add(CookNavKey.PrivateRecipesScreen()) },
-                                onOpenPersonalCatalog = { backStack.add(CookNavKey.PersonalCatalogScreen) },
-                                onOpenLibraryTransfer = { backStack.add(CookNavKey.LibraryTransfer) },
-                                onOpenAccountSync = { backStack.add(CookNavKey.AccountAndSyncScreen) },
+                                onOpenRecipe = { route -> pushRoute(route) },
+                                onOpenPrivateRecipes = { pushRoute(CookNavKey.PrivateRecipesScreen()) },
+                                onOpenPersonalCatalog = { pushRoute(CookNavKey.PersonalCatalogScreen) },
+                                onOpenLibraryTransfer = { pushRoute(CookNavKey.LibraryTransfer) },
+                                onOpenAccountSync = { pushRoute(CookNavKey.AccountAndSyncScreen) },
                             )
                         }
                         entry<CookNavKey.SettingsTab> {
                             SettingsTabScreen(
                                 snapshot = snapshot,
                                 container = container,
-                                onOpenAccountSync = { backStack.add(CookNavKey.AccountAndSyncScreen) },
-                                onOpenMembership = { backStack.add(CookNavKey.Membership) },
-                                onOpenPrivateRecipes = { backStack.add(CookNavKey.PrivateRecipesScreen()) },
-                                onOpenPersonalCatalog = { backStack.add(CookNavKey.PersonalCatalogScreen) },
-                                onOpenAiSettings = { backStack.add(CookNavKey.AiSettingsScreen) },
-                                onOpenHelp = { backStack.add(CookNavKey.HelpScreen) },
-                                onOpenRecipeData = { backStack.add(CookNavKey.RecipeDataSettingsScreen) },
-                                onOpenAbout = { backStack.add(CookNavKey.About) },
-                                onOpenPrivacy = { backStack.add(CookNavKey.PrivacySettingsScreen) },
-                                onOpenCookingJournal = { backStack.add(CookNavKey.CookingJournal()) },
-                                onOpenDeviceBackup = { backStack.add(CookNavKey.DeviceBackup) },
+                                onOpenAccountSync = { pushRoute(CookNavKey.AccountAndSyncScreen) },
+                                onOpenMembership = { pushRoute(CookNavKey.Membership) },
+                                onOpenPrivateRecipes = { pushRoute(CookNavKey.PrivateRecipesScreen()) },
+                                onOpenPersonalCatalog = { pushRoute(CookNavKey.PersonalCatalogScreen) },
+                                onOpenAiSettings = { pushRoute(CookNavKey.AiSettingsScreen) },
+                                onOpenHelp = { pushRoute(CookNavKey.HelpScreen) },
+                                onOpenRecipeData = { pushRoute(CookNavKey.RecipeDataSettingsScreen) },
+                                onOpenAbout = { pushRoute(CookNavKey.About) },
+                                onOpenPrivacy = { pushRoute(CookNavKey.PrivacySettingsScreen) },
+                                onOpenCookingJournal = { pushRoute(CookNavKey.CookingJournal()) },
+                                onOpenDeviceBackup = { pushRoute(CookNavKey.DeviceBackup) },
                             )
                         }
                         entry<CookNavKey.RecipeDetail> { route ->
@@ -539,7 +548,7 @@ private fun CookAppShell(
                                 recipeId = route.recipeId,
                                 snapshot = snapshot,
                                 container = container,
-                                onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+                                onBack = { popRoute(route) },
                                 onOpenWorkbench = { id -> resumeOrOpen(CookNavKey.KitchenWorkbench(id, route.dietaryGoal)) },
                                 onOpenJournal = { resumeOrOpen(CookNavKey.CookingJournal(it)) },
                                 dietaryGoal = route.dietaryGoal,
@@ -552,7 +561,7 @@ private fun CookAppShell(
                                 recipe = snapshot.recipe(route.recipeId),
                                 client = container.feedbackClient,
                                 recipeVersion = snapshot.data.meta.dataVersion,
-                                onBack = { if (backStack.lastOrNull() == route) backStack.removeLastOrNull() },
+                                onBack = { popRoute(route) },
                             )
                         }
                         entry<CookNavKey.KitchenWorkbench> { route ->
@@ -560,7 +569,7 @@ private fun CookAppShell(
                                 recipeId = route.recipeId,
                                 snapshot = snapshot,
                                 container = container,
-                                onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+                                onBack = { popRoute(route) },
                                 onOpenJournal = { resumeOrOpen(CookNavKey.CookingJournal(it)) },
                                 onOpenAiSettings = { resumeOrOpen(CookNavKey.AiSettingsScreen) },
                                 onOpenAccount = { resumeOrOpen(CookNavKey.AccountAndSyncScreen) },
@@ -574,7 +583,7 @@ private fun CookAppShell(
                             PrivateRecipesManageScreen(
                                 snapshot = snapshot,
                                 container = container,
-                                onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+                                onBack = { popRoute(route) },
                                 targetId = route.targetId,
                                 onOpenJournal = { resumeOrOpen(CookNavKey.CookingJournal(it)) },
                             )
@@ -594,7 +603,7 @@ private fun CookAppShell(
                                         is JournalRecipeId.Personal -> privateTitles[id.customId]
                                     }
                                 },
-                                onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+                                onBack = { popRoute(route) },
                                 onOpenRecipe = { id ->
                                     resumeOrOpen(when (id) {
                                         is JournalRecipeId.Catalog -> CookNavKey.RecipeDetail(id.id)
@@ -606,22 +615,22 @@ private fun CookAppShell(
                         entry<CookNavKey.DeviceBackup> {
                             DeviceBackupScreen(
                                 store = container.deviceBackupStore,
-                                onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+                                onBack = { popRoute(CookNavKey.DeviceBackup) },
                             )
                         }
                         entry<CookNavKey.PersonalCatalogScreen> {
                             PersonalCatalogManageScreen(
                                 snapshot = snapshot,
                                 container = container,
-                                onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+                                onBack = { popRoute(CookNavKey.PersonalCatalogScreen) },
                             )
                         }
                         entry<CookNavKey.HelpScreen> {
                             HelpAndFeedbackScreen(
                                 weChatSupport = snapshot.links.wecomKf,
-                                onOpenFeedback = { backStack.add(CookNavKey.AppFeedbackScreen) },
-                                onOpenContribution = { backStack.add(CookNavKey.RecipeContributionScreen) },
-                                onBack = { backStack.removeLastOrNull() },
+                                onOpenFeedback = { pushRoute(CookNavKey.AppFeedbackScreen) },
+                                onOpenContribution = { pushRoute(CookNavKey.RecipeContributionScreen) },
+                                onBack = { popRoute(CookNavKey.HelpScreen) },
                             )
                         }
                         entry<CookNavKey.AppFeedbackScreen> {
@@ -629,8 +638,8 @@ private fun CookAppShell(
                                 purpose = AppFeedbackPurpose.FEEDBACK,
                                 client = container.feedbackClient,
                                 recipeVersion = snapshot.data.meta.dataVersion,
-                                onOpenPrivacy = { backStack.add(CookNavKey.PrivacySettingsScreen) },
-                                onBack = { backStack.removeLastOrNull() },
+                                onOpenPrivacy = { pushRoute(CookNavKey.PrivacySettingsScreen) },
+                                onBack = { popRoute(CookNavKey.AppFeedbackScreen) },
                             )
                         }
                         entry<CookNavKey.RecipeContributionScreen> {
@@ -638,48 +647,48 @@ private fun CookAppShell(
                                 purpose = AppFeedbackPurpose.CONTRIBUTION,
                                 client = container.feedbackClient,
                                 recipeVersion = snapshot.data.meta.dataVersion,
-                                onOpenPrivacy = { backStack.add(CookNavKey.PrivacySettingsScreen) },
-                                onBack = { backStack.removeLastOrNull() },
+                                onOpenPrivacy = { pushRoute(CookNavKey.PrivacySettingsScreen) },
+                                onBack = { popRoute(CookNavKey.RecipeContributionScreen) },
                             )
                         }
                         entry<CookNavKey.AiSettingsScreen> {
                             AiSettingsScreen(
                                 container = container,
-                                onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
-                                onOpenAccount = { backStack.add(CookNavKey.AccountAndSyncScreen) },
+                                onBack = { popRoute(CookNavKey.AiSettingsScreen) },
+                                onOpenAccount = { pushRoute(CookNavKey.AccountAndSyncScreen) },
                             )
                         }
                         entry<CookNavKey.RecipeDataSettingsScreen> {
                             RecipeDataSettingsScreen(
                                 snapshot = snapshot,
-                                onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+                                onBack = { popRoute(CookNavKey.RecipeDataSettingsScreen) },
                             )
                         }
                         entry<CookNavKey.PrivacySettingsScreen> {
                             LegalDocumentScreen(
                                 document = LegalDocument.PRIVACY,
-                                onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+                                onBack = { popRoute(CookNavKey.PrivacySettingsScreen) },
                             )
                         }
                         entry<CookNavKey.TermsScreen> {
                             LegalDocumentScreen(
                                 document = LegalDocument.TERMS,
-                                onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
-                                onOpenPrivacy = { backStack.add(CookNavKey.PrivacySettingsScreen) },
+                                onBack = { popRoute(CookNavKey.TermsScreen) },
+                                onOpenPrivacy = { pushRoute(CookNavKey.PrivacySettingsScreen) },
                             )
                         }
                         entry<CookNavKey.About> {
                             AboutSettingsScreen(
                                 snapshot = snapshot,
-                                onOpenRecipeData = { backStack.add(CookNavKey.RecipeDataSettingsScreen) },
-                                onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+                                onOpenRecipeData = { pushRoute(CookNavKey.RecipeDataSettingsScreen) },
+                                onBack = { popRoute(CookNavKey.About) },
                             )
                         }
                         entry<CookNavKey.AccountAndSyncScreen> {
                             AccountAndSyncScreen(
                                 container = container,
                                 accountBrowser = accountBrowser,
-                                onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+                                onBack = { popRoute(CookNavKey.AccountAndSyncScreen) },
                                 onOpenWeChatSignup = { resumeOrOpen(CookNavKey.WeChatSignup) },
                                 onOpenLibraryTransfer = { resumeOrOpen(CookNavKey.LibraryTransfer) },
                                 onOpenMembership = { resumeOrOpen(CookNavKey.Membership) },
@@ -688,7 +697,7 @@ private fun CookAppShell(
                         entry<CookNavKey.LibraryTransfer> {
                             LibraryTransferScreen(
                                 container = container,
-                                onBack = { if (backStack.lastOrNull() == CookNavKey.LibraryTransfer) backStack.removeLastOrNull() },
+                                onBack = { popRoute(CookNavKey.LibraryTransfer) },
                             )
                         }
                         entry<CookNavKey.Membership> {
@@ -696,16 +705,16 @@ private fun CookAppShell(
                                 sessions = container.yunlefunSessionManager,
                                 accountBrowser = accountBrowser,
                                 playMembership = container.playMembership,
-                                onBack = { if (backStack.lastOrNull() == CookNavKey.Membership) backStack.removeLastOrNull() },
+                                onBack = { popRoute(CookNavKey.Membership) },
                                 onOpenAccount = { resumeOrOpen(CookNavKey.AccountAndSyncScreen) },
-                                onOpenPrivacy = { backStack.add(CookNavKey.PrivacySettingsScreen) },
-                                onOpenTerms = { backStack.add(CookNavKey.TermsScreen) },
+                                onOpenPrivacy = { pushRoute(CookNavKey.PrivacySettingsScreen) },
+                                onOpenTerms = { pushRoute(CookNavKey.TermsScreen) },
                             )
                         }
                         entry<CookNavKey.WeChatSignup> {
                             WeChatSignupScreen(
                                 container = container,
-                                onBack = { if (backStack.lastOrNull() == CookNavKey.WeChatSignup) backStack.removeLastOrNull() },
+                                onBack = { popRoute(CookNavKey.WeChatSignup) },
                             )
                         }
                     },

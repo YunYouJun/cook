@@ -41,7 +41,12 @@ import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.aead.PredefinedAeadParameters
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
@@ -552,6 +557,9 @@ class AccountWebHandoffTest {
             assertTrue(runCatching { afterExpiry.approveAccountWebsiteCallback(expiring) }.exceptionOrNull()
                 is YunlefunAccountException.InvalidWebsiteCallback)
             assertEquals(0, transport.approvals)
+
+            val nextColdStart = sessions(database, transport, vault)
+            assertNull(nextColdStart.state.value.expiredWebsitePurpose)
         } finally {
             database.close()
         }
@@ -1270,6 +1278,84 @@ class AccountWebHandoffTest {
         assertFalse(app.canOpenWebMembershipCheckout())
         packages.setInstallSourceInfo(app.packageName, "com.android.vending", "com.android.shell")
         assertFalse(app.canOpenWebMembershipCheckout())
+    }
+
+    @Test
+    fun membershipServiceMapsLoginRequiredAndEnforcesLedgerEnvironment() = runBlocking {
+        val loginRequired = MembershipService(object : HttpTransport {
+            override suspend fun request(
+                method: String,
+                url: String,
+                headers: Map<String, String>,
+                jsonBody: String?,
+                maxResponseBytes: Int,
+                connectTimeoutMs: Int,
+                readTimeoutMs: Int,
+            ): HttpResponsePayload = HttpResponsePayload(200, """{"code":"login_required"}""")
+        })
+        assertTrue(runCatching { loginRequired.queryEntitlement(credential) }.exceptionOrNull()
+            is YunlefunAccountException.ExpiredSession)
+
+        val mismatchedLane = MembershipService(object : HttpTransport {
+            override suspend fun request(
+                method: String,
+                url: String,
+                headers: Map<String, String>,
+                jsonBody: String?,
+                maxResponseBytes: Int,
+                connectTimeoutMs: Int,
+                readTimeoutMs: Int,
+            ): HttpResponsePayload = HttpResponsePayload(
+                200,
+                """{"ledgerEnvironment":"Sandbox","membership":{"isActive":true,"expireAt":${credential.expiresAtEpochMs}}}""",
+            )
+        }, sandbox = false)
+        assertTrue(runCatching { mismatchedLane.queryEntitlement(credential) }.exceptionOrNull()
+            is YunlefunAccountException.InvalidResponse)
+
+        val redacted = credential.toString()
+        assertFalse(redacted.contains(credential.accessToken))
+        assertFalse(redacted.contains(credential.refreshToken))
+    }
+
+    @Test
+    fun accountBrowserFlowAcceptsCallbackWhenPriorDeliveryIsStillPending() {
+        val database = database()
+        val transport = Transport()
+        val sessions = sessions(database, transport)
+        val looper = shadowOf(Looper.getMainLooper())
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        try {
+            val flow = AccountBrowserFlow()
+            val callback = runBlocking { callbackFor(sessions.beginAccountWebsite()) }
+            // Queue a Delivery without calling deliver() yet (simulating paused Activity before RESUMED).
+            flow.resumeWebsite(sessions, AccountWebsitePurpose.ACCOUNT_SETTINGS)
+            val pendingDeadline = System.nanoTime() + 5_000_000_000L
+            while (!flow.hasPendingDelivery && System.nanoTime() < pendingDeadline) {
+                looper.idle()
+                if (!flow.hasPendingDelivery) Thread.sleep(10)
+            }
+            assertTrue(flow.hasPendingDelivery)
+            assertTrue(flow.busy.value)
+
+            flow.approveWebsite(sessions, callback, AccountWebsitePurpose.ACCOUNT_SETTINGS)
+            val opened = mutableListOf<String>()
+            val deliverJob = scope.launch {
+                flow.deliver(sessions, open = { opened += it }, showMessage = {})
+            }
+            val deadline = System.nanoTime() + 5_000_000_000L
+            while ((opened.isEmpty() || flow.busy.value) && System.nanoTime() < deadline) {
+                looper.idle()
+                if (opened.isEmpty() || flow.busy.value) Thread.sleep(10)
+            }
+            deliverJob.cancel()
+            assertEquals(1, transport.approvals)
+            assertEquals(1, opened.size)
+            assertFalse(flow.busy.value)
+        } finally {
+            scope.cancel()
+            database.close()
+        }
     }
 
     private fun database(): CookDatabase = Room.inMemoryDatabaseBuilder(

@@ -213,14 +213,18 @@ data class UserDataDocument(
         val incomingCutoff = incoming.historyClearedAt.takeUnless { cutoff ->
             combined.histories.any { it.time <= cutoff }
         } ?: 0.0
+        val mergedClearedAt = maxOf(historyClearedAt, incomingCutoff)
         return combined.copy(
             favoriteRemovals = latestById(combined.favoriteRemovals + incoming.favoriteRemovals).values
                 .filterNot { it.id in activeFavorites }
-                .sortedWith(compareBy<Favorite> { it.time }.thenBy { it.id }),
+                .sortedWith(compareBy<Favorite> { it.time }.thenBy { it.id })
+                .takeLast(MAX_REMOVALS),
             historyRemovals = (combined.historyRemovals + incoming.historyRemovals)
-                .distinct().filterNot { it in activeVisits }
-                .sortedWith(compareBy<Removal> { it.time }.thenBy { it.name }),
-            historyClearedAt = maxOf(historyClearedAt, incomingCutoff),
+                .distinct()
+                .filter { it !in activeVisits && it.time > mergedClearedAt }
+                .sortedWith(compareBy<Removal> { it.time }.thenBy { it.name })
+                .takeLast(MAX_REMOVALS),
+            historyClearedAt = mergedClearedAt,
         )
     }
 

@@ -63,7 +63,7 @@ GitHub Release 工作流在正式版标签（如 `v2.0.1`）通过版本校验�
 
 切换时从当前线上 SHA 创建 `web-production`，在 `yunyoujun-cook` 的「设置 → 环境管理 → 生产 → 编辑」选择该分支并保存。若 EdgeOne 构建失败且分支已指向该标签，在「构建部署」重新部署该提交，再重跑 GitHub 部署任务核对。站点回滚可在 EdgeOne 重新发布上一个成功部署。
 
-Git 部署使用根目录 `edgeone.json`，其中配置了授权回调的 `no-store` 和 `no-referrer` 响应头。`scripts/copy-web-output.ts` 将该配置复制到 `dist`，使下载的发布产物也能用于直接上传。官网的 `dist-site` 不应发布到此项目，网页版和审核中的 `/about/` 保持独立。
+Git 部署使用根目录 `edgeone.json`，其中配置了授权回调的 `no-store` 和 `no-referrer` 响应头。`scripts/lib/web-build.mjs` 将该配置复制到 `dist`，使下载的发布产物也能用于直接上传。官网的 `dist-site` 不应发布到此项目，网页版和审核中的 `/about/` 保持独立。
 
 2026-11-22，`cook.yunyoujun.cn` 的生产构建 `00bc9b1cb` 已提供 Android Chrome 的打开 App、复制和手动全选回调入口。用 Android 15 Chrome 和合成回调验证了剪贴板复制、模拟剪贴板拒绝后全选完整链接，以及向 `fun.yunle.cook` 发出打开请求。线上 `/auth/callback?platform=native` 返回 200 和默认缓存头，未命中配置的两个响应头。`/auth/callback/?platform=native` 返回了配置的响应头。
 

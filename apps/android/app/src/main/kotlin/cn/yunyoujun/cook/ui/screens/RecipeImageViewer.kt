@@ -83,11 +83,20 @@ internal fun recipePhotos(text: RecipeText?, library: RecipeTextLibrary?, name: 
 
 @Composable
 internal fun RecipePhotoPreview(photo: RecipePhoto, loader: RecipeImageLoader, onOpen: () -> Unit) {
-    val result = recipeImage(photo, loader, attempt = 0)
+    var attempt by remember(photo.url) { mutableIntStateOf(0) }
+    val result = recipeImage(photo, loader, attempt = attempt)
+    val failed = result?.isFailure == true
     Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceVariant) {
         Box(
             Modifier.fillMaxWidth().aspectRatio(photo.aspectRatio)
-                .clickable(role = Role.Button, onClickLabel = "查看配图", onClick = onOpen),
+                .clickable(
+                    role = Role.Button,
+                    onClickLabel = if (failed) "重试加载配图" else "查看配图",
+                    onClick = {
+                        if (failed) attempt++
+                        else onOpen()
+                    },
+                ),
             contentAlignment = Alignment.Center,
         ) {
             val image = result?.getOrNull()

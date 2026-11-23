@@ -236,7 +236,18 @@ class PrivateRecipeVideoStore internal constructor(
         try {
             draft.file.copyTo(temporary, overwrite = true)
             if (temporary.length() != installed.byteCount) throw PrivateVideoException.Corrupt()
-            Files.move(temporary.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE)
+            try {
+                Files.move(
+                    temporary.toPath(),
+                    destination.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE,
+                )
+            } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
+                Files.move(temporary.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            } catch (_: UnsupportedOperationException) {
+                Files.move(temporary.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            }
         } finally {
             temporary.delete()
         }

@@ -176,6 +176,28 @@ class UserDataDocumentTest {
         assertEquals(1, decoded.favorites.size)
     }
 
+    @Test
+    fun restoreMergingCapsTombstonesAndPrunesClearedHistoryRemovals() {
+        val current = UserDataDocument(
+            favoriteRemovals = (1..600).map { UserDataDocument.Favorite(id = it, time = it.toDouble()) },
+            historyRemovals = (1..600).map { UserDataDocument.Removal(name = "旧菜-$it", time = (1000 + it).toDouble()) },
+            historyClearedAt = 1200.0,
+        )
+        val incoming = UserDataDocument(
+            favoriteRemovals = (601..1200).map { UserDataDocument.Favorite(id = it, time = it.toDouble()) },
+            historyRemovals = (601..1200).map { UserDataDocument.Removal(name = "新菜-$it", time = (1000 + it).toDouble()) },
+        )
+        val restored = current.restoreMerging(incoming)
+        restored.validate()
+        assertEquals(UserDataDocument.MAX_REMOVALS, restored.favoriteRemovals.size)
+        assertEquals(201, restored.favoriteRemovals.first().id)
+        assertEquals(1200, restored.favoriteRemovals.last().id)
+        assertEquals(1000, restored.historyRemovals.size)
+        assertTrue(restored.historyRemovals.all { it.time > 1200.0 })
+        assertEquals(1201.0, restored.historyRemovals.first().time, 0.0)
+        assertEquals(2200.0, restored.historyRemovals.last().time, 0.0)
+    }
+
     @Test(expected = UserDataDocument.InvalidDocumentException::class)
     fun rejectsOversizedDocument() {
         val largeName = "a".repeat(150)

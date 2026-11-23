@@ -12,12 +12,25 @@ struct ShowcaseModelView: View {
     @State private var lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
     @State private var model: Entity?
     @State private var loadFailed = false
-    @GestureState private var preview: ShowcaseViewpoint? = nil
+    @GestureState private var dragRotation: Double? = nil
+    @GestureState private var pinchScale: Double? = nil
+    @State private var suppressDragUntilEnd = false
     @State private var still: (viewpoint: ShowcaseViewpoint, image: UIImage)?
     @State private var resetFeedback = false
 
     private var previewsGesture: Bool { !reduceMotion && !lowPowerMode }
-    private var activePreview: ShowcaseViewpoint? { previewsGesture ? preview : nil }
+    private var activePreview: ShowcaseViewpoint? {
+        guard previewsGesture else { return nil }
+        if let pinchScale {
+            let next = viewpoint.adjusted(pinch: pinchScale)
+            return next == viewpoint ? nil : next
+        }
+        if !suppressDragUntilEnd, let dragRotation {
+            let next = viewpoint.adjusted(rotation: dragRotation)
+            return next == viewpoint ? nil : next
+        }
+        return nil
+    }
     private var displayedViewpoint: ShowcaseViewpoint { activePreview ?? viewpoint }
     private var canAdjust: Bool { still != nil && !loadFailed }
 
@@ -115,7 +128,14 @@ struct ShowcaseModelView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-        .simultaneousGesture(modelGesture, including: canAdjust ? .all : .none)
+        .simultaneousGesture(magnifyGesture, including: canAdjust ? .all : .none)
+        .simultaneousGesture(dragGesture, including: canAdjust ? .all : .none)
+        .onChange(of: dragRotation == nil) { _, ended in
+            if ended && pinchScale == nil { suppressDragUntilEnd = false }
+        }
+        .onChange(of: pinchScale == nil) { _, ended in
+            if ended && dragRotation == nil { suppressDragUntilEnd = false }
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(loadFailed ? "\(name)徽章" : !canAdjust ? "正在加载模型" : "\(name)模型")
         .accessibilityValue(canAdjust ? viewpointDescription : "")
@@ -127,20 +147,31 @@ struct ShowcaseModelView: View {
         return zoom == 100 ? angle : "\(angle)，缩放 \(zoom)%"
     }
 
-    private var modelGesture: some Gesture {
-        DragGesture(minimumDistance: 4).simultaneously(with: MagnifyGesture())
-            .updating($preview) { value, state, _ in
-                if previewsGesture {
-                    let next = adjustedViewpoint(for: value)
-                    state = next == viewpoint ? nil : next
-                }
+    private var magnifyGesture: some Gesture {
+        MagnifyGesture()
+            .updating($pinchScale) { value, state, _ in
+                state = Double(value.magnification)
             }
-            .onEnded { value in viewpoint = adjustedViewpoint(for: value) }
+            .onChanged { _ in
+                suppressDragUntilEnd = true
+            }
+            .onEnded { value in
+                viewpoint = viewpoint.adjusted(pinch: Double(value.magnification))
+                if dragRotation == nil { suppressDragUntilEnd = false }
+            }
     }
 
-    private func adjustedViewpoint(for value: SimultaneousGesture<DragGesture, MagnifyGesture>.Value) -> ShowcaseViewpoint {
-        let degrees = value.first.map { rotation(for: $0.translation) } ?? 0
-        return viewpoint.adjusted(rotation: degrees, pinch: value.second.map { Double($0.magnification) })
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 4)
+            .updating($dragRotation) { value, state, _ in
+                state = rotation(for: value.translation)
+            }
+            .onEnded { value in
+                if !suppressDragUntilEnd && pinchScale == nil {
+                    viewpoint = viewpoint.adjusted(rotation: rotation(for: value.translation))
+                }
+                suppressDragUntilEnd = pinchScale != nil
+            }
     }
 
     private func rotation(for translation: CGSize) -> Double {

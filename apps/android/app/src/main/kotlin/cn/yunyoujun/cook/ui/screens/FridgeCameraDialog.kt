@@ -42,8 +42,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.Observer
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import cn.yunyoujun.cook.data.local.BoundedIoStreams
 import cn.yunyoujun.cook.data.local.FridgePhotoInspector
 import cn.yunyoujun.cook.ui.state.FridgePhotoIntake
@@ -126,10 +128,12 @@ internal fun FridgeCameraDialog(
             }
         }
         if (!streaming && error == null) {
-            LaunchedEffect(controller) {
+            LaunchedEffect(controller, owner) {
                 // A system camera privacy block can leave the attached view idle indefinitely.
-                delay(12.seconds)
-                if (!streaming) previewTimedOut = true
+                owner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    delay(12.seconds)
+                    if (!streaming) previewTimedOut = true
+                }
             }
         }
     }

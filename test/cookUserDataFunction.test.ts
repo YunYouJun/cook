@@ -286,4 +286,34 @@ describe('cook-user-data function', () => {
     await expect(fn.main({ action: 'get' })).resolves.toEqual({ ok: false, code: 'INTERNAL_ERROR' })
     error.mockRestore()
   })
+
+  it('validates record.expireAt bounds and handles wrapped transaction deletion errors', async () => {
+    const future = Date.now() + 60_000
+    createApp({ uid: 'u1' }, 253402300799001)
+    await expect(fn.main({ action: 'capabilities' })).resolves.toEqual({ ok: false, code: 'MEMBERSHIP_REQUIRED' })
+
+    createApp({ uid: 'u1' }, 1.5)
+    await expect(fn.main({ action: 'capabilities' })).resolves.toEqual({ ok: false, code: 'MEMBERSHIP_REQUIRED' })
+
+    createApp({ uid: 'u1' }, 253402300799001, [{ expiresAt: future }])
+    await expect(fn.main({ action: 'capabilities' })).resolves.toEqual({ ok: true, protocolVersion: 2 })
+
+    const { profiles, runTransaction } = createApp({ uid: 'u1' }, future)
+    runTransaction.mockImplementationOnce(async (work) => {
+      try {
+        return await work({
+          collection: () => ({
+            doc: () => ({
+              async get() { return { data: [] } },
+              async set() { profiles.set('u1', { deletionStatus: 'pending' }) },
+            }),
+          }),
+        })
+      }
+      catch (err) {
+        throw new Error(`wrapped: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    })
+    await expect(fn.main({ action: 'sync', document })).resolves.toEqual({ ok: false, code: 'LOGIN_REQUIRED' })
+  })
 })

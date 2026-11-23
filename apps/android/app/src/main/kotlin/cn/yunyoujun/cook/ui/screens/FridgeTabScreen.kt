@@ -723,7 +723,11 @@ internal fun FridgeTabScreen(
                             val received by modelStatus.receivedBytes.collectAsState()
                             Text("正在下载蔬果模型…", style = MaterialTheme.typography.bodySmall)
                             LinearProgressIndicator(
-                                progress = { (received.toDouble() / modelStore.model.bytes).toFloat() },
+                                progress = {
+                                    if (modelStore.model.bytes > 0) {
+                                        (received.toDouble() / modelStore.model.bytes).toFloat().coerceIn(0f, 1f)
+                                    } else 0f
+                                },
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             if (waitingForModel) Text("下载完成后会继续识别这张照片。", style = MaterialTheme.typography.bodySmall)

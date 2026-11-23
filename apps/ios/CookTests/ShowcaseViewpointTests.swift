@@ -49,4 +49,11 @@ final class ShowcaseViewpointTests: XCTestCase {
             XCTAssertEqual(initial.adjusted(rotation: 45, pinch: invalid), initial)
         }
     }
+
+    func testTinyNegativeRotationWrapsCleanlyToZero() {
+        let adjusted = ShowcaseViewpoint.initial.adjusted(rotation: -1e-17)
+        XCTAssertEqual(adjusted, .initial)
+        XCTAssertEqual(adjusted.angle, 0)
+        XCTAssertEqual(adjusted.angleDegrees, 0)
+    }
 }

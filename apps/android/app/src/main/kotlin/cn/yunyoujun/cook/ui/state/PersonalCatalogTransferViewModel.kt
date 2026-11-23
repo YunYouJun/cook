@@ -43,7 +43,7 @@ internal class PersonalCatalogTransferViewModel(private val store: PersonalCatal
     fun export(resolver: ContentResolver, uri: Uri) = transfer("无法导出词典。") {
         withContext(Dispatchers.IO) {
             val bytes = store.exportJson().toByteArray(Charsets.UTF_8)
-            resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error("无法写入选中的文件。")
+            resolver.openOutputStream(uri, "wt")?.use { it.write(bytes) } ?: error("无法写入选中的文件。")
         }
         message = "已导出个人食材与厨具词典。"
     }

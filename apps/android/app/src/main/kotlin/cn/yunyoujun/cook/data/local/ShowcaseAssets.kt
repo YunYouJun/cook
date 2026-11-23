@@ -221,7 +221,7 @@ internal class ShowcasePackStore(
                 mutableState.update { it.copy(error = error) }
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (_: IOException) {
+            } catch (_: Exception) {
                 mutableState.update { it.copy(error = error) }
             } finally {
                 mutableState.update { it.copy(busy = false, receivedBytes = null) }
@@ -264,7 +264,18 @@ internal class ShowcasePackStore(
                 output.write(data)
                 output.fd.sync()
             }
-            Files.move(staging.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE)
+            try {
+                Files.move(
+                    staging.toPath(),
+                    destination.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE,
+                )
+            } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
+                Files.move(staging.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            } catch (_: UnsupportedOperationException) {
+                Files.move(staging.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            }
         } finally {
             staging.delete()
         }

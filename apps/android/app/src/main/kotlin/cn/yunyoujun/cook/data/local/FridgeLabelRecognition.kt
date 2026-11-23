@@ -497,10 +497,15 @@ object FridgePhotoInspector {
             BitmapRegionDecoder.newInstance(bytes, 0, bytes.size, false)
         } catch (_: IOException) {
             return null
-        }
+        } ?: return null
         val region = try {
+            if (decoder.width <= 0 || decoder.height <= 0) return null
             val bounds = sourceCropBounds(decoder.width, decoder.height, focus, transform)
             decoder.decodeRegion(bounds, sampledOptions(bounds.width(), bounds.height(), MAX_PIXEL_DIMENSION))
+        } catch (_: IOException) {
+            null
+        } catch (_: IllegalArgumentException) {
+            null
         } finally {
             decoder.recycle()
         } ?: return null

@@ -83,18 +83,33 @@ def pick_signups(rows, cutoff, claims):
         if claim:
             chosen = next((row for row in same_email if row.record == claim['record']), None)
         else:
-            delivered = next((row for row in same_email if row.queued or row.status == QQ_SENT), None)
-            chosen = delivered or next((row for row in same_email if row.created >= cutoff and row.agreed
-                                        and row.status == WAITING), None)
-        if (chosen and chosen.created >= cutoff and chosen.agreed
+            eligible_rows = [row for row in same_email
+                             if on_or_after(row.created, cutoff) and row.agreed and row.status in {WAITING, QQ_SENT}]
+            delivered = next((row for row in eligible_rows if row.queued or row.status == QQ_SENT), None)
+            chosen = delivered or next((row for row in eligible_rows if row.status == WAITING), None)
+        if (chosen and on_or_after(chosen.created, cutoff) and chosen.agreed
                 and chosen.status in {WAITING, QQ_SENT}):
             eligible.append(chosen)
     return sorted(eligible, key=lambda entry: (entry.created, entry.record))
 
 
+def on_or_after(created, cutoff):
+    if hasattr(created, 'tzinfo') and hasattr(cutoff, 'tzinfo') and (created.tzinfo is None) != (cutoff.tzinfo is None):
+        from datetime import timezone
+        created = created.replace(tzinfo=timezone.utc) if created.tzinfo is None else created.astimezone(timezone.utc)
+        cutoff = cutoff.replace(tzinfo=timezone.utc) if cutoff.tzinfo is None else cutoff.astimezone(timezone.utc)
+    return created >= cutoff
+
+
+def require_command(value, name):
+    if not isinstance(value, list) or not value or not all(isinstance(part, str) and part for part in value):
+        raise ValueError(f'{name} must be a non-empty list of strings')
+    return value
+
+
 class Feishu:
     def __init__(self, config):
-        self.cli = config['larkCommand']
+        self.cli = require_command(config['larkCommand'], 'larkCommand')
         self.target = ['--base-token', config['baseToken'], '--table-id', config['tableId'], '--as', 'user']
         self.columns = [value for field in config['fieldIds'] for value in ('--field-id', field)]
 
@@ -118,7 +133,7 @@ class Feishu:
                 if manifest.get('has_more') is False:
                     break
                 following = manifest.get('next_offset')
-                if record or not isinstance(following, int) or following <= offset or revision is None:
+                if record or type(following) is not int or following <= offset or revision is None:
                     raise RuntimeError('Feishu signup snapshot is incomplete')
                 offset = following
         signups = []
@@ -140,7 +155,10 @@ class Feishu:
 
 class TestFlight:
     def __init__(self, config):
-        self.command = read(Path(config.get('ascStateDir', DEFAULT_STATE)) / 'config.json')['ascCommand']
+        self.command = require_command(
+            read(Path(config.get('ascStateDir', DEFAULT_STATE)) / 'config.json').get('ascCommand', ['asc']),
+            'ascCommand',
+        )
         self.app = config['appId']
         candidate = read(Path(__file__).with_name('candidate.json'))
         if candidate.get('appId') != self.app or candidate.get('distributionChannel') != 'external' or not candidate.get('publicLink'):
@@ -221,12 +239,14 @@ def queue_qq(feishu, rows, claims, persist, apply):
         if row.status != WAITING:
             continue
         claim = claims.get(row.key, {})
+        if claim.get('appleAt'):
+            continue
         if row.queued or claim.get('queuedAt'):
             summary['qq_waiting'] += 1
             summary['stalled'] += bool(expired_attempt(claim, 'queuedAt'))
         elif not apply or feishu.rows(row.record) == [row]:
             if apply:
-                claims[row.key] = {'record': row.record, 'queuedAt': now()}
+                claims[row.key] = {**claim, 'record': row.record, 'queuedAt': now()}
                 persist()
                 feishu.update(row, QUEUE, True)
             summary['qq_queued'] += 1
@@ -252,17 +272,19 @@ def reconcile(feishu, apple, config, state, persist, apply, record_id=None, limi
         summary['testflight_candidates'] = len(ready)
         return summary
 
+    members = apple.testers(group=True) if ready else []
     for row in ready:
         current = feishu.rows(row.record)
         if current != [row]:
             continue
-        members = apple.testers(group=True)
         matched = email_matches(members, row)
         claim = claims.get(row.key, {})
         if not matched:
             if claim.get('appleAt'):
                 summary['awaiting_apple'] += 1
                 summary['stalled'] += bool(expired_attempt(claim, 'appleAt'))
+                continue
+            if limit is not None and summary['new_invites_requested'] >= limit:
                 continue
             if email_matches(apple.testers(email=row.email), row):
                 summary['previously_registered'] += 1
@@ -277,8 +299,6 @@ def reconcile(feishu, apple, config, state, persist, apply, record_id=None, limi
                 continue
             if email_matches(members, row):
                 summary['awaiting_apple'] += 1
-                continue
-            if limit is not None and summary['new_invites_requested'] >= limit:
                 continue
             claim = {**claim, 'record': row.record, 'appleAt': now()}
             claims[row.key] = claim

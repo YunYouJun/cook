@@ -132,24 +132,34 @@ async function setDocument(uid, input, now) {
   const document = readDocument(input)
   if (!document)
     return fail('INVALID_DOCUMENT')
-  // Both new sync and old set callers merge inside the same transaction. A
-  // snapshot read before another device's write can never erase that write.
-  return getApp().database().runTransaction(async (transaction) => {
-    const reference = transaction.collection(COLLECTION).doc(uid)
-    const raw = await readStoredDocument(reference)
-    const previous = raw == null ? readDocument({ version: USER_DATA_VERSION }) : readDocument(stripMeta(raw))
-    if (!previous)
-      return fail('INVALID_REMOTE')
-    const merged = { version: USER_DATA_VERSION, ...mergeUserData(normalizeUserData(previous), normalizeUserData(document), now), updatedAt: now }
-    if (!readDocument(merged))
-      return fail('DOCUMENT_LIMIT')
-    await reference.set(merged)
-    // Recheck against the current profile while the staged write holds the library lock.
-    // A profile read inside this transaction would still see its earlier snapshot.
-    if (await accountDeletionBlocksSync(uid))
-      throw new AccountDeletionInProgress()
-    return { ok: true, document: merged, updatedAt: now, protocolVersion: 2 }
-  })
+  let deletionBlocked = false
+  try {
+    // Both new sync and old set callers merge inside the same transaction. A
+    // snapshot read before another device's write can never erase that write.
+    return await getApp().database().runTransaction(async (transaction) => {
+      const reference = transaction.collection(COLLECTION).doc(uid)
+      const raw = await readStoredDocument(reference)
+      const previous = raw == null ? readDocument({ version: USER_DATA_VERSION }) : readDocument(stripMeta(raw))
+      if (!previous)
+        return fail('INVALID_REMOTE')
+      const merged = { version: USER_DATA_VERSION, ...mergeUserData(normalizeUserData(previous), normalizeUserData(document), now), updatedAt: now }
+      if (!readDocument(merged))
+        return fail('DOCUMENT_LIMIT')
+      await reference.set(merged)
+      // Recheck against the current profile while the staged write holds the library lock.
+      // A profile read inside this transaction would still see its earlier snapshot.
+      if (await accountDeletionBlocksSync(uid)) {
+        deletionBlocked = true
+        throw new AccountDeletionInProgress()
+      }
+      return { ok: true, document: merged, updatedAt: now, protocolVersion: 2 }
+    })
+  }
+  catch (error) {
+    if (deletionBlocked || error instanceof AccountDeletionInProgress)
+      return fail('LOGIN_REQUIRED')
+    throw error
+  }
 }
 
 async function main(event = {}) {

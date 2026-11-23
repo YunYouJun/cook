@@ -151,3 +151,35 @@ class SignupInvitationTests(TestCase):
         self.apple.members[row.email] = 'INVITED'
         self.run_invites()
         self.assertEqual(self.feishu.records[row.record].status, INVITED)
+
+    def test_stale_pre_cutoff_qq_sent_does_not_shadow_newer_round_signup(self):
+        stale = signup('stale', 'person@example.com', minutes=-1, status=QQ_SENT)
+        newer = signup('newer', 'person@example.com', minutes=5, status=WAITING)
+        self.feishu = SignupTable(stale, newer)
+        self.run_qq_replies()
+        self.assertEqual(self.feishu.writes, [('newer', QUEUE, True)])
+        self.feishu.update(newer, STATUS, [QQ_SENT])
+        summary = self.run_invites()
+        self.assertEqual(summary['new_invites_requested'], 1)
+        self.assertEqual(self.apple.additions, ['person@example.com'])
+        self.assertEqual(self.feishu.records['newer'].status, INVITED)
+        self.assertEqual(self.feishu.records['stale'].status, QQ_SENT)
+
+    def test_limit_stops_before_querying_extra_asc_candidates(self):
+        first = signup('first', 'first@example.com', minutes=1, status=QQ_SENT)
+        second = signup('second', 'second@example.com', minutes=2, status=QQ_SENT)
+        third = signup('third', 'third@example.com', minutes=3, status=QQ_SENT)
+        self.feishu = SignupTable(first, second, third)
+        email_queries = []
+        original_testers = self.apple.testers
+
+        def tracked_testers(*, group=False, email=None):
+            if not group and email is not None:
+                email_queries.append(email)
+            return original_testers(group=group, email=email)
+
+        self.apple.testers = tracked_testers
+        summary = self.run_invites(limit=1)
+        self.assertEqual(summary['new_invites_requested'], 1)
+        self.assertEqual(self.apple.additions, ['first@example.com'])
+        self.assertEqual(email_queries, ['first@example.com'])

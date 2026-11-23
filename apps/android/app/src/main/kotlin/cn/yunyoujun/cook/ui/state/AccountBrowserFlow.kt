@@ -31,6 +31,8 @@ internal class AccountBrowserFlow : ViewModel() {
     private val mutableBusy = MutableStateFlow(false)
     val busy = mutableBusy.asStateFlow()
     private val completion = MutableStateFlow<Delivery?>(null)
+    internal val hasPendingDelivery: Boolean get() = completion.value != null
+    private var inFlight = false
 
     fun beginSignIn(sessions: YunlefunSessionManager, preferApp: Boolean) = execute(::signInError) {
         if (preferApp) {
@@ -50,12 +52,13 @@ internal class AccountBrowserFlow : ViewModel() {
         null
     }
 
-    fun completeSignIn(sessions: YunlefunSessionManager, url: String) = execute(::signInError) {
-        when (val result = sessions.handleSsoCallbackUrl(url).getOrThrow()) {
-            YunlefunSignInResult.SignedIn -> null
-            is YunlefunSignInResult.ContinueInBrowser -> Delivery.SignInPage(result.url)
+    fun completeSignIn(sessions: YunlefunSessionManager, url: String) =
+        execute(::signInError, preemptPendingDelivery = true) {
+            when (val result = sessions.handleSsoCallbackUrl(url).getOrThrow()) {
+                YunlefunSignInResult.SignedIn -> null
+                is YunlefunSignInResult.ContinueInBrowser -> Delivery.SignInPage(result.url)
+            }
         }
-    }
 
     fun beginWebsite(
         sessions: YunlefunSessionManager,
@@ -66,13 +69,24 @@ internal class AccountBrowserFlow : ViewModel() {
     }
 
     fun approveWebsite(sessions: YunlefunSessionManager, url: String, purpose: AccountWebsitePurpose? = null) =
-        execute(::approvalError) { Delivery.AccountWebsite(sessions.approveAccountWebsiteCallback(url, purpose)) }
+        execute(::approvalError, preemptPendingDelivery = true) {
+            Delivery.AccountWebsite(sessions.approveAccountWebsiteCallback(url, purpose))
+        }
 
     fun resumeWebsite(sessions: YunlefunSessionManager, purpose: AccountWebsitePurpose) =
         execute(::websiteError) { Delivery.AccountWebsite(sessions.resumeApprovedAccountWebsite(purpose)) }
 
-    private fun execute(errorMessage: (Exception) -> String?, action: suspend () -> Delivery?) {
-        if (mutableBusy.value) return
+    private fun execute(
+        errorMessage: (Exception) -> String?,
+        preemptPendingDelivery: Boolean = false,
+        action: suspend () -> Delivery?,
+    ) {
+        if (inFlight) return
+        if (completion.value != null) {
+            if (!preemptPendingDelivery) return
+            completion.value = null
+        }
+        inFlight = true
         mutableBusy.value = true
         viewModelScope.launch {
             val result = try {
@@ -80,9 +94,14 @@ internal class AccountBrowserFlow : ViewModel() {
             } catch (error: Exception) {
                 currentCoroutineContext().ensureActive()
                 errorMessage(error)?.let { Delivery.Notice(it) }
+            } finally {
+                inFlight = false
             }
-            if (result != null) completion.value = result
-            else mutableBusy.value = false
+            if (result != null) {
+                completion.value = result
+            } else {
+                mutableBusy.value = completion.value != null
+            }
         }
     }
 
@@ -115,14 +134,18 @@ internal class AccountBrowserFlow : ViewModel() {
             } catch (error: Exception) {
                 // Preserve undelivered work if the Activity paused while opening the page.
                 currentCoroutineContext().ensureActive()
-                websiteError(error)?.let(showMessage)
+                val formatted = when (result) {
+                    is Delivery.SignInPage -> signInError(error)
+                    else -> websiteError(error)
+                }
+                formatted?.let(showMessage)
             }
             finishDelivery(result)
         }
     }
 
     private fun finishDelivery(result: Delivery) {
-        if (completion.compareAndSet(result, null)) mutableBusy.value = false
+        if (completion.compareAndSet(result, null)) mutableBusy.value = inFlight
     }
 
     private fun signInError(error: Exception): String = when (error) {

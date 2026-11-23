@@ -10,7 +10,7 @@ import zipfile
 PAGE_SIZE = 16 * 1024
 ELF64_HEADER_SIZE = 64
 ELF64_PROGRAM_HEADER = struct.Struct("<IIQQQQQQ")
-ANDROID_64_BIT_ABIS = {"arm64-v8a", "x86_64"}
+ANDROID_64_BIT_ABIS = {"arm64-v8a", "x86_64", "riscv64"}
 PT_LOAD = 1
 
 
@@ -41,7 +41,7 @@ def library_alignment_error(archive, library):
         if segment_type != PT_LOAD:
             continue
         has_load_segment = True
-        if alignment < PAGE_SIZE or (address - offset) % PAGE_SIZE != 0:
+        if alignment < PAGE_SIZE or (alignment & (alignment - 1)) != 0 or (address - offset) % PAGE_SIZE != 0:
             return f"LOAD {index} has alignment {alignment:#x}, offset {offset:#x}, address {address:#x}"
     if not has_load_segment:
         return "missing ELF LOAD segment"
@@ -53,7 +53,7 @@ def verify(artifact):
         libraries = []
         for entry in archive.infolist():
             parts = entry.filename.split("/")
-            if len(parts) >= 3 and parts[-3] == "lib" and parts[-2] in ANDROID_64_BIT_ABIS and parts[-1].endswith(".so"):
+            if ((len(parts) == 3 and parts[0] == "lib") or (len(parts) == 4 and parts[1] == "lib")) and parts[-2] in ANDROID_64_BIT_ABIS and parts[-1].endswith(".so"):
                 libraries.append(entry)
         if not libraries:
             raise ValueError("no 64-bit native libraries found")

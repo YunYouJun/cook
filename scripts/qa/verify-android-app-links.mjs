@@ -36,7 +36,8 @@ async function main() {
   const device = values.device || values['verify-device']
   if (values.serial !== undefined && !device)
     throw new Error('--serial requires --device or --verify-device')
-  if (values.serial !== undefined && !values.serial.trim())
+  const serial = values.serial?.trim()
+  if (values.serial !== undefined && !serial)
     throw new Error('--serial requires a non-empty adb device serial')
   if (values['build-tools'] && !values.apk && !device)
     throw new Error('--build-tools requires --apk, --device, or --verify-device')
@@ -46,7 +47,7 @@ async function main() {
   const suppliedFingerprints = [
     ...(values.apk ?? []).flatMap(apk => readAndroidApkFingerprints(resolve(apk), { buildTools })),
     ...(values.certificate ?? []).map(file => readAndroidCertificateFingerprint(readFileSync(file))),
-    ...(device ? readInstalledAndroidApkFingerprints({ serial: values.serial, buildTools }) : []),
+    ...(device ? readInstalledAndroidApkFingerprints({ serial, buildTools }) : []),
   ]
   const fingerprints = suppliedFingerprints.length
     ? [...new Set(suppliedFingerprints)]
@@ -61,7 +62,7 @@ async function main() {
   const results = await verifyAndroidLinks(fingerprints, fetch, { requireExactFingerprints: suppliedFingerprints.length === 0 })
   for (const result of results)
     console.log(`${result.ok ? 'PASS' : 'FAIL'} ${result.url} — ${result.message}`)
-  const deviceResults = values['verify-device'] ? verifyAndroidDeviceLinks({ serial: values.serial }) : []
+  const deviceResults = values['verify-device'] ? verifyAndroidDeviceLinks({ serial }) : []
   for (const result of deviceResults)
     console.log(`${result.ok ? 'PASS' : 'FAIL'} [device] ${result.label} — ${result.message}`)
   if ([...results, ...deviceResults].some(result => !result.ok))

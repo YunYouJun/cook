@@ -28,6 +28,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
@@ -288,6 +289,9 @@ data class YunlefunCredential(
             accessToken.isNotEmpty() &&
             accessToken.toByteArray(Charsets.UTF_8).size <= 16_384 &&
             accessToken.all { it.code in 33..126 }
+
+    override fun toString(): String =
+        "YunlefunCredential(subject=$subject, expiresAtEpochMs=$expiresAtEpochMs, deviceID=$deviceID)"
 }
 
 /**
@@ -406,7 +410,7 @@ class YunlefunAccountService(
         val subject = payload.requiredWeChatString("subject", 512)
         val credential = exchangeCustomTicket(payload.requiredWeChatString("ticket", 32_768), deviceID)
         if (credential.subject != subject) {
-            runCatching { signOut(credential) }
+            withContext(NonCancellable) { runCatching { signOut(credential) } }
             throw YunlefunAccountException.InvalidResponse()
         }
         return credential
@@ -530,12 +534,12 @@ class YunlefunAccountService(
         )
         val obj = runCatching { Json.parseToJsonElement(bodyText).jsonObject }
             .getOrElse { throw YunlefunAccountException.InvalidResponse() }
-        val accessToken = obj["access_token"]?.jsonPrimitive?.takeIf { it.isString }?.content.orEmpty()
-        val refreshToken = obj["refresh_token"]?.jsonPrimitive?.takeIf { it.isString }?.content.orEmpty()
-        val subject = obj["sub"]?.jsonPrimitive?.takeIf { it.isString }?.content.orEmpty()
-        val expiresInSec = obj["expires_in"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+        val accessToken = (obj["access_token"] as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty()
+        val refreshToken = (obj["refresh_token"] as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty()
+        val subject = (obj["sub"] as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty()
+        val expiresInSec = (obj["expires_in"] as? JsonPrimitive)?.takeUnless { it.isString }?.doubleOrNull ?: 0.0
         if (accessToken.isEmpty() || refreshToken.isEmpty() || subject.isEmpty() ||
-            expiresInSec <= 0.0 || expiresInSec > 31 * 86400.0
+            !expiresInSec.isFinite() || expiresInSec <= 0.0 || expiresInSec > 31 * 86400.0
         ) {
             throw YunlefunAccountException.InvalidResponse()
         }
@@ -838,22 +842,24 @@ class ManagedCookAIService(
         if (!ALLOWED_CAPABILITY_KEYS.containsAll(obj.keys)) {
             throw ManagedCookAIException.InvalidResponse()
         }
-        val serviceVersion = obj["serviceVersion"]?.jsonPrimitive?.intOrNull
-        val enabled = obj["enabled"]?.jsonPrimitive?.booleanOrNull
-        val membership = obj["membership"]?.jsonObject
+        val serviceVersion = (obj["serviceVersion"] as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull
+        val enabled = (obj["enabled"] as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull
+        val membership = obj["membership"] as? JsonObject
         if (serviceVersion != 1 || enabled == null || membership == null ||
-            ! setOf("isActive", "expireAt").containsAll(membership.keys)
+            !setOf("isActive", "expireAt").containsAll(membership.keys)
         ) {
             throw ManagedCookAIException.InvalidResponse()
         }
-        val isActive = membership["isActive"]?.jsonPrimitive?.booleanOrNull
+        val isActive = (membership["isActive"] as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull
             ?: throw ManagedCookAIException.InvalidResponse()
-        val expireAtMs = membership["expireAt"]?.jsonPrimitive?.doubleOrNull?.let { ms ->
-            if (!ms.isFinite() || ms <= 0.0) throw ManagedCookAIException.InvalidResponse()
-            ms.toLong()
+        val rawExpiry = membership["expireAt"]
+        val expireAtMs = if (rawExpiry == null || rawExpiry == JsonNull) null else {
+            (rawExpiry as? JsonPrimitive)?.takeUnless { it.isString }?.doubleOrNull?.takeIf { ms ->
+                ms.isFinite() && ms > 0.0
+            }?.toLong() ?: throw ManagedCookAIException.InvalidResponse()
         }
         if (enabled) {
-            val code = obj["code"]?.jsonPrimitive?.takeIf { it.isString }?.content
+            val code = (obj["code"] as? JsonPrimitive)?.takeIf { it.isString }?.content
             if (code != null || !isActive || expireAtMs == null || expireAtMs <= System.currentTimeMillis()) {
                 throw ManagedCookAIException.InvalidResponse()
             }
@@ -889,7 +895,7 @@ class ManagedCookAIService(
         if (obj.keys != setOf("ok", "intent")) {
             throw ManagedCookAIException.InvalidResponse()
         }
-        val rawIntent = obj["intent"]?.jsonObject ?: throw ManagedCookAIException.InvalidResponse()
+        val rawIntent = obj["intent"] as? JsonObject ?: throw ManagedCookAIException.InvalidResponse()
         return try {
             val validator = SearchIntentValidator(data, availableGoals)
             val intent = validator.decode(rawIntent.toString(), expectedSource = SearchIntentSource.DEEPSEEK)
@@ -1146,10 +1152,21 @@ class MembershipService(
             val status = response.statusCode
             throw YunlefunAccountException.Unavailable(retryable = status == 408 || status == 429 || status in 500..599)
         }
-        val body = runCatching { Json.parseToJsonElement(response.bodyText).jsonObject }
-            .getOrElse { throw YunlefunAccountException.InvalidResponse() }
+        val body = runCatching { Json.parseToJsonElement(response.bodyText) as? JsonObject }
+            .getOrNull() ?: throw YunlefunAccountException.InvalidResponse()
+        val code = (body["code"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        if (code.equals("login_required", ignoreCase = true)) {
+            throw YunlefunAccountException.ExpiredSession()
+        }
         if (body["code"] != null) {
             throw YunlefunAccountException.Unavailable(retryable = false)
+        }
+        if (sandbox || body["ledgerEnvironment"] != null) {
+            val expectedEnvironment = if (sandbox) "Sandbox" else "Production"
+            val environment = (body["ledgerEnvironment"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+            if (environment != expectedEnvironment) {
+                throw YunlefunAccountException.InvalidResponse()
+            }
         }
         return readMembershipEntitlement(credential.subject, body)
     }
@@ -1353,6 +1370,7 @@ class YunlefunSessionManager(
                     publishPendingAccountWebsite(pending)
                 } else {
                     _state.value = _state.value.copy(expiredWebsitePurpose = pending.purpose)
+                    runCatching { persistSession(saved, awaitingReturn, website = null, baselineExpiry = baselineExpiry) }
                 }
             }
         }
@@ -1462,10 +1480,17 @@ class YunlefunSessionManager(
             if (current.isValid() && current.accessToken != rejectedAccessToken) return@withLock current
             val fresh = accountService.refresh(current)
             if (!fresh.isValid() || fresh.subject != subject) throw YunlefunAccountException.ExpiredSession()
-            mutationMutex.withLock {
-                assertSessionUnchanged(revision, subject)
-                persistSession(fresh, _state.value.awaitingMembershipReturn)
-                _state.value = _state.value.copy(credential = fresh)
+            try {
+                mutationMutex.withLock {
+                    assertSessionUnchanged(revision, subject)
+                    persistSession(fresh, _state.value.awaitingMembershipReturn)
+                    _state.value = _state.value.copy(credential = fresh)
+                }
+            } catch (error: Throwable) {
+                if (error is CancellationException || error is Exception) {
+                    withContext(NonCancellable) { runCatching { accountService.signOut(fresh) } }
+                }
+                throw error
             }
             fresh
         }
@@ -1622,7 +1647,7 @@ class YunlefunSessionManager(
 
     suspend fun cancelAccountWebsite(purpose: AccountWebsitePurpose = AccountWebsitePurpose.ACCOUNT_SETTINGS): Result<Unit> =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runSuspendCatching {
                 mutationMutex.withLock {
                     if (pendingAccountWebsite?.purpose == purpose) savePendingAccountWebsite(null)
                 }
@@ -1798,7 +1823,7 @@ class YunlefunSessionManager(
     }
 
     internal suspend fun handleSsoCallbackUrl(callbackUrl: String): Result<YunlefunSignInResult> = withContext(Dispatchers.IO) {
-        runCatching {
+        runSuspendCatching {
             val (callback, revision) = mutationMutex.withLock {
                 if (_state.value.credential != null) throw YunlefunAccountException.InvalidCallback()
                 val sso = readPendingSso()
@@ -1810,7 +1835,7 @@ class YunlefunSessionManager(
                 val parsed = sso.callbackResult(callbackUrl, now)
                 if (parsed == YunlefunSSO.Callback.SelectAccountOnWeb && sso.inApp) {
                     val url = newSsoLocked(inApp = false).authorizationUrl
-                    return@runCatching YunlefunSignInResult.ContinueInBrowser(url)
+                    return@runSuspendCatching YunlefunSignInResult.ContinueInBrowser(url)
                 }
                 clearSsoLocked()
                 parsed to sessionRevision.get()
@@ -1939,7 +1964,7 @@ class YunlefunSessionManager(
         expectedSession: MembershipSession? = state.value.membershipSession,
         onlyIfNeeded: Boolean = false,
     ): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
+        runSuspendCatching {
             val session = expectedSession ?: throw YunlefunAccountException.ExpiredSession()
             membershipCheckMutex.withLock profileCheck@{
                 val initial = mutationMutex.withLock start@{
@@ -2145,7 +2170,7 @@ class YunlefunSessionManager(
     }
 
     internal suspend fun setSyncEnabled(enabled: Boolean, expected: UserLibraryScope? = null): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
+        runSuspendCatching {
             val (session, choice) = mutationMutex.withLock {
                 val current = _state.value
                 if (expected != null && current.libraryScope != expected) throw UserDataSyncException.LibraryChanged()
@@ -2223,7 +2248,7 @@ class YunlefunSessionManager(
      * 显式将本机 `DeviceLibrary` 收藏与历史合并到当前账号库（不会在首次登录时自动静默上传）。
      */
     internal suspend fun copyDeviceLibraryToAccount(expected: UserLibraryScope): Result<Pair<Int, Int>> = withContext(Dispatchers.IO) {
-        runCatching {
+        runSuspendCatching {
             val deviceDoc = database.withTransaction {
                 val devFavs = deviceDao.getAllFavorites().map {
                     UserDataDocument.Favorite(id = it.recipeId, time = it.addedAtMs)
@@ -2339,7 +2364,7 @@ class YunlefunSessionManager(
     }
 
     internal suspend fun syncNow(expected: UserLibraryScope?): Result<UserDataDocument> = withContext(Dispatchers.IO) {
-        runCatching {
+        runSuspendCatching {
             val target = mutationMutex.withLock {
                 val current = _state.value
                 if (expected != null && current.libraryScope != expected) throw UserDataSyncException.LibraryChanged()
@@ -2460,7 +2485,7 @@ class YunlefunSessionManager(
         throw UserDataSyncException.Unavailable()
     }
 
-    private suspend fun sync(target: SyncTarget, retrying: Boolean = false): Result<UserDataDocument> = runCatching {
+    private suspend fun sync(target: SyncTarget, retrying: Boolean = false): Result<UserDataDocument> = runSuspendCatching {
         syncMutex.withLock {
             coroutineScope {
                 val job = coroutineContext[Job]
@@ -2538,8 +2563,19 @@ class YunlefunSessionManager(
             currentCred
         }
         if (credToRevoke != null) {
-            runCatching { accountService.signOut(credToRevoke) }
+            withContext(NonCancellable) {
+                runCatching { accountService.signOut(credToRevoke) }
+            }
         }
+    }
+
+    private suspend inline fun <T> runSuspendCatching(block: () -> T): Result<T> = try {
+        Result.success(block())
+    } catch (error: CancellationException) {
+        currentCoroutineContext().ensureActive()
+        Result.failure(error)
+    } catch (error: Throwable) {
+        Result.failure(error)
     }
 
     private fun resetLocalSessionLocked(message: String) {

@@ -96,6 +96,7 @@ protocol YunlefunAccountServing {
     func account(_ credential: YunlefunCredential) async throws -> YunlefunAccount
     func signOut(_ credential: YunlefunCredential) async throws
     func signInWithWeChat(code: String, deviceID: String) async throws -> YunlefunCredential
+    func registerWithWeChat(proof: String, code: String, deviceID: String) async throws -> YunlefunCredential
     func bindWeChat(code: String, credential: YunlefunCredential) async throws
     func supportsAccountWebHandoff(in transport: YunlefunAccountWebHandoff.Transport) async throws -> Bool
     func approveAccountWebHandoff(fields: [String: String], credential: YunlefunCredential) async throws
@@ -103,6 +104,9 @@ protocol YunlefunAccountServing {
 
 extension YunlefunAccountServing {
     func signInWithWeChat(code: String, deviceID: String) async throws -> YunlefunCredential {
+        throw WeChatAccountError.unavailable
+    }
+    func registerWithWeChat(proof: String, code: String, deviceID: String) async throws -> YunlefunCredential {
         throw WeChatAccountError.unavailable
     }
     func bindWeChat(code: String, credential: YunlefunCredential) async throws {
@@ -121,19 +125,22 @@ struct YunlefunAccountService: YunlefunAccountServing {
     private static let ticketURL = URL(string: "https://api.yunle.fun/sso-ticket")!
     private static let cookOrigin = "https://cook.yunyoujun.cn"
     private static let logger = Logger(subsystem: "fun.yunle.cook", category: "account")
+    private static let defaultSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.httpShouldSetCookies = false
+        config.httpCookieStorage = nil
+        config.urlCredentialStorage = nil
+        config.urlCache = nil
+        config.timeoutIntervalForRequest = 20
+        config.timeoutIntervalForResource = 30
+        return URLSession(configuration: config, delegate: AccountRedirectPolicy(), delegateQueue: nil)
+    }()
     private let transport: Transport
 
     init(transport: Transport? = nil) {
         if let transport { self.transport = transport }
         else {
-            let config = URLSessionConfiguration.ephemeral
-            config.httpShouldSetCookies = false
-            config.httpCookieStorage = nil
-            config.urlCredentialStorage = nil
-            config.urlCache = nil
-            config.timeoutIntervalForRequest = 20
-            config.timeoutIntervalForResource = 30
-            let session = URLSession(configuration: config, delegate: AccountRedirectPolicy(), delegateQueue: nil)
+            let session = Self.defaultSession
             self.transport = { try await session.data(for: $0) }
         }
     }
@@ -387,7 +394,7 @@ struct YunlefunAccountService: YunlefunAccountServing {
     private struct SignupResponse: Decodable { let next: String?; let proof: String?; let challenge: String? }
 }
 
-private final class AccountRedirectPolicy: NSObject, URLSessionTaskDelegate {
+private final class AccountRedirectPolicy: NSObject, URLSessionTaskDelegate, Sendable {
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
         completionHandler(nil)

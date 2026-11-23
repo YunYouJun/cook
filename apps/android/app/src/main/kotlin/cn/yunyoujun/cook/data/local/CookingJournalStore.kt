@@ -61,14 +61,39 @@ private fun sameDay(firstMs: Long, secondMs: Long, zone: ZoneId): Boolean =
 
 class CookingJournalStore(context: Context) {
     private val file = File(context.applicationContext.filesDir, "cooking-journal-v1.json")
-    private val initial = runCatching {
-        AtomicJsonFiles.readTextRecoverable(file)?.let {
-            AtomicJsonFiles.json.decodeFromString<CookingJournal>(it)
-        } ?: CookingJournal()
-    }
+    private val initial = loadInitialJournal(file)
     val loadFailed = initial.isFailure
     private val mutableState = MutableStateFlow(initial.getOrDefault(CookingJournal()))
     val state = mutableState.asStateFlow()
+
+    private fun loadInitialJournal(target: File): Result<CookingJournal> {
+        val bak = File(target.parentFile, "${target.name}.bak")
+        val hasPrimary = target.isFile && target.length() > 0L
+        val hasBackup = bak.isFile && bak.length() > 0L
+        if (hasPrimary) {
+            val primaryResult = runCatching {
+                AtomicJsonFiles.json.decodeFromString<CookingJournal>(target.readText(Charsets.UTF_8))
+            }
+            if (primaryResult.isSuccess) return primaryResult
+            if (!hasBackup) return primaryResult
+        }
+        if (hasBackup) {
+            val backupResult = runCatching {
+                val recovered = AtomicJsonFiles.json.decodeFromString<CookingJournal>(bak.readText(Charsets.UTF_8))
+                runCatching {
+                    java.nio.file.Files.copy(
+                        bak.toPath(),
+                        target.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                    )
+                }
+                recovered
+            }
+            if (backupResult.isSuccess) return backupResult
+            return backupResult
+        }
+        return Result.success(CookingJournal())
+    }
 
     @Synchronized
     fun recordCooked(recipeId: JournalRecipeId, name: String, nowMs: Long = System.currentTimeMillis()): Boolean {

@@ -120,6 +120,7 @@ internal object AtomicJsonFiles {
                 StandardCopyOption.REPLACE_EXISTING,
                 StandardCopyOption.ATOMIC_MOVE,
             )
+            bak.delete()
             true
         }.getOrDefault(false)
         if (!movedAtomically) {

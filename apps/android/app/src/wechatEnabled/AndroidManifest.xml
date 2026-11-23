@@ -8,6 +8,7 @@
         <activity
             android:name="cn.yunyoujun.cook.platform.WeChatCallbackActivity"
             android:exported="false"
+            android:launchMode="singleTop"
             android:theme="@android:style/Theme.NoDisplay" />
         <activity-alias
             android:name="${applicationId}.wxapi.WXEntryActivity"

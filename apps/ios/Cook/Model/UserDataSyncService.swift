@@ -25,19 +25,22 @@ protocol UserDataSyncServing {
 struct UserDataSyncService: UserDataSyncServing {
     typealias Transport = @Sendable (URLRequest) async throws -> (Data, URLResponse)
     nonisolated static let endpoint = URL(string: "https://yunlefun-8g7ybcxc7345c490.api.tcloudbasegateway.com/v1/functions/cook-user-data")!
+    private static let defaultSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.httpShouldSetCookies = false
+        config.httpCookieStorage = nil
+        config.urlCredentialStorage = nil
+        config.urlCache = nil
+        config.timeoutIntervalForRequest = 20
+        config.timeoutIntervalForResource = 30
+        return URLSession(configuration: config, delegate: UserDataRedirectPolicy(), delegateQueue: nil)
+    }()
     private let transport: Transport
 
     init(transport: Transport? = nil) {
         if let transport { self.transport = transport }
         else {
-            let config = URLSessionConfiguration.ephemeral
-            config.httpShouldSetCookies = false
-            config.httpCookieStorage = nil
-            config.urlCredentialStorage = nil
-            config.urlCache = nil
-            config.timeoutIntervalForRequest = 20
-            config.timeoutIntervalForResource = 30
-            let session = URLSession(configuration: config, delegate: UserDataRedirectPolicy(), delegateQueue: nil)
+            let session = Self.defaultSession
             self.transport = { try await session.data(for: $0) }
         }
     }
@@ -91,7 +94,7 @@ struct UserDataSyncService: UserDataSyncServing {
     }
 }
 
-private final class UserDataRedirectPolicy: NSObject, URLSessionTaskDelegate {
+private final class UserDataRedirectPolicy: NSObject, URLSessionTaskDelegate, Sendable {
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) { completionHandler(nil) }
 }
