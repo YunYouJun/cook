@@ -2,32 +2,13 @@ import { execFileSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import process from 'node:process'
+import { ANDROID_LINKS_PATH, createAndroidLinksDocument, parseAndroidLinkFingerprints } from './android-app-links.mjs'
 
 /** Root-relative static endpoint used by production deployment verification. */
 export const BUILD_INFO_PATH = '.well-known/cook-build.json'
 const SHA_PATTERN = /^[0-9a-f]{40}$/i
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[\dA-Z.-]+)?(?:\+[\dA-Z.-]+)?$/i
 const COMMIT_ENV_KEYS = ['GITHUB_SHA', 'CF_PAGES_COMMIT_SHA']
-const ANDROID_LINKS_PATH = '.well-known/assetlinks.json'
-
-function androidLinksDocument(environment) {
-  const value = environment.COOK_ANDROID_LINKS_SHA256?.trim()
-  if (!value)
-    return undefined
-
-  const fingerprints = [...new Set(value.split(',').map(fingerprint => fingerprint.trim().toUpperCase()))]
-  if (fingerprints.some(fingerprint => !/^(?:[0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(fingerprint)))
-    throw new Error('COOK_ANDROID_LINKS_SHA256 must contain comma-separated SHA-256 certificate fingerprints in AA:BB:… format')
-
-  return [{
-    relation: ['delegate_permission/common.handle_all_urls'],
-    target: {
-      namespace: 'android_app',
-      package_name: 'fun.yunle.cook',
-      sha256_cert_fingerprints: fingerprints,
-    },
-  }]
-}
 
 function readGit(root, args) {
   try {
@@ -117,16 +98,20 @@ export function copyWebOutput(repositoryRoot, input, options) {
   if (!existsSync(join(webDist, 'index.html')))
     throw new Error('apps/web/dist/index.html not found; generate the web app first')
   const metadata = createBuildInfo(root, input, options)
-  const androidLinks = androidLinksDocument(options?.environment ?? process.env)
+  const fingerprints = parseAndroidLinkFingerprints((options?.environment ?? process.env).COOK_ANDROID_LINKS_SHA256)
   // Validate every input before replacing the previous successful deployment output.
   JSON.parse(readFileSync(join(root, 'edgeone.json'), 'utf8'))
   rmSync(rootDist, { recursive: true, force: true })
-  cpSync(webDist, rootDist, { recursive: true, dereference: true })
+  cpSync(webDist, rootDist, {
+    recursive: true,
+    dereference: true,
+    filter: source => source !== join(webDist, ANDROID_LINKS_PATH),
+  })
   cpSync(join(root, 'edgeone.json'), join(rootDist, 'edgeone.json'))
   mkdirSync(join(rootDist, '.well-known'), { recursive: true })
   writeFileSync(join(rootDist, BUILD_INFO_PATH), `${JSON.stringify(metadata, null, 2)}\n`)
-  if (androidLinks)
-    writeFileSync(join(rootDist, ANDROID_LINKS_PATH), `${JSON.stringify(androidLinks, null, 2)}\n`)
+  if (fingerprints.length)
+    writeFileSync(join(rootDist, ANDROID_LINKS_PATH), `${JSON.stringify(createAndroidLinksDocument(fingerprints), null, 2)}\n`)
   return rootDist
 }
 

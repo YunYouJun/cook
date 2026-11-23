@@ -6,6 +6,8 @@ import { basename, dirname, join } from 'node:path'
 import { test } from 'node:test'
 import { composeProductSite } from '../scripts/compose-product-site.mjs'
 
+const appleAssociationPath = '.well-known/apple-app-site-association'
+const productAssociation = 'docs/.vitepress/apple-app-site-association.json'
 const inputs = {
   'dist/index.html': '<div id="__nuxt">app shell</div>',
   'dist/200.html': '<div id="__nuxt">fallback shell</div>',
@@ -15,7 +17,7 @@ const inputs = {
   'dist/assets/shared/icon.svg': 'identical shared icon',
   'dist/auth/callback/index.html': 'existing same-origin callback',
   'dist/auth/wechat/index.html': 'native callback fallback',
-  'dist/.well-known/apple-app-site-association': '{"applinks":{}}',
+  [`dist/${appleAssociationPath}`]: readFileSync(new URL(`../apps/web/public/${appleAssociationPath}`, import.meta.url), 'utf8'),
   'dist/.well-known/assetlinks.json': '[]',
   'dist/.well-known/cook-build.json': JSON.stringify({ schemaVersion: 1, productId: 'cook', repository: 'YunYouJun/cook', commitSha: 'a'.repeat(40), version: '2.0.0', builtAt: '2026-10-28T12:00:00.000Z', dirty: false }),
   'dist/sw.js': 'retire the old service worker',
@@ -32,6 +34,7 @@ const inputs = {
   'docs/.vitepress/dist/privacy.html': 'privacy policy',
   'docs/.vitepress/dist/guide/start.html': 'getting started',
   'docs/.vitepress/dist/guide/ios-beta.html': '<h1>云食册 iOS 体验测试</h1>',
+  [productAssociation]: readFileSync(new URL(`../${productAssociation}`, import.meta.url), 'utf8'),
   'edgeone.json': JSON.stringify({
     headers: ['/auth/wechat/*', '/auth/callback', '/auth/callback/*'].map(source => ({
       source,
@@ -77,13 +80,39 @@ test('documentation owns root and unknown-page HTML while legacy resources survi
     assert.equal(read('dist-site/assets/shared/icon.svg'), 'identical shared icon')
     assert.equal(read('dist-site/terms.html'), 'current product agreement')
     assert.equal(read('dist-site/edgeone.json'), inputs['edgeone.json'])
-    for (const path of ['_nuxt/app.js', 'auth/callback/index.html', 'auth/wechat/index.html', '.well-known/apple-app-site-association', '.well-known/assetlinks.json', '.well-known/cook-build.json', 'sw.js', 'about/site.css', 'about/assets/icon.svg', 'settings/index.html'])
+    for (const path of ['_nuxt/app.js', 'auth/callback/index.html', 'auth/wechat/index.html', '.well-known/assetlinks.json', '.well-known/cook-build.json', 'sw.js', 'about/site.css', 'about/assets/icon.svg', 'settings/index.html'])
       assert.equal(read(`dist-site/${path}`), inputs[`dist/${path}`], path)
     assert.equal(existsSync(join(root, 'dist-site/200.html')), false)
     assert.equal(existsSync(join(root, 'dist-site/unknown-doc/index.html')), false)
     for (const [path, content] of Object.entries(inputs))
       assert.equal(read(path), content, `input must remain unchanged: ${path}`)
     assert.equal(existsSync(join(root, 'dist/home')), false)
+  })
+})
+
+test('Apple associated domains advertise the links handled on each production host', () => {
+  fixture(({ root, read }) => {
+    composeProductSite(root)
+    assert.equal(read(`dist/${appleAssociationPath}`), inputs[`dist/${appleAssociationPath}`])
+    assert.equal(read(`dist-site/${appleAssociationPath}`), inputs[productAssociation])
+    const appID = 'QT792GAY4C.fun.yunle.cook'
+    const web = JSON.parse(read(`dist/${appleAssociationPath}`))
+    const product = JSON.parse(read(`dist-site/${appleAssociationPath}`))
+    assert.deepEqual(web.webcredentials.apps, [appID])
+    assert.deepEqual(web.applinks.details, [{
+      appIDs: [appID],
+      components: [
+        { '/': '/auth/wechat/*' },
+        { '/': '/auth/callback', '?': { platform: 'native' }, '#': 'ylf_sso=*' },
+      ],
+    }])
+    assert.deepEqual(product.applinks.details, [{
+      appIDs: [appID],
+      components: [
+        { '/': '/recipes/share', '?': { id: '?*' } },
+        { '/': '/recipes/share/', '?': { id: '?*' } },
+      ],
+    }])
   })
 })
 
@@ -176,7 +205,7 @@ test('root app shell supplies compatibility routes when no 200 shell or callback
 })
 
 test('missing build inputs fail before replacing an existing output', () => {
-  for (const missing of ['dist/index.html', 'dist/_nuxt/', 'dist/sw.js', 'dist/.well-known/', 'dist/.well-known/cook-build.json', 'dist/auth/wechat/', 'dist/about/terms.html', 'docs/.vitepress/dist/', 'docs/.vitepress/dist/index.html', 'docs/.vitepress/dist/404.html', 'docs/.vitepress/dist/terms.html', 'edgeone.json']) {
+  for (const missing of ['dist/index.html', 'dist/_nuxt/', 'dist/sw.js', 'dist/.well-known/', 'dist/.well-known/cook-build.json', 'dist/auth/wechat/', 'dist/about/terms.html', 'docs/.vitepress/dist/', 'docs/.vitepress/dist/index.html', 'docs/.vitepress/dist/404.html', 'docs/.vitepress/dist/terms.html', productAssociation, 'edgeone.json']) {
     fixture(({ root, write, read }) => {
       write('dist-site/index.html', 'previous successful build')
       assert.throws(() => composeProductSite(root), /Missing (file|directory)/, missing)
