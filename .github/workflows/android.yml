@@ -5,16 +5,23 @@ on:
     branches: [main, dev]
     paths: &android_paths
       - 'apps/android/**'
+      - docs/privacy-android.md
+      - docs/terms.md
       - apps/ios/Cook/Resources/showcase-packs.json
+      - 'apps/ios/Cook/Resources/cooking-badge-*.webp'
       - apps/ios/Cook/Resources/CloudKitchenManifest.json
+      - apps/ios/Cook/Resources/CloudKitchen.usdz
       - 'assets/android/**'
       - 'assets/showcase/**/image.webp'
+      - 'assets/showcase/**/model.glb'
       - 'packages/cook/**'
       - 'packages/data/**'
       - 'packages/shared/**'
       - 'cloudfunctions/cook-feedback/**'
       - '.github/actions/setup-js/**'
       - .github/workflows/android.yml
+      - scripts/qa/verify-android-elf-alignment.py
+      - scripts/export-android-scenes.py
       - .nvmrc
       - package.json
       - pnpm-lock.yaml
@@ -46,8 +53,37 @@ jobs:
       - uses: android-actions/setup-android@v4
         with:
           packages: platform-tools platforms;android-37.2 build-tools;37.0.0
-      - name: Run Kotlin and Android tests and build both APK variants
+      - name: Set up Blender for the shared kitchen scene
+        run: |
+          version=4.4.0
+          archive="blender-${version}-linux-x64.tar.xz"
+          base="https://download.blender.org/release/Blender4.4"
+          blender_dir="$(mktemp -d "$RUNNER_TEMP/cook-blender.XXXXXXXX")"
+          cd "$blender_dir"
+          trap 'rm -f "$archive"' EXIT
+          curl --fail --location --retry 3 --output "$archive" "$base/$archive"
+          echo "b4a74463677618d09621332ddbd62baa1a3ed06a11818714f6c5f1c7f31a15c6  $archive" | sha256sum --check
+          tar -xf "$archive"
+          echo "COOK_BLENDER=$blender_dir/blender-${version}-linux-x64/blender" >> "$GITHUB_ENV"
+      - name: Run tests and verify APK and App Bundle builds
         working-directory: apps/android
         run: |
-          ./gradlew :core:test :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease --no-daemon
-          ./gradlew :core:test :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease --offline --no-daemon
+          ./gradlew :core:test :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease :app:bundleRelease --no-daemon
+          ./gradlew :core:test :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease :app:bundleRelease --offline --no-daemon
+          test -s app/build/outputs/bundle/release/app-release.aab
+          "$ANDROID_HOME/build-tools/37.0.0/zipalign" -c -P 16 4 app/build/outputs/apk/release/app-release-unsigned.apk
+          python3 ../../scripts/qa/verify-android-elf-alignment.py \
+            app/build/outputs/apk/release/app-release-unsigned.apk \
+            app/build/outputs/bundle/release/app-release.aab
+      - name: Verify opt-in WeChat callback
+        working-directory: apps/android
+        run: |
+          aapt2="$ANDROID_HOME/build-tools/37.0.0/aapt2"
+          apk=app/build/outputs/apk/debug/app-debug.apk
+          default_manifest=$("$aapt2" dump xmltree --file AndroidManifest.xml "$apk")
+          [[ "$default_manifest" != *".wxapi.WXEntryActivity"* ]]
+          [[ "$default_manifest" != *'"com.tencent.mm"'* ]]
+          ./gradlew :app:assembleDebug -Pcook.wechat.login=true -Pcook.wechat.signup=true --no-daemon
+          enabled_manifest=$("$aapt2" dump xmltree --file AndroidManifest.xml "$apk")
+          [[ "$enabled_manifest" == *"fun.yunle.cook.debug.wxapi.WXEntryActivity"* ]]
+          [[ "$enabled_manifest" == *'"com.tencent.mm"'* ]]

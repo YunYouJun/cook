@@ -1,23 +1,50 @@
 package cn.yunyoujun.cook.data.remote
 
 import android.os.SystemClock
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
+@Serializable
 enum class AccountWebsitePurpose {
     ACCOUNT_SETTINGS,
     MEMBERSHIP_PURCHASE,
 }
 
+internal class AccountWebsiteLaunch(
+    val session: MembershipSession,
+    val purpose: AccountWebsitePurpose,
+    val supportsHandoff: Boolean,
+)
+
+internal class ApprovedAccountWebsite(
+    val url: String,
+    val session: MembershipSession,
+    val handoff: YunlefunAccountWebHandoff,
+)
+
+@Serializable
 internal class YunlefunAccountWebHandoff(
-    private val startedAtMs: Long = SystemClock.elapsedRealtime(),
-    private val verifier: String = YunlefunSSO.randomToken(),
+    private val startedAtMs: Long,
+    private val verifier: String,
 ) {
+    constructor() : this(SystemClock.elapsedRealtime(), YunlefunSSO.randomToken())
+
+    init {
+        require(startedAtMs in 0..Long.MAX_VALUE - LIFETIME_MS && TOKEN.matches(verifier))
+    }
+
+    @Transient
     private val request = YunlefunSSO.sha256Base64Url(verifier.toByteArray(Charsets.UTF_8))
 
     val startUrl: String
         get() = "$ENDPOINT?request=$request&transport=browser"
 
+    val expiresAtMs: Long get() = startedAtMs + LIFETIME_MS
+
+    fun isCurrentAt(nowMs: Long): Boolean = nowMs in startedAtMs until expiresAtMs
+
     fun complete(callback: String, nowMs: Long = SystemClock.elapsedRealtime()): Completion {
-        if (!isCallback(callback) || nowMs - startedAtMs !in 0 until LIFETIME_MS) {
+        if (!isCallback(callback) || !isCurrentAt(nowMs)) {
             throw YunlefunAccountException.InvalidWebsiteCallback()
         }
         val result = callback.substringAfter('#').removePrefix(FRAGMENT_PREFIX)
@@ -32,8 +59,13 @@ internal class YunlefunAccountWebHandoff(
                 "verifier" to verifier,
                 "binding" to binding,
             ),
-            url = "${YunlefunSSO.ISSUER}/auth/cook-account?request=$request&binding=$binding",
+            url = continuationUrl(binding),
         )
+    }
+
+    fun continuationUrl(binding: String): String {
+        if (!TOKEN.matches(binding)) throw YunlefunAccountException.InvalidWebsiteCallback()
+        return "${YunlefunSSO.ISSUER}/auth/cook-account?request=$request&binding=$binding"
     }
 
     class Completion(val approval: Map<String, String>, val url: String)

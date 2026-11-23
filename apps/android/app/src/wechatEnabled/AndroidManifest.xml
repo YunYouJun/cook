@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <queries>
+        <package android:name="com.tencent.mm" />
+    </queries>
+
+    <application>
+        <activity
+            android:name="cn.yunyoujun.cook.platform.WeChatCallbackActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.NoDisplay" />
+        <activity-alias
+            android:name="${applicationId}.wxapi.WXEntryActivity"
+            android:targetActivity="cn.yunyoujun.cook.platform.WeChatCallbackActivity"
+            android:exported="true" />
+    </application>
+</manifest>

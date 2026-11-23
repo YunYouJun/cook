@@ -7,6 +7,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -71,5 +72,16 @@ class FeedbackClientTest {
             """{"id":"1","ticketId":"abc","ticketUrl":"https://support.yunle.fun/other/abc"}""",
         ).jsonObject
         assertNull(FeedbackClient.parseTicketUrl(badPath))
+    }
+
+    @Test
+    fun contributionCountsTheWholeStructuredNoteAndRejectsAnInvalidWebLink() {
+        val draft = RecipeContributionDraft(" 番茄炒蛋 ", " https://example.com/recipe ", "")
+        assertTrue(draft.canSubmit)
+        assertEquals("菜谱投稿\n菜名：番茄炒蛋\n做法链接：https://example.com/recipe", draft.note)
+        assertFalse(draft.copy(name = " ").canSubmit)
+        assertFalse(draft.copy(source = "https://example.com/recipe https://example.com/other").canSubmit)
+        assertFalse(draft.copy(source = "file:///recipe.html").canSubmit)
+        assertFalse(draft.copy(details = "🍅".repeat(250)).canSubmit)
     }
 }

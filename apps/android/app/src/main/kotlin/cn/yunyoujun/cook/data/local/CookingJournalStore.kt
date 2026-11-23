@@ -26,9 +26,12 @@ data class CookingRecord(
     val id: String = UUID.randomUUID().toString(),
 )
 
+@Serializable
 data class LearningConfirmation(val record: CookingRecord, val autoCookedId: String?)
 
-data class JournalEntry(val record: CookingRecord, val cookedId: String?, val learned: Boolean)
+data class JournalEntry(val record: CookingRecord, val cookedId: String?, val learnedId: String?) {
+    val learned: Boolean get() = learnedId != null
+}
 
 @Serializable
 data class CookingJournal(
@@ -39,15 +42,15 @@ data class CookingJournal(
         cooked.any { it.recipeId == recipeId && sameDay(it.dateMs, dateMs, zone) }
 
     fun entries(learnedOnly: Boolean, zone: ZoneId = ZoneId.systemDefault()): List<JournalEntry> {
-        if (learnedOnly) return learned.sortedByDescending { it.dateMs }.map { JournalEntry(it, null, true) }
+        if (learnedOnly) return learned.sortedByDescending { it.dateMs }.map { JournalEntry(it, null, it.id) }
         val milestones = learned.associateBy { it.recipeId }
         val joined = mutableSetOf<String>()
         val timeline = cooked.map { record ->
             val milestone = milestones[record.recipeId]?.takeIf { sameDay(it.dateMs, record.dateMs, zone) }
             milestone?.let { joined.add(it.id) }
-            JournalEntry(record, record.id, milestone != null)
+            JournalEntry(record, record.id, milestone?.id)
         }
-        return (timeline + learned.filterNot { it.id in joined }.map { JournalEntry(it, null, true) })
+        return (timeline + learned.filterNot { it.id in joined }.map { JournalEntry(it, null, it.id) })
             .sortedWith(compareByDescending<JournalEntry> { it.record.dateMs }.thenBy { it.record.id })
     }
 }
@@ -68,11 +71,11 @@ class CookingJournalStore(context: Context) {
     val state = mutableState.asStateFlow()
 
     @Synchronized
-    fun recordCooked(recipeId: JournalRecipeId, name: String, nowMs: Long = System.currentTimeMillis()) {
+    fun recordCooked(recipeId: JournalRecipeId, name: String, nowMs: Long = System.currentTimeMillis()): Boolean {
         val journal = state.value
-        if (!journal.cookedOn(recipeId, nowMs)) {
-            save(journal.copy(cooked = journal.cooked + CookingRecord(recipeId, name, nowMs)))
-        }
+        if (journal.cookedOn(recipeId, nowMs)) return false
+        save(journal.copy(cooked = journal.cooked + CookingRecord(recipeId, name, nowMs)))
+        return true
     }
 
     @Synchronized
@@ -105,8 +108,21 @@ class CookingJournalStore(context: Context) {
     fun removeCooked(id: String) = save(state.value.copy(cooked = state.value.cooked.filterNot { it.id == id }))
 
     @Synchronized
-    fun removeLearned(recipeId: JournalRecipeId) =
-        save(state.value.copy(learned = state.value.learned.filterNot { it.recipeId == recipeId }))
+    fun removeLearned(id: String) =
+        save(state.value.copy(learned = state.value.learned.filterNot { it.id == id }))
+
+    @Synchronized
+    internal fun restoreBackup(backup: CookingJournal) {
+        val current = state.value
+        val recordIds = (current.cooked + current.learned).mapTo(HashSet()) { it.id }
+        val learned = current.learned.mapTo(HashSet()) { it.recipeId }
+        save(
+            CookingJournal(
+                cooked = current.cooked + backup.cooked.filterNot { it.id in recordIds },
+                learned = current.learned + backup.learned.filterNot { it.id in recordIds || it.recipeId in learned },
+            ),
+        )
+    }
 
     private fun save(journal: CookingJournal) {
         check(!loadFailed) { "做菜足迹暂时无法读取，原始记录已保留。" }

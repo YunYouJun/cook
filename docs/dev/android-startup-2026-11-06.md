@@ -20,11 +20,28 @@
 
 历史源码可从 [Capacitor 清理提交的父版本](https://github.com/YunYouJun/cook/tree/c61cc064%5E/android) 追溯。没有找到分发证据不等于从未分发，P0 的身份/升级项继续保持未完成。
 
+2026-11-23 在连接的 Android 真机上只读核对到一个旧版侧载样本。包名为 `cn.yunyoujun.cook`，版本为 `1.0.1 (2)`，`minSdk=23`、`targetSdk=35`，带有 `DEBUGGABLE` 标记并使用 `CN=Android Debug` 证书。正式 App Links 工具核对到旧包名后拒绝提取用于发布的指纹。公开渠道的分发范围和最高版本仍需单独核对。
+
 若曾分发，先取得既有渠道、实际最高 versionCode、安装包的证书 SHA-256 和包身份；凭据通过原有私有签名路径提供，不进入仓库。Android 更新需要证书匹配，换包名会被视为另一应用，见[官方签名说明](https://developer.android.com/studio/publish/app-signing#considerations)。
 
-同包覆盖也不会自动将旧 WebView localStorage/IndexedDB 转成 Room。需用真实旧包确认存储位置及 Schema，再选择可回滚的读取/导出迁移流程，先备份、校验和预览，再原子写入；迁移失败保留旧数据。新原生核心不内嵌 JavaScript 来运行搜索/推荐逻辑。不得清空旧包数据来完成验收。
-
 若维护者确认从未分发，再决定原生版正式包名和首个 versionCode；Debug 使用独立后缀，避免覆盖可能存在的历史安装。正式签名、App Links 与 SSO Registry 在对应里程碑核对。
+
+### 旧版食用手册的数据迁移
+
+侧载样本通过 `https://localhost` 载入内置页面，收藏和浏览历史分别保存在 `cook:favorites`、`cook:history`，菜谱目录保存在 IndexedDB 的 `cook-db/recipes`。样本未提供文件导出。支持 WebView 调试的旧包可以通过电脑端工具导出，再由新版的系统文件选择器合并到已有库。[Android WebView 调试接口](<https://developer.android.com/reference/android/webkit/WebView#setWebContentsDebuggingEnabled(boolean)>)
+
+1. 保留旧 App，打开「食用手册」首页并让它加载完毕。通过 USB 连接启用 USB 调试的设备，用 `adb devices` 查看序列号。
+2. 使用仓库指定的 Node.js 版本，在仓库根目录运行下列命令。工具默认读取由 `pnpm convert` 生成的菜谱目录。目标版本采用不同的目录时，通过 `--catalog /path/to/recipe.json` 指定该版本的文件。
+
+   ```sh
+   node scripts/export-legacy-android-library.mjs --serial SERIAL --output /path/to/cook-backup.json
+   ```
+
+3. 检查导出条数，再将文件传到新版 Android。在「菜谱 → 导入与导出 → 从文件导入」选择这份 JSON，分别检查「收藏」和「最近浏览」。当前页面显示要写入本机库还是账号库。确认后再决定如何处理旧安装和备份。
+
+旧版编号是目录中的位置，工具按菜名和视频来源查找新版编号。无法唯一匹配的收藏会报告条数，可在旧 App 保留查看。已有收藏时间与历史快照随文件迁移，只有编号的早期收藏会排在有时间的收藏之前。工具只读取指定设备旧包的收藏、历史及收藏关联的菜谱，备份写入本机指定路径。
+
+2026-11-23 在断网的 Android 15 模拟器安装该旧包并写入独立测试数据。工具导出了两条收藏和一条浏览历史，报告了一条有两种候选的收藏。新版通过系统文件选择器导入，冷启动后仍可看到三条收藏和一条浏览历史，包含导入前已有的收藏。再次导出确认旧记录保持原样。正式渠道旧包的文件迁移仍待验收。
 
 ## 本机可复用环境
 

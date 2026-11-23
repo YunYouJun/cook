@@ -1,6 +1,7 @@
 package cn.yunyoujun.cook.data.local
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -63,6 +64,7 @@ data class AccountSyncStateEntity(
     val historyClearedAtMs: Double,
     val lastSyncedDocumentJson: String?,
     val updatedAtMs: Double,
+    val lastSyncedAtMs: Long? = null,
 )
 
 @Dao
@@ -75,6 +77,15 @@ interface DeviceLibraryDao {
 
     @Query("SELECT * FROM device_favorite_removals ORDER BY removedAtMs DESC")
     suspend fun getAllFavoriteRemovals(): List<DeviceFavoriteRemovalEntity>
+
+    @Query("""
+        SELECT MAX(changedAt) FROM (
+            SELECT addedAtMs AS changedAt FROM device_favorites WHERE recipeId = :recipeId
+            UNION ALL
+            SELECT removedAtMs AS changedAt FROM device_favorite_removals WHERE recipeId = :recipeId
+        )
+    """)
+    suspend fun latestFavoriteChangeTime(recipeId: Int): Double?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertFavorite(entity: DeviceFavoriteEntity)
@@ -106,8 +117,14 @@ interface DeviceLibraryDao {
     @Query("SELECT * FROM device_histories ORDER BY visitedAtMs DESC, recipeName ASC")
     suspend fun getAllHistories(): List<DeviceHistoryEntity>
 
+    @Query("SELECT MAX(visitedAtMs) FROM device_histories WHERE recipeName = :recipeName")
+    suspend fun latestVisitTime(recipeName: String): Double?
+
     @Query("SELECT * FROM device_history_removals ORDER BY removedAtMs DESC")
     suspend fun getAllHistoryRemovals(): List<DeviceHistoryRemovalEntity>
+
+    @Query("SELECT MAX(removedAtMs) FROM device_history_removals WHERE recipeName = :recipeName")
+    suspend fun latestRemovedVisitTime(recipeName: String): Double?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertHistory(entity: DeviceHistoryEntity)
@@ -130,6 +147,15 @@ interface DeviceLibraryDao {
     @Query("DELETE FROM device_history_removals")
     suspend fun clearAllHistoryRemovals()
 
+    @Query("DELETE FROM device_history_removals WHERE removedAtMs <= :clearedAt")
+    suspend fun clearHistoryRemovalsThrough(clearedAt: Double)
+
+    @Query("""
+        INSERT OR IGNORE INTO device_history_removals (recipeName, removedAtMs)
+        SELECT recipeName, visitedAtMs FROM device_histories WHERE visitedAtMs > :clearedAt
+    """)
+    suspend fun saveHistoryRemovalsAfter(clearedAt: Double)
+
     @Transaction
     suspend fun recordVisitTransactional(entity: DeviceHistoryEntity, maxHistories: Int) {
         upsertHistory(entity)
@@ -150,12 +176,6 @@ interface DeviceLibraryDao {
                 removedAtMs = visitedAtMs,
             ),
         )
-    }
-
-    @Transaction
-    suspend fun clearAllHistoryTransactional() {
-        clearAllHistories()
-        clearAllHistoryRemovals()
     }
 
     @Transaction
@@ -229,8 +249,9 @@ interface AccountLibraryDao {
         AccountFavoriteEntity::class,
         AccountSyncStateEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 abstract class CookDatabase : RoomDatabase() {
     abstract fun deviceLibraryDao(): DeviceLibraryDao

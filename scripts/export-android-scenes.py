@@ -7,6 +7,7 @@ Run from the repository root:
 import json
 import shutil
 import struct
+import sys
 import tempfile
 from pathlib import Path
 
@@ -17,13 +18,15 @@ ROOT = Path(__file__).resolve().parents[1]
 IOS_ASSETS = ROOT / "apps/ios/Cook/Resources"
 
 
-def export_scene(source, output):
+def export_scene(source, output, *, preserve_hierarchy=False):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     imported = bpy.ops.wm.usd_import(
         filepath=str(source),
         import_cameras=False,
         import_lights=False,
         import_textures_mode="IMPORT_PACK",
+        # Keep the kitchen's named selection and cooking groups for runtime visibility.
+        merge_parent_xform=not preserve_hierarchy,
     )
     if imported != {"FINISHED"}:
         raise RuntimeError(f"Could not import {source}")
@@ -47,8 +50,35 @@ def model_nodes(path):
         return json.loads(model.read(size))["nodes"]
 
 
+def validate_kitchen(path):
+    nodes = model_nodes(path)
+    by_name = {node.get("name"): node for node in nodes}
+    required = {"CookPot", "PotFood", "StoveFlame", *(f"Steam_{index}" for index in range(6))}
+    missing = required - by_name.keys()
+    if missing:
+        raise RuntimeError(f"Kitchen scene nodes missing: {missing}")
+    manifest = json.loads((IOS_ASSETS / "CloudKitchenManifest.json").read_text())
+    for ingredient in manifest["ingredients"]:
+        node = by_name[ingredient["node"]]
+        ring = f"Selection_{ingredient['id']}"
+        if not any(nodes[index].get("name") == ring for index in node.get("children", [])):
+            raise RuntimeError(f"{ring} must remain under {ingredient['node']}")
+
+
 def main():
-    shared_manifest = json.loads((IOS_ASSETS / "CloudKitchenManifest.json").read_text())
+    args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    if args:
+        if len(args) != 2 or args[0] != "--kitchen-only":
+            raise ValueError("Expected --kitchen-only OUTPUT.glb")
+        output = Path(args[1]).resolve()
+        output.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="cook-kitchen-", dir=output.parent) as scratch:
+            staged = Path(scratch) / output.name
+            export_scene(IOS_ASSETS / "CloudKitchen.usdz", staged, preserve_hierarchy=True)
+            validate_kitchen(staged)
+            staged.replace(output)
+        return
+
     showcase = json.loads((IOS_ASSETS / "showcase-packs.json").read_text())
     android_assets = ROOT / "assets/android"
     pairs = [
@@ -63,13 +93,11 @@ def main():
         results = []
         for index, (source, destination) in enumerate(pairs):
             output = Path(scratch) / f"{index}.glb"
-            export_scene(source, output)
-            nodes = model_nodes(output)
+            export_scene(source, output, preserve_hierarchy=index == 0)
             if index == 0:
-                names = {node.get("name") for node in nodes}
-                required = {ingredient["node"] for ingredient in shared_manifest["ingredients"]} | {"CookPot"}
-                if not required <= names:
-                    raise RuntimeError(f"Kitchen ingredient nodes missing: {required - names}")
+                validate_kitchen(output)
+            else:
+                model_nodes(output)
             results.append((output, destination))
 
         for output, destination in results:

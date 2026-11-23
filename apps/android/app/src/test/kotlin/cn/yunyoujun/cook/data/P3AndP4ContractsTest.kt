@@ -2,6 +2,7 @@ package cn.yunyoujun.cook.data
 
 import cn.yunyoujun.cook.core.ai.SearchIntent
 import cn.yunyoujun.cook.core.ai.SearchIntentSource
+import cn.yunyoujun.cook.core.ai.StepGuidanceException
 import cn.yunyoujun.cook.core.ai.StepGuidanceKind
 import cn.yunyoujun.cook.core.ai.StepGuidancePrompt
 import cn.yunyoujun.cook.core.data.CookData
@@ -28,6 +29,7 @@ import cn.yunyoujun.cook.data.remote.YunlefunAccountException
 import cn.yunyoujun.cook.data.remote.YunlefunAccountService
 import cn.yunyoujun.cook.data.remote.YunlefunCredential
 import cn.yunyoujun.cook.data.remote.YunlefunSSO
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -122,6 +124,7 @@ class P3AndP4ContractsTest {
                 context = null,
                 localRootDir = File(tempRoot, "videos"),
                 explicitDeviceId = deviceId,
+                inspectVideo = {},
             )
 
             val sourceMp4 = File(tempRoot, "demo.mp4").apply {
@@ -136,6 +139,20 @@ class P3AndP4ContractsTest {
             val playable = store.playableFile(installed)
             assertTrue(playable.isFile)
             assertEquals(2048L, playable.length())
+            val exported = java.io.ByteArrayOutputStream()
+            store.writeVideo(installed, exported)
+            assertTrue(sourceMp4.readBytes().contentEquals(exported.toByteArray()))
+            val damaged = installed.copy(byteCount = installed.byteCount - 1)
+            val rejected = java.io.ByteArrayOutputStream()
+            assertTrue(runCatching { store.writeVideo(damaged, rejected) }.exceptionOrNull() is PrivateVideoException.Corrupt)
+            assertEquals(0, rejected.size())
+
+            val incompleteDraft = store.stageFromFile(sourceMp4)
+            incompleteDraft.file.writeBytes(byteArrayOf(1))
+            assertTrue(runCatching { store.install(incompleteDraft) }.exceptionOrNull() is PrivateVideoException.Corrupt)
+            assertEquals(listOf(playable), playable.parentFile?.listFiles()?.toList())
+            assertTrue(incompleteDraft.file.isFile)
+            store.discard(incompleteDraft)
 
             // iCloud 引用在 Android 端明确拒绝拉取
             val icloudVideo = PrivateRecipeVideo(
@@ -153,6 +170,8 @@ class P3AndP4ContractsTest {
             val foreignVideo = installed.copy(deviceID = UUID.randomUUID().toString().lowercase())
             val foreignErr = runCatching { store.playableFile(foreignVideo) }.exceptionOrNull()
             assertTrue(foreignErr is PrivateVideoException.OtherDevice)
+            assertTrue(runCatching { store.writeVideo(foreignVideo, rejected) }.exceptionOrNull() is PrivateVideoException.OtherDevice)
+            assertEquals(0, rejected.size())
 
             store.remove(installed)
             assertFalse(playable.exists())
@@ -318,11 +337,16 @@ class P3AndP4ContractsTest {
             dataVersion = cookData.meta.dataVersion,
             step = sampleStep,
             servings = 1,
-            kind = StepGuidanceKind.EXPLAIN,
-            question = null,
+            kind = StepGuidanceKind.QUESTION,
+            question = "怎样判断火候？",
             requestID = "req-001",
             contextRevision = "rev-001",
         )
+        val actions = mutableListOf<JsonObject>()
+        val ready = """{"ok":true,"serviceVersion":1,"enabled":true,"membership":{"isActive":true,"expireAt":${System.currentTimeMillis() + 60_000}}}"""
+        var capabilityBody = ready
+        var sameContext = true
+        var switchDuringCheck = false
         val managedGuidance = ManagedStepGuidanceService(
             transport = object : HttpTransport {
                 override suspend fun request(
@@ -333,9 +357,15 @@ class P3AndP4ContractsTest {
                     maxResponseBytes: Int,
                     connectTimeoutMs: Int,
                     readTimeoutMs: Int,
-                ): HttpResponsePayload = HttpResponsePayload(
-                    statusCode = 200,
-                    bodyText = """
+                ): HttpResponsePayload {
+                    assertEquals(ManagedStepGuidanceService.DEFAULT_ENDPOINT, url)
+                    val body = Json.parseToJsonElement(requireNotNull(jsonBody)).jsonObject
+                    actions += body
+                    if (body["action"] == JsonPrimitive("capabilities")) {
+                        if (switchDuringCheck) sameContext = false
+                        return HttpResponsePayload(200, capabilityBody)
+                    }
+                    return HttpResponsePayload(200, """
                         {
                           "ok": true,
                           "guidance": {
@@ -352,11 +382,42 @@ class P3AndP4ContractsTest {
                             "sourceIDs": [${Json.encodeToString(JsonPrimitive.serializer(), JsonPrimitive("step:${prompt.request.stepID}"))}]
                           }
                         }
-                    """.trimIndent(),
-                )
+                    """.trimIndent())
+                }
             },
         )
         val validatedResp = managedGuidance.complete(prompt, cred)
         assertEquals("req-001", validatedResp.requestID)
+        val capabilities = JsonObject(mapOf("action" to JsonPrimitive("capabilities")))
+        assertEquals(capabilities, actions.first())
+        val submitted = actions.last()
+        assertEquals(JsonPrimitive("guidance"), submitted["action"])
+        assertEquals(JsonPrimitive(prompt.request.question), submitted["question"])
+        assertFalse(submitted.keys.any { it in setOf("recipeText", "text", "userId", "sources") })
+
+        suspend fun blocked(body: String, expected: Class<out StepGuidanceException>) {
+            actions.clear()
+            capabilityBody = body
+            val failure = runCatching { managedGuidance.complete(prompt, cred) }.exceptionOrNull()
+            assertEquals(expected, failure?.javaClass)
+            assertEquals(listOf(capabilities), actions)
+        }
+        blocked(
+            """{"ok":true,"serviceVersion":1,"enabled":false,"membership":{"isActive":false,"expireAt":null}}""",
+            StepGuidanceException.MembershipRequired::class.java,
+        )
+        blocked(ready.replace("\"enabled\":true", "\"enabled\":false"), StepGuidanceException.NotDeployed::class.java)
+        blocked(ready.replace("\"enabled\":true", "\"enabled\":\"true\""), StepGuidanceException.InvalidResponse::class.java)
+
+        actions.clear()
+        capabilityBody = ready
+        switchDuringCheck = true
+        val cancelled = runCatching {
+            managedGuidance.complete(prompt, cred) {
+                if (!sameContext) throw CancellationException("Switched account")
+            }
+        }.exceptionOrNull()
+        assertTrue(cancelled is CancellationException)
+        assertEquals(listOf(capabilities), actions)
     }
 }

@@ -17,7 +17,15 @@
         "bytes": 1387895,
         "sha256": "1dc5b0796f4a82078120dfb81a412ad79f74c7600bb924b6cbbbe95dbfc10996"
       }
-    ]
+    ],
+    "badgeName": "tomato-egg",
+    "androidModel": {
+      "kind": "model",
+      "version": 1,
+      "url": "https://assets.yunle.fun/cook/showcase/250/tomato-egg-clay/model/v1-5b7a9eb5caef80aed589e3586d6ca2bb92ca803173414639f182f2aaff28b99e.glb",
+      "bytes": 881128,
+      "sha256": "5b7a9eb5caef80aed589e3586d6ca2bb92ca803173414639f182f2aaff28b99e"
+    }
   },
   {
     "recipeID": 588,
@@ -37,7 +45,15 @@
         "bytes": 257867,
         "sha256": "1fd52c915c69de27bbb3ca7ad9415caa354744559b777b00c09829737ae33463"
       }
-    ]
+    ],
+    "badgeName": "steamed-egg",
+    "androidModel": {
+      "kind": "model",
+      "version": 1,
+      "url": "https://assets.yunle.fun/cook/showcase/588/steamed-egg-clay/model/v1-d13ba07d162a0c766db509649ad0c66c42449d301ee479f08e65f57839506eb8.glb",
+      "bytes": 149216,
+      "sha256": "d13ba07d162a0c766db509649ad0c66c42449d301ee479f08e65f57839506eb8"
+    }
   },
   {
     "recipeID": 497,
@@ -57,6 +73,14 @@
         "bytes": 199919,
         "sha256": "37496813b782b3e621caf5ab0af49c99985ee80afac99db8268315644dead7ea"
       }
-    ]
+    ],
+    "badgeName": "smashed-cucumber",
+    "androidModel": {
+      "kind": "model",
+      "version": 1,
+      "url": "https://assets.yunle.fun/cook/showcase/497/smashed-cucumber-clay/model/v1-0b97b1a765525d4e7e4d4ea0ae822e915ce1cf43523547a4980a1c5fe36a4ec8.glb",
+      "bytes": 112312,
+      "sha256": "0b97b1a765525d4e7e4d4ea0ae822e915ce1cf43523547a4980a1c5fe36a4ec8"
+    }
   }
 ]

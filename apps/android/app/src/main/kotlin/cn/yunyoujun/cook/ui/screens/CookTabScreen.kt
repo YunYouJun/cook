@@ -1,21 +1,25 @@
 package cn.yunyoujun.cook.ui.screens
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -23,55 +27,53 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SecondaryScrollableTabRow
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import cn.yunyoujun.cook.AppContainer
-import cn.yunyoujun.cook.core.ai.SearchIntent
+import cn.yunyoujun.cook.core.model.DietaryGoal
 import cn.yunyoujun.cook.core.model.Recipe
 import cn.yunyoujun.cook.core.model.RecommendationMode
-import cn.yunyoujun.cook.core.recommend.Recommender
-import cn.yunyoujun.cook.data.local.AiProviderMode
-import cn.yunyoujun.cook.data.local.AndroidKeystoreVault
+import cn.yunyoujun.cook.core.model.StuffItem
+import cn.yunyoujun.cook.data.local.JournalRecipeId
 import cn.yunyoujun.cook.data.local.SignalConsentState
 import cn.yunyoujun.cook.data.repository.CookCatalogSnapshot
 import cn.yunyoujun.cook.data.repository.CookDiscovery
-import cn.yunyoujun.cook.data.repository.CookDiscoveryScene
 import cn.yunyoujun.cook.platform.DeviceShakeDetector
-import cn.yunyoujun.cook.ui.components.DecideRandomDialog
 import cn.yunyoujun.cook.ui.components.DietaryGoalBar
 import cn.yunyoujun.cook.ui.components.RecipeSummaryCard
-import cn.yunyoujun.cook.ui.components.SearchIntentReviewDialog
 import cn.yunyoujun.cook.ui.components.TagFlowChips
-import cn.yunyoujun.cook.ui.components.buildDecideContextSummary
+import cn.yunyoujun.cook.ui.components.rememberCookSceneCamera
+import cn.yunyoujun.cook.ui.navigation.CookNavKey
 import cn.yunyoujun.cook.ui.state.CookSessionController
+import cn.yunyoujun.cook.ui.state.RecordRecipeVisit
+import cn.yunyoujun.cook.ui.state.rememberLocalCalendarClock
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -80,78 +82,84 @@ fun CookTabScreen(
     snapshot: CookCatalogSnapshot,
     sessionController: CookSessionController,
     container: AppContainer,
-    onOpenRecipe: (Int) -> Unit,
+    onOpenRecipe: (CookNavKey.RecipeDetail) -> Unit,
+    onOpenWorkbench: (CookNavKey.KitchenWorkbench) -> Unit = {},
+    onOpenJournal: (JournalRecipeId) -> Unit = {},
+    onOpenRecipeFeedback: ((Int) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val conditions by sessionController.conditions.collectAsState()
     val prefs by container.preferencesStore.state.collectAsState()
-    val favoriteIds by container.userLibraryRepository.observeDeviceFavoriteIds().collectAsState(initial = emptySet())
+    val session by container.yunlefunSessionManager.state.collectAsState()
+    val libraryScope = session.libraryScope
+    val favorites by remember(container) { container.userLibraryRepository.observeFavorites() }.collectAsState(initial = null)
+    val favoriteEntries = favorites?.takeIf { it.scope == libraryScope }
+    val favoriteIds = remember(favoriteEntries) { favoriteEntries?.entries.orEmpty().map { it.recipeId }.toSet() }
     val fridgeDoc by container.fridgeStore.state.collectAsState()
+    val today = rememberLocalCalendarClock().toLocalDate()
+    val fridgeStock = remember(fridgeDoc, today) { fridgeDoc.stockOn(today).filter { it.usableForCooking } }
+    val fridgeNames = remember(fridgeStock, snapshot) {
+        snapshot.data.normalizer.unique(fridgeStock.map { it.batch.ingredientName })
+    }
+    val fridgePriority = remember(fridgeStock, snapshot) {
+        snapshot.data.normalizer.unique(fridgeStock.filter { it.needsAttention }.map { it.batch.ingredientName })
+    }
     val personalCatalog by container.personalCatalogStore.state.collectAsState()
+    val appliedFood = remember(personalCatalog, snapshot) {
+        personalCatalog.toDocument().applyingTo(snapshot.data.food)
+    }
 
     var showIngredientPicker by rememberSaveable { mutableStateOf(false) }
     var showFilterDialog by rememberSaveable { mutableStateOf(false) }
     var showDecideDialog by rememberSaveable { mutableStateOf(false) }
-    var showCompleteKitchenResults by rememberSaveable { mutableStateOf(false) }
-    val listState = rememberLazyListState()
+    var decideBatchIds by rememberSaveable { mutableStateOf<IntArray?>(null) }
+    var showCompleteResults by rememberSaveable { mutableStateOf(false) }
+    var returnToCloudKitchen by rememberSaveable { mutableStateOf(false) }
+    var lastDecidedId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var detailId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var detailGoal by rememberSaveable { mutableStateOf<DietaryGoal?>(null) }
+    var detailIngredients by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
+    var showRecipesInSidebar by rememberSaveable { mutableStateOf(false) }
+    val compactScroll = rememberLazyListState()
+    val chooserScroll = rememberLazyListState()
+    val resultsScroll = rememberLazyListState()
+    val cloudKitchenCamera = rememberCookSceneCamera()
     var sceneBatch by remember { mutableStateOf<List<Recipe>>(emptyList()) }
-    var pendingIntent by remember { mutableStateOf<Pair<String, SearchIntent>?>(null) }
-    var pendingAiConsent by remember { mutableStateOf<Pair<String, AiProviderMode>?>(null) }
-    var queryText by rememberSaveable { mutableStateOf(conditions.keyword) }
-    var showRecentSearches by rememberSaveable { mutableStateOf(false) }
-    val focus = LocalFocusManager.current
-    var intentError by remember { mutableStateOf<String?>(null) }
-    var isAiSearching by remember { mutableStateOf(false) }
-    var aiSearchJob by remember { mutableStateOf<Job?>(null) }
-    val account by container.yunlefunSessionManager.state.collectAsState()
-    LaunchedEffect(prefs.aiProviderMode, account.credential) {
-        aiSearchJob?.cancel()
-        pendingAiConsent = null
-        pendingIntent = null
-    }
-
-    fun submitKeyword() {
-        val text = queryText.trim()
-        sessionController.setKeyword(text)
-        container.preferencesStore.recordSearch(text)
-        focus.clearFocus()
-    }
-
-    fun sendIntent(query: String, mode: AiProviderMode) {
-        isAiSearching = true
-        aiSearchJob = scope.launch {
-            try {
-                val draft = when (mode) {
-                    AiProviderMode.BYOK_DEEPSEEK -> {
-                        val key = container.vault.readSecret(AndroidKeystoreVault.KEY_DEEPSEEK_API_KEY)
-                            ?: error("请先在 AI 设置中保存个人 DeepSeek Key。")
-                        container.deepSeekClient.requestSearchIntent(key, query, snapshot.data, snapshot.availableDietaryGoals)
-                    }
-                    AiProviderMode.MANAGED_MEMBERSHIP -> {
-                        val credential = container.yunlefunSessionManager.state.value.credential
-                            ?.takeIf { it.isValid() } ?: error("请先登录有效的云乐坊会员账号。")
-                        val result = container.managedAiService.parse(query, credential, snapshot.data, snapshot.availableDietaryGoals)
-                        if (container.yunlefunSessionManager.state.value.credential != credential) return@launch
-                        result
-                    }
-                    AiProviderMode.DISABLED -> sessionController.parseLocalIntent(snapshot, query)
-                }
-                pendingIntent = query to draft
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                intentError = e.message ?: "联网识别暂不可用，已切换到本机识别。"
-                pendingIntent = query to sessionController.parseLocalIntent(snapshot, query)
-            } finally {
-                isAiSearching = false
-            }
-        }
-    }
+    var showSearch by rememberSaveable { mutableStateOf(false) }
     var favoriteError by remember { mutableStateOf<String?>(null) }
+
+    RecordRecipeVisit(detailId?.let(snapshot::recipe), container.userLibraryRepository, libraryScope)
 
     val candidateResult = remember(snapshot, conditions, prefs) {
         sessionController.evaluateCandidates(snapshot, prefs)
+    }
+    val canDecide = candidateResult.recipes.isNotEmpty() || conditions.discoveryScene != null
+    fun openDecision(batch: List<Recipe>? = null) {
+        decideBatchIds = batch?.map { it.id }?.toIntArray()
+        showDecideDialog = true
+    }
+
+    fun closeDetail() {
+        detailId = null
+        detailIngredients = arrayListOf()
+        showRecipesInSidebar = false
+    }
+
+    fun showUpdatedResults() {
+        closeDetail()
+        resultsScroll.requestScrollToItem(0)
+    }
+
+    fun toggleIngredient(name: String) {
+        sessionController.toggleStuff(name)
+        resultsScroll.requestScrollToItem(0)
+    }
+
+    val clearFilters = {
+        sessionController.clearFiltersOnly()
+        if (prefs.noSpicy) container.preferencesStore.setNoSpicy(false)
+        showUpdatedResults()
     }
 
     LaunchedEffect(conditions.discoveryScene, candidateResult.recipes) {
@@ -174,29 +182,34 @@ fun CookTabScreen(
         }
     }
 
-    val canDecide by rememberUpdatedState(candidateResult.recipes.isNotEmpty())
+    val showingSample = !showCompleteResults && conditions.discoveryScene != null &&
+        conditions.selectedStuff.isEmpty() && conditions.keyword.isBlank()
+    val shakeToDecide by rememberUpdatedState {
+        if (candidateResult.recipes.isNotEmpty() && detailId == null && !showSearch && !showIngredientPicker && !showFilterDialog) {
+            openDecision(sceneBatch.takeIf { showingSample && it.isNotEmpty() })
+        }
+    }
     val shakeDetector = remember(context) {
-        DeviceShakeDetector(context) { if (canDecide) showDecideDialog = true }
+        DeviceShakeDetector(context) { shakeToDecide() }
     }
-    DisposableEffect(shakeDetector, showDecideDialog) {
+    LifecycleResumeEffect(shakeDetector, showDecideDialog) {
         if (!showDecideDialog) shakeDetector.start()
-        onDispose { shakeDetector.stop() }
+        onPauseOrDispose { shakeDetector.stop() }
     }
 
-    val displayedRecipes = if (prefs.cloudKitchen && showCompleteKitchenResults) {
-        candidateResult.recipes
-    } else if (conditions.discoveryScene != null && conditions.selectedStuff.isEmpty() && conditions.keyword.isBlank()) {
-        sceneBatch
-    } else {
-        candidateResult.recipes.take(120)
+    val displayedRecipes = if (showingSample) sceneBatch else candidateResult.recipes
+    val openCandidate: (Boolean, CookNavKey.RecipeDetail) -> Unit = { expanded, route ->
+        if (expanded) {
+            detailId = route.recipeId
+            detailGoal = route.dietaryGoal
+            detailIngredients = ArrayList(route.matchedIngredients)
+            showRecipesInSidebar = true
+        } else {
+            onOpenRecipe(route)
+        }
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    fun LazyListScope.chooser(expanded: Boolean) {
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -204,7 +217,11 @@ fun CookTabScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = if (prefs.cloudKitchen) "云厨房" else "今天做什么菜",
+                    text = when {
+                        prefs.cloudKitchen -> "云厨房"
+                        expanded -> "食材快选"
+                        else -> "今天做什么菜"
+                    },
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
@@ -212,18 +229,35 @@ fun CookTabScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     TextButton(
                         onClick = {
-                            showCompleteKitchenResults = false
+                            showCompleteResults = false
+                            returnToCloudKitchen = false
                             container.preferencesStore.setCloudKitchen(!prefs.cloudKitchen)
+                            closeDetail()
                         },
                         contentPadding = PaddingValues(horizontal = 8.dp),
                     ) { Text(if (prefs.cloudKitchen) "列表" else "云厨房") }
                     OutlinedButton(
-                        onClick = {
-                            showDecideDialog = true
-                        },
-                        enabled = candidateResult.recipes.isNotEmpty(),
+                        onClick = { openDecision() },
+                        enabled = canDecide,
                     ) {
                         Text("随机一道")
+                    }
+                }
+            }
+        }
+
+        item {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = {
+                    showUpdatedResults()
+                    showSearch = true
+                }) { Text("搜索菜名或食材") }
+                if (conditions.keyword.isNotEmpty()) {
+                    TextButton(onClick = {
+                        sessionController.setKeyword("")
+                        showUpdatedResults()
+                    }) {
+                        Text("清除菜名：“${conditions.keyword}”")
                     }
                 }
             }
@@ -236,46 +270,31 @@ fun CookTabScreen(
                     hidden = personalCatalog.hiddenBuiltInNames,
                     normalize = snapshot.data.normalizer::normalize,
                     allowRotation = prefs.cloudKitchenRotation,
+                    camera = cloudKitchenCamera,
                     onRotationChanged = container.preferencesStore::setCloudKitchenRotation,
-                    onPick = sessionController::toggleStuff,
-                    resultCount = candidateResult.recipes.size,
+                    onPick = ::toggleIngredient,
+                    onShowAllIngredients = { showIngredientPicker = true },
+                    recipes = candidateResult.recipes,
+                    menuAvailable = !showSearch && !showIngredientPicker && !showFilterDialog && !showDecideDialog,
                     onShowResults = {
-                        // The results heading is immediately before the recipe rows or the empty-result item.
-                        val heading = (listState.layoutInfo.totalItemsCount - displayedRecipes.size.coerceAtLeast(1) - 1)
-                            .coerceAtLeast(0)
-                        showCompleteKitchenResults = true
-                        scope.launch { listState.animateScrollToItem(heading) }
+                        showCompleteResults = true
+                        if (expanded) {
+                            showUpdatedResults()
+                        } else {
+                            val heading = (compactScroll.layoutInfo.totalItemsCount - displayedRecipes.size.coerceAtLeast(1) - 1)
+                                .coerceAtLeast(0)
+                            returnToCloudKitchen = true
+                            compactScroll.requestScrollToItem(heading)
+                        }
                     },
                 )
             }
         }
 
-        item {
-            OutlinedTextField(
-                value = queryText,
-                onValueChange = { queryText = it.take(300) },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("搜菜名，或输入一句话让我挑菜") },
-                placeholder = { Text("例：番茄炒蛋，或：家里有土豆、别放香菜") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { submitKeyword() }),
-                trailingIcon = {
-                    if (queryText.isNotEmpty() || conditions.keyword.isNotEmpty()) {
-                        Row {
-                            if (queryText.isNotBlank() && queryText != conditions.keyword) {
-                                TextButton(onClick = ::submitKeyword) { Text("搜索") }
-                            }
-                            TextButton(onClick = {
-                                queryText = ""
-                                sessionController.setKeyword("")
-                            }) { Text("清空") }
-                        }
-                    } else if (prefs.recentSearches.isNotEmpty()) {
-                        TextButton(onClick = { showRecentSearches = true }) { Text("最近搜索") }
-                    }
-                },
-            )
+        if (expanded && !prefs.cloudKitchen) {
+            item("vegetables") {
+                DiscoveryIngredientSection("蔬菜", appliedFood.vegetable, conditions.selectedStuff, ::toggleIngredient)
+            }
         }
 
         item {
@@ -283,47 +302,30 @@ fun CookTabScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Button(onClick = { showIngredientPicker = true }) {
-                    val countLabel = if (conditions.selectedStuff.isEmpty()) "选食材" else "选食材 (${conditions.selectedStuff.size})"
-                    Text(countLabel)
+                if (!expanded && !prefs.cloudKitchen) {
+                    Button(onClick = { showIngredientPicker = true }) {
+                        val countLabel = if (conditions.selectedStuff.isEmpty()) "选食材" else "选食材 (${conditions.selectedStuff.size})"
+                        Text(countLabel)
+                    }
                 }
-                OutlinedButton(onClick = { showFilterDialog = true }) {
+                OutlinedButton(onClick = {
+                    showUpdatedResults()
+                    showFilterDialog = true
+                }) {
                     val count = conditions.activeFilterCount(prefs)
                     Text(if (count == 0) "筛选与模式" else "筛选 ($count)")
                 }
-                OutlinedButton(
-                    enabled = !isAiSearching && queryText.isNotBlank(),
-                    onClick = {
-                        val query = queryText.trim()
-                        val mode = prefs.aiProviderMode
-                        intentError = null
-                        if (mode == AiProviderMode.DISABLED) {
-                            pendingIntent = query to sessionController.parseLocalIntent(snapshot, query)
-                        } else {
-                            pendingAiConsent = query to mode
-                        }
-                    },
-                ) { Text(if (isAiSearching) "识别中…" else "智能识别语句") }
                 if (conditions.selectedStuff.isNotEmpty() || conditions.isFilterActive(prefs) || conditions.keyword.isNotEmpty()) {
                     TextButton(onClick = {
-                        queryText = ""
                         sessionController.clearSessionConditions()
+                        showUpdatedResults()
                     }) {
                         Text("清空本次条件")
                     }
                 }
             }
-            intentError?.let { msg ->
-                Text(
-                    text = msg,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            }
         }
 
-        val fridgeNames = fridgeDoc.stock.map { it.ingredientName }.distinct()
         if (fridgeNames.isNotEmpty()) {
             item {
                 Card(
@@ -336,33 +338,57 @@ fun CookTabScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = "冰箱里有 ${fridgeNames.size} 种食材（${fridgeNames.take(3).joinToString("、")}${if (fridgeNames.size > 3) "…" else ""}）",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.weight(1f),
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("冰箱里有 ${fridgeNames.size} 种食材", style = MaterialTheme.typography.bodySmall)
+                            val preview = fridgePriority.ifEmpty { fridgeNames }
+                            val names = preview.take(3).joinToString("、") + if (preview.size > 3) "…" else ""
+                            Text(
+                                text = if (fridgePriority.isEmpty()) names else "优先食用 $names",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (fridgePriority.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.tertiary,
+                            )
+                        }
+                        val added = conditions.selectedStuff.containsAll(fridgeNames)
                         TextButton(
+                            enabled = !added,
                             onClick = {
                                 val normalized = snapshot.data.normalizer.unique(conditions.selectedStuff + fridgeNames)
                                 sessionController.setSelectedStuff(normalized)
+                                showUpdatedResults()
                             },
                         ) {
-                            Text("一键选入")
+                            Text(if (added) "已选入" else "一键选入")
                         }
                     }
                 }
             }
         }
 
-        if (conditions.selectedStuff.isNotEmpty()) {
+        if (!prefs.cloudKitchen && conditions.selectedStuff.isNotEmpty()) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("已选食材（点击移除）", style = MaterialTheme.typography.labelMedium)
                     TagFlowChips(
                         items = conditions.selectedStuff,
                         selectedItems = conditions.selectedStuff.toSet(),
-                        onToggle = { sessionController.toggleStuff(it) },
+                        onToggle = ::toggleIngredient,
                     )
+                }
+            }
+        }
+
+        if (expanded && !prefs.cloudKitchen) {
+            item("protein") {
+                DiscoveryIngredientSection("肉和蛋", appliedFood.meat, conditions.selectedStuff, ::toggleIngredient)
+            }
+            item("staples") {
+                DiscoveryIngredientSection("主食", appliedFood.staple, conditions.selectedStuff, ::toggleIngredient)
+            }
+            item("tools") {
+                Text("厨具（可选）", style = MaterialTheme.typography.titleSmall)
+                TagFlowChips(appliedFood.tools.map { it.name }.distinct(), setOfNotNull(conditions.tool)) {
+                    sessionController.toggleTool(it)
+                    showUpdatedResults()
                 }
             }
         }
@@ -387,21 +413,9 @@ fun CookTabScreen(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    CookDiscoveryScene.entries.forEach { scene ->
-                        val enabled = scene != CookDiscoveryScene.INSTITUTIONAL_LOW_GI ||
-                            snapshot.institutionalLowGICatalog?.isAvailable == true
-                        if (enabled) {
-                            FilterChip(
-                                selected = conditions.discoveryScene == scene,
-                                onClick = { sessionController.toggleDiscoveryScene(scene) },
-                                label = { Text("${scene.emoji} ${scene.label}") },
-                            )
-                        }
-                    }
+                CookDiscoverySceneChips(snapshot, conditions.discoveryScene) {
+                    sessionController.toggleDiscoveryScene(it)
+                    showUpdatedResults()
                 }
                 conditions.discoveryScene?.let { activeScene ->
                     Card(
@@ -419,13 +433,13 @@ fun CookTabScreen(
                                 modifier = Modifier.padding(top = 4.dp),
                             )
                             if (conditions.selectedStuff.isEmpty() && conditions.keyword.isBlank()) {
-                                Row(
+                                FlowRow(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.End,
                                 ) {
                                     TextButton(
                                         onClick = {
-                                            showCompleteKitchenResults = false
+                                            showCompleteResults = false
                                             sceneBatch = CookDiscovery.sample(
                                                 candidateResult.recipes,
                                                 count = 3,
@@ -434,6 +448,11 @@ fun CookTabScreen(
                                         },
                                     ) {
                                         Text("换一批")
+                                    }
+                                    if (showingSample && sceneBatch.isNotEmpty()) {
+                                        TextButton(onClick = { openDecision(sceneBatch) }) {
+                                            Text("从这几道里选")
+                                        }
                                     }
                                 }
                             }
@@ -446,12 +465,17 @@ fun CookTabScreen(
         item {
             DietaryGoalBar(
                 availableGoals = snapshot.availableDietaryGoals,
-                selectedGoal = prefs.rememberedDietaryGoal,
-                onSelectGoal = { goal -> container.preferencesStore.selectDietaryGoal(goal) },
+                selectedGoal = conditions.dietaryGoal(prefs),
+                onSelectGoal = { goal ->
+                    sessionController.selectDietaryGoal(goal, container.preferencesStore)
+                    showUpdatedResults()
+                },
             )
         }
+    }
 
-        item {
+    fun LazyListScope.results(recipes: List<Recipe>, expanded: Boolean, inSidebar: Boolean = false) {
+        item("results-heading") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -463,22 +487,33 @@ fun CookTabScreen(
                     } else {
                         "为你匹配到 ${candidateResult.recipes.size} 道菜"
                     },
+                    modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
                 if (conditions.isFilterActive(prefs)) {
                     TextButton(
-                        onClick = {
-                            sessionController.clearFiltersOnly()
-                        },
+                        onClick = clearFilters,
                     ) {
                         Text("清除筛选")
                     }
                 }
             }
+            if (expanded && conditions.selectedStuff.isNotEmpty()) {
+                Text(
+                    "已选：${conditions.selectedStuff.joinToString("、")}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (!inSidebar && showingSample && recipes.size < candidateResult.recipes.size) {
+                TextButton(onClick = { showCompleteResults = true }) {
+                    Text("查看全部 ${candidateResult.recipes.size} 道菜")
+                }
+            }
         }
 
-        if (displayedRecipes.isEmpty()) {
+        if (recipes.isEmpty()) {
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(
@@ -492,7 +527,7 @@ fun CookTabScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = { sessionController.clearFiltersOnly() }) {
+                            OutlinedButton(onClick = clearFilters, enabled = conditions.isFilterActive(prefs)) {
                                 Text("清除筛选")
                             }
                             if (prefs.mode != RecommendationMode.LOOSE) {
@@ -505,20 +540,23 @@ fun CookTabScreen(
                 }
             }
         } else {
-            itemsIndexed(displayedRecipes, key = { _, item -> item.id }) { rank, recipe ->
-                val activeGoal = prefs.rememberedDietaryGoal
+            itemsIndexed(recipes, key = { _, item -> item.id }) { rank, recipe ->
+                val activeGoal = conditions.dietaryGoal(prefs)
                 val dietaryNote = activeGoal?.let { snapshot.dietaryCatalog?.entry(recipe, it)?.reason(it) }
-                val sceneReason = conditions.discoveryScene?.let { CookDiscovery.reason(recipe, it.filters) }
                 val isFav = recipe.id in favoriteIds
                 RecipeSummaryCard(
                     recipe = recipe,
                     match = candidateResult.matchesById[recipe.id],
                     isFavorite = isFav,
-                    sceneReason = sceneReason,
+                    sceneReason = snapshot.sceneReason(recipe, conditions.discoveryScene),
                     dietaryNote = dietaryNote,
+                    showInstitutionalTag = snapshot.institutionalLowGICatalog?.entry(recipe) != null,
+                    modifier = Modifier.testTag("cook.recipe.${recipe.id}"),
+                    isSelected = inSidebar && detailId == recipe.id,
+                    favoriteEnabled = favoriteEntries != null,
                     onToggleFavorite = {
                         scope.launch {
-                            container.userLibraryRepository.toggleFavorite(recipe.id, isFav)
+                            container.userLibraryRepository.toggleFavorite(recipe.id, isFav, libraryScope)
                                 .onFailure { favoriteError = it.message ?: "收藏保存失败，请重试。" }
                         }
                     },
@@ -536,20 +574,155 @@ fun CookTabScreen(
                                 )
                             }
                         }
-                        onOpenRecipe(recipe.id)
+                        openCandidate(expanded, CookNavKey.RecipeDetail(
+                            recipe.id,
+                            activeGoal,
+                            candidateResult.matchesById[recipe.id]?.matchedStuff.orEmpty(),
+                        ))
                     },
                 )
             }
         }
     }
 
+    @Composable
+    fun EmbeddedRecipe(id: Int) {
+        key(id, detailGoal) {
+            RecipeDetailScreen(
+                recipeId = id,
+                snapshot = snapshot,
+                container = container,
+                onBack = ::closeDetail,
+                onOpenWorkbench = { onOpenWorkbench(CookNavKey.KitchenWorkbench(it, detailGoal)) },
+                onOpenJournal = onOpenJournal,
+                dietaryGoal = detailGoal,
+                embedded = true,
+                recommendationSession = sessionController.takeIf { detailIngredients.isNotEmpty() },
+                onOpenRecipeFeedback = onOpenRecipeFeedback,
+            )
+        }
+    }
+
+    CookDiscoveryLayout(overlay = { expanded ->
+        if (showDecideDialog) {
+            CookDecideDialog(
+                snapshot = snapshot,
+                container = container,
+                controller = sessionController,
+                ignoringKeyword = false,
+                avoidFirstId = lastDecidedId,
+                batchIds = decideBatchIds,
+                onRecipePreviewed = { lastDecidedId = it },
+                onOpenRecipe = { route ->
+                    lastDecidedId = route.recipeId
+                    showDecideDialog = false
+                    openCandidate(expanded, route)
+                },
+                onDismiss = { showDecideDialog = false },
+            )
+        }
+    }) { sidebarWidth, separation ->
+        val activeDetail = detailId
+        val canReturnToCloudKitchen = sidebarWidth == null && prefs.cloudKitchen && returnToCloudKitchen &&
+            compactScroll.firstVisibleItemIndex > 0
+        BackHandler(enabled = activeDetail != null || canReturnToCloudKitchen) {
+            if (activeDetail != null) {
+                closeDetail()
+            } else {
+                returnToCloudKitchen = false
+                compactScroll.requestScrollToItem(0)
+            }
+        }
+        if (sidebarWidth == null) {
+            if (activeDetail != null) {
+                EmbeddedRecipe(activeDetail)
+            } else {
+                LazyColumn(
+                    state = compactScroll,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    chooser(expanded = false)
+                    results(displayedRecipes, expanded = false)
+                }
+            }
+        } else {
+            Row(Modifier.fillMaxSize()) {
+                Column(Modifier.width(sidebarWidth).fillMaxHeight().clipToBounds()) {
+                    if (activeDetail != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
+                                SegmentedButton(
+                                    selected = !showRecipesInSidebar,
+                                    onClick = { showRecipesInSidebar = false },
+                                    shape = SegmentedButtonDefaults.itemShape(0, 2),
+                                    label = { Text("食材") },
+                                )
+                                SegmentedButton(
+                                    selected = showRecipesInSidebar,
+                                    onClick = { showRecipesInSidebar = true },
+                                    shape = SegmentedButtonDefaults.itemShape(1, 2),
+                                    label = { Text("菜谱列表") },
+                                )
+                            }
+                            if (showRecipesInSidebar) {
+                                TextButton(
+                                    onClick = { openDecision() },
+                                    enabled = canDecide,
+                                ) { Text("随机一道") }
+                            }
+                        }
+                    }
+                    if (activeDetail != null && showRecipesInSidebar) {
+                        LazyColumn(
+                            state = resultsScroll,
+                            modifier = Modifier.fillMaxSize().testTag("cook.sidebar.recipes"),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            results(candidateResult.recipes, expanded = true, inSidebar = true)
+                        }
+                    } else {
+                        LazyColumn(
+                            state = chooserScroll,
+                            modifier = Modifier.fillMaxSize().testTag("cook.chooser"),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            chooser(expanded = true)
+                        }
+                    }
+                }
+                Spacer(Modifier.width(separation).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant))
+                Box(Modifier.weight(1f).fillMaxHeight().clipToBounds().testTag("cook.resultsPane")) {
+                    if (activeDetail != null) {
+                        EmbeddedRecipe(activeDetail)
+                    } else {
+                        LazyColumn(
+                            state = resultsScroll,
+                            modifier = Modifier.fillMaxSize().testTag("cook.results"),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            results(displayedRecipes, expanded = true)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     if (showIngredientPicker) {
-        val appliedFood = personalCatalog.toDocument().applyingTo(snapshot.data.food)
+        val pantryCategory = "常用调料"
         val categories = listOf(
             "素菜" to appliedFood.vegetable.map { it.name },
             "荤菜" to appliedFood.meat.map { it.name },
             "主食" to appliedFood.staple.map { it.name },
-            "常用调料" to snapshot.data.pantry.options,
+            pantryCategory to snapshot.data.pantry.options,
         ).filter { it.second.isNotEmpty() }
         var tabIdx by rememberSaveable { mutableIntStateOf(0) }
         val safeIdx = tabIdx.coerceIn(0, (categories.size - 1).coerceAtLeast(0))
@@ -570,17 +743,12 @@ fun CookTabScreen(
                             }
                         }
                         Spacer(modifier = Modifier.height(4.dp))
-                        val currentItems = categories[safeIdx].second
+                        val (category, currentItems) = categories[safeIdx]
+                        val isPantry = category == pantryCategory
                         TagFlowChips(
                             items = currentItems,
-                            selectedItems = (conditions.selectedStuff + if (safeIdx == 3) prefs.pantry else emptyList()).toSet(),
-                            onToggle = { item ->
-                                if (safeIdx == 3) {
-                                    container.preferencesStore.togglePantryItem(item)
-                                } else {
-                                    sessionController.toggleStuff(item)
-                                }
-                            },
+                            selectedItems = (conditions.selectedStuff + if (isPantry) prefs.pantry else emptyList()).toSet(),
+                            onToggle = if (isPantry) container.preferencesStore::togglePantryItem else ::toggleIngredient,
                         )
                     }
                 }
@@ -594,156 +762,16 @@ fun CookTabScreen(
     }
 
     if (showFilterDialog) {
-        val appliedFood = personalCatalog.toDocument().applyingTo(snapshot.data.food)
-        val toolNames = appliedFood.tools.map { it.name }.distinct()
-        AlertDialog(
-            onDismissRequest = { showFilterDialog = false },
-            title = { Text("筛选条件与推荐模式") },
-            text = {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Text("匹配模式", style = MaterialTheme.typography.labelMedium)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(
-                            RecommendationMode.LOOSE to "宽松模式",
-                            RecommendationMode.STRICT to "严格模式",
-                            RecommendationMode.SURVIVAL to "应急模式",
-                        ).forEach { (mode, title) ->
-                            FilterChip(
-                                selected = prefs.mode == mode,
-                                onClick = { container.preferencesStore.setMode(mode) },
-                                label = { Text(title) },
-                            )
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("不吃辣（自动避开辣椒）", style = MaterialTheme.typography.bodyMedium)
-                        Switch(
-                            checked = prefs.noSpicy,
-                            onCheckedChange = { container.preferencesStore.setNoSpicy(it) },
-                        )
-                    }
-
-                    Text("厨具（单选）", style = MaterialTheme.typography.labelMedium)
-                    TagFlowChips(
-                        items = toolNames,
-                        selectedItems = conditions.tool?.let { setOf(it) } ?: emptySet(),
-                        onToggle = { sessionController.toggleTool(it) },
-                    )
-
-                    Text("难度", style = MaterialTheme.typography.labelMedium)
-                    TagFlowChips(
-                        items = Recommender.DIFFICULTY_LEVELS,
-                        selectedItems = conditions.difficulty.toSet(),
-                        onToggle = { sessionController.toggleDifficulty(it) },
-                    )
-
-                    Text("做法分类", style = MaterialTheme.typography.labelMedium)
-                    TagFlowChips(
-                        items = Recommender.METHOD_GROUPS.map { it.label },
-                        selectedItems = conditions.methodGroups.toSet(),
-                        onToggle = { sessionController.toggleMethodGroup(it) },
-                    )
-                }
-            },
-            confirmButton = {
-                Button(onClick = { showFilterDialog = false }) {
-                    Text("完成")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { sessionController.clearFiltersOnly() }) {
-                    Text("清除筛选")
-                }
-            },
+        CookFilterDialog(
+            snapshot, appliedFood, conditions, sessionController, prefs, container.preferencesStore,
+            count = candidateResult.recipes.size,
+            onClear = clearFilters,
+            onClose = { showFilterDialog = false },
         )
     }
 
-    if (showDecideDialog) {
-        DecideRandomDialog(
-            recipes = candidateResult.recipes,
-            matchesById = candidateResult.matchesById,
-            contextSummary = buildDecideContextSummary(conditions, prefs, ignoringKeyword = false),
-            onOpenRecipe = { id ->
-                showDecideDialog = false
-                onOpenRecipe(id)
-            },
-            onDismiss = { showDecideDialog = false },
-        )
-    }
-
-    if (showRecentSearches) {
-        AlertDialog(
-            onDismissRequest = { showRecentSearches = false },
-            title = { Text("最近搜索") },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    if (prefs.recentSearches.isEmpty()) Text("暂无搜索记录")
-                    prefs.recentSearches.forEach { text ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(
-                                modifier = Modifier.weight(1f),
-                                onClick = { queryText = text; showRecentSearches = false },
-                            ) { Text(text) }
-                            TextButton(onClick = { container.preferencesStore.removeSearch(text) }) { Text("删除") }
-                        }
-                    }
-                }
-            },
-            confirmButton = { TextButton(onClick = { showRecentSearches = false }) { Text("关闭") } },
-            dismissButton = {
-                TextButton(onClick = { container.preferencesStore.clearSearches() }) { Text("清空记录") }
-            },
-        )
-    }
-
-    pendingAiConsent?.let { (query, mode) ->
-        val recipient = if (mode == AiProviderMode.BYOK_DEEPSEEK) "DeepSeek" else "云乐坊的腾讯云 CloudBase 与 DeepSeek"
-        AlertDialog(
-            onDismissRequest = { pendingAiConsent = null },
-            title = { Text("发送本次搜索？") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("以下文字将发送给$recipient。")
-                    Text(query)
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    pendingAiConsent = null
-                    sendIntent(query, mode)
-                }) { Text("同意并识别") }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    pendingAiConsent = null
-                    pendingIntent = query to sessionController.parseLocalIntent(snapshot, query)
-                }) { Text("用本机识别") }
-            },
-        )
-    }
-
-    pendingIntent?.let { (query, draft) ->
-        SearchIntentReviewDialog(
-            intent = draft,
-            onConfirm = { confirmed ->
-                container.preferencesStore.recordSearch(query)
-                queryText = ""
-                val suggestedGoal = sessionController.applySearchIntent(confirmed)
-                if (suggestedGoal != null && suggestedGoal in snapshot.availableDietaryGoals) {
-                    container.preferencesStore.selectDietaryGoal(suggestedGoal)
-                }
-                pendingIntent = null
-            },
-            onDismiss = { pendingIntent = null },
-        )
+    if (showSearch) {
+        CookSearchDialog(snapshot, sessionController, container, onClose = { showSearch = false })
     }
 
     favoriteError?.let { err ->
@@ -757,5 +785,39 @@ fun CookTabScreen(
                 }
             },
         )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DiscoveryIngredientSection(
+    title: String,
+    ingredients: List<StuffItem>,
+    selected: List<String>,
+    onToggle: (String) -> Unit,
+) {
+    if (ingredients.isEmpty()) return
+    var showAll by rememberSaveable { mutableStateOf(false) }
+    val selectedNames = selected.toSet()
+    val options = ingredients.distinctBy { it.name }
+    val visible = if (showAll) options else options.filter { it.more != true || it.name in selectedNames }
+    Text(title, style = MaterialTheme.typography.titleSmall)
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        visible.forEach { item ->
+            FilterChip(
+                selected = item.name in selectedNames,
+                onClick = { onToggle(item.name) },
+                modifier = Modifier.testTag("cook.ingredient.${item.name}"),
+                label = { Text(item.name) },
+            )
+        }
+        if (showAll || visible.size < options.size) {
+            TextButton(onClick = { showAll = !showAll }) {
+                Text(if (showAll) "收起" else "更多 ${options.size - visible.size} 种")
+            }
+        }
     }
 }

@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
     <queries>
-        <package android:name="com.tencent.mm" />
+        <package android:name="fun.yunle.apps" />
     </queries>
 
     <application
@@ -32,13 +38,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="cook.yunyoujun.cn" />
-                <!-- Older Android versions use the browser's copy-link fallback. -->
-                <data android:path="/__cook_no_legacy_auth_match__" />
-                <uri-relative-filter-group android:allow="true">
-                    <data android:path="/auth/callback" />
-                    <data android:query="platform=native" />
-                </uri-relative-filter-group>
+                    android:host="cook.yunyoujun.cn"
+                    android:path="/auth/callback" />
             </intent-filter>
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -49,15 +50,29 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".platform.WeChatCallbackActivity"
+        <provider
+            android:name=".platform.RecipeImageFileProvider"
+            android:authorities="${applicationId}.recipe-images"
             android:exported="false"
-            android:theme="@android:style/Theme.NoDisplay" />
-        <activity-alias
-            android:name="${applicationId}.wxapi.WXEntryActivity"
-            android:targetActivity=".platform.WeChatCallbackActivity"
-            android:enabled="${cookWeChatEnabled}"
-            android:exported="true" />
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/recipe_image_share_paths" />
+        </provider>
+
+        <provider
+            android:name=".platform.LibraryShareFileProvider"
+            android:authorities="${applicationId}.library-shares"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/library_share_paths" />
+        </provider>
+
+        <provider
+            android:name=".platform.PrivateRecipeVideoShareProvider"
+            android:authorities="${applicationId}.private-recipe-video-shares"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/private_recipe_video_share_paths" />
+        </provider>
 
         <receiver
             android:name=".platform.KitchenTimerScheduler$KitchenTimerReceiver"
@@ -66,6 +81,7 @@
                 <action android:name="cn.yunyoujun.cook.ACTION_KITCHEN_TIMER_EXPIRED" />
                 <action android:name="cn.yunyoujun.cook.ACTION_FRIDGE_DAILY_CHECK" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
                 <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />

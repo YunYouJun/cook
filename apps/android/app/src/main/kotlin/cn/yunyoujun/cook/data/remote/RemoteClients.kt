@@ -42,6 +42,9 @@ data class HttpResponsePayload(
     val bodyText: String,
 )
 
+internal class HttpResponseTooLargeException(maxBytes: Int) :
+    IllegalStateException("Response exceeded $maxBytes bytes")
+
 fun interface HttpPostTransport {
     suspend fun post(url: String, headers: Map<String, String>, jsonBody: String): HttpResponsePayload
 }
@@ -125,7 +128,7 @@ object IsolatedHttpPostTransport : HttpTransport {
                         if (read <= 0) break
                         total += read
                         if (total > maxResponseBytes) {
-                            throw IllegalStateException("Response exceeded $maxResponseBytes bytes")
+                            throw HttpResponseTooLargeException(maxResponseBytes)
                         }
                         buffer.write(chunk, 0, read)
                     }
@@ -203,6 +206,8 @@ class FeedbackClient(
 ) {
     val reporterId: String = UUID.randomUUID().toString()
     val endpoint: String? = routedEndpoint(rawEndpoint, environment)
+    val isTest: Boolean
+        get() = environment == "test"
     val isConfigured: Boolean
         get() = endpoint != null
 
@@ -352,7 +357,9 @@ class FeedbackClient(
             if (trimmed.isEmpty()) return null
             val uri = runCatching { URI(trimmed) }.getOrNull() ?: return null
             if (uri.scheme?.lowercase() != "https" || uri.host.isNullOrEmpty()) return null
-            if (environment == "test" && uri.host == "api.yunle.fun" && uri.path == "/cook-feedback") {
+            if (environment == "test" && uri.host.equals("api.yunle.fun", ignoreCase = true) &&
+                uri.path.trimEnd('/') == "/cook-feedback"
+            ) {
                 return "https://api.yunle.fun/cook-feedback-test"
             }
             return uri.toString()

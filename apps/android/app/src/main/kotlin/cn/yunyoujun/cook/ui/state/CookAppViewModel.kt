@@ -2,14 +2,17 @@ package cn.yunyoujun.cook.ui.state
 
 import android.os.Bundle
 import androidx.compose.runtime.saveable.Saver
-import cn.yunyoujun.cook.core.ai.LocalSearchIntentParser
 import cn.yunyoujun.cook.core.ai.SearchIntent
+import cn.yunyoujun.cook.core.ai.SearchIntentValidator
 import cn.yunyoujun.cook.core.model.DietaryGoal
 import cn.yunyoujun.cook.core.model.Recipe
 import cn.yunyoujun.cook.core.model.RecommendationMode
 import cn.yunyoujun.cook.core.recommend.RecipeMatch
 import cn.yunyoujun.cook.core.recommend.RecommendationOptions
+import cn.yunyoujun.cook.core.search.CookQuery
+import cn.yunyoujun.cook.core.search.CookQueryParser
 import cn.yunyoujun.cook.data.local.DevicePreferencesSnapshot
+import cn.yunyoujun.cook.data.local.DevicePreferencesStore
 import cn.yunyoujun.cook.data.repository.CookCatalogSnapshot
 import cn.yunyoujun.cook.data.repository.CookDiscovery
 import cn.yunyoujun.cook.data.repository.CookDiscoveryScene
@@ -26,22 +29,21 @@ data class CookSessionConditions(
     val difficulty: List<String> = emptyList(),
     val keyword: String = "",
     val discoveryScene: CookDiscoveryScene? = null,
+    val hideRememberedDietaryGoal: Boolean = false,
 ) {
     fun isFilterActive(prefs: DevicePreferencesSnapshot): Boolean =
-        methodGroups.isNotEmpty() ||
-            difficulty.isNotEmpty() ||
-            avoid.isNotEmpty() ||
-            noSpicy ||
-            prefs.noSpicy ||
-            prefs.rememberedDietaryGoal != null ||
-            discoveryScene != null
+        activeFilterCount(prefs) > 0
+
+    fun dietaryGoal(prefs: DevicePreferencesSnapshot): DietaryGoal? =
+        prefs.rememberedDietaryGoal.takeUnless { hideRememberedDietaryGoal }
 
     fun activeFilterCount(prefs: DevicePreferencesSnapshot): Int =
         methodGroups.size +
             difficulty.size +
             avoid.size +
             (if (noSpicy || prefs.noSpicy) 1 else 0) +
-            (if (prefs.rememberedDietaryGoal != null) 1 else 0) +
+            (if (dietaryGoal(prefs) != null) 1 else 0) +
+            (if (tool != null) 1 else 0) +
             (if (discoveryScene != null) 1 else 0)
 }
 
@@ -50,6 +52,8 @@ data class CookCandidateResult(
     val matchesById: Map<Int, RecipeMatch>,
     val isCandidatePoolMode: Boolean,
 )
+
+internal class SearchFilterConflict : Exception("本次条件与当前厨具、做法、难度或饮食目标冲突。请修改预览条件或返回调整筛选。")
 
 class CookSessionController(
     initialConditions: CookSessionConditions = CookSessionConditions(),
@@ -96,18 +100,56 @@ class CookSessionController(
         update { it.copy(keyword = keyword) }
     }
 
+    /** Returns the applied conditions, if any, so the caller can persist dietary restrictions. */
+    fun applyDiscoveryInput(snapshot: CookCatalogSnapshot, input: String, parser: CookQueryParser): CookQuery? {
+        val text = input.trim()
+        if (text.isEmpty()) return null
+
+        val parsed = parser.parse(text)
+        val query = parsed.copy(unknown = emptyList())
+        val hasOtherConditions = !query.copy(stuff = emptyList()).isEmpty
+        val onlyKnownIngredients = query.stuff.isNotEmpty() && parsed.unknown.isEmpty() && !hasOtherConditions
+        val exactDish = snapshot.data.recipes.any { it.name == text }
+        val partialDish = !onlyKnownIngredients && snapshot.data.recipes.any { text in it.name }
+        if (exactDish || partialDish || query.isEmpty || (parsed.unknown.isNotEmpty() && !hasOtherConditions)) {
+            setKeyword(text)
+            return null
+        }
+
+        val normalizer = snapshot.data.normalizer
+        val avoided = normalizer.unique(query.avoid).toSet()
+        update { current ->
+            current.copy(
+                selectedStuff = normalizer.unique(current.selectedStuff + query.stuff).filterNot(avoided::contains),
+                tool = query.tool ?: current.tool,
+                methodGroups = (current.methodGroups + query.methodGroups).distinct(),
+                difficulty = (current.difficulty + query.difficulty).distinct(),
+                keyword = "",
+            )
+        }
+        return query
+    }
+
+    fun addDiscoveryIngredient(name: String) {
+        update { it.copy(selectedStuff = (it.selectedStuff + name).distinct(), keyword = "") }
+    }
+
     fun toggleDiscoveryScene(scene: CookDiscoveryScene) {
         update { prev ->
             prev.copy(discoveryScene = if (prev.discoveryScene == scene) null else scene)
         }
     }
 
-    /** 清空本次所有临时选菜条件（保留长期常备调料与默认饮食目标）。 */
-    fun clearSessionConditions() {
-        _conditions.value = CookSessionConditions()
+    fun clearDiscoveryScene() {
+        update { it.copy(discoveryScene = null) }
     }
 
-    /** 仅清除筛选条件与场景（保留已选食材和关键词）。 */
+    /** 清空本次所有临时选菜条件（保留长期常备调料与默认饮食目标）。 */
+    fun clearSessionConditions() {
+        update { CookSessionConditions(hideRememberedDietaryGoal = it.hideRememberedDietaryGoal) }
+    }
+
+    /** 清除本次筛选条件（保留已选食材、关键词和记住的饮食目标）。 */
     fun clearFiltersOnly() {
         update {
             it.copy(
@@ -117,28 +159,48 @@ class CookSessionController(
                 methodGroups = emptyList(),
                 difficulty = emptyList(),
                 discoveryScene = null,
+                hideRememberedDietaryGoal = true,
             )
         }
     }
 
-    fun applySearchIntent(intent: SearchIntent): DietaryGoal? {
-        update {
-            it.copy(
-                selectedStuff = intent.query.stuff,
-                avoid = intent.query.avoid,
-                noSpicy = intent.query.noSpicy,
-                tool = intent.query.tool,
-                methodGroups = intent.query.methodGroups,
-                difficulty = intent.query.difficulty,
-                keyword = "",
-                discoveryScene = null,
-            )
-        }
-        return intent.goal
+    fun selectDietaryGoal(goal: DietaryGoal?, preferences: DevicePreferencesStore) {
+        preferences.selectDietaryGoal(goal)
+        update { it.copy(hideRememberedDietaryGoal = false) }
     }
 
-    fun parseLocalIntent(snapshot: CookCatalogSnapshot, rawText: String): SearchIntent =
-        LocalSearchIntentParser(snapshot.data, snapshot.availableDietaryGoals).parse(rawText)
+    fun setNoSpicy(enabled: Boolean, preferences: DevicePreferencesStore) {
+        preferences.setNoSpicy(enabled)
+        update { it.copy(noSpicy = false) }
+    }
+
+    fun applySearchIntent(snapshot: CookCatalogSnapshot, intent: SearchIntent, preferences: DevicePreferencesStore) {
+        val validated = SearchIntentValidator(snapshot.data, snapshot.availableDietaryGoals).validate(intent)
+        val query = validated.query
+        val current = _conditions.value
+        val activeGoal = current.dietaryGoal(preferences.current)
+        val toolConflicts = current.tool != null && query.tool != null && current.tool != query.tool
+        val goalConflicts = activeGoal != null && validated.goal != null && activeGoal != validated.goal
+        if (toolConflicts || goalConflicts) {
+            throw SearchFilterConflict()
+        }
+        fun intersect(active: List<String>, added: List<String>): List<String> = when {
+            active.isEmpty() -> added
+            added.isEmpty() -> active
+            else -> active.filter(added::contains).ifEmpty { throw SearchFilterConflict() }
+        }
+        val normalizer = snapshot.data.normalizer
+        val avoided = normalizer.unique(query.avoid).toSet()
+        val merged = current.copy(
+            selectedStuff = normalizer.unique(current.selectedStuff + query.stuff).filterNot(avoided::contains),
+            tool = query.tool ?: current.tool,
+            methodGroups = intersect(current.methodGroups, query.methodGroups),
+            difficulty = intersect(current.difficulty, query.difficulty),
+            hideRememberedDietaryGoal = validated.goal == null && current.hideRememberedDietaryGoal,
+        )
+        preferences.applySearchPreferences(query.avoid, query.noSpicy, validated.goal)
+        _conditions.value = merged
+    }
 
     fun evaluateCandidates(
         snapshot: CookCatalogSnapshot,
@@ -158,7 +220,7 @@ class CookSessionController(
             difficulty = cond.difficulty,
             methodGroups = cond.methodGroups,
         )
-        val goal = prefs.rememberedDietaryGoal
+        val goal = cond.dietaryGoal(prefs)
         if (cond.selectedStuff.isNotEmpty()) {
             val rawMatches = if (goal != null) {
                 snapshot.dietaryCatalog?.recommend(options, goal, snapshot.recommender).orEmpty()
@@ -220,6 +282,7 @@ class CookSessionController(
                     putStringArrayList("difficulty", ArrayList(c.difficulty))
                     putString("keyword", c.keyword)
                     putString("discoveryScene", c.discoveryScene?.name)
+                    putBoolean("hideRememberedDietaryGoal", c.hideRememberedDietaryGoal)
                 }
             },
             restore = { bundle ->
@@ -237,6 +300,7 @@ class CookSessionController(
                         difficulty = bundle.getStringArrayList("difficulty")?.toList().orEmpty(),
                         keyword = bundle.getString("keyword").orEmpty(),
                         discoveryScene = scene,
+                        hideRememberedDietaryGoal = bundle.getBoolean("hideRememberedDietaryGoal"),
                     ),
                 )
             },

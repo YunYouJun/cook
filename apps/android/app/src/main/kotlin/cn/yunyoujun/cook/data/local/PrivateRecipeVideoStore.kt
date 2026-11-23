@@ -1,16 +1,26 @@
 package cn.yunyoujun.cook.data.local
 
 import android.content.Context
+import android.media.MediaCodecList
+import android.media.MediaExtractor
+import android.media.MediaFormat
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import cn.yunyoujun.cook.core.sync.PrivateRecipeVideo
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.InputStream
+import java.io.OutputStream
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.UUID
+import kotlin.coroutines.coroutineContext
 
 data class PrivateVideoDraft(
     val video: PrivateRecipeVideo,
@@ -21,7 +31,7 @@ sealed class PrivateVideoException(message: String) : Exception(message) {
     class Format : PrivateVideoException("请选择可播放的 MP4、MOV 或 M4V 视频。")
     class TooLarge : PrivateVideoException("视频超过 500 MB，请先剪短或压缩。")
     class Empty : PrivateVideoException("视频文件为空，未改变原有附件。")
-    class Unavailable : PrivateVideoException("这个视频保存在 iCloud Drive，Android 端暂不支持直接读取 iCloud 附件，请在编辑中重新选择本地视频。")
+    class Unavailable : PrivateVideoException("请在原 iOS 设备导出 iCloud 视频，再在这里编辑菜谱并选择视频文件。")
     class Missing : PrivateVideoException("视频尚未同步到这台设备，或已被移动、删除。请稍后重试，或在编辑中重新选择视频。")
     class OtherDevice : PrivateVideoException("这个视频只保存在原来的设备上。请在原设备导出或在这里重新选择视频。")
     class Corrupt : PrivateVideoException("视频无法播放，文件可能已损坏或编码不受支持。请重新选择视频。")
@@ -33,10 +43,11 @@ sealed class PrivateVideoException(message: String) : Exception(message) {
  * - 先暂存到 `Drafts/<uuid>`，确认保存菜谱时再安装到 `Files/<uuid>.<ext>`
  * - 校验 `deviceID` 与 `location`（遇到 iCloud 位置或外机 deviceID 给出明确指引）
  */
-class PrivateRecipeVideoStore(
+class PrivateRecipeVideoStore internal constructor(
     private val context: Context? = null,
     localRootDir: File? = null,
     explicitDeviceId: String? = null,
+    private val inspectVideo: (File) -> Unit = ::requireVideoTrack,
 ) {
     private val localRoot: File = localRootDir
         ?: File(requireNotNull(context) { "Context or localRootDir required" }.applicationContext.filesDir, "PrivateRecipeVideos")
@@ -71,9 +82,12 @@ class PrivateRecipeVideoStore(
                 dir.deleteRecursively()
             }
         }
+        File(localRoot, "Files").listFiles { file ->
+            file.isFile && file.name.startsWith(".video-") && file.name.endsWith(".part")
+        }?.forEach { it.delete() }
     }
 
-    suspend fun stageFromUri(uri: Uri, displayName: String? = null): PrivateVideoDraft = withContext(Dispatchers.IO) {
+    suspend fun stageFromUri(uri: Uri, displayName: String? = null): PrivateVideoDraft = stageVideo {
         val ctx = requireNotNull(context) { "Context required for stageFromUri" }
         val (resolvedName, resolvedExt) = resolveUriNameAndExtension(ctx, uri, displayName)
         if (resolvedExt !in PrivateRecipeVideo.ALLOWED_EXTENSIONS) {
@@ -82,7 +96,7 @@ class PrivateRecipeVideoStore(
         val input = ctx.contentResolver.openInputStream(uri)
             ?: throw PrivateVideoException.Format()
         input.use { stream ->
-            stageFromStream(stream, originalName = resolvedName.take(200), extension = resolvedExt)
+            stageFromStream(stream, originalName = resolvedName, extension = resolvedExt)
         }
     }
 
@@ -120,7 +134,7 @@ class PrivateRecipeVideoStore(
         return finalName to mimeExt
     }
 
-    suspend fun stageFromFile(sourceFile: File): PrivateVideoDraft = withContext(Dispatchers.IO) {
+    suspend fun stageFromFile(sourceFile: File): PrivateVideoDraft = stageVideo {
         if (!sourceFile.isFile) throw PrivateVideoException.Format()
         val ext = sourceFile.extension.lowercase()
         if (ext !in PrivateRecipeVideo.ALLOWED_EXTENSIONS) throw PrivateVideoException.Format()
@@ -130,11 +144,28 @@ class PrivateRecipeVideoStore(
         }
     }
 
+    internal suspend fun stageFromBackup(input: InputStream, source: PrivateRecipeVideo): PrivateVideoDraft =
+        stageVideo {
+            stageFromStream(input, source.originalName, source.fileExtension, expectedBytes = source.byteCount)
+        }
+
+    private suspend fun stageVideo(read: suspend () -> PrivateVideoDraft): PrivateVideoDraft {
+        var staged: PrivateVideoDraft? = null
+        try {
+            return withContext(Dispatchers.IO) { read().also { staged = it } }
+        } catch (cancelled: CancellationException) {
+            // Cancellation can arrive while returning a successfully copied file to the caller.
+            withContext(NonCancellable + Dispatchers.IO) { staged?.let { discard(it) } }
+            throw cancelled
+        }
+    }
+
     private suspend fun stageFromStream(
         input: InputStream,
         originalName: String,
         extension: String,
-    ): PrivateVideoDraft = withContext(Dispatchers.IO) {
+        expectedBytes: Long? = null,
+    ): PrivateVideoDraft {
         if (extension !in PrivateRecipeVideo.ALLOWED_EXTENSIONS) {
             throw PrivateVideoException.Format()
         }
@@ -147,23 +178,13 @@ class PrivateRecipeVideoStore(
         }
         var keep = false
         try {
-            var count = 0L
-            destination.outputStream().use { output ->
-                val buffer = ByteArray(64 * 1024)
-                while (true) {
-                    coroutineContext.ensureActive()
-                    val read = input.read(buffer)
-                    if (read <= 0) break
-                    count += read
-                    if (count > PrivateRecipeVideo.BYTE_LIMIT) {
-                        throw PrivateVideoException.TooLarge()
-                    }
-                    output.write(buffer, 0, read)
-                }
+            val count = destination.outputStream().use {
+                copyVideo(input, it, expectedBytes ?: PrivateRecipeVideo.BYTE_LIMIT)
             }
-            if (count <= 0L) {
-                throw PrivateVideoException.Empty()
-            }
+            if (count == 0L) throw PrivateVideoException.Empty()
+            if (expectedBytes != null && count != expectedBytes) throw PrivateVideoException.Corrupt()
+            inspectVideo(destination)
+            coroutineContext.ensureActive()
             val video = PrivateRecipeVideo(
                 id = id,
                 fileExtension = extension,
@@ -173,7 +194,7 @@ class PrivateRecipeVideoStore(
                 deviceID = deviceId,
             ).validated()
             keep = true
-            PrivateVideoDraft(video = video, file = destination)
+            return PrivateVideoDraft(video = video, file = destination)
         } finally {
             if (!keep) {
                 synchronized(this@PrivateRecipeVideoStore) {
@@ -211,7 +232,14 @@ class PrivateRecipeVideoStore(
         val filesRoot = File(localRoot, "Files")
         filesRoot.mkdirs()
         val destination = File(filesRoot, installed.fileName)
-        draft.file.copyTo(destination, overwrite = false)
+        val temporary = Files.createTempFile(filesRoot.toPath(), ".video-", ".part").toFile()
+        try {
+            draft.file.copyTo(temporary, overwrite = true)
+            if (temporary.length() != installed.byteCount) throw PrivateVideoException.Corrupt()
+            Files.move(temporary.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE)
+        } finally {
+            temporary.delete()
+        }
         if (discardDraft) {
             discard(draft)
         }
@@ -238,8 +266,65 @@ class PrivateRecipeVideoStore(
         return file
     }
 
-    fun remove(video: PrivateRecipeVideo) {
-        val file = runCatching { playableFile(video) }.getOrNull() ?: return
-        file.delete()
+    /** Writes an independent file only to the document created by the system picker. */
+    suspend fun exportToDocument(video: PrivateRecipeVideo?, uri: Uri) = withContext(Dispatchers.IO) {
+        val resolver = requireNotNull(context).contentResolver
+        var completed = false
+        try {
+            requireNotNull(resolver.openOutputStream(uri, "wt")).use { output ->
+                writeVideo(video ?: throw PrivateVideoException.Missing(), output)
+            }
+            completed = true
+        } finally {
+            if (!completed) runCatching { DocumentsContract.deleteDocument(resolver, uri) }
+        }
     }
+
+    internal suspend fun writeVideo(video: PrivateRecipeVideo, output: OutputStream) {
+        val file = exportableFile(video)
+        val count = file.inputStream().use { copyVideo(it, output, video.byteCount) }
+        if (count != video.byteCount) throw PrivateVideoException.Corrupt()
+    }
+
+    internal fun exportableFile(video: PrivateRecipeVideo): File = playableFile(video).also {
+        if (it.length() != video.byteCount) throw PrivateVideoException.Corrupt()
+    }
+
+    private suspend fun copyVideo(input: InputStream, output: OutputStream, byteLimit: Long = PrivateRecipeVideo.BYTE_LIMIT): Long {
+        val buffer = ByteArray(64 * 1024)
+        var count = 0L
+        while (true) {
+            coroutineContext.ensureActive()
+            val read = input.read(buffer)
+            if (read == -1) return count
+            count += read
+            if (count > byteLimit) throw PrivateVideoException.TooLarge()
+            output.write(buffer, 0, read)
+        }
+    }
+
+    fun remove(video: PrivateRecipeVideo): Boolean {
+        val validated = runCatching { video.validated() }.getOrNull() ?: return false
+        if (validated.location != PrivateRecipeVideo.Location.LOCAL || validated.deviceID != deviceId) return true
+        val file = File(File(localRoot, "Files"), validated.fileName)
+        return runCatching { !file.exists() || (file.isFile && file.delete()) }.getOrDefault(false)
+    }
+}
+
+private fun requireVideoTrack(file: File) {
+    val extractor = MediaExtractor()
+    val supported = try {
+        extractor.setDataSource(file.absolutePath)
+        val codecs = MediaCodecList(MediaCodecList.REGULAR_CODECS)
+        (0 until extractor.trackCount).any { index ->
+            val format = extractor.getTrackFormat(index)
+            format.getString(MediaFormat.KEY_MIME)?.startsWith("video/") == true &&
+                codecs.findDecoderForFormat(format) != null
+        }
+    } catch (_: Exception) {
+        false
+    } finally {
+        extractor.release()
+    }
+    if (!supported) throw PrivateVideoException.Format()
 }

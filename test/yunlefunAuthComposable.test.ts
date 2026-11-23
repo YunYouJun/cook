@@ -145,9 +145,39 @@ describe('yunlefun auth initialization at the composable boundary', () => {
     expect(adapters.consumeInitial).not.toHaveBeenCalled()
     expect(adapters.restore).not.toHaveBeenCalled()
     expect(adapters.adopt).not.toHaveBeenCalled()
-    expect(auth.status.value).toBe('signed-out')
-    expect(auth.configurationMessage.value).toContain('请在应用中重新授权')
+    expect(auth.status.value).toBe('idle')
+    expect(auth.configurationMessage.value).toBe('')
     expect(window.location.hash).toBe('')
     expect(navigate).not.toHaveBeenCalled()
+  })
+
+  it('keeps a native result available after scrubbing the address and permits later Web sign-in', async () => {
+    const callback = 'https://cook.yunyoujun.cn/auth/callback?platform=native#ylf_sso=synthetic_return'
+    const location = new URL(callback)
+    const replaceState = vi.fn((_state: unknown, _title: string, path: string) => {
+      location.href = new URL(path, location).href
+    })
+    vi.stubGlobal('window', { location, history: { state: {}, replaceState } })
+    const { useYunlefunAuth } = await import('../apps/web/app/composables/useYunlefunAuth')
+    const auth = useYunlefunAuth()
+
+    await auth.initialize()
+    await auth.initialize()
+
+    expect(auth.nativeReturnLink.value).toBe(callback)
+    expect(location.hash).toBe('')
+    expect(replaceState).toHaveBeenCalledOnce()
+    expect(adapters.consumeInitial).not.toHaveBeenCalled()
+    expect(adapters.restore).not.toHaveBeenCalled()
+    expect(adapters.adopt).not.toHaveBeenCalled()
+
+    auth.clearNativeReturnLink()
+    location.pathname = '/my'
+    location.search = ''
+    await auth.signIn()
+
+    expect(auth.nativeReturnLink.value).toBe('')
+    expect(adapters.restore).toHaveBeenCalledOnce()
+    expect(adapters.start).toHaveBeenCalledOnce()
   })
 })

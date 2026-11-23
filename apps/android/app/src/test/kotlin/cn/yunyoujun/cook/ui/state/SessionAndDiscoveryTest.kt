@@ -5,6 +5,8 @@ import cn.yunyoujun.cook.core.model.Recipe
 import cn.yunyoujun.cook.data.local.DevicePreferencesSnapshot
 import cn.yunyoujun.cook.data.repository.CookDiscovery
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -26,6 +28,9 @@ class SessionAndDiscoveryTest {
         assertEquals("番茄", controller.conditions.value.keyword)
         assertEquals(null, controller.conditions.value.tool)
         assertTrue(controller.conditions.value.difficulty.isEmpty())
+        assertNull(controller.conditions.value.dietaryGoal(prefs))
+        assertEquals(DietaryGoal.WEIGHT_AWARE, CookSessionConditions().dietaryGoal(prefs))
+        assertFalse(controller.conditions.value.isFilterActive(prefs.copy(noSpicy = false)))
 
         controller.clearSessionConditions()
         assertTrue(controller.conditions.value.selectedStuff.isEmpty())

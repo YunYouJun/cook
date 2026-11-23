@@ -1,7 +1,9 @@
 <script lang="ts" setup>
 import type { DbRecipeItem } from '~/utils/db'
 import RecipeFeedbackButton from '~/components/feedback/RecipeButton.vue'
+import AndroidRecipeLink from '~/components/recipe/AndroidRecipeLink.vue'
 import { useIndexedDB } from '~/composables/db'
+import { sharedRecipePageTitle } from '~/constants/seo'
 import { db } from '~/utils/db'
 import { getRecipeLink, getRecipeTextLink } from '~/utils/recipe'
 
@@ -21,9 +23,10 @@ const recipeID = computed(() => {
 const sourceURL = computed(() => recipe.value ? getRecipeLink(recipe.value) : '')
 const textURL = computed(() => recipe.value ? getRecipeTextLink(recipe.value) : '')
 
-useHead({
-  title: computed(() => recipe.value ? `${recipe.value.name} · 食用手册` : '分享的菜谱 · 食用手册'),
-  meta: [{ name: 'robots', content: 'noindex' }],
+const sharePageMeta = [{ name: 'robots' as const, content: 'noindex' }]
+const head = useHead({ title: sharedRecipePageTitle, meta: sharePageMeta })
+watch(() => recipe.value?.name, (name) => {
+  head.patch({ title: name ? `${name} · 食用手册` : sharedRecipePageTitle, meta: sharePageMeta })
 })
 
 watch([recipeID, retries], async ([id], _, onCleanup) => {
@@ -68,6 +71,7 @@ watch([recipeID, retries], async ([id], _, onCleanup) => {
       <article v-if="recipe" class="shared-recipe">
         <h1>{{ recipe.name }}</h1>
         <ion-list :inset="true">
+          <AndroidRecipeLink :recipe-id="recipeID" />
           <ion-item v-if="recipe.stuff.length">
             <ion-label class="ion-text-wrap">
               <h2>食材</h2>
@@ -105,6 +109,7 @@ watch([recipeID, retries], async ([id], _, onCleanup) => {
             浏览菜谱
           </ion-button>
         </template>
+        <AndroidRecipeLink :recipe-id="recipeID" />
       </div>
     </ion-content>
   </ion-page>

@@ -17,151 +17,161 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import cn.yunyoujun.cook.data.remote.FridgeVisionException
-import cn.yunyoujun.cook.data.remote.FridgeVisionProvider
-import cn.yunyoujun.cook.data.remote.FridgeVisionService
-import cn.yunyoujun.cook.data.remote.YunlefunSessionManager
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-
-private data class VisionCandidate(val name: String, val included: Boolean = true)
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import cn.yunyoujun.cook.ui.state.FridgeBatchReview
+import cn.yunyoujun.cook.ui.state.FridgeBatchReview.Phase
 
 @Composable
 internal fun FridgeVisionDialog(
-    jpeg: ByteArray,
-    service: FridgeVisionService,
-    sessions: YunlefunSessionManager,
-    normalize: (String) -> String,
+    review: FridgeBatchReview,
     onBack: () -> Unit,
+    onReplacePhoto: () -> Unit,
     onOpenAccount: () -> Unit,
-    onAdd: (List<String>) -> Unit,
+    onOpenMembership: () -> Unit,
+    onOpenPrivacy: () -> Unit,
+    writeItems: suspend (List<String>) -> Unit,
+    onSaved: () -> Unit,
 ) {
-    val session by sessions.state.collectAsState()
-    val credential = session.credential
-    val scope = rememberCoroutineScope()
-    var provider by remember(credential) { mutableStateOf<FridgeVisionProvider?>(null) }
-    var eligibilityError by remember(credential) { mutableStateOf<Exception?>(null) }
-    var message by remember(credential) { mutableStateOf<String?>(null) }
-    var candidates by remember(credential) { mutableStateOf<List<VisionCandidate>?>(null) }
-    var uploading by remember(credential) { mutableStateOf(false) }
-    var uploadJob by remember(credential) { mutableStateOf<Job?>(null) }
-    var checkNumber by remember { mutableIntStateOf(0) }
-    val preview = remember(jpeg) { BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)?.asImageBitmap() }
-
-    DisposableEffect(credential) {
-        onDispose { uploadJob?.cancel() }
+    val phase = review.phase
+    val saving = review.isSaving
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (review.phase is Phase.MembershipRequired) review.refreshAccess()
     }
-
-    LaunchedEffect(credential, checkNumber) {
-        provider = null
-        eligibilityError = null
-        try {
-            provider = service.memberProvider(credential ?: throw FridgeVisionException.Login())
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            eligibilityError = e
-        }
-    }
-
-    val names = candidates.orEmpty().filter { it.included }.map { normalize(it.name) }.distinct()
-    val namesValid = names.isNotEmpty() && names.all { FridgeVisionService.validName(it) }
-    val recipient = provider
-    val problem = eligibilityError
 
     AlertDialog(
-        onDismissRequest = onBack,
-        title = { Text(if (candidates == null) "批量识图" else "核对识别结果") },
+        onDismissRequest = { if (!review.isSaving) onBack() },
+        title = {
+            val hasResults = phase is Phase.Results && phase.candidates.isNotEmpty()
+            Text(if (hasResults) "核对识别结果" else "批量识图")
+        },
         text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                val rows = candidates
-                if (rows == null) {
-                    preview?.let { Image(it, contentDescription = "将上传的照片", modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp)) }
-                    when {
-                        uploading -> Text("正在识别照片…")
-                        recipient != null -> Text("确认后，处理后的照片将发送给${recipient.recipient}。")
-                        problem != null -> Text(problem.message.orEmpty())
-                        else -> Text("正在核对会员资格和照片接收方…")
-                    }
-                } else {
-                    rows.forEachIndexed { index, candidate ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                checked = candidate.included,
-                                onCheckedChange = { included ->
-                                    candidates = rows.toMutableList().apply { set(index, candidate.copy(included = included)) }
-                                },
-                            )
-                            OutlinedTextField(
-                                value = candidate.name,
-                                onValueChange = { name ->
-                                    candidates = rows.toMutableList().apply { set(index, candidate.copy(name = name.take(30))) }
-                                },
-                                label = { Text("食材 ${index + 1}") },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f),
-                                isError = candidate.included && !FridgeVisionService.validName(normalize(candidate.name)),
-                            )
-                        }
-                    }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FridgeVisionContent(
+                    review, phase, onReplacePhoto, onOpenPrivacy,
+                    modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                )
+                if (phase is Phase.Ready && !phase.uploading) {
+                    Text(
+                        "确认后，处理后的照片将发送给${phase.provider.recipient}。",
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
-                message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                val error = when (phase) {
+                    is Phase.Ready -> phase.message
+                    is Phase.Results -> when {
+                        phase.saveError -> "食材未保存，请重试。"
+                        phase.candidates.any { it.included && !review.isValid(it.name) } ->
+                            "请为每项勾选的食材填写一个有效名称，不超过 30 字。"
+                        phase.candidates.isNotEmpty() && phase.candidates.none { it.included } ->
+                            "请至少勾选一项要加入冰箱的食材。"
+                        else -> null
+                    }
+                    else -> null
+                }
+                if (error != null) {
+                    Text(error, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics {
+                        liveRegion = LiveRegionMode.Polite
+                    })
+                }
             }
         },
         confirmButton = {
-            when {
-                candidates != null -> Button(enabled = namesValid, onClick = {
-                    if (sessions.state.value.credential != credential) return@Button
-                    runCatching { onAdd(names) }.onFailure { message = "食材未保存，请重试。" }
-                }) { Text("加入冰箱（${names.size} 样）") }
-                problem is FridgeVisionException.Login || problem is FridgeVisionException.Membership ->
-                    Button(onClick = onOpenAccount) { Text("云乐坊账号") }
-                problem != null -> Button(onClick = { checkNumber++ }) { Text("重试") }
-                recipient != null && credential != null -> Button(enabled = !uploading, onClick = {
-                    if (sessions.state.value.credential != credential) return@Button
-                    uploading = true
-                    message = null
-                    uploadJob = scope.launch {
-                        try {
-                            val result = service.recognize(jpeg, recipient, credential)
-                            if (sessions.state.value.credential != credential) return@launch
-                            if (result.isEmpty()) {
-                                message = "这张照片未识别出食材，可换一张照片。"
-                            } else {
-                                candidates = result.map { VisionCandidate(it) }
-                            }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: FridgeVisionException.ProviderChanged) {
-                            message = e.message
-                            provider = null
-                            checkNumber++
-                        } catch (e: Exception) {
-                            message = e.message ?: "识图失败，请重试。"
-                        } finally {
-                            uploading = false
-                        }
+            when (phase) {
+                Phase.Checking -> Unit
+                is Phase.LoginRequired -> Button(onClick = onOpenAccount) {
+                    Text(if (phase.sessionRejected) "前往账号设置" else "登录云乐坊账号")
+                }
+                is Phase.MembershipRequired -> Button(onClick = onOpenMembership) { Text("查看会员权益") }
+                is Phase.Unavailable -> Button(onClick = review::refreshAccess) { Text("重试") }
+                is Phase.Ready -> Button(enabled = !phase.uploading, onClick = { review.recognize(phase) }) { Text("同意并识别") }
+                is Phase.Results -> if (phase.candidates.isNotEmpty()) {
+                    val names = review.namesToSave(phase)
+                    Button(enabled = !saving && names.isNotEmpty(), onClick = { review.save(writeItems, onSaved) }) {
+                        Text(if (saving) "正在保存…" else "加入冰箱（${names.size} 样）")
                     }
-                }) { Text("同意并识别") }
+                }
             }
         },
-        dismissButton = { TextButton(onClick = onBack) { Text("返回本机识别") } },
+        dismissButton = { TextButton(enabled = !saving, onClick = onBack) { Text("返回本机识别") } },
     )
+}
+
+@Composable
+private fun FridgeVisionContent(
+    review: FridgeBatchReview,
+    phase: Phase,
+    onReplacePhoto: () -> Unit,
+    onOpenPrivacy: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val saving = review.isSaving
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        when (phase) {
+            Phase.Checking -> Text("正在核对会员资格和照片接收方…")
+            is Phase.LoginRequired -> Text(
+                if (phase.sessionRejected) "请在云乐坊账号设置退出并重新登录。当前照片会保留。"
+                else "请登录云乐坊后使用批量识图。",
+            )
+            is Phase.MembershipRequired -> {
+                Text("批量识图需要有效的云乐坊会员。")
+                TextButton(onClick = review::refreshAccess) { Text("重新核对会员资格") }
+            }
+            is Phase.Unavailable -> Text(phase.message, color = MaterialTheme.colorScheme.error)
+            is Phase.Ready -> {
+                val preview = remember(review) {
+                    BitmapFactory.decodeByteArray(review.jpeg, 0, review.jpeg.size)?.asImageBitmap()
+                }
+                preview?.let {
+                    Image(it, contentDescription = "将上传的照片", modifier = Modifier.fillMaxWidth().heightIn(max = 160.dp))
+                }
+                if (phase.uploading) {
+                    Text("正在识别照片…")
+                } else {
+                    Text("上传前会移除位置等信息。请避开人物、地址等私密内容。", style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = onOpenPrivacy) { Text("隐私说明") }
+                }
+            }
+            is Phase.Results -> {
+                if (phase.candidates.isEmpty()) {
+                    Text("没有识别出食材。可以换一张照片或手动添加。")
+                } else {
+                    Text("核对名称，取消勾选识别错的食材", style = MaterialTheme.typography.bodySmall)
+                    phase.candidates.forEachIndexed { index, candidate ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = candidate.included,
+                                enabled = !saving,
+                                modifier = Modifier.semantics { contentDescription = "选择${candidate.name}" },
+                                onCheckedChange = { review.setIncluded(index, it) },
+                            )
+                            OutlinedTextField(
+                                value = candidate.name,
+                                enabled = !saving,
+                                onValueChange = { review.setName(index, it) },
+                                label = { Text("食材 ${index + 1}") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                                isError = candidate.included && !review.isValid(candidate.name),
+                            )
+                        }
+                    }
+                    Text("每种记一份，日期按食用建议估算，入库后可调整。", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        if (phase !is Phase.Ready || !phase.uploading) {
+            TextButton(enabled = !saving, onClick = onReplacePhoto) { Text("换一张照片") }
+        }
+    }
 }
