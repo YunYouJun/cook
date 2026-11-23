@@ -9,7 +9,7 @@
 - 每道菜的素材在 `assets/showcase/<配对 ID>/`，统一为 `image.webp` 和 `model.usdz`。番茄炒蛋（250）沿用先前验收的软陶模型和配图。蒸蛋羹（588）和拍黄瓜（497）将 #239 的 Demo 造型转成同风格的原生资源，共用米白釉面、薄荷绿盘沿和相机。
 - 番茄炒蛋生成脚本 `docs/scripts/showcase/tomato_egg_clay.py` 和蒸蛋羹及拍黄瓜导出脚本 `docs/scripts/showcase/export_demo_dishes.py` 从各自场景输出透明预览与 USDZ。后一个脚本可用 `blender -b -t 4 -P docs/scripts/showcase/export_demo_dishes.py -- <独立输出目录>` 重跑，再用 `cwebp -q 88 -m 6` 把 768 像素的 PNG 转成透明 WebP。
 - 官方菜谱随 App 安装徽章与 `showcase-packs.json` 清单。清单按菜谱 ID 和配对 ID 关联两份素材，按包固定版本、URL、字节数和 SHA-256。更新其中一份素材时递增对应包的版本，写入新的大小和哈希。路径中包含版本和哈希，旧版持有的 URL 继续可用。
-- `Showcase Assets` 工作流使用仓库现有 COS 上传凭据，发布到 `cook/showcase/<菜谱 ID>/<配对 ID>/`。发布前检查清单与原文件，上传时避免覆盖旧对象。工作区没有生成的 GLB 时，从清单指定的 CDN 地址下载并校验大小、SHA-256 和 GLB 文件头。上传后，工作流复查公网下载结果，也可在本机运行 `node scripts/upload-showcase-assets.mjs --verify-public` 复查。
+- `Showcase Assets` 工作流使用仓库现有 COS 上传凭据，发布到 `cook/showcase/<菜谱 ID>/<配对 ID>/`。发布前检查清单与原文件，上传时避免覆盖旧对象。工作区没有生成的 GLB 时，复用 Android 构建清单中已发布到 `cook/android/` 的共享模型，校验大小、SHA-256 和 GLB 文件头。上传后，工作流复查公网下载结果，也可在本机运行 `node scripts/upload-showcase-assets.mjs --verify-public` 复查。
 - Android 读取同一清单中的图片包和可选的 `androidModel`（GLB），`badgeName` 对应安装包中的离线徽章。构建时校验 GLB 并打包，用户可在展柜离线安装模型。图片包可单独从 CDN 下载。GLB 和 USDZ 分别记录版本及摘要，共用菜品配对与发布流程。可运行 `node scripts/upload-showcase-assets.mjs --check` 在本机核对全部发布文件。已安装素材保存在 `noBackupFilesDir/showcase/`，可离线使用并单独删除。
 - 三张离线徽章与番茄切面纹理在仓库中使用 WebP。该工作流也将它们按内容 SHA-256 发布到 `cook/showcase/badges/` 和 `cook/showcase/source/`。徽章随 App 安装，Blender 从同目录加载纹理。
 - iOS 将通过校验的文件原子写入 `Application Support/CookShowcaseAssets`，并把目录排除在设备备份之外。更新取消或校验失败时可以继续使用以前的版本。仅在完成安装后移除旧版本。删除包只清理对应菜品和类别的本机版本。番茄炒蛋继续使用原本的目录，已下载素材可继续使用。

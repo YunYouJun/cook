@@ -11,6 +11,7 @@ if (extraArgs.length || (mode !== undefined && !['--check', '--verify-public'].i
 }
 
 const manifests = JSON.parse(await readFile(new URL('../apps/ios/Cook/Resources/showcase-packs.json', import.meta.url), 'utf8'))
+const androidModels = JSON.parse(await readFile(new URL('../assets/android/models.json', import.meta.url), 'utf8'))
 const files = {
   image: { name: 'image.webp', type: 'image/webp' },
   model: { name: 'model.usdz', type: 'model/vnd.usdz+zip' },
@@ -56,16 +57,21 @@ const uploads = await Promise.all(manifests.flatMap((manifest) => {
       || url !== `https://assets.yunle.fun/${key}`) {
       throw new Error(`${pairID} 的 ${kind} 素材清单有误`)
     }
+    const isGlb = extension === 'glb'
+    const source = isGlb ? androidModels[`showcase/${pairID}/model.glb`] : undefined
+    if (isGlb && (source?.file !== `${pairID}-${sha256}.glb` || source.bytes !== bytes || source.sha256 !== sha256)) {
+      throw new Error(`${pairID} 的展柜模型与 Android 构建清单不一致`)
+    }
     let data
     try {
       data = await readFile(new URL(`../assets/showcase/${pairID}/${file.name}`, import.meta.url))
     }
     catch (error) {
-      if (error.code !== 'ENOENT' || extension !== 'glb')
+      if (error.code !== 'ENOENT' || !source)
         throw error
-      data = await readVerifiedPublicObject(key, bytes, sha256)
+      data = await readVerifiedPublicObject(`cook/android/${source.file}`, bytes, sha256)
     }
-    if (file.name.endsWith('.glb') && (data.length < 20 || data.toString('ascii', 0, 4) !== 'glTF'
+    if (isGlb && (data.length < 20 || data.toString('ascii', 0, 4) !== 'glTF'
       || data.readUInt32LE(4) !== 2 || data.readUInt32LE(8) !== data.length)) {
       throw new Error(`${pairID} 的 Android 模型不是有效的 GLB 2.0 文件`)
     }
