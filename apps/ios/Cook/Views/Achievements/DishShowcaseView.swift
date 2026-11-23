@@ -9,6 +9,8 @@ struct DishShowcaseView: View {
     let name: String
     let learnedAt: Date
     let source: Source
+    @Binding var viewpoint: ShowcaseViewpoint
+    @Environment(\.scenePhase) private var scenePhase
     @State private var photo: (url: URL, image: UIImage)?
     @State private var showingModel = false
 
@@ -57,11 +59,15 @@ struct DishShowcaseView: View {
         .background(Color(uiColor: .systemGroupedBackground))
         .navigationDestination(isPresented: $showingModel) {
             if let modelURL {
-                ShowcaseModelView(catalogRecipeID: catalogRecipeID, name: name, learnedAt: learnedAt, modelURL: modelURL)
+                ShowcaseModelView(catalogRecipeID: catalogRecipeID, name: name, learnedAt: learnedAt,
+                                  modelURL: modelURL, viewpoint: $viewpoint)
                     .id(modelURL)
             }
         }
         .task { assets?.reload() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { assets?.reload() }
+        }
         .task(id: imageURL) {
             if let imageURL, let image = UIImage(contentsOfFile: imageURL.path) {
                 photo = (imageURL, image)

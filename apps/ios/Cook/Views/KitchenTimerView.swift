@@ -83,20 +83,30 @@ struct KitchenTimerPanel: View {
     private func controls(_ phase: KitchenTimer.Phase) -> some View {
         switch phase {
         case .ready:
-            Button("开始计时", systemImage: "play.fill") { update { $0.start(at: .now) } }
-                .buttonStyle(.borderedProminent)
+            prominentControl("开始计时", systemImage: "play.fill") { update { $0.start(at: .now) } }
         case .running:
             Button("暂停", systemImage: "pause.fill") { update { $0.pause(at: .now) } }
             Button("重置", systemImage: "arrow.counterclockwise") { update { $0.reset() } }
         case .paused:
-            Button("继续", systemImage: "play.fill") { update { $0.resume(at: .now) } }
-                .buttonStyle(.borderedProminent)
+            prominentControl("继续", systemImage: "play.fill") { update { $0.resume(at: .now) } }
             Button("重置", systemImage: "arrow.counterclockwise") { update { $0.reset() } }
         case .finished:
-            Button("再计一次", systemImage: "arrow.clockwise") { update { $0.start(at: .now) } }
-                .buttonStyle(.borderedProminent)
+            prominentControl("再计一次", systemImage: "arrow.clockwise") { update { $0.start(at: .now) } }
             Button("重置", systemImage: "arrow.counterclockwise") { update { $0.reset() } }
         }
+    }
+
+    private func prominentControl(_ title: LocalizedStringKey, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label {
+                Text(title)
+            } icon: {
+                // Form 会给图标套用强调色，在蓝底按钮上显式使用白色。
+                Image(systemName: systemImage)
+                    .foregroundStyle(.white)
+            }
+        }
+        .buttonStyle(.borderedProminent)
     }
 
     private func update(_ change: (inout KitchenTimer) -> Void) {

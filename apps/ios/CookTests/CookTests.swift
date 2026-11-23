@@ -152,6 +152,22 @@ final class CookTests: XCTestCase {
         XCTAssertEqual(try context.fetch(FetchDescriptor<HistoryEntry>()).map(\.recipeId), [7])
     }
 
+    func testRemoveSingleDeviceVisitKeepsANewerVisitAndOtherRecipes() throws {
+        let container = Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let earlier = Date(timeIntervalSince1970: 100)
+        let later = earlier.addingTimeInterval(10)
+        context.insert(HistoryEntry(recipeId: 1, at: earlier))
+        context.insert(HistoryEntry(recipeId: 1, at: later))
+        context.insert(HistoryEntry(recipeId: 2, at: earlier))
+        try context.save()
+
+        try context.removeVisit(recipeId: 1, visitedAt: earlier, at: later)
+        let entries = try context.fetch(FetchDescriptor<HistoryEntry>())
+        XCTAssertEqual(entries.first { $0.recipeId == 1 && $0.visitedAt == earlier }?.deletedAt, later)
+        XCTAssertEqual(try activeVisits(context), [1, 2])
+    }
+
     private func activeVisits(_ context: ModelContext) throws -> [Int] {
         let descriptor = FetchDescriptor<HistoryEntry>(
             predicate: #Predicate<HistoryEntry> { $0.deletedAt == nil },

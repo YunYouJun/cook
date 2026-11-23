@@ -5,6 +5,8 @@ import SwiftUI
 /// are the same ones used by the ingredient list.
 struct CloudKitchenView: View {
     @Binding var presentation: CookPresentation
+    @Binding var allowsRotation: Bool
+    @Binding var viewpoint: CloudKitchenCameraOrbit.Viewpoint
     let inputMessage: String?
     let openSearch: (CGFloat) -> Void
     let decide: (RecipeRoute) -> Void
@@ -25,11 +27,11 @@ struct CloudKitchenView: View {
     @State private var cooking = false
     @State private var visible = true
     @State private var sceneStatus = CloudKitchenSceneStatus.loading
+    @State private var sceneReload = 0
     @State private var needsIngredients = false
     @State private var decideRequest: CookDecideRequest?
     @State private var lastDecidedID: Int?
     @State private var inspirationVisible = false
-    @AppStorage("cook.kitchen.rotationEnabled") private var allowsRotation = false
 
     private var background: Color {
         colorScheme == .dark ? Color(red: 0.10, green: 0.16, blue: 0.24) : Color(red: 0.93, green: 0.97, blue: 1)
@@ -173,10 +175,13 @@ struct CloudKitchenView: View {
                     dark: colorScheme == .dark,
                     reduceMotion: reduceMotion,
                     allowsRotation: allowsRotation,
+                    viewpoint: allowsRotation ? viewpoint : .initial,
+                    onViewpointChange: { if allowsRotation { viewpoint = $0 } },
                     onSelect: session.toggleStuff,
                     onCook: cook,
                     onStatus: { sceneStatus = $0 }
                 )
+                .id(sceneReload)
             }
             if sceneStatus == .loading {
                 ProgressView("正在布置云厨房…")
@@ -188,6 +193,11 @@ struct CloudKitchenView: View {
                     Text("厨房暂时没能打开")
                     Text("可以继续用下方食材和开火按钮找菜。")
                         .font(.caption).foregroundStyle(.secondary)
+                    Button("重试 3D") {
+                        sceneStatus = .loading
+                        sceneReload += 1
+                    }
+                    .buttonStyle(.bordered)
                 }
                 .multilineTextAlignment(.center)
             }

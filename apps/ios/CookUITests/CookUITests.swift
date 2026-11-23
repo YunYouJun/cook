@@ -525,6 +525,38 @@ final class CookUITests: XCTestCase {
     }
 
     @MainActor
+    func testRemovingOneHistoryEntryKeepsItsFavorite() {
+        let app = XCUIApplication()
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-disable-animations"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        app.launchEnvironment["COOK_SKIP_CLOUDKIT_SCHEMA"] = "1"
+        terminateAppAfterTest(app)
+        app.launch()
+
+        selectCookingIngredient("番茄")
+        selectCookingIngredient("鸡蛋")
+        showCookingResults(in: app)
+        let recipeName = NSPredicate(format: "label BEGINSWITH %@", "番茄炒蛋")
+        tap(app.collectionViews["dietary.results"].buttons.matching(recipeName).firstMatch)
+        tap(app.navigationBars.buttons["收藏"])
+        wait(app.buttons["取消收藏"], "exists == true")
+
+        let library = app.buttons.matching(NSPredicate(format: "label IN %@", ["菜谱", "book"])).firstMatch
+        if !library.exists { tap(app.tabBars.buttons.firstMatch) }
+        tap(library)
+        tap(app.segmentedControls.buttons["最近浏览"])
+        let visit = app.buttons.matching(recipeName).firstMatch
+        wait(visit, "isHittable == true")
+        visit.swipeLeft()
+        tap(app.buttons["移除"].firstMatch)
+        wait(app.staticTexts["还没有浏览记录"], "exists == true")
+        XCTAssertFalse(visit.exists)
+
+        tap(app.segmentedControls.buttons["收藏"])
+        wait(app.buttons.matching(recipeName).firstMatch, "exists == true")
+    }
+
+    @MainActor
     private func showCookingResults(in app: XCUIApplication) {
         if app.windows.firstMatch.horizontalSizeClass == .regular {
             let results = app.collectionViews.matching(identifier: "dietary.results").firstMatch

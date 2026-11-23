@@ -13,49 +13,55 @@ struct CloudKitchenCameraOrbit {
         let position: SIMD3<Float>
     }
 
-    private(set) var yaw: Float = 0
-    private(set) var pitch: Float = 0
-    private var dragYaw: Float = 0
-    private var dragPitch: Float = 0
+    struct Viewpoint: Equatable {
+        static let initial = Self(yaw: 0, pitch: 0)
+
+        let yaw: Float
+        let pitch: Float
+    }
+
+    private(set) var viewpoint: Viewpoint
+    private var dragOrigin: Viewpoint
     private let center: SIMD3<Float>
     private let originalDirection: SIMD3<Float>
     private let framingPoints: [SIMD3<Float>]
 
-    init(framing: CloudKitchenAsset.Camera) {
+    init(framing: CloudKitchenAsset.Camera, viewpoint: Viewpoint = .initial) {
+        self.viewpoint = viewpoint
+        dragOrigin = viewpoint
         center = SIMD3<Float>(framing.center)
         originalDirection = simd_normalize(SIMD3<Float>(framing.direction))
         framingPoints = Self.enclosingPoints(framing: framing, direction: originalDirection)
     }
 
     mutating func beginDrag() {
-        dragYaw = yaw
-        dragPitch = pitch
+        dragOrigin = viewpoint
     }
 
     /// Translation is cumulative from the start of the current pan, just like
     /// UIPanGestureRecognizer.translation(in:). Repeated updates do not drift.
     mutating func updateDrag(translation: CGSize, viewport: CGSize) {
-        guard viewport.width > 0, viewport.height > 0,
+        guard viewport.width.isFinite, viewport.height.isFinite, viewport.width > 0, viewport.height > 0,
               translation.width.isFinite, translation.height.isFinite else { return }
-        yaw = min(Self.yawLimit, max(-Self.yawLimit,
-            dragYaw - Float(translation.width / viewport.width) * Self.yawLimit * 2))
-        pitch = min(Self.pitchLimit, max(-Self.pitchLimit,
-            dragPitch + Float(translation.height / viewport.height) * Self.pitchLimit * 2))
+        viewpoint = Viewpoint(
+            yaw: min(Self.yawLimit, max(-Self.yawLimit,
+                dragOrigin.yaw - Float(translation.width / viewport.width) * Self.yawLimit * 2)),
+            pitch: min(Self.pitchLimit, max(-Self.pitchLimit,
+                dragOrigin.pitch + Float(translation.height / viewport.height) * Self.pitchLimit * 2))
+        )
     }
 
-    mutating func reset() {
-        yaw = 0
-        pitch = 0
-        dragYaw = 0
-        dragPitch = 0
+    mutating func restore(_ viewpoint: Viewpoint) {
+        self.viewpoint = viewpoint
+        dragOrigin = viewpoint
     }
 
     func pose(viewport: CGSize) -> Pose? {
         guard viewport.width > 0, viewport.height > 0,
               viewport.width.isFinite, viewport.height.isFinite,
               !framingPoints.isEmpty else { return nil }
-        let azimuth = atan2(originalDirection.x, originalDirection.z) + yaw
-        let elevation = asin(originalDirection.y) + pitch
+        let azimuth = atan2(originalDirection.x, originalDirection.z) + viewpoint.yaw
+        let elevation = asin(originalDirection.y) + viewpoint.pitch
         let direction = SIMD3<Float>(sin(azimuth) * cos(elevation), sin(elevation), cos(azimuth) * cos(elevation))
         let right = simd_normalize(simd_cross(SIMD3<Float>(0, 1, 0), direction))
         let up = simd_cross(direction, right)

@@ -27,6 +27,8 @@ struct CookView: View {
     /// 展开了「更多」的分组标题，用逗号连起来存，下次打开保持原样
     @AppStorage("cook.food.moreExpanded") private var moreExpanded = ""
     @AppStorage("cook.presentation") private var presentation = CookPresentation.list
+    @AppStorage("cook.kitchen.rotationEnabled") private var allowsKitchenRotation = false
+    @State private var kitchenViewpoint = CloudKitchenCameraOrbit.Viewpoint.initial
     @State private var cookPath = NavigationPath()
     @State private var detailPath = NavigationPath()
     @State private var decideRequest: CookDecideRequest?
@@ -50,7 +52,12 @@ struct CookView: View {
         Group {
             if presentation == .kitchen {
                 NavigationStack(path: $cookPath) {
-                    CloudKitchenView(presentation: $presentation, inputMessage: notice?.message, openSearch: openSearch, decide: openRecipe, showResults: { cookPath.append(ResultsRoute()) }, isDetailPresented: !cookPath.isEmpty, isSearchPresented: isSearching)
+                    CloudKitchenView(
+                        presentation: $presentation, allowsRotation: $allowsKitchenRotation, viewpoint: $kitchenViewpoint,
+                        inputMessage: notice?.message, openSearch: openSearch, decide: openRecipe,
+                        showResults: { cookPath.append(ResultsRoute()) }, isDetailPresented: !cookPath.isEmpty,
+                        isSearchPresented: isSearching
+                    )
                         .cookSearch(isPresented: $isSearching, onApplied: show)
                         .navigationDestination(for: ResultsRoute.self) { _ in ResultsView() }
                         .recipeDestinations()
@@ -84,6 +91,9 @@ struct CookView: View {
         }
         .overlay {
             BasketFlightLayer(animator: basket)
+        }
+        .onChange(of: allowsKitchenRotation) { _, enabled in
+            if !enabled { kitchenViewpoint = .initial }
         }
         .refreshesAtMidnight($now)
         // Both presentations share the same transient feedback lifetime.

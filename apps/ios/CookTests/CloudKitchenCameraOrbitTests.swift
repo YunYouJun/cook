@@ -24,15 +24,15 @@ final class CloudKitchenCameraOrbitTests: XCTestCase {
         let viewport = CGSize(width: 400, height: 300)
         orbit.beginDrag()
         for _ in 0..<20 { orbit.updateDrag(translation: CGSize(width: 100, height: 50), viewport: viewport) }
-        XCTAssertEqual(orbit.yaw, -CloudKitchenCameraOrbit.yawLimit / 2, accuracy: 0.00001)
-        XCTAssertEqual(orbit.pitch, CloudKitchenCameraOrbit.pitchLimit / 3, accuracy: 0.00001)
+        XCTAssertEqual(orbit.viewpoint.yaw, -CloudKitchenCameraOrbit.yawLimit / 2, accuracy: 0.00001)
+        XCTAssertEqual(orbit.viewpoint.pitch, CloudKitchenCameraOrbit.pitchLimit / 3, accuracy: 0.00001)
         orbit.updateDrag(translation: CGSize(width: 10_000, height: -10_000), viewport: viewport)
-        XCTAssertEqual(orbit.yaw, -CloudKitchenCameraOrbit.yawLimit)
-        XCTAssertEqual(orbit.pitch, -CloudKitchenCameraOrbit.pitchLimit)
+        XCTAssertEqual(orbit.viewpoint.yaw, -CloudKitchenCameraOrbit.yawLimit)
+        XCTAssertEqual(orbit.viewpoint.pitch, -CloudKitchenCameraOrbit.pitchLimit)
         orbit.beginDrag()
         orbit.updateDrag(translation: CGSize(width: -100, height: 50), viewport: viewport)
-        XCTAssertEqual(orbit.yaw, -CloudKitchenCameraOrbit.yawLimit / 2, accuracy: 0.00001)
-        XCTAssertEqual(orbit.pitch, -CloudKitchenCameraOrbit.pitchLimit * 2 / 3, accuracy: 0.00001)
+        XCTAssertEqual(orbit.viewpoint.yaw, -CloudKitchenCameraOrbit.yawLimit / 2, accuracy: 0.00001)
+        XCTAssertEqual(orbit.viewpoint.pitch, -CloudKitchenCameraOrbit.pitchLimit * 2 / 3, accuracy: 0.00001)
     }
 
     func testRotatedCameraFramesEveryBoxCornerOnNarrowAndWideScreens() throws {
@@ -77,25 +77,47 @@ final class CloudKitchenCameraOrbitTests: XCTestCase {
         let original = try XCTUnwrap(orbit.pose(viewport: viewport))
         orbit.beginDrag()
         orbit.updateDrag(translation: CGSize(width: 80, height: 60), viewport: viewport)
-        let angles = (orbit.yaw, orbit.pitch)
+        let angles = orbit.viewpoint
         _ = orbit.pose(viewport: CGSize(width: 800, height: 300))
-        XCTAssertEqual(orbit.yaw, angles.0)
-        XCTAssertEqual(orbit.pitch, angles.1)
-        orbit.reset()
+        XCTAssertEqual(orbit.viewpoint, angles)
+        orbit.restore(.initial)
         let reset = try XCTUnwrap(orbit.pose(viewport: viewport))
         XCTAssertEqual(reset.center, original.center)
         XCTAssertEqual(reset.position, original.position)
         orbit.updateDrag(translation: .zero, viewport: viewport)
-        XCTAssertEqual(orbit.yaw, 0)
-        XCTAssertEqual(orbit.pitch, 0)
+        XCTAssertEqual(orbit.viewpoint, .initial)
+    }
+
+    func testRecreatedOrbitRestoresTheViewpointAndContinuesDraggingFromIt() throws {
+        let narrow = CGSize(width: 320, height: 340)
+        let wide = CGSize(width: 720, height: 360)
+        var original = CloudKitchenCameraOrbit(framing: boxFraming)
+        original.beginDrag()
+        original.updateDrag(translation: CGSize(width: 80, height: -45), viewport: narrow)
+        let saved = original.viewpoint
+        XCTAssertNotEqual(saved, .initial)
+
+        var recreated = CloudKitchenCameraOrbit(framing: boxFraming, viewpoint: saved)
+        let narrowPose = try XCTUnwrap(original.pose(viewport: narrow))
+        XCTAssertEqual(try XCTUnwrap(recreated.pose(viewport: narrow)).position, narrowPose.position)
+        let widePose = try XCTUnwrap(recreated.pose(viewport: wide))
+        XCTAssertEqual(try XCTUnwrap(original.pose(viewport: wide)).position, widePose.position)
+        XCTAssertNotEqual(widePose.position, narrowPose.position)
+
+        recreated.beginDrag()
+        recreated.updateDrag(translation: .zero, viewport: wide)
+        XCTAssertEqual(recreated.viewpoint, saved)
+        recreated.updateDrag(translation: CGSize(width: -60, height: 30), viewport: wide)
+        XCTAssertNotEqual(recreated.viewpoint, saved)
+        recreated.restore(saved)
+        XCTAssertEqual(try XCTUnwrap(recreated.pose(viewport: wide)).position, widePose.position)
     }
 
     func testZeroSizeHasNoPoseAndIgnoresDrag() {
         var orbit = CloudKitchenCameraOrbit(framing: boxFraming)
         orbit.beginDrag()
         orbit.updateDrag(translation: CGSize(width: 100, height: 100), viewport: .zero)
-        XCTAssertEqual(orbit.yaw, 0)
-        XCTAssertEqual(orbit.pitch, 0)
+        XCTAssertEqual(orbit.viewpoint, .initial)
         XCTAssertNil(orbit.pose(viewport: .zero))
     }
 

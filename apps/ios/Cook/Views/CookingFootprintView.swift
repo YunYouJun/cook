@@ -27,6 +27,7 @@ struct CookingFootprintView: View {
     @Query private var privateRecords: [PrivateRecipeRecord]
     @State private var filter: Filter = .all
     @State private var error: String?
+    @State private var showcase = ShowcaseBrowsingState()
     var recipeID: CookingRecipeID? = nil
 
     private enum Filter: String, CaseIterable {
@@ -127,6 +128,9 @@ struct CookingFootprintView: View {
         }
         .navigationTitle("做菜足迹")
         .accessibilityIdentifier("footprint.list")
+        .onChange(of: records.progress.learned) { _, learned in
+            showcase.retainLearnedRecords(Set(learned.map(\.id)))
+        }
         .alert("未能保存足迹", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("好", role: .cancel) {}
         } message: { Text(error ?? "") }
@@ -134,7 +138,7 @@ struct CookingFootprintView: View {
 
     private var learnedDishesLink: some View {
         let subtitle = records.storageIssue == nil ? "徽章与首次学会日期" : "暂时无法读取"
-        return NavigationLink { LearnedDishesView() } label: {
+        return NavigationLink { LearnedDishesView(browsing: $showcase) } label: {
             SettingsRowLabel("我的拿手菜", symbol: "medal.fill", color: .brown, subtitle: subtitle)
         }
         .accessibilityIdentifier("footprint.learnedDishes")
