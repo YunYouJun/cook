@@ -7,19 +7,32 @@ struct ShowcaseModelView: View {
     let name: String
     let learnedAt: Date
     let modelURL: URL
+    @Binding var viewpoint: ShowcaseViewpoint
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var lowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
     @State private var model: Entity?
     @State private var loadFailed = false
-    @State private var yaw = 0.0
-    @GestureState private var drag = 0.0
-    @State private var still: (angle: Double, image: UIImage)?
+    @GestureState private var dragRotation: Double? = nil
+    @GestureState private var pinchScale: Double? = nil
+    @State private var suppressDragUntilEnd = false
+    @State private var still: (viewpoint: ShowcaseViewpoint, image: UIImage)?
     @State private var resetFeedback = false
 
-    private var previewsDrag: Bool { !reduceMotion && !lowPowerMode }
-    private var activeDrag: Double { previewsDrag ? drag : 0 }
-    private var displayedAngle: Double { Self.normalized(yaw + activeDrag) }
-    private var canRotate: Bool { still != nil && !loadFailed }
+    private var previewsGesture: Bool { !reduceMotion && !lowPowerMode }
+    private var activePreview: ShowcaseViewpoint? {
+        guard previewsGesture else { return nil }
+        if let pinchScale {
+            let next = viewpoint.adjusted(pinch: pinchScale)
+            return next == viewpoint ? nil : next
+        }
+        if !suppressDragUntilEnd, let dragRotation {
+            let next = viewpoint.adjusted(rotation: dragRotation)
+            return next == viewpoint ? nil : next
+        }
+        return nil
+    }
+    private var displayedViewpoint: ShowcaseViewpoint { activePreview ?? viewpoint }
+    private var canAdjust: Bool { still != nil && !loadFailed }
 
     var body: some View {
         GeometryReader { geometry in
@@ -37,9 +50,10 @@ struct ShowcaseModelView: View {
                         }
                         .font(.footnote)
                         .padding(.top, 24)
-                    } else if canRotate {
+                    } else if canAdjust {
                         controls.padding(.top, 20)
-                        Text(previewsDrag ? "左右拖动可旋转菜品" : "左右拖动，松手后旋转菜品")
+                        zoomControls.padding(.top, 8)
+                        Text(previewsGesture ? "左右拖动旋转，双指缩放" : "拖动或双指缩放，松手后应用")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .padding(.top, 12)
@@ -78,7 +92,7 @@ struct ShowcaseModelView: View {
 
     private var viewport: some View {
         Group {
-            if canRotate {
+            if canAdjust {
                 modelContent.accessibilityAdjustableAction { direction in
                     switch direction {
                     case .increment: turn(by: 30)
@@ -86,6 +100,8 @@ struct ShowcaseModelView: View {
                     @unknown default: break
                     }
                 }
+                .accessibilityAction(named: Text("放大模型")) { zoom(by: ShowcaseViewpoint.zoomStep) }
+                .accessibilityAction(named: Text("缩小模型")) { zoom(by: 1 / ShowcaseViewpoint.zoomStep) }
             } else {
                 modelContent
             }
@@ -98,11 +114,11 @@ struct ShowcaseModelView: View {
             if loadFailed {
                 LearnedDishBadge(catalogRecipeID: catalogRecipeID, size: 144)
             } else if let model {
-                if activeDrag == 0, let still, still.angle == yaw {
+                if activePreview == nil, let still, still.viewpoint == viewpoint {
                     Image(uiImage: still.image).resizable().scaledToFit()
                 } else {
-                    ShowcaseRenderer(model: model, angle: displayedAngle, settling: activeDrag == 0) { angle, image in
-                        if let image { still = (angle, image) }
+                    ShowcaseRenderer(model: model, viewpoint: displayedViewpoint, settling: activePreview == nil) { captured, image in
+                        if let image { still = (captured, image) }
                         else { loadFailed = true }
                     }
                 }
@@ -112,15 +128,50 @@ struct ShowcaseModelView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-        .simultaneousGesture(DragGesture(minimumDistance: 4)
-            .updating($drag) { value, state, _ in
-                if previewsDrag { state = rotation(for: value.translation) }
-            }
-            .onEnded { value in turn(by: rotation(for: value.translation)) },
-            including: canRotate ? .all : .none)
+        .simultaneousGesture(magnifyGesture, including: canAdjust ? .all : .none)
+        .simultaneousGesture(dragGesture, including: canAdjust ? .all : .none)
+        .onChange(of: dragRotation == nil) { _, ended in
+            if ended && pinchScale == nil { suppressDragUntilEnd = false }
+        }
+        .onChange(of: pinchScale == nil) { _, ended in
+            if ended && dragRotation == nil { suppressDragUntilEnd = false }
+        }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(loadFailed ? "\(name)徽章" : !canRotate ? "正在加载模型" : "\(name)模型")
-        .accessibilityValue(canRotate ? "\(Int(displayedAngle.rounded()) % 360) 度" : "")
+        .accessibilityLabel(loadFailed ? "\(name)徽章" : !canAdjust ? "正在加载模型" : "\(name)模型")
+        .accessibilityValue(canAdjust ? viewpointDescription : "")
+    }
+
+    private var viewpointDescription: String {
+        let angle = "\(displayedViewpoint.angleDegrees) 度"
+        let zoom = displayedViewpoint.zoomPercent
+        return zoom == 100 ? angle : "\(angle)，缩放 \(zoom)%"
+    }
+
+    private var magnifyGesture: some Gesture {
+        MagnifyGesture()
+            .updating($pinchScale) { value, state, _ in
+                state = Double(value.magnification)
+            }
+            .onChanged { _ in
+                suppressDragUntilEnd = true
+            }
+            .onEnded { value in
+                viewpoint = viewpoint.adjusted(pinch: Double(value.magnification))
+                if dragRotation == nil { suppressDragUntilEnd = false }
+            }
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 4)
+            .updating($dragRotation) { value, state, _ in
+                state = rotation(for: value.translation)
+            }
+            .onEnded { value in
+                if !suppressDragUntilEnd && pinchScale == nil {
+                    viewpoint = viewpoint.adjusted(rotation: rotation(for: value.translation))
+                }
+                suppressDragUntilEnd = pinchScale != nil
+            }
     }
 
     private func rotation(for translation: CGSize) -> Double {
@@ -129,7 +180,11 @@ struct ShowcaseModelView: View {
     }
 
     private func turn(by degrees: Double) {
-        yaw = Self.normalized(yaw + degrees)
+        viewpoint = viewpoint.adjusted(rotation: degrees)
+    }
+
+    private func zoom(by scale: Double) {
+        viewpoint = viewpoint.adjusted(pinch: scale)
     }
 
     private var controls: some View {
@@ -142,7 +197,7 @@ struct ShowcaseModelView: View {
             }
             Divider().frame(height: 20).accessibilityHidden(true)
             Button {
-                yaw = 0
+                viewpoint = .initial
                 resetFeedback.toggle()
             } label: {
                 Label("复位", systemImage: "arrow.uturn.backward")
@@ -152,8 +207,8 @@ struct ShowcaseModelView: View {
                     .frame(minHeight: 48)
                     .contentShape(Rectangle())
             }
-            .accessibilityHint("恢复到初始角度")
-            .disabled(displayedAngle == 0)
+            .accessibilityHint("恢复初始角度和缩放比例")
+            .disabled(displayedViewpoint == .initial)
         }
         .font(.title3.weight(.medium))
         .buttonStyle(.borderless)
@@ -163,9 +218,26 @@ struct ShowcaseModelView: View {
         .sensoryFeedback(.alignment, trigger: resetFeedback)
     }
 
-    private static func normalized(_ degrees: Double) -> Double {
-        let remainder = degrees.truncatingRemainder(dividingBy: 360)
-        return remainder < 0 ? remainder + 360 : remainder
+    private var zoomControls: some View {
+        HStack(spacing: 8) {
+            Button { zoom(by: 1 / ShowcaseViewpoint.zoomStep) } label: {
+                Label("缩小模型", systemImage: "minus.magnifyingglass").labelStyle(.iconOnly)
+                    .frame(minWidth: 48, minHeight: 48)
+                    .contentShape(Rectangle())
+            }
+            .disabled(viewpoint.magnification <= ShowcaseViewpoint.minimumMagnification)
+            Text("\(displayedViewpoint.zoomPercent)%")
+                .font(.subheadline.monospacedDigit())
+                .accessibilityLabel("缩放 \(displayedViewpoint.zoomPercent)%")
+            Button { zoom(by: ShowcaseViewpoint.zoomStep) } label: {
+                Label("放大模型", systemImage: "plus.magnifyingglass").labelStyle(.iconOnly)
+                    .frame(minWidth: 48, minHeight: 48)
+                    .contentShape(Rectangle())
+            }
+            .disabled(viewpoint.magnification >= ShowcaseViewpoint.maximumMagnification)
+        }
+        .buttonStyle(.borderless)
+        .tint(CookingJournalPalette.warmInk)
     }
 }
 
@@ -196,16 +268,17 @@ private struct RotationStepButton: View {
 /// Once the requested orientation is on screen, keep its snapshot and release the live renderer.
 private struct ShowcaseRenderer: UIViewRepresentable {
     let model: Entity
-    let angle: Double
+    let viewpoint: ShowcaseViewpoint
     let settling: Bool
-    let onStill: (Double, UIImage?) -> Void
+    let onStill: (ShowcaseViewpoint, UIImage?) -> Void
 
     private static let usesLowMemoryRendering = ProcessInfo.processInfo.physicalMemory <= 4 * 1024 * 1024 * 1024
 
     final class Coordinator {
         let pivot = Entity()
+        let camera = PerspectiveCamera()
         var pending: Task<Void, Never>?
-        var angle: Double?
+        var viewpoint: ShowcaseViewpoint?
         var settling = false
         var snapshotID: UUID?
     }
@@ -225,21 +298,24 @@ private struct ShowcaseRenderer: UIViewRepresentable {
         view.scene.addAnchor(anchor)
         anchor.addChild(context.coordinator.pivot)
         context.coordinator.pivot.addChild(model)
-        let camera = PerspectiveCamera()
+        let camera = context.coordinator.camera
         camera.camera.fieldOfViewInDegrees = 28.841546
         camera.camera.near = 0.003
         anchor.addChild(camera)
-        camera.look(at: [0, 0.0135, 0], from: [0.1577126, 0.2610783, 0.225237], relativeTo: nil)
         installShowcaseLighting(in: view, on: anchor)
         return view
     }
 
     func updateUIView(_ view: ARView, context: Context) {
         let state = context.coordinator
-        guard angle != state.angle || settling != state.settling else { return }
-        state.angle = angle
+        guard viewpoint != state.viewpoint || settling != state.settling else { return }
+        state.viewpoint = viewpoint
         state.settling = settling
-        state.pivot.orientation = simd_quatf(angle: Float(angle) * .pi / 180, axis: [0, 1, 0])
+        state.pivot.orientation = simd_quatf(angle: Float(viewpoint.angle) * .pi / 180, axis: [0, 1, 0])
+        let focus: SIMD3<Float> = [0, 0.0135, 0]
+        let initialPosition: SIMD3<Float> = [0.1577126, 0.2610783, 0.225237]
+        let position = focus + (initialPosition - focus) / Float(viewpoint.magnification)
+        state.camera.look(at: focus, from: position, relativeTo: nil)
         state.pending?.cancel()
         state.snapshotID = nil
         if settling {
@@ -250,7 +326,7 @@ private struct ShowcaseRenderer: UIViewRepresentable {
                 view?.snapshot(saveToHDR: false) { [weak state] image in
                     Task { @MainActor in
                         guard state?.snapshotID == snapshotID else { return }
-                        onStill(angle, image)
+                        onStill(viewpoint, image)
                     }
                 }
             }

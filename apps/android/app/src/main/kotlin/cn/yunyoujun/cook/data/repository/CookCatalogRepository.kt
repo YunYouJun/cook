@@ -23,6 +23,8 @@ data class SharedLinks(
     val wecomKf: String? = null,
 )
 
+internal data class ReviewedRecipe(val goal: DietaryGoal, val entry: DietaryCatalog.Entry, val text: RecipeText)
+
 data class CookCatalogSnapshot(
     val data: CookData,
     val recommender: Recommender,
@@ -38,23 +40,23 @@ data class CookCatalogSnapshot(
     val availableDietaryGoals: List<DietaryGoal>
         get() = DietaryGoal.entries.filter { dietaryCatalog?.availableGoals?.contains(it) == true }
 
-    val allBuiltInStuffNames: Set<String> by lazy {
-        val set = LinkedHashSet<String>()
-        data.food.vegetable.forEach { set.add(it.name) }
-        data.food.meat.forEach { set.add(it.name) }
-        data.food.staple.forEach { set.add(it.name) }
-        data.food.tools.forEach { set.add(it.name) }
-        data.pantry.options.forEach { set.add(it) }
-        data.recipes.forEach { recipe ->
-            set.addAll(recipe.stuff)
-            set.addAll(recipe.tools)
-        }
-        set
-    }
-
     fun recipe(id: Int): Recipe? = recipesById[id]
 
     fun recipeText(id: Int): RecipeText? = textLibrary?.text(id)
+
+    internal fun sceneReason(recipe: Recipe, scene: CookDiscoveryScene?): String? = when (scene) {
+        null -> null
+        CookDiscoveryScene.INSTITUTIONAL_LOW_GI -> institutionalLowGICatalog?.entry(recipe)?.sourceRecipeTitle
+        else -> CookDiscovery.reason(recipe, scene.filters)
+    }
+
+    internal fun reviewedRecipe(recipe: Recipe, goal: DietaryGoal?): ReviewedRecipe? {
+        if (goal == null) return null
+        val catalog = dietaryCatalog ?: return null
+        val entry = catalog.entry(recipe, goal) ?: return null
+        val text = catalog.text(recipe.id) ?: return null
+        return ReviewedRecipe(goal, entry, text)
+    }
 
     fun stuffItemsByCategory(): Triple<List<StuffItem>, List<StuffItem>, List<StuffItem>> =
         Triple(data.food.vegetable, data.food.meat, data.food.staple)

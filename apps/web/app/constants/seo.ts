@@ -6,6 +6,7 @@
 export const siteOrigin = 'https://cook.yunyoujun.cn'
 export const siteName = '食用手册'
 export const siteTitle = '食用手册｜根据家里的食材和厨具找菜谱'
+export const sharedRecipePageTitle = `分享的菜谱 · ${siteName}`
 export const appDescription = '根据家里现有的食材和厨具，找到今天能做的家常菜。食用手册（Cook）免费使用，也叫云食册：点选食材、一句话找菜、看做法、收藏，或随机决定今天吃什么。'
 export const socialImagePath = '/about/assets/light-2-cook-selected.webp'
 
@@ -193,11 +194,12 @@ function ensureMetaRobots(html: string, content: string) {
 }
 
 /**
- * Rewrite the generated SPA shell so crawlers see each public route's metadata
- * and both Nitro 404 outputs carry noindex.
+ * Apply route metadata to the generated SPA shell before JavaScript runs.
  */
 export function applyCookRouteSeo(html: string, route: string) {
   const normalized = normalizePath(route)
+  if (normalized === '/recipes/share')
+    return ensureMetaRobots(html.replace(`<title>${siteTitle}</title>`, `<title>${sharedRecipePageTitle}</title>`), 'noindex')
   if (normalized === '/404' || normalized === '/404.html')
     return ensureMetaRobots(html, 'noindex')
   const page = routeSeoByPath[normalized]

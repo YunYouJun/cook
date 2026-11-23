@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TOMBSTONE_TTL = exports.TOMBSTONE_LIMIT = exports.HISTORY_LIMIT = exports.USER_DATA_VERSION = void 0;
 exports.createEmptyUserData = createEmptyUserData;
 exports.mergeUserData = mergeUserData;
+exports.clearUserDataHistory = clearUserDataHistory;
 exports.isSameUserData = isSameUserData;
 exports.normalizeUserData = normalizeUserData;
 exports.createUserDataExport = createUserDataExport;
@@ -32,6 +33,17 @@ function mergeUserData(a, b, now = Date.now()) {
     const { favorites, favoriteRemovals } = mergeFavorites([...a.favorites, ...b.favorites], [...a.favoriteRemovals, ...b.favoriteRemovals], now);
     const { histories, historyRemovals } = mergeHistories([...a.histories, ...b.histories], [...a.historyRemovals, ...b.historyRemovals], historyClearedAt, now);
     return { favorites, favoriteRemovals, histories, historyRemovals, historyClearedAt };
+}
+function clearUserDataHistory(current, now = Date.now()) {
+    const historyClearedAt = Math.max(now, current.historyClearedAt);
+    // A known visit from a fast clock can be deleted by identity without hiding unseen later visits.
+    const futureRemovals = current.histories
+        .filter(visit => visit.time > historyClearedAt)
+        .map(({ recipe, time }) => ({ name: recipe.name, time }));
+    return {
+        ...mergeHistories([], [...current.historyRemovals, ...futureRemovals], historyClearedAt, now),
+        historyClearedAt,
+    };
 }
 function isSameUserData(a, b) {
     return JSON.stringify(toPlain(a)) === JSON.stringify(toPlain(b));

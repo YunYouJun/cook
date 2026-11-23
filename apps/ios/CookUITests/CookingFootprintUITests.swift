@@ -79,6 +79,10 @@ final class CookingFootprintUITests: XCTestCase {
         turn.tap()
         XCTAssertEqual(viewport.value as? String, "30 度")
         XCTAssertTrue(reset.isEnabled)
+        tapShowcaseAction(app.buttons["放大模型"], in: app)
+        XCTAssertEqual(viewport.value as? String, "30 度，缩放 125%")
+        tapShowcaseAction(app.buttons["缩小模型"], in: app)
+        XCTAssertEqual(viewport.value as? String, "30 度")
         app.buttons["左转"].tap()
         XCTAssertEqual(viewport.value as? String, "0 度")
         viewport.swipeLeft()
@@ -88,6 +92,10 @@ final class CookingFootprintUITests: XCTestCase {
         XCTAssertEqual(viewport.value as? String, "0 度")
         XCTAssertFalse(reset.isEnabled)
         capture(app, "tomato-egg-achievement-reset")
+        viewport.pinch(withScale: 1.5, velocity: 1)
+        XCTAssertEqual(viewport.waitForState("value CONTAINS %@", timeout: 5, argument: "缩放"), .completed)
+        reset.tap()
+        XCTAssertEqual(viewport.value as? String, "0 度")
         closeShowcaseModel(app)
         app.navigationBars["菜肴成就"].buttons["完成"].tap()
         closeLearnedDishes(app)
@@ -359,20 +367,55 @@ final class CookingFootprintUITests: XCTestCase {
         openLearnedDishes(app)
         XCTAssertTrue(app.segmentedControls.buttons["徽章册"].isSelected)
         openGallery(app)
-        for name in dishes {
+        let angles = ["蒸蛋羹": "30 度，缩放 125%", "拍黄瓜": "330 度"]
+        func feature(_ name: String) {
             let picker = app.buttons["learnedDishes.featuredDish"]
             XCTAssertTrue(picker.waitForExistence(timeout: 5))
             picker.tap()
             app.buttons[name].tap()
+        }
+        for name in dishes {
+            feature(name)
             XCTAssertTrue(image.waitForExistence(timeout: 10))
             XCTAssertEqual(image.label, "\(name)配图")
             tapShowcaseAction(app.buttons["showcase.model.open"], in: app)
             let turn = app.buttons["右转"]
             XCTAssertTrue(turn.waitForExistence(timeout: 15))
             XCTAssertEqual(model.label, "\(name)模型")
-            turn.tap()
-            XCTAssertEqual(model.value as? String, "30 度")
+            XCTAssertEqual(model.value as? String, "0 度")
+            if name == dishes[0] {
+                turn.tap()
+                tapShowcaseAction(app.buttons["放大模型"], in: app)
+            } else {
+                app.buttons["左转"].tap()
+            }
+            XCTAssertEqual(model.value as? String, angles[name])
             capture(app, "showcase-rotation-\(name)")
+            closeShowcaseModel(app, returningTo: "我的拿手菜")
+        }
+
+        app.segmentedControls.buttons["徽章册"].tap()
+        selectShowcase(app, named: dishes[0])
+        tapShowcaseAction(app.buttons["showcase.model.open"], in: app)
+        XCTAssertTrue(app.buttons["复位"].waitForExistence(timeout: 15))
+        XCTAssertEqual(model.value as? String, angles[dishes[0]])
+        closeShowcaseModel(app)
+        app.navigationBars["菜肴成就"].buttons["完成"].tap()
+        openGallery(app)
+        XCTAssertTrue(image.waitForExistence(timeout: 10))
+        XCTAssertEqual(image.label, "\(dishes[1])配图")
+        app.navigationBars["我的拿手菜"].buttons.firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["做菜足迹"].waitForExistence(timeout: 5))
+        app.buttons["footprint.learnedDishes"].tap()
+        XCTAssertTrue(app.segmentedControls.buttons["展柜"].isSelected)
+        XCTAssertTrue(image.waitForExistence(timeout: 10))
+        XCTAssertEqual(image.label, "\(dishes[1])配图")
+
+        for name in dishes {
+            feature(name)
+            tapShowcaseAction(app.buttons["showcase.model.open"], in: app)
+            XCTAssertTrue(app.buttons["复位"].waitForExistence(timeout: 15))
+            XCTAssertEqual(model.value as? String, angles[name])
             app.buttons["复位"].tap()
             XCTAssertEqual(model.value as? String, "0 度")
             closeShowcaseModel(app, returningTo: "我的拿手菜")

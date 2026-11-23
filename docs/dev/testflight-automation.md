@@ -1,6 +1,6 @@
 # TestFlight 外测自动化
 
-首批外测采用 **准备精确候选 → Apple 审核 → 完成该候选的验收 → 30 人自助加入**。当前候选为 `2.0.0 (7)`，Apple 构建 ID 为 `3f9e3992-bceb-4687-9346-875bf527fe0c`；2026-10-26 已上传并回读为 `VALID / APP_STORE_ELIGIBLE / BETA_APPROVED`，八项模拟器策略验收及维护者确认已绑定，开放门禁为零阻塞。首批外测组仅关联构建 7；公开邀请已开启并回读确认上限 30 人，自动通知关闭。真实入口为[加入 TestFlight](https://testflight.apple.com/join/KTTJNhDh)，具体可用名额以 Apple 页面为准。具体证据和未实测范围见[验收记录](./ios-candidate-7-validation.md)。
+2026-11-22 起，外测发版和邮件定向邀请统一使用「首批外部测试」。`scripts/testflight/candidate.json` 记录已开放的 **2.0.1 (28)**、首批组和原公开链接。首批组仍提供构建 7 作为历史版本。第二轮组已撤下全部构建。构建 7 的首批开放过程及八项模拟器验收见[验收记录](./ios-candidate-7-validation.md)。
 
 2026-11-09 收尾复核将两种渠道的候选分开：`scripts/testflight/candidate.json` 继续绑定已开放外测的构建 7 和 30 人外部组；`scripts/testflight/internal-candidate.json` 单独记录仅内部的 `2.0.0 (14)`、内部组、源码及 IPA 哈希。维护者已批准内容和内部上传，并采用已有模拟器证据收尾；构建 14 已完成实际内部分发，`buildId=d0fe231d-350f-4dd6-9df6-8e98bb468a0e`、`uploaded=true`、`distributionReady=true`。真机项目保留未验证，详见[发布记录](./ios-testflight.md)及[分发证据](./evidence/dietary-build14-published-2026-11-09.json)。
 
@@ -12,26 +12,32 @@
 GitHub Actions 只测试门禁，不保存签名密钥、审核联系人或反馈原文。推送代码不会提交审核。
 
 ```bash
-# 实时检查与无副作用的审核提交预演
+# 回读首批组的当前构建和原公开链接
 python3 scripts/testflight/beta.py status
-python3 scripts/testflight/beta.py submit-review
-
-# 手动提交已验包、已上传的精确候选到 Beta Review；邀请继续关闭
-python3 scripts/testflight/beta.py submit-review --apply
-
-# 预演 / 执行开放门禁；缺项时保持或恢复关闭
-python3 scripts/testflight/beta.py reconcile
 python3 scripts/testflight/beta.py reconcile --apply
+
+# 在关闭邀请的审核组预演并提交精确候选
+python3 scripts/testflight/beta.py submit-review --candidate "$REVIEW_CANDIDATE" --state-dir "$REVIEW_STATE_DIR"
+python3 scripts/testflight/beta.py submit-review --candidate "$REVIEW_CANDIDATE" --state-dir "$REVIEW_STATE_DIR" --apply
+
+# Apple 审核通过、候选验收完成后，将精确构建分发到首批组
+GROUP_ID=$(jq -er .groupId scripts/testflight/candidate.json)
+asc builds add-groups --build-id "$BUILD_ID" --group "$GROUP_ID" --dry-run
+asc builds add-groups --build-id "$BUILD_ID" --group "$GROUP_ID"
 
 # 拉取所有构建的 TestFlight 反馈和崩溃反馈记录
 python3 scripts/testflight/beta.py feedback
 ```
 
-Apple 审核批准后，如果添加构建时关闭了自动通知，还需由维护者对精确构建执行 `asc testflight notifications send --build-id BUILD_ID` 开始测试，再验证公开邀请页确实显示当前应用并允许加入。审核通过、链接开关开启和落地页可加入分别核对；本轮在外部成员为 0 时完成开始测试。参见 [Apple 开始外测说明](https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers/#notify-external-testers-after-your-build-is-approved)。
+分发后回读首批组的构建关联和 `IN_BETA_TESTING`，并核对原公开链接及 30 人自助加入上限。审批状态、链接开关和公开页面的剩余名额分别核对。需要发送新版通知时，由维护者按本次发布范围决定。参见 [Apple 开始外测说明](https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers/#notify-external-testers-after-your-build-is-approved)。
 
 此入口处理已上传候选的外测发布。新版本编译、签名、验包和上传继续遵循 [构建流程](./ios-testflight.md) 与
-[外测准备](./ios-external-testflight.md)。完成后更新 `scripts/testflight/candidate.json` 的精确构建 ID、版本、源码 SHA 和 IPA SHA-256。
+[外测准备](./ios-external-testflight.md)。完成后更新 `scripts/testflight/candidate.json` 和本机同名候选记录的精确构建 ID、版本、源码 SHA 和 IPA SHA-256，继续沿用首批组 ID 和 `publicLink`。
 不能使用 `latest` 或沿用旧构建验收。保留 archive、dSYM、IPA、验证回执，回收 DerivedData 等中间产物。
+
+`publicLink` 字段标明要保留的已开放入口。对这类候选，`reconcile --apply` 仅回读 Apple 并刷新本机回执，校验最新发布的构建在组内测试、原链接有效和公开名额上限。首批组可以同时保留历史构建。审核阶段使用单独的审核候选。
+
+邮件邀请脚本从同一个仓库候选文件读取首批组和当前构建。本机报名配置沿用既有报名筛选和去重账本，并单独设置邮件邀请上限。公开链接加入的人由 Apple 按 30 人上限计算。
 
 本机状态默认保存在 `~/Library/Application Support/CookExternalBeta`，也可用 `--state-dir` 指定。
 目录权限 700、JSON 权限 600，使用进程锁和原子写入。`config.json` 包含 `ascCommand` 参数数组（默认 `["asc"]`，可指定已有凭据包装器）
@@ -58,9 +64,9 @@ Apple 审核批准后，如果添加构建时关闭了自动通知，还需由�
 
 模拟器策略验证本地存储、升级及隔离，不将检查命名为生产同步或 Apple 账号隔离。真实 CloudKit 传输、Apple 账号退出与切换仍可保持未验证，必须在报告和测试说明中明示。CI、模拟器、schema 相同及旧构建结果均不能写成新候选的真实生产验收。未知策略或候选与验收策略不一致会阻止开放。
 
-开放前还检查 App/构建/组身份、未过期、可外部分发、合规状态、Apple 允许外测（`BETA_APPROVED`、`READY_FOR_BETA_TESTING` 或 `IN_BETA_TESTING`）、专用组只有该候选且不自动接收全部构建、人数不超过 30。
+首次开启时使用未设置 `publicLink` 的候选。开放前还检查 App/构建/组身份、未过期、可外部分发、合规状态、Apple 允许外测（`BETA_APPROVED`、`READY_FOR_BETA_TESTING` 或 `IN_BETA_TESTING`）、专用组只有该候选且不自动接收全部构建、人数不超过 30。
 Apple 不允许在关闭公开链接时修改人数上限，所以脚本在同一次开启请求中设置 30 人上限，随后回读。错误时尝试关闭链接并报告失败。
-满员由 Apple 阻止新加入，不应额外用邮件批量加入绕过首批范围。
+满员由 Apple 阻止通过公开链接新加入。定向邮件邀请按已授权的报名范围执行。
 
 只有 `reconcile --apply` 成功并产生 `invitation.json` 的 `open: true` 后，才将其中回读得到的真实 URL 发布到
 [内测说明页](../guide/ios-beta.md)，并验证文档构建、线上 HTTPS 与入口。不得猜测链接。

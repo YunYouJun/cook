@@ -54,6 +54,12 @@ describe('web app citation metadata', () => {
     expect(hidden.match(/name="robots"/g)).toHaveLength(1)
   })
 
+  it('labels the shared recipe page before the recipe loads and excludes it from indexing', () => {
+    const sharePage = applyCookRouteSeo(shell(), '/recipes/share/?id=250')
+    expect(sharePage).toContain('<title>分享的菜谱 · 食用手册</title>')
+    expect(sharePage).toContain('<meta name="robots" content="noindex">')
+  })
+
   it('publishes a sitemap, robots entry, and llms.txt for the web app host', () => {
     const sitemap = read('apps/web/public/sitemap.xml')
     const robots = read('apps/web/public/robots.txt')
@@ -186,6 +192,7 @@ describe('product site citation metadata', () => {
       { url: 'guide/web-domain' },
       { url: '/terms' },
       { url: '/privacy' },
+      { url: '/privacy-android' },
       { url: '/dev/cli' },
       { url: 'dev/data' },
       { url: '/decisions/' },
@@ -193,7 +200,7 @@ describe('product site citation metadata', () => {
       { url: 'https://cook.yunle.fun/public/landing/README' },
       { url: '/404' },
     ])
-    expect(sitemap.map(item => item.url)).toEqual(['', '/guide/getting-started', 'guide/web-domain', '/terms', '/privacy'])
+    expect(sitemap.map(item => item.url)).toEqual(['', '/guide/getting-started', 'guide/web-domain', '/terms', '/privacy', '/privacy-android'])
     expect(isNonIndexableProductPage('404.md')).toBe(true)
     expect(isNonIndexableProductPage('dev/cli.md')).toBe(true)
     expect(isNonIndexableProductPage('decisions/index.md')).toBe(true)
@@ -209,6 +216,7 @@ describe('product site citation metadata', () => {
       'guide/web-and-ios.md',
       'guide/web-domain.md',
       'index.md',
+      'privacy-android.md',
       'privacy.md',
       'terms.md',
     ])

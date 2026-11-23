@@ -18,6 +18,11 @@ export function isAuthCallbackUrl(href: string) {
   return new URL(href, 'https://cook.invalid').pathname.replace(/\/+$/, '') === '/auth/callback'
 }
 
+export function isNativeAuthCallbackUrl(href: string) {
+  const url = new URL(href, 'https://cook.invalid')
+  return isAuthCallbackUrl(url.href) && url.searchParams.get('platform') === 'native'
+}
+
 export function nativeReturnUrl(href: string): string | undefined {
   const prefix = 'https://cook.yunyoujun.cn/auth/callback?platform=native#'
   if (!href.startsWith(prefix) || href.length >= prefix.length + 4096 || href.trim() !== href)

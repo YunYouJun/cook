@@ -156,10 +156,10 @@ private struct WebDataTransferView: View {
         do {
             if let accountData, accountData.usesAccountLibrary {
                 var additions = UserDataDocument()
-                additions.favorites = data.favorites.map { .init(id: $0.recipeId, time: $0.time.timeIntervalSince1970 * 1000) }
+                additions.favorites = data.favorites.map { .init(id: $0.recipeId, time: $0.timeMillis) }
                 additions.histories = data.visits.compactMap { visit in
                     guard let id = store.recipeIdByName[visit.name], let recipe = store.recipesById[id] else { return nil }
-                    return .init(recipe: .init(recipe: recipe), time: visit.time.timeIntervalSince1970 * 1000)
+                    return .init(recipe: .init(recipe: recipe), time: visit.timeMillis)
                 }
                 let before = accountData.snapshot.document
                 try accountData.importDocument(additions)

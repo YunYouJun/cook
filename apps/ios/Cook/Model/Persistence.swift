@@ -183,8 +183,9 @@ extension ModelContext {
             let active = existing.filter { $0.deletedAt == nil }
             if !isFavorite {
                 for favorite in active {
-                    favorite.deletedAt = date
-                    favorite.updatedAt = date
+                    let removedAt = max(date, favorite.createdAt, favorite.updatedAt)
+                    favorite.deletedAt = removedAt
+                    favorite.updatedAt = removedAt
                 }
             } else if active.isEmpty {
                 if let revived = existing.first {
@@ -239,10 +240,25 @@ extension ModelContext {
     func clearHistory(at date: Date = Date()) {
         let all = (try? fetch(FetchDescriptor<HistoryEntry>())) ?? []
         for entry in all where entry.deletedAt == nil {
-            entry.deletedAt = date
-            entry.updatedAt = date
+            let removedAt = max(date, entry.updatedAt, entry.visitedAt)
+            entry.deletedAt = removedAt
+            entry.updatedAt = removedAt
         }
         try? save()
+    }
+
+    func removeVisit(recipeId: Int, visitedAt: Date, at date: Date = Date()) throws {
+        let entries = try fetch(FetchDescriptor<HistoryEntry>(predicate: #Predicate {
+            $0.recipeId == recipeId && $0.visitedAt == visitedAt && $0.deletedAt == nil
+        }))
+        guard !entries.isEmpty else { return }
+        try saveUserChange {
+            for entry in entries {
+                let removedAt = max(date, entry.updatedAt, entry.visitedAt)
+                entry.deletedAt = removedAt
+                entry.updatedAt = removedAt
+            }
+        }
     }
 
     /// 未导入云端偏好时保持空库；旧版本的默认记录无法与用户重置可靠区分，保留原始记录。
@@ -307,7 +323,7 @@ extension ModelContext {
         }
 
         var addedVisits = 0
-        for visit in data.visits {
+        for visit in data.latestVisits {
             guard let recipeId = recipeIdByName[visit.name] else {
                 continue
             }

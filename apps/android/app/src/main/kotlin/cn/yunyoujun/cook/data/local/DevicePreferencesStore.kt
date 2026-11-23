@@ -13,6 +13,8 @@ import kotlinx.serialization.json.Json
 import java.text.Normalizer
 import java.util.Locale
 
+internal const val DEFAULT_FRIDGE_REMINDER_MINUTES = 9 * 60
+
 @Serializable
 enum class AppThemeMode(val title: String) {
     SYSTEM("跟随系统"),
@@ -46,6 +48,8 @@ data class DevicePreferencesSnapshot(
     val signalConsent: SignalConsentState = SignalConsentState.UNDECIDED,
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val aiProviderMode: AiProviderMode = AiProviderMode.DISABLED,
+    val fridgeRemindersEnabled: Boolean = false,
+    val fridgeReminderMinutes: Int = DEFAULT_FRIDGE_REMINDER_MINUTES,
     val lastFridgeReminderDate: String? = null,
     val recentSearches: List<String> = emptyList(),
     val cloudKitchen: Boolean = false,
@@ -102,6 +106,18 @@ class DevicePreferencesStore(
         update { it.copy(noSpicy = noSpicy) }
     }
 
+    fun applySearchPreferences(avoid: List<String>, noSpicy: Boolean, goal: DietaryGoal? = null) {
+        if (avoid.isEmpty() && !noSpicy && goal == null) return
+        update {
+            it.copy(
+                avoid = (it.avoid + avoid).distinct(),
+                noSpicy = it.noSpicy || noSpicy,
+                rememberedDietaryGoal = goal ?: it.rememberedDietaryGoal,
+                hasCompletedDietaryIntroduction = goal != null || it.hasCompletedDietaryIntroduction,
+            )
+        }
+    }
+
     fun setMode(mode: RecommendationMode) {
         update { it.copy(mode = mode) }
     }
@@ -137,9 +153,14 @@ class DevicePreferencesStore(
         update { it.copy(aiProviderMode = mode) }
     }
 
-    fun recordFridgeReminderSent(isoLocalDate: String) {
-        update { it.copy(lastFridgeReminderDate = isoLocalDate) }
+    fun setFridgeRemindersEnabled(enabled: Boolean) = update(durable = true) { it.copy(fridgeRemindersEnabled = enabled) }
+
+    fun setFridgeReminderMinutes(minutes: Int) {
+        require(minutes in 0 until 24 * 60)
+        update(durable = true) { it.copy(fridgeReminderMinutes = minutes) }
     }
+
+    fun recordFridgeReminderSent(isoLocalDate: String) = update(durable = true) { it.copy(lastFridgeReminderDate = isoLocalDate) }
 
     fun recordSearch(raw: String) {
         val text = raw.trim().split(Regex("\\s+")).joinToString(" ").take(300)
@@ -156,10 +177,16 @@ class DevicePreferencesStore(
 
     fun clearSearches() = update { it.copy(recentSearches = emptyList()) }
 
-    private fun update(transform: (DevicePreferencesSnapshot) -> DevicePreferencesSnapshot) {
+    internal fun restoreBackup(backup: BackupPreferences) = update(durable = true, transform = backup::applyingTo)
+
+    private fun update(
+        durable: Boolean = false,
+        transform: (DevicePreferencesSnapshot) -> DevicePreferencesSnapshot,
+    ) {
         synchronized(this) {
             val next = transform(_state.value)
-            prefs.edit().putString(KEY_SNAPSHOT_JSON, json.encodeToString(next)).apply()
+            val edit = prefs.edit().putString(KEY_SNAPSHOT_JSON, json.encodeToString(next))
+            if (durable) check(edit.commit()) { "无法写入做菜偏好。" } else edit.apply()
             _state.value = next
         }
     }
@@ -167,6 +194,10 @@ class DevicePreferencesStore(
     private fun readSnapshot(): DevicePreferencesSnapshot {
         val raw = prefs.getString(KEY_SNAPSHOT_JSON, null) ?: return DevicePreferencesSnapshot()
         return runCatching { json.decodeFromString<DevicePreferencesSnapshot>(raw) }
+            .map { value ->
+                if (value.fridgeReminderMinutes in 0 until 24 * 60) value
+                else value.copy(fridgeReminderMinutes = DEFAULT_FRIDGE_REMINDER_MINUTES)
+            }
             .getOrDefault(DevicePreferencesSnapshot())
     }
 

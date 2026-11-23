@@ -7,7 +7,7 @@ import {
   createCloudbaseIdentityAdapter,
   createWebYunlefunAuthorizationAdapter,
 } from '~/adapters/yunlefunAuth'
-import { isAuthCallbackUrl, nativeReturnUrl } from '~/utils/authInitialization'
+import { isAuthCallbackUrl, isNativeAuthCallbackUrl, nativeReturnUrl } from '~/utils/authInitialization'
 import { createYunlefunAuthController } from '~/utils/yunlefunAuth'
 import { resolveYunlefunSsoConfig } from '~/utils/yunlefunSsoConfig'
 
@@ -40,17 +40,24 @@ export function useYunlefunAuth() {
   const isAuthenticated = computed(() => snapshot.value.status === 'signed-in' && Boolean(snapshot.value.account))
 
   async function initialize(): Promise<void> {
+    // Native redirects belong to the app. Leave Web initialization available for a later Web route.
+    if (!import.meta.server && isNativeAuthCallbackUrl(window.location.href)) {
+      if (window.location.hash) {
+        rememberNativeReturnLink(window.location.href)
+        window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`)
+      }
+      return
+    }
+
     if (!initialization)
-      initialization = initializeOnce(runtimeConfig, snapshot, configurationMessage, rememberNativeReturnLink)
+      initialization = initializeOnce(runtimeConfig, snapshot, configurationMessage)
     publishSnapshot(snapshot)
     await initialization
     publishSnapshot(snapshot)
   }
 
   function rememberNativeReturnLink(href: string) {
-    const callback = nativeReturnUrl(href)
-    if (callback)
-      nativeReturnLink.value = callback
+    nativeReturnLink.value = nativeReturnUrl(href) ?? ''
   }
 
   async function signIn(): Promise<void> {
@@ -100,24 +107,9 @@ async function initializeOnce(
   runtimeConfig: YunlefunRuntimeConfig,
   snapshot: Ref<YunlefunAuthSnapshot>,
   configurationMessage: Ref<string>,
-  rememberNativeReturnLink: (href: string) => void,
 ): Promise<void> {
   if (import.meta.server)
     return
-
-  // Native HTTPS callbacks (including SwiftUI) must not become Web transactions.
-  if (isAuthCallbackUrl(window.location.href)
-    && new URLSearchParams(window.location.search).get('platform') === 'native') {
-    rememberNativeReturnLink(window.location.href)
-    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`)
-    configurationMessage.value = '未能返回云食册，请在应用中重新授权，或返回网页版登录'
-    snapshot.value = {
-      account: null,
-      errorMessage: '',
-      status: 'signed-out',
-    }
-    return
-  }
 
   const result = resolveYunlefunSsoConfig({
     clientId: runtimeConfig.public.yunlefunSsoClientId,

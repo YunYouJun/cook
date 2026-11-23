@@ -1,5 +1,7 @@
 package cn.yunyoujun.cook.data.remote
 
+import android.net.Uri
+import android.os.SystemClock
 import androidx.room.withTransaction
 import cn.yunyoujun.cook.core.ai.LocalSearchIntentParser
 import cn.yunyoujun.cook.core.ai.SearchIntent
@@ -24,15 +26,27 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -41,10 +55,13 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
+import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.URI
 import java.net.URLEncoder
@@ -53,22 +70,30 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicReference
+import javax.net.ssl.SSLException
 import kotlin.coroutines.coroutineContext
 
 /**
  * 与 @yunlefun/sso 的 SSO v3 协议一致；不接收 URL 中的会话或长期凭据。
  * 1:1 对齐 iOS `YunlefunSSO.swift`。
  */
+@Serializable
 class YunlefunSSO(
     val createdAtMs: Long = System.currentTimeMillis(),
     val nonce: String = randomToken(),
     val verifier: String = randomToken(),
+    internal val inApp: Boolean = false,
 ) {
     sealed interface Callback {
         data class Authorized(val fields: Map<String, String>) : Callback
         data object Denied : Callback
         data object SelectAccountOnWeb : Callback
+
+        fun exchangeFields(): Map<String, String> = when (this) {
+            is Authorized -> fields
+            Denied -> throw CancellationException("User cancelled SSO")
+            SelectAccountOnWeb -> throw YunlefunAccountException.AuthorizationFailed()
+        }
     }
 
     val authorizationUrl: String
@@ -93,8 +118,11 @@ class YunlefunSSO(
         return "$ISSUER$path?$params"
     }
 
+    internal fun isCurrentAt(nowMs: Long): Boolean =
+        nowMs >= createdAtMs && nowMs - createdAtMs in 0 until LIFETIME_MS
+
     fun callbackResult(callbackUrl: String, nowMs: Long = System.currentTimeMillis()): Callback {
-        if (nowMs < createdAtMs || (nowMs - createdAtMs) >= LIFETIME_MS) {
+        if (!isCurrentAt(nowMs)) {
             throw YunlefunAccountException.InvalidCallback()
         }
         if (!isCallback(callbackUrl)) {
@@ -102,10 +130,10 @@ class YunlefunSSO(
         }
         val fragment = runCatching { URI(callbackUrl).rawFragment }.getOrNull()
             ?: throw YunlefunAccountException.InvalidCallback()
-        if (!fragment.startsWith("ylf_sso=") || fragment.length >= 4096) {
+        if (!fragment.startsWith(CALLBACK_RESULT_PREFIX) || fragment.length >= MAX_CALLBACK_FRAGMENT_LENGTH) {
             throw YunlefunAccountException.InvalidCallback()
         }
-        val encoded = fragment.removePrefix("ylf_sso=")
+        val encoded = fragment.removePrefix(CALLBACK_RESULT_PREFIX)
         val decodedBytes = decodeBase64Url(encoded) ?: throw YunlefunAccountException.InvalidCallback()
         val payload = runCatching {
             Json.parseToJsonElement(decodedBytes.toString(Charsets.UTF_8)).jsonObject
@@ -114,9 +142,9 @@ class YunlefunSSO(
         if (!ALLOWED_FRAGMENT_KEYS.containsAll(payload.keys)) {
             throw YunlefunAccountException.InvalidCallback()
         }
-        val payloadNonce = payload["nonce"]?.jsonPrimitive?.takeIf { it.isString }?.content
-        val payloadIss = payload["iss"]?.jsonPrimitive?.takeIf { it.isString }?.content
-        val ok = payload["ok"]?.jsonPrimitive?.booleanOrNull
+        val payloadNonce = (payload["nonce"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        val payloadIss = (payload["iss"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        val ok = (payload["ok"] as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull
         if (payloadNonce != nonce || payloadIss != ISSUER || ok == null) {
             throw YunlefunAccountException.InvalidCallback()
         }
@@ -124,7 +152,7 @@ class YunlefunSSO(
             if (payload["code"] != null) {
                 throw YunlefunAccountException.InvalidCallback()
             }
-            return when (payload["reason"]?.jsonPrimitive?.takeIf { it.isString }?.content) {
+            return when ((payload["reason"] as? JsonPrimitive)?.takeIf { it.isString }?.content) {
                 "access_denied" -> Callback.Denied
                 "account_selection_required" -> Callback.SelectAccountOnWeb
                 else -> throw YunlefunAccountException.AuthorizationFailed()
@@ -133,7 +161,7 @@ class YunlefunSSO(
         if (payload["reason"] != null) {
             throw YunlefunAccountException.InvalidCallback()
         }
-        val code = payload["code"]?.jsonPrimitive?.takeIf { it.isString }?.content
+        val code = (payload["code"] as? JsonPrimitive)?.takeIf { it.isString }?.content
             ?: throw YunlefunAccountException.InvalidCallback()
         if (!CODE_REGEX.matches(code)) {
             throw YunlefunAccountException.InvalidCallback()
@@ -152,19 +180,21 @@ class YunlefunSSO(
     }
 
     fun exchangeFields(callbackUrl: String, nowMs: Long = System.currentTimeMillis()): Map<String, String> =
-        when (val res = callbackResult(callbackUrl, nowMs)) {
-            is Callback.Authorized -> res.fields
-            Callback.Denied -> throw CancellationException("User cancelled SSO")
-            Callback.SelectAccountOnWeb -> throw YunlefunAccountException.AuthorizationFailed()
-        }
+        callbackResult(callbackUrl, nowMs).exchangeFields()
+
+    internal enum class CallbackTarget { NATIVE, WEB }
 
     companion object {
         const val ISSUER = "https://www.yunle.fun"
         const val CLIENT_ID = "cook-mobile"
-        const val REDIRECT_URI = "https://cook.yunyoujun.cn/auth/callback?platform=native"
+        internal const val CALLBACK_HOST = "cook.yunyoujun.cn"
+        const val REDIRECT_URI = "https://$CALLBACK_HOST/auth/callback?platform=native"
         const val SCOPE = "identity:bootstrap"
         const val LIFETIME_MS = 600_000L
 
+        private const val CALLBACK_RESULT_PREFIX = "ylf_sso="
+        private const val MAX_CALLBACK_FRAGMENT_LENGTH = 4096
+        internal val MAX_CALLBACK_LENGTH = REDIRECT_URI.length + MAX_CALLBACK_FRAGMENT_LENGTH
         private val ALLOWED_FRAGMENT_KEYS = setOf("nonce", "iss", "ok", "code", "reason")
         private val CODE_REGEX = Regex("^[A-Za-z0-9_-]{43}$")
         private val BASE64URL_REGEX = Regex("^[A-Za-z0-9_-]+$")
@@ -173,6 +203,23 @@ class YunlefunSSO(
         fun isCallback(rawUrl: String): Boolean {
             val withoutFragment = rawUrl.substringBefore('#')
             return withoutFragment == REDIRECT_URI
+        }
+
+        internal fun isSignInCallback(rawUrl: String): Boolean =
+            isCallback(rawUrl) && rawUrl.substringAfter('#', "").startsWith(CALLBACK_RESULT_PREFIX)
+
+        internal fun callbackTarget(rawUrl: String): CallbackTarget? {
+            val url = runCatching { URI(rawUrl) }.getOrNull() ?: return null
+            if (!url.scheme.equals("https", ignoreCase = true) ||
+                !url.host.equals(CALLBACK_HOST, ignoreCase = true) ||
+                url.rawUserInfo != null || url.port !in listOf(-1, 443) ||
+                url.rawPath != "/auth/callback"
+            ) return null
+            val targetsNative = url.rawQuery?.split('&')?.any { item ->
+                Uri.decode(item.substringBefore('=')) == "platform" &&
+                    Uri.decode(item.substringAfter('=', "")) == "native"
+            } == true
+            return if (targetsNative) CallbackTarget.NATIVE else CallbackTarget.WEB
         }
 
         fun randomToken(): String {
@@ -204,7 +251,7 @@ sealed class YunlefunAccountException(message: String) : Exception(message) {
     class InvalidResponse : YunlefunAccountException("登录服务返回了无效结果，请稍后重试。")
     class ExpiredSession : YunlefunAccountException("登录已过期，请重新登录。")
     class SecureStorage : YunlefunAccountException("无法访问安全存储，请解锁设备后重试。")
-    class Unavailable : YunlefunAccountException("暂时无法连接登录服务，请稍后重试。")
+    class Unavailable(val retryable: Boolean = true) : YunlefunAccountException("暂时无法连接登录服务，请稍后重试。")
 }
 
 @Serializable
@@ -242,6 +289,9 @@ data class YunlefunCredential(
             accessToken.isNotEmpty() &&
             accessToken.toByteArray(Charsets.UTF_8).size <= 16_384 &&
             accessToken.all { it.code in 33..126 }
+
+    override fun toString(): String =
+        "YunlefunCredential(subject=$subject, expiresAtEpochMs=$expiresAtEpochMs, deviceID=$deviceID)"
 }
 
 /**
@@ -266,7 +316,7 @@ class YunlefunAccountService(
     internal suspend fun signInWithWeChat(code: String, deviceID: String): YunlefunCredential {
         validateWeChatCode(code)
         val response = weChatRequest("exchangeCookWeChatCode", mapOf("code" to code))
-        return exchangeWeChatTicket(response, deviceID, subjectRequired = true)
+        return exchangeWeChatTicket(response, deviceID)
     }
 
     internal suspend fun bindWeChat(code: String, credential: YunlefunCredential) {
@@ -300,7 +350,7 @@ class YunlefunAccountService(
     }
 
     internal suspend fun verifyWeChatSignupSms(challenge: String, otp: String, deviceID: String): WeChatSignupNext {
-        if (!otp.matches(Regex("[0-9]{6}")) || challenge.length !in 1..4096) {
+        if (!WECHAT_SIGNUP_OTP.matches(otp) || challenge.length !in 1..4096) {
             throw WeChatAccountException(WeChatAccountException.Reason.INVALID_OTP)
         }
         val response = weChatRequest("verifyCookSignupSms", mapOf("challenge" to challenge, "otp" to otp), deviceID)
@@ -317,9 +367,14 @@ class YunlefunAccountService(
     internal suspend fun registerWithWeChat(proof: String, code: String, deviceID: String): YunlefunCredential {
         validateWeChatCode(code)
         if (proof.length !in 1..4096) throw WeChatAccountException(WeChatAccountException.Reason.RESTART_SIGNUP)
-        val response = weChatRequest("registerCookWeChat", mapOf("proof" to proof, "code" to code), deviceID)
+        val response = try {
+            weChatRequest(WECHAT_REGISTER_ACTION, mapOf("proof" to proof, "code" to code), deviceID)
+        } catch (error: YunlefunAccountException) {
+            if (error !is YunlefunAccountException.Unavailable && error !is YunlefunAccountException.InvalidResponse) throw error
+            throw WeChatAccountException(WeChatAccountException.Reason.SIGNUP_UNCONFIRMED)
+        }
         return try {
-            exchangeWeChatTicket(response, deviceID, subjectRequired = false)
+            exchangeWeChatTicket(response, deviceID)
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {
@@ -339,7 +394,7 @@ class YunlefunAccountService(
             credential = credential,
             deviceID = deviceID,
             origin = COOK_ORIGIN,
-            weChat = true,
+            weChatAction = action,
         )
         val response = runCatching { Json.parseToJsonElement(data).jsonObject }
             .getOrElse { throw YunlefunAccountException.InvalidResponse() }
@@ -350,13 +405,12 @@ class YunlefunAccountService(
     private suspend fun exchangeWeChatTicket(
         payload: JsonObject,
         deviceID: String,
-        subjectRequired: Boolean,
     ): YunlefunCredential {
-        if (payload.keys.any { it !in setOf("ok", "ticket", "subject") }) throw YunlefunAccountException.InvalidResponse()
-        val subject = if (subjectRequired || "subject" in payload) payload.requiredWeChatString("subject", 512) else null
+        if (payload.keys != setOf("ok", "ticket", "subject")) throw YunlefunAccountException.InvalidResponse()
+        val subject = payload.requiredWeChatString("subject", 512)
         val credential = exchangeCustomTicket(payload.requiredWeChatString("ticket", 32_768), deviceID)
-        if (subject != null && credential.subject != subject) {
-            runCatching { signOut(credential) }
+        if (credential.subject != subject) {
+            withContext(NonCancellable) { runCatching { signOut(credential) } }
             throw YunlefunAccountException.InvalidResponse()
         }
         return credential
@@ -480,12 +534,12 @@ class YunlefunAccountService(
         )
         val obj = runCatching { Json.parseToJsonElement(bodyText).jsonObject }
             .getOrElse { throw YunlefunAccountException.InvalidResponse() }
-        val accessToken = obj["access_token"]?.jsonPrimitive?.takeIf { it.isString }?.content.orEmpty()
-        val refreshToken = obj["refresh_token"]?.jsonPrimitive?.takeIf { it.isString }?.content.orEmpty()
-        val subject = obj["sub"]?.jsonPrimitive?.takeIf { it.isString }?.content.orEmpty()
-        val expiresInSec = obj["expires_in"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+        val accessToken = (obj["access_token"] as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty()
+        val refreshToken = (obj["refresh_token"] as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty()
+        val subject = (obj["sub"] as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty()
+        val expiresInSec = (obj["expires_in"] as? JsonPrimitive)?.takeUnless { it.isString }?.doubleOrNull ?: 0.0
         if (accessToken.isEmpty() || refreshToken.isEmpty() || subject.isEmpty() ||
-            expiresInSec <= 0.0 || expiresInSec > 31 * 86400.0
+            !expiresInSec.isFinite() || expiresInSec <= 0.0 || expiresInSec > 31 * 86400.0
         ) {
             throw YunlefunAccountException.InvalidResponse()
         }
@@ -505,7 +559,7 @@ class YunlefunAccountService(
         credential: YunlefunCredential? = null,
         deviceID: String? = null,
         origin: String? = null,
-        weChat: Boolean = false,
+        weChatAction: String? = null,
     ): String {
         val headers = LinkedHashMap<String, String>()
         (deviceID ?: credential?.deviceID)?.let { headers["x-device-id"] = it }
@@ -515,6 +569,7 @@ class YunlefunAccountService(
         val jsonBody = fields?.let { map ->
             JsonObject(map.mapValues { (_, v) -> JsonPrimitive(v) }).toString()
         }
+        val websiteApproval = url == TICKET_URL && fields?.get("action") == "approveCookWebHandoff"
         val response = try {
             transport.request(
                 method = method,
@@ -525,37 +580,43 @@ class YunlefunAccountService(
             )
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
-            throw YunlefunAccountException.Unavailable()
+        } catch (error: Exception) {
+            val retryable = !websiteApproval || (error is IOException && error !is SSLException)
+            throw YunlefunAccountException.Unavailable(retryable)
         }
 
         if (response.statusCode !in 200..299) {
-            if (weChat) {
+            if (weChatAction != null) {
                 val reason = runCatching {
                     Json.parseToJsonElement(response.bodyText).jsonObject.requiredWeChatString("reason", 128)
                 }.getOrNull()
                 if (reason == "not_authenticated") throw YunlefunAccountException.ExpiredSession()
-                throw WeChatAccountException(
-                    WeChatAccountException.Reason.entries.firstOrNull { it.wire == reason }
-                        ?: WeChatAccountException.Reason.UNAVAILABLE,
-                )
+                val known = WeChatAccountException.Reason.entries.firstOrNull { it.wire != null && it.wire == reason }
+                val signupOutcomeUnknown = weChatAction == WECHAT_REGISTER_ACTION && reason != "not_configured" &&
+                    (response.statusCode == 408 || response.statusCode in 500..599)
+                val fallback = if (signupOutcomeUnknown) {
+                    WeChatAccountException.Reason.SIGNUP_UNCONFIRMED
+                } else WeChatAccountException.Reason.UNAVAILABLE
+                throw WeChatAccountException(known ?: fallback)
             }
-            val errCode = runCatching {
-                Json.parseToJsonElement(response.bodyText).jsonObject["error"]
-                    ?.jsonPrimitive?.takeIf { it.isString }?.content
-            }.getOrNull()
+            val failure = runCatching { Json.parseToJsonElement(response.bodyText).jsonObject }.getOrNull()
+            val errCode = (failure?.get("error") as? JsonPrimitive)?.takeIf { it.isString }?.content
             if (response.statusCode == 401 || errCode in setOf(
                     "invalid_grant", "invalid_token", "unauthenticated", "user_not_found", "user_disabled",
                 )
             ) {
                 throw YunlefunAccountException.ExpiredSession()
             }
-            throw YunlefunAccountException.Unavailable()
+            val reason = (failure?.get("reason") as? JsonPrimitive)?.content
+            val retryable = !websiteApproval ||
+                (response.statusCode in setOf(408, 500, 502, 503, 504) && reason != "not_configured")
+            throw YunlefunAccountException.Unavailable(retryable)
         }
         return response.bodyText
     }
 
     companion object {
+        private const val WECHAT_REGISTER_ACTION = "registerCookWeChat"
         const val GATEWAY = "https://yunlefun-8g7ybcxc7345c490.api.tcloudbasegateway.com/auth/v1/"
         const val TICKET_URL = "https://api.yunle.fun/sso-ticket"
         const val COOK_ORIGIN = "https://cook.yunyoujun.cn"
@@ -563,11 +624,16 @@ class YunlefunAccountService(
 }
 
 sealed class UserDataSyncException(message: String) : Exception(message) {
-    class LoginRequired : UserDataSyncException("请重新登录后同步，离线记录已保留。")
+    class LoginRequired internal constructor(internal val canRefresh: Boolean = false) :
+        UserDataSyncException("请重新登录后同步，离线记录已保留。")
     class MembershipRequired : UserDataSyncException("跨平台同步需要有效的云乐坊会员，已有记录仍可在本机使用。")
     class Unavailable : UserDataSyncException("暂时无法同步，恢复联网后会重试。")
     class InvalidResponse : UserDataSyncException("同步服务或数据版本暂不兼容，已停止覆盖，请稍后重试。")
     class LocalStorage : UserDataSyncException("账号记录未能保存，原有数据已保留。请检查设备储存空间。")
+    class Disabled : UserDataSyncException("请先开启账号跨端同步。")
+    class AccountCacheUnreadable : UserDataSyncException("账号缓存无法读取，暂时无法同步。")
+    class LibraryUnreadable : UserDataSyncException("暂时无法读取当前收藏和历史库，请重试。")
+    class LibraryChanged : UserDataSyncException("当前收藏与历史库已切换，请重试。")
 }
 
 /**
@@ -623,6 +689,8 @@ class UserDataSyncService(
             )
         } catch (e: CancellationException) {
             throw e
+        } catch (_: HttpResponseTooLargeException) {
+            throw UserDataSyncException.InvalidResponse()
         } catch (_: Exception) {
             throw UserDataSyncException.Unavailable()
         }
@@ -630,22 +698,26 @@ class UserDataSyncService(
         if (response.statusCode in 300..399) {
             throw UserDataSyncException.InvalidResponse()
         }
-        val body = runCatching { Json.parseToJsonElement(response.bodyText).jsonObject }
-            .getOrElse { throw UserDataSyncException.InvalidResponse() }
-        val code = body["code"]?.jsonPrimitive?.takeIf { it.isString }?.content.orEmpty()
-        if (response.statusCode == 401 || code in setOf("LOGIN_REQUIRED", "SESSION_CHANGED")) {
-            throw UserDataSyncException.LoginRequired()
+        if (response.statusCode == 408 || response.statusCode == 429 || response.statusCode in 500..599) {
+            throw UserDataSyncException.Unavailable()
         }
+        val body = runCatching { Json.parseToJsonElement(response.bodyText).jsonObject }.getOrNull()
+        val code = (body?.get("code") as? JsonPrimitive)?.takeIf { it.isString }?.content
+        if (code == "SESSION_CHANGED") throw UserDataSyncException.LoginRequired()
+        if (response.statusCode == 401 || code == "LOGIN_REQUIRED") {
+            throw UserDataSyncException.LoginRequired(canRefresh = true)
+        }
+        if (body == null) throw UserDataSyncException.InvalidResponse()
         if (code == "MEMBERSHIP_REQUIRED") {
             throw UserDataSyncException.MembershipRequired()
         }
         if (code in setOf("INVALID_REMOTE", "INVALID_DOCUMENT", "DOCUMENT_LIMIT", "UNKNOWN_ACTION")) {
             throw UserDataSyncException.InvalidResponse()
         }
-        if (response.statusCode !in 200..299 || body["ok"]?.jsonPrimitive?.booleanOrNull != true) {
+        if (response.statusCode !in 200..299 || body["ok"] != JsonPrimitive(true)) {
             throw UserDataSyncException.Unavailable()
         }
-        if (body["protocolVersion"]?.jsonPrimitive?.intOrNull != UserDataDocument.PROTOCOL_VERSION) {
+        if (body["protocolVersion"] != JsonPrimitive(UserDataDocument.PROTOCOL_VERSION)) {
             throw UserDataSyncException.InvalidResponse()
         }
         return body
@@ -770,22 +842,24 @@ class ManagedCookAIService(
         if (!ALLOWED_CAPABILITY_KEYS.containsAll(obj.keys)) {
             throw ManagedCookAIException.InvalidResponse()
         }
-        val serviceVersion = obj["serviceVersion"]?.jsonPrimitive?.intOrNull
-        val enabled = obj["enabled"]?.jsonPrimitive?.booleanOrNull
-        val membership = obj["membership"]?.jsonObject
+        val serviceVersion = (obj["serviceVersion"] as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull
+        val enabled = (obj["enabled"] as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull
+        val membership = obj["membership"] as? JsonObject
         if (serviceVersion != 1 || enabled == null || membership == null ||
-            ! setOf("isActive", "expireAt").containsAll(membership.keys)
+            !setOf("isActive", "expireAt").containsAll(membership.keys)
         ) {
             throw ManagedCookAIException.InvalidResponse()
         }
-        val isActive = membership["isActive"]?.jsonPrimitive?.booleanOrNull
+        val isActive = (membership["isActive"] as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull
             ?: throw ManagedCookAIException.InvalidResponse()
-        val expireAtMs = membership["expireAt"]?.jsonPrimitive?.doubleOrNull?.let { ms ->
-            if (!ms.isFinite() || ms <= 0.0) throw ManagedCookAIException.InvalidResponse()
-            ms.toLong()
+        val rawExpiry = membership["expireAt"]
+        val expireAtMs = if (rawExpiry == null || rawExpiry == JsonNull) null else {
+            (rawExpiry as? JsonPrimitive)?.takeUnless { it.isString }?.doubleOrNull?.takeIf { ms ->
+                ms.isFinite() && ms > 0.0
+            }?.toLong() ?: throw ManagedCookAIException.InvalidResponse()
         }
         if (enabled) {
-            val code = obj["code"]?.jsonPrimitive?.takeIf { it.isString }?.content
+            val code = (obj["code"] as? JsonPrimitive)?.takeIf { it.isString }?.content
             if (code != null || !isActive || expireAtMs == null || expireAtMs <= System.currentTimeMillis()) {
                 throw ManagedCookAIException.InvalidResponse()
             }
@@ -821,7 +895,7 @@ class ManagedCookAIService(
         if (obj.keys != setOf("ok", "intent")) {
             throw ManagedCookAIException.InvalidResponse()
         }
-        val rawIntent = obj["intent"]?.jsonObject ?: throw ManagedCookAIException.InvalidResponse()
+        val rawIntent = obj["intent"] as? JsonObject ?: throw ManagedCookAIException.InvalidResponse()
         return try {
             val validator = SearchIntentValidator(data, availableGoals)
             val intent = validator.decode(rawIntent.toString(), expectedSource = SearchIntentSource.DEEPSEEK)
@@ -911,11 +985,15 @@ class ManagedStepGuidanceService(
     val endpoint: String? = rawEndpoint?.let(::approvedEndpoint)
     val isConfigured: Boolean get() = endpoint != null
 
-    suspend fun complete(prompt: StepGuidancePrompt, credential: YunlefunCredential): StepGuidanceResponse {
-        val url = endpoint ?: throw StepGuidanceException.NotDeployed()
-        if (!credential.isValid()) {
-            throw StepGuidanceException.LoginRequired()
-        }
+    suspend fun complete(
+        prompt: StepGuidancePrompt,
+        credential: YunlefunCredential,
+        assertCurrent: () -> Unit = {},
+    ): StepGuidanceResponse {
+        assertCurrent()
+        checkAccess(credential)
+        coroutineContext.ensureActive()
+        assertCurrent()
         val fields = LinkedHashMap<String, JsonPrimitive>().apply {
             put("action", JsonPrimitive("guidance"))
             put("schemaVersion", JsonPrimitive(prompt.request.schemaVersion))
@@ -930,12 +1008,52 @@ class ManagedStepGuidanceService(
             put("contextRevision", JsonPrimitive(prompt.request.contextRevision))
             prompt.request.question?.let { put("question", JsonPrimitive(it)) }
         }
+        val obj = request(JsonObject(fields), credential)
+        if (obj.keys != setOf("ok", "guidance")) throw StepGuidanceException.InvalidResponse()
+        val guidanceObj = obj["guidance"] as? JsonObject ?: throw StepGuidanceException.InvalidResponse()
+        if (guidanceObj.keys != EXPECTED_GUIDANCE_KEYS) throw StepGuidanceException.InvalidResponse()
+        val decoded = runCatching {
+            Json.decodeFromString<StepGuidanceResponse>(guidanceObj.toString())
+        }.getOrElse { throw StepGuidanceException.InvalidResponse() }
+        return StepGuidanceValidator.validate(decoded, prompt)
+    }
+
+    internal suspend fun checkAccess(credential: YunlefunCredential): Long {
+        val obj = request(JsonObject(mapOf("action" to JsonPrimitive("capabilities"))), credential)
+        val membership = obj["membership"] as? JsonObject ?: throw StepGuidanceException.InvalidResponse()
+        if (obj.keys != setOf("ok", "serviceVersion", "enabled", "membership") ||
+            obj["serviceVersion"] != JsonPrimitive(1) || membership.keys != setOf("isActive", "expireAt")
+        ) throw StepGuidanceException.InvalidResponse()
+
+        val enabled = (obj["enabled"] as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull
+            ?: throw StepGuidanceException.InvalidResponse()
+        val active = (membership["isActive"] as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull
+            ?: throw StepGuidanceException.InvalidResponse()
+        val expireAt = when (val value = membership["expireAt"]) {
+            JsonNull -> null
+            is JsonPrimitive -> value.takeUnless { it.isString }?.longOrNull?.takeIf { it > 0 }
+                ?: throw StepGuidanceException.InvalidResponse()
+            else -> throw StepGuidanceException.InvalidResponse()
+        }
+        if (!enabled) {
+            if (active) throw StepGuidanceException.NotDeployed()
+            throw StepGuidanceException.MembershipRequired()
+        }
+        if (!active || expireAt == null || expireAt <= System.currentTimeMillis()) {
+            throw StepGuidanceException.InvalidResponse()
+        }
+        return expireAt
+    }
+
+    private suspend fun request(body: JsonObject, credential: YunlefunCredential): JsonObject {
+        val url = endpoint ?: throw StepGuidanceException.NotDeployed()
+        if (!credential.isValid()) throw StepGuidanceException.LoginRequired()
         val response = try {
             transport.request(
                 method = "POST",
                 url = url,
                 headers = mapOf("Authorization" to "Bearer ${credential.accessToken}"),
-                jsonBody = JsonObject(fields).toString(),
+                jsonBody = body.toString(),
                 maxResponseBytes = 65_536,
                 readTimeoutMs = 35_000,
             )
@@ -949,22 +1067,13 @@ class ManagedStepGuidanceService(
             throw StepGuidanceException.Unavailable()
         }
 
-        val obj = runCatching { Json.parseToJsonElement(response.bodyText).jsonObject }.getOrNull()
+        val obj = runCatching { Json.parseToJsonElement(response.bodyText) as? JsonObject }.getOrNull()
         if (response.statusCode != 200) {
-            val code = obj?.get("code")?.jsonPrimitive?.takeIf { it.isString }?.content
+            val code = (obj?.get("code") as? JsonPrimitive)?.takeIf { it.isString }?.content
             throw mapServiceError(response.statusCode, code)
         }
-        if (obj == null || obj.keys != setOf("ok", "guidance") || obj["ok"]?.jsonPrimitive?.booleanOrNull != true) {
-            throw StepGuidanceException.InvalidResponse()
-        }
-        val guidanceObj = obj["guidance"]?.jsonObject ?: throw StepGuidanceException.InvalidResponse()
-        if (guidanceObj.keys != EXPECTED_GUIDANCE_KEYS) {
-            throw StepGuidanceException.InvalidResponse()
-        }
-        val decoded = runCatching {
-            Json.decodeFromString<StepGuidanceResponse>(guidanceObj.toString())
-        }.getOrElse { throw StepGuidanceException.InvalidResponse() }
-        return StepGuidanceValidator.validate(decoded, prompt)
+        if (obj == null || obj["ok"] != JsonPrimitive(true)) throw StepGuidanceException.InvalidResponse()
+        return obj
     }
 
     companion object {
@@ -1015,7 +1124,9 @@ data class MembershipEntitlement(
         isActive && expiresAtEpochMs?.let { it > nowMs } == true
 }
 
-enum class MembershipCheckReason { SCREEN, RESTORE, CHECKOUT_RETURN }
+enum class MembershipCheckReason { SCREEN, RESTORE, CHECKOUT_RETURN, PLAY_ORDER }
+
+internal enum class MembershipCheckResult { UPDATED, RETRYABLE_FAILURE, NOT_UPDATED }
 
 /**
  * 会员权益读取服务 (`account-api` -> `getAccount`)，对齐 iOS `MembershipService.swift`。
@@ -1036,33 +1147,28 @@ class MembershipService(
             jsonBody = JsonObject(mapOf("action" to JsonPrimitive("getAccount"))).toString(),
             maxResponseBytes = 256 * 1024,
         )
+        if (response.statusCode == 401) throw YunlefunAccountException.ExpiredSession()
         if (response.statusCode !in 200..299) {
-            throw YunlefunAccountException.Unavailable()
+            val status = response.statusCode
+            throw YunlefunAccountException.Unavailable(retryable = status == 408 || status == 429 || status in 500..599)
         }
-        val body = runCatching { Json.parseToJsonElement(response.bodyText).jsonObject }
-            .getOrElse { throw YunlefunAccountException.InvalidResponse() }
+        val body = runCatching { Json.parseToJsonElement(response.bodyText) as? JsonObject }
+            .getOrNull() ?: throw YunlefunAccountException.InvalidResponse()
+        val code = (body["code"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        if (code.equals("login_required", ignoreCase = true)) {
+            throw YunlefunAccountException.ExpiredSession()
+        }
         if (body["code"] != null) {
-            throw YunlefunAccountException.Unavailable()
+            throw YunlefunAccountException.Unavailable(retryable = false)
         }
-        val membership = body["membership"] as? JsonObject
-            ?: throw YunlefunAccountException.InvalidResponse()
-        val isActive = (membership["isActive"] as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull
-            ?: throw YunlefunAccountException.InvalidResponse()
-        val expiry = membership["expireAt"]
-        val expireAtMs = if (expiry == null || expiry == JsonNull) null else {
-            (expiry as? JsonPrimitive)?.takeUnless { it.isString }?.doubleOrNull?.takeIf { ms ->
-                ms.isFinite() && ms in 0.0..253_402_300_799_000.0
-            }?.toLong() ?: throw YunlefunAccountException.InvalidResponse()
+        if (sandbox || body["ledgerEnvironment"] != null) {
+            val expectedEnvironment = if (sandbox) "Sandbox" else "Production"
+            val environment = (body["ledgerEnvironment"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+            if (environment != expectedEnvironment) {
+                throw YunlefunAccountException.InvalidResponse()
+            }
         }
-        if (isActive && (expireAtMs == null || expireAtMs <= 0L)) {
-            throw YunlefunAccountException.InvalidResponse()
-        }
-        return MembershipEntitlement(
-            userID = credential.subject,
-            accountToken = MembershipAccountToken.forUser(credential.subject),
-            isActive = isActive,
-            expiresAtEpochMs = if (isActive) expireAtMs else null,
-        )
+        return readMembershipEntitlement(credential.subject, body)
     }
 
     companion object {
@@ -1070,25 +1176,88 @@ class MembershipService(
     }
 }
 
+internal fun readMembershipEntitlement(subject: String, body: JsonObject): MembershipEntitlement {
+    val membership = body["membership"] as? JsonObject
+        ?: throw YunlefunAccountException.InvalidResponse()
+    val isActive = (membership["isActive"] as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull
+        ?: throw YunlefunAccountException.InvalidResponse()
+    val expiry = membership["expireAt"]
+    val expireAtMs = if (expiry == null || expiry == JsonNull) null else {
+        (expiry as? JsonPrimitive)?.takeUnless { it.isString }?.doubleOrNull?.takeIf { ms ->
+            ms.isFinite() && ms in 0.0..253_402_300_799_000.0
+        }?.toLong() ?: throw YunlefunAccountException.InvalidResponse()
+    }
+    if (isActive && (expireAtMs == null || expireAtMs <= 0L)) {
+        throw YunlefunAccountException.InvalidResponse()
+    }
+    return MembershipEntitlement(
+        userID = subject,
+        accountToken = MembershipAccountToken.forUser(subject),
+        isActive = isActive,
+        expiresAtEpochMs = if (isActive) expireAtMs else null,
+    )
+}
+
+internal data class MembershipSession(val subject: String, val revision: Long)
+
+internal sealed interface YunlefunSignInResult {
+    data object SignedIn : YunlefunSignInResult
+    data class ContinueInBrowser(val url: String) : YunlefunSignInResult
+}
+
+internal data class MembershipWebsiteReturn(val session: MembershipSession, val generation: Long)
+
+internal data class UserLibraryScope(
+    val session: MembershipSession? = null,
+    val consentRevision: Long = 0,
+    val usesAccountLibrary: Boolean = false,
+    val isHydrated: Boolean = true,
+)
+
+private const val MEMBERSHIP_RETURN_PENDING_FIELD = "awaitingMembershipReturn"
+private const val MEMBERSHIP_RETURN_BASELINE_FIELD = "membershipReturnBaselineExpiry"
+private const val ACCOUNT_WEBSITE_PENDING_FIELD = "pendingAccountWebsite"
+
+enum class DeviceLibraryCopyStatus { IDLE, COPYING, FAILED }
+
 data class AccountSyncUiState(
     val credential: YunlefunCredential? = null,
     val account: YunlefunAccount? = null,
     val entitlement: MembershipEntitlement? = null,
+    val isRefreshingProfile: Boolean = false,
+    val profileRefreshError: String? = null,
     val syncEnabled: Boolean = false,
     val isSyncing: Boolean = false,
     val isHydrated: Boolean = true,
+    val accountCacheUnreadable: Boolean = false,
     val lastSyncedAtMs: Long? = null,
     val accountDocument: UserDataDocument = UserDataDocument(),
     val statusMessage: String? = null,
+    internal val appSignInNonce: String? = null,
+    internal val isSavingSyncConsent: Boolean = false,
+    internal val deviceLibraryCopyStatus: DeviceLibraryCopyStatus = DeviceLibraryCopyStatus.IDLE,
     val pendingWebsitePurpose: AccountWebsitePurpose? = null,
+    internal val approvedWebsitePurpose: AccountWebsitePurpose? = null,
+    internal val expiredWebsitePurpose: AccountWebsitePurpose? = null,
     val awaitingMembershipReturn: Boolean = false,
     val isCheckingMembership: Boolean = false,
     val membershipMessage: String? = null,
+    internal val revision: Long = 0,
+    internal val syncConsentRevision: Long = 0,
+    internal val membershipReturnGeneration: Long = 0,
+    internal val membershipReturnBaselineExpiry: Long = 0,
 ) {
     val usesAccountLibrary: Boolean
         get() = credential != null && syncEnabled
 
     val awaitingAccountWebsite: Boolean get() = pendingWebsitePurpose == AccountWebsitePurpose.ACCOUNT_SETTINGS
+    internal val membershipSession: MembershipSession?
+        get() = credential?.let { MembershipSession(it.subject, revision) }
+    internal val membershipWebsiteReturn: MembershipWebsiteReturn?
+        get() = membershipSession?.takeIf { awaitingMembershipReturn }
+            ?.let { MembershipWebsiteReturn(it, membershipReturnGeneration) }
+    internal val libraryScope: UserLibraryScope
+        get() = UserLibraryScope(membershipSession, syncConsentRevision, usesAccountLibrary, isHydrated)
 }
 
 /**
@@ -1104,6 +1273,8 @@ class YunlefunSessionManager(
     private val accountService: YunlefunAccountService = YunlefunAccountService(),
     private val syncService: UserDataSyncService = UserDataSyncService(),
     private val membershipService: MembershipService = MembershipService(),
+    networkChanges: Flow<Unit> = emptyFlow(),
+    private val accountWebsiteBootCount: Int? = null,
 ) {
     private val accountDao = database.accountLibraryDao()
     private val deviceDao = database.deviceLibraryDao()
@@ -1112,46 +1283,134 @@ class YunlefunSessionManager(
     private val hydratedSubjects = HashSet<String>()
     private val hydrationMutex = Mutex()
     private val mutationMutex = Mutex()
+    private val syncMutex = Mutex()
     private val tokenRefreshMutex = Mutex()
     private val membershipCheckMutex = Mutex()
     private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+    private data class SyncTarget(val session: MembershipSession, val consentRevision: Long)
+
+    private val syncRequests = Channel<SyncTarget>(Channel.CONFLATED)
+    // Guarded by syncMutex. A timed retry must belong to the exact attempt that failed.
+    private var lastTransientSyncTarget: SyncTarget? = null
+    private var syncChoiceRevision = 0L
+    // Guarded by mutationMutex. Access can be restored while an older sync request is still in flight.
+    private var activeMembershipCheckRevision = 0L
+    private var syncWaitingForMembership: SyncTarget? = null
+    private var activeSync: Job? = null
     @Volatile
     private var initialHydrationJob: Job? = null
     @Volatile
     internal var beforeAccountPersistCommitHook: (suspend () -> Unit)? = null
 
-    private val pendingSso = AtomicReference<YunlefunSSO?>()
-    private class PendingAccountWebsite(
+    @Serializable
+    private data class PendingAccountWebsite(
         val handoff: YunlefunAccountWebHandoff,
-        val subject: String,
-        val revision: Long,
         val purpose: AccountWebsitePurpose,
-    )
+        val bootCount: Int?,
+        val approvalBinding: String? = null,
+        val approved: Boolean = false,
+    ) {
+        @kotlinx.serialization.Transient
+        var approving = false
+    }
 
     private var pendingAccountWebsite: PendingAccountWebsite? = null
+    private var accountWebsiteExpiry: Job? = null
+    private var appSignInExpiry: Job? = null
     private val _state = MutableStateFlow(AccountSyncUiState())
     val state: StateFlow<AccountSyncUiState> = _state.asStateFlow()
 
-    val isAccountLibraryActive: Boolean
-        get() {
-            val s = _state.value
-            return s.credential != null && s.syncEnabled
-        }
-
     init {
         restoreSavedSession()
+        if (_state.value.credential == null) {
+            runCatching { readPendingSso() }.getOrNull()
+                ?.takeIf { it.inApp && it.isCurrentAt(System.currentTimeMillis()) }
+                ?.let(::publishPendingAppSignIn)
+        }
+        scope.launch { runQueuedSync() }
+        scope.launch {
+            state.map { current -> current.libraryScope.takeIf { current.isHydrated && it.usesAccountLibrary } }
+                .distinctUntilChanged()
+                .collectLatest { library ->
+                    if (library == null) return@collectLatest
+                    networkChanges.collect {
+                        mutationMutex.withLock {
+                            if (_state.value.libraryScope == library) queueSyncLocked()
+                        }
+                    }
+                }
+        }
     }
 
     private fun restoreSavedSession() {
         val raw = runCatching { vault.readSecret(AndroidKeystoreVault.KEY_YUNLEFUN_SESSION_JSON) }.getOrNull()
             ?: return
-        val saved = runCatching { json.decodeFromString<YunlefunCredential>(raw) }.getOrNull()
+        val session = runCatching { json.parseToJsonElement(raw).jsonObject }.getOrNull()
             ?: return
+        val saved = runCatching { json.decodeFromJsonElement<YunlefunCredential>(session) }.getOrNull()
+            ?: return
+        val awaitingReturn = session[MEMBERSHIP_RETURN_PENDING_FIELD] == JsonPrimitive(true)
+        val baselineExpiry = if (awaitingReturn) {
+            (session[MEMBERSHIP_RETURN_BASELINE_FIELD] as? JsonPrimitive)?.longOrNull?.coerceAtLeast(0L) ?: 0L
+        } else 0L
         val rev = sessionRevision.incrementAndGet()
-        _state.value = _state.value.copy(credential = saved, isHydrated = false)
+        _state.value = _state.value.copy(
+            credential = saved,
+            isHydrated = false,
+            awaitingMembershipReturn = awaitingReturn,
+            membershipReturnBaselineExpiry = baselineExpiry,
+            revision = rev,
+        )
+        if (accountWebsiteBootCount != null) {
+            val pending = session[ACCOUNT_WEBSITE_PENDING_FIELD]?.let {
+                runCatching { json.decodeFromJsonElement<PendingAccountWebsite>(it) }.getOrNull()
+            }
+            if (pending != null) {
+                if (pending.bootCount == accountWebsiteBootCount && pending.handoff.isCurrentAt(SystemClock.elapsedRealtime())) {
+                    publishPendingAccountWebsite(pending)
+                } else {
+                    _state.value = _state.value.copy(expiredWebsitePurpose = pending.purpose)
+                    runCatching { persistSession(saved, awaitingReturn, website = null, baselineExpiry = baselineExpiry) }
+                }
+            }
+        }
         initialHydrationJob = scope.launch {
             runCatching { ensureHydrated(saved.subject, expectedRevision = rev) }
         }
+    }
+
+    private fun persistSession(
+        credential: YunlefunCredential,
+        awaitingMembershipReturn: Boolean = false,
+        website: PendingAccountWebsite? = pendingAccountWebsite,
+        baselineExpiry: Long = _state.value.membershipReturnBaselineExpiry,
+    ) {
+        val fields = json.encodeToJsonElement(YunlefunCredential.serializer(), credential).jsonObject.toMutableMap()
+        if (awaitingMembershipReturn) {
+            fields[MEMBERSHIP_RETURN_PENDING_FIELD] = JsonPrimitive(true)
+            fields[MEMBERSHIP_RETURN_BASELINE_FIELD] = JsonPrimitive(baselineExpiry)
+        }
+        if (website?.bootCount != null) {
+            fields[ACCOUNT_WEBSITE_PENDING_FIELD] = json.encodeToJsonElement(PendingAccountWebsite.serializer(), website)
+        }
+        vault.writeSecret(AndroidKeystoreVault.KEY_YUNLEFUN_SESSION_JSON, JsonObject(fields).toString())
+    }
+
+    // Call under mutationMutex on the IO dispatcher. If storage fails, preserve in-process recovery.
+    private fun setMembershipReturnPending(
+        pending: Boolean,
+        generation: Long = _state.value.membershipReturnGeneration,
+        baselineExpiry: Long = 0,
+    ) {
+        val current = _state.value
+        if (current.awaitingMembershipReturn != pending || current.membershipReturnBaselineExpiry != baselineExpiry) {
+            runCatching { persistSession(requireNotNull(current.credential), pending, baselineExpiry = baselineExpiry) }
+        }
+        _state.value = current.copy(
+            awaitingMembershipReturn = pending,
+            membershipReturnGeneration = generation,
+            membershipReturnBaselineExpiry = baselineExpiry,
+        )
     }
 
     suspend fun awaitInitialHydration() {
@@ -1172,26 +1431,34 @@ class YunlefunSessionManager(
     private suspend fun ensureHydrated(
         uid: String,
         expectedRevision: Long = sessionRevision.get(),
-    ): UserDataDocument = hydrationMutex.withLock {
+    ) = hydrationMutex.withLock {
         if (isHydrated(uid) && _state.value.credential?.subject == uid) {
-            return _state.value.accountDocument
+            return@withLock
         }
         val syncState = accountDao.getSyncState(uid)
-        val cachedDoc = syncState?.lastSyncedDocumentJson?.takeIf { it.isNotBlank() }?.let {
-            runCatching { UserDataDocument.decode(it) }.getOrNull()
-        } ?: UserDataDocument()
-        if (sessionRevision.get() == expectedRevision && _state.value.credential?.subject == uid) {
-            val mergedDoc = cachedDoc.merging(_state.value.accountDocument)
+        val cachedDoc = decodeAccountCache(syncState)
+        mutationMutex.withLock publish@{
+            if (sessionRevision.get() != expectedRevision || _state.value.credential?.subject != uid) {
+                return@publish
+            }
             markHydrated(uid)
             _state.value = _state.value.copy(
-                syncEnabled = syncState?.syncEnabled == true || _state.value.syncEnabled,
+                syncEnabled = cachedDoc != null && syncState?.syncEnabled == true,
                 isHydrated = true,
-                lastSyncedAtMs = syncState?.updatedAtMs?.toLong() ?: _state.value.lastSyncedAtMs,
-                accountDocument = mergedDoc,
+                accountCacheUnreadable = cachedDoc == null,
+                lastSyncedAtMs = syncState?.lastSyncedAtMs,
+                accountDocument = cachedDoc ?: UserDataDocument(),
             )
-            return mergedDoc
         }
-        return cachedDoc
+    }
+
+    private fun decodeAccountCache(syncState: AccountSyncStateEntity?): UserDataDocument? {
+        val raw = syncState?.lastSyncedDocumentJson?.takeIf { it.isNotBlank() } ?: return UserDataDocument()
+        return try {
+            UserDataDocument.decode(raw)
+        } catch (_: UserDataDocument.InvalidDocumentException) {
+            null
+        }
     }
 
     private fun assertSessionUnchanged(expectedRevision: Long, expectedUid: String) {
@@ -1200,100 +1467,382 @@ class YunlefunSessionManager(
         }
     }
 
-    private suspend fun credentialForAccountRequest(revision: Long, subject: String): YunlefunCredential =
+    private suspend fun credentialForAccountRequest(
+        revision: Long,
+        subject: String,
+        rejectedAccessToken: String? = null,
+    ): YunlefunCredential =
         tokenRefreshMutex.withLock {
             val current = mutationMutex.withLock {
                 assertSessionUnchanged(revision, subject)
                 requireNotNull(_state.value.credential)
             }
-            if (current.isValid()) return@withLock current
+            if (current.isValid() && current.accessToken != rejectedAccessToken) return@withLock current
             val fresh = accountService.refresh(current)
-            if (!fresh.isValid()) throw YunlefunAccountException.ExpiredSession()
-            mutationMutex.withLock {
-                assertSessionUnchanged(revision, subject)
-                vault.writeSecret(AndroidKeystoreVault.KEY_YUNLEFUN_SESSION_JSON, json.encodeToString(fresh))
-                _state.value = _state.value.copy(credential = fresh)
+            if (!fresh.isValid() || fresh.subject != subject) throw YunlefunAccountException.ExpiredSession()
+            try {
+                mutationMutex.withLock {
+                    assertSessionUnchanged(revision, subject)
+                    persistSession(fresh, _state.value.awaitingMembershipReturn)
+                    _state.value = _state.value.copy(credential = fresh)
+                }
+            } catch (error: Throwable) {
+                if (error is CancellationException || error is Exception) {
+                    withContext(NonCancellable) { runCatching { accountService.signOut(fresh) } }
+                }
+                throw error
             }
             fresh
         }
 
-    fun beginSsoAuthorization(): String {
-        val sso = YunlefunSSO()
-        pendingSso.set(sso)
-        return sso.authorizationUrl
+    internal fun isCurrentMembershipSession(identity: MembershipSession): Boolean =
+        sessionRevision.get() == identity.revision && state.value.membershipSession == identity
+
+    internal suspend fun <T> withMembershipSession(
+        identity: MembershipSession,
+        request: suspend (YunlefunCredential) -> T,
+    ): T = withMembershipSession(identity, rejectedAccessToken = null, request = request)
+
+    internal suspend fun <T> withMembershipSession(
+        identity: MembershipSession,
+        rejectedAccessToken: String?,
+        request: suspend (YunlefunCredential) -> T,
+    ): T {
+        val credential = credentialForAccountRequest(identity.revision, identity.subject, rejectedAccessToken)
+        val response = request(credential)
+        assertSessionUnchanged(identity.revision, identity.subject)
+        return response
     }
 
-    suspend fun beginAccountWebsite(purpose: AccountWebsitePurpose = AccountWebsitePurpose.ACCOUNT_SETTINGS): String {
-        val (revision, subject) = mutationMutex.withLock {
-            val credential = _state.value.credential ?: throw YunlefunAccountException.ExpiredSession()
-            sessionRevision.get() to credential.subject
+    internal suspend fun <T> withMembershipSessionRetryingAuth(
+        identity: MembershipSession,
+        request: suspend (YunlefunCredential) -> T,
+    ): T = withMembershipSession(identity) { credential ->
+        try {
+            request(credential)
+        } catch (_: YunlefunAccountException.ExpiredSession) {
+            withMembershipSession(identity, credential.accessToken, request)
         }
-        val supported = accountService.supportsAccountWebHandoff()
-        return mutationMutex.withLock {
-            assertSessionUnchanged(revision, subject)
-            clearPendingAccountWebsite()
-            if (!supported) {
-                if (purpose == AccountWebsitePurpose.MEMBERSHIP_PURCHASE) throw YunlefunAccountException.CheckoutUnavailable()
-                return@withLock YunlefunAccountWebHandoff.SETTINGS_URL
-            }
+    }
 
-            val pending = PendingAccountWebsite(YunlefunAccountWebHandoff(), subject, revision, purpose)
-            pendingAccountWebsite = pending
-            _state.value = _state.value.copy(pendingWebsitePurpose = purpose)
-            scope.launch {
-                delay(YunlefunAccountWebHandoff.LIFETIME_MS)
-                mutationMutex.withLock {
-                    if (pendingAccountWebsite === pending) clearPendingAccountWebsite()
+    suspend fun beginSsoAuthorization(): String = withContext(Dispatchers.IO) {
+        mutationMutex.withLock { newSsoLocked(inApp = false).authorizationUrl }
+    }
+
+    internal suspend fun beginAppSsoAuthorization(): YunlefunSSO = withContext(Dispatchers.IO) {
+        mutationMutex.withLock { newSsoLocked(inApp = true) }
+    }
+
+    internal suspend fun continueAppSignInOnWeb(nonce: String): String = withContext(Dispatchers.IO) {
+        mutationMutex.withLock {
+            requireAppSignInLocked(nonce)
+            newSsoLocked(inApp = false).authorizationUrl
+        }
+    }
+
+    internal suspend fun cancelAppSignIn(nonce: String) = withContext(Dispatchers.IO) {
+        mutationMutex.withLock {
+            requireAppSignInLocked(nonce)
+            clearSsoLocked()
+        }
+    }
+
+    internal fun refreshAppSignInOnForeground() {
+        val nonce = _state.value.appSignInNonce ?: return
+        scope.launch {
+            mutationMutex.withLock {
+                if (_state.value.appSignInNonce != nonce) return@withLock
+                val pending = runCatching { readPendingSso() }.getOrNull()
+                if (pending?.nonce == nonce && !pending.isCurrentAt(System.currentTimeMillis())) {
+                    expireAppSignInLocked()
                 }
             }
-            pending.handoff.startUrl
         }
     }
 
-    suspend fun cancelAccountWebsite(purpose: AccountWebsitePurpose = AccountWebsitePurpose.ACCOUNT_SETTINGS): Unit =
-        mutationMutex.withLock {
-            if (pendingAccountWebsite?.purpose == purpose) clearPendingAccountWebsite()
+    private fun newSsoLocked(inApp: Boolean): YunlefunSSO {
+        if (_state.value.credential != null) throw YunlefunAccountException.AuthorizationFailed()
+        val sso = YunlefunSSO(inApp = inApp)
+        vault.writeSecret(AndroidKeystoreVault.KEY_YUNLEFUN_PENDING_SSO, json.encodeToString(sso))
+        publishPendingAppSignIn(sso.takeIf { it.inApp })
+        return sso
+    }
+
+    private fun readPendingSso(): YunlefunSSO? =
+        vault.readSecret(AndroidKeystoreVault.KEY_YUNLEFUN_PENDING_SSO)?.let { raw ->
+            runCatching { json.decodeFromString<YunlefunSSO>(raw) }.getOrNull()
         }
 
-    suspend fun openAccountWebsiteFromCallback(
+    private fun requireAppSignInLocked(nonce: String) {
+        if (_state.value.appSignInNonce != nonce) throw YunlefunAccountException.InvalidCallback()
+        val pending = readPendingSso()
+        if (pending?.nonce != nonce || !pending.inApp) throw YunlefunAccountException.InvalidCallback()
+        if (!pending.isCurrentAt(System.currentTimeMillis())) {
+            expireAppSignInLocked()
+            throw YunlefunAccountException.InvalidCallback()
+        }
+    }
+
+    private fun clearSsoLocked() {
+        vault.deleteSecret(AndroidKeystoreVault.KEY_YUNLEFUN_PENDING_SSO)
+        publishPendingAppSignIn(null)
+    }
+
+    private fun expireAppSignInLocked() {
+        runCatching { clearSsoLocked() }.onFailure { publishPendingAppSignIn(null) }
+    }
+
+    private fun publishPendingAppSignIn(sso: YunlefunSSO?) {
+        appSignInExpiry?.cancel()
+        _state.value = _state.value.copy(appSignInNonce = sso?.nonce)
+        appSignInExpiry = sso?.let {
+            scope.launch {
+                delay((sso.createdAtMs + YunlefunSSO.LIFETIME_MS - System.currentTimeMillis()).coerceAtLeast(0))
+                mutationMutex.withLock {
+                    if (_state.value.appSignInNonce == sso.nonce) expireAppSignInLocked()
+                }
+            }
+        }
+    }
+
+    internal suspend fun prepareAccountWebsite(
+        purpose: AccountWebsitePurpose,
+        expectedSession: MembershipSession? = null,
+    ): AccountWebsiteLaunch = withContext(Dispatchers.IO) {
+        val session = expectedSession ?: _state.value.membershipSession ?: throw YunlefunAccountException.ExpiredSession()
+        assertSessionUnchanged(session.revision, session.subject)
+        val supported = accountService.supportsAccountWebHandoff()
+        assertSessionUnchanged(session.revision, session.subject)
+        if (!supported && purpose == AccountWebsitePurpose.MEMBERSHIP_PURCHASE) throw YunlefunAccountException.CheckoutUnavailable()
+        AccountWebsiteLaunch(session, purpose, supported)
+    }
+
+    internal suspend fun launchAccountWebsite(launch: AccountWebsiteLaunch, open: (String) -> Unit) {
+        mutationMutex.withLock {
+            assertSessionUnchanged(launch.session.revision, launch.session.subject)
+            val previous = pendingAccountWebsite
+            try {
+                val pending = withContext(Dispatchers.IO) {
+                    val next = if (launch.supportsHandoff) {
+                        PendingAccountWebsite(YunlefunAccountWebHandoff(), launch.purpose, accountWebsiteBootCount)
+                    } else null
+                    savePendingAccountWebsite(next)
+                    next
+                }
+                if (pending != null && !pending.handoff.isCurrentAt(SystemClock.elapsedRealtime())) {
+                    throw YunlefunAccountException.InvalidWebsiteCallback()
+                }
+                open(pending?.handoff?.startUrl ?: YunlefunAccountWebHandoff.SETTINGS_URL)
+            } catch (error: Exception) {
+                if (pendingAccountWebsite !== previous) {
+                    withContext(NonCancellable + Dispatchers.IO) {
+                        val stillCurrent = previous?.takeIf { it.handoff.isCurrentAt(SystemClock.elapsedRealtime()) }
+                        runCatching { savePendingAccountWebsite(stillCurrent) }.onFailure(error::addSuppressed)
+                    }
+                }
+                throw error
+            }
+        }
+    }
+
+    suspend fun cancelAccountWebsite(purpose: AccountWebsitePurpose = AccountWebsitePurpose.ACCOUNT_SETTINGS): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runSuspendCatching {
+                mutationMutex.withLock {
+                    if (pendingAccountWebsite?.purpose == purpose) savePendingAccountWebsite(null)
+                }
+            }
+        }
+
+    internal fun refreshAccountWebsiteOnForeground() {
+        if (state.value.pendingWebsitePurpose == null) return
+        scope.launch {
+            mutationMutex.withLock {
+                val pending = pendingAccountWebsite ?: return@withLock
+                // Elapsed time continues during sleep while a coroutine delay can remain queued.
+                if (!pending.handoff.isCurrentAt(SystemClock.elapsedRealtime())) expireAccountWebsite(pending)
+            }
+        }
+    }
+
+    internal suspend fun approveAccountWebsiteCallback(
         callbackUrl: String,
         expectedPurpose: AccountWebsitePurpose? = null,
-        open: (String) -> Unit,
-    ) {
-        val (pending, completion) = mutationMutex.withLock {
+    ): ApprovedAccountWebsite = withContext(Dispatchers.IO) {
+        val (session, pending, completion) = mutationMutex.withLock {
             val current = pendingAccountWebsite ?: throw YunlefunAccountException.InvalidWebsiteCallback()
-            if (expectedPurpose != null && current.purpose != expectedPurpose) {
+            requireCurrentAccountWebsite(current)
+            if (current.approving || (expectedPurpose != null && current.purpose != expectedPurpose)) {
                 throw YunlefunAccountException.InvalidWebsiteCallback()
             }
-            assertSessionUnchanged(current.revision, current.subject)
+            val session = _state.value.membershipSession ?: throw YunlefunAccountException.InvalidWebsiteCallback()
             val completion = current.handoff.complete(callbackUrl)
-            clearPendingAccountWebsite()
-            current to completion
+            val binding = completion.approval.getValue("binding")
+            val bound = when (current.approvalBinding) {
+                null -> current.copy(approvalBinding = binding).also { savePendingAccountWebsite(it) }
+                binding -> current
+                else -> throw YunlefunAccountException.InvalidWebsiteCallback()
+            }
+            bound.approving = !bound.approved
+            Triple(session, bound, completion)
         }
-        val credential = credentialForAccountRequest(pending.revision, pending.subject)
-        accountService.approveAccountWebHandoff(completion.approval, credential)
+        if (pending.approved) return@withContext approvedWebsite(pending, session, completion.url)
+        val approved = try {
+            var retriedConnection = false
+            withMembershipSessionRetryingAuth(session) { credential ->
+                suspend fun submit() {
+                    val remainingMs = mutationMutex.withLock {
+                        assertSessionUnchanged(session.revision, session.subject)
+                        requireCurrentAccountWebsite(pending)
+                        pending.handoff.expiresAtMs - SystemClock.elapsedRealtime()
+                    }
+                    withTimeoutOrNull(remainingMs) {
+                        accountService.approveAccountWebHandoff(completion.approval, credential)
+                    } ?: throw YunlefunAccountException.InvalidWebsiteCallback()
+                }
+                try {
+                    submit()
+                } catch (error: YunlefunAccountException.Unavailable) {
+                    if (!error.retryable || retriedConnection) throw error
+                    retriedConnection = true
+                    delay(400)
+                    submit()
+                }
+            }
+            mutationMutex.withLock {
+                assertSessionUnchanged(session.revision, session.subject)
+                requireCurrentAccountWebsite(pending)
+                pending.copy(approved = true).also { savePendingAccountWebsite(it) }
+            }
+        } finally {
+            withContext(NonCancellable) {
+                mutationMutex.withLock { pending.approving = false }
+            }
+        }
+        approvedWebsite(approved, session, completion.url)
+    }
+
+    internal suspend fun resumeApprovedAccountWebsite(purpose: AccountWebsitePurpose): ApprovedAccountWebsite =
+        withContext(Dispatchers.IO) {
+            mutationMutex.withLock {
+                val pending = pendingAccountWebsite?.takeIf { it.purpose == purpose && it.approved }
+                    ?: throw YunlefunAccountException.InvalidWebsiteCallback()
+                requireCurrentAccountWebsite(pending)
+                val session = _state.value.membershipSession ?: throw YunlefunAccountException.InvalidWebsiteCallback()
+                val binding = pending.approvalBinding ?: throw YunlefunAccountException.InvalidWebsiteCallback()
+                approvedWebsite(pending, session, pending.handoff.continuationUrl(binding))
+            }
+        }
+
+    private fun approvedWebsite(pending: PendingAccountWebsite, session: MembershipSession, url: String): ApprovedAccountWebsite {
+        val destination = if (pending.purpose == AccountWebsitePurpose.MEMBERSHIP_PURCHASE) "$url#membership" else url
+        return ApprovedAccountWebsite(destination, session, pending.handoff)
+    }
+
+    // Checked under mutationMutex before sending approval and before completing the handoff.
+    private suspend fun requireCurrentAccountWebsite(pending: PendingAccountWebsite) {
+        if (pendingAccountWebsite !== pending) throw YunlefunAccountException.InvalidWebsiteCallback()
+        if (!pending.handoff.isCurrentAt(SystemClock.elapsedRealtime())) {
+            withContext(Dispatchers.IO) { expireAccountWebsite(pending) }
+            throw YunlefunAccountException.InvalidWebsiteCallback()
+        }
+    }
+
+    internal suspend fun openApprovedAccountWebsite(website: ApprovedAccountWebsite, open: (String) -> Unit) {
         mutationMutex.withLock {
-            assertSessionUnchanged(pending.revision, pending.subject)
-            open(completion.url)
-            if (pending.purpose == AccountWebsitePurpose.MEMBERSHIP_PURCHASE) {
-                _state.value = _state.value.copy(awaitingMembershipReturn = true, membershipMessage = null)
+            assertSessionUnchanged(website.session.revision, website.session.subject)
+            val pending = pendingAccountWebsite?.takeIf { it.approved && it.handoff === website.handoff }
+                ?: throw YunlefunAccountException.InvalidWebsiteCallback()
+            requireCurrentAccountWebsite(pending)
+            val checkout = pending.purpose == AccountWebsitePurpose.MEMBERSHIP_PURCHASE
+            val before = _state.value
+            try {
+                if (checkout) {
+                    withContext(Dispatchers.IO) {
+                        val baseline = before.entitlement?.takeIf { it.isActiveAt() }?.expiresAtEpochMs ?: 0L
+                        setMembershipReturnPending(true, before.membershipReturnGeneration + 1, baseline)
+                    }
+                    requireCurrentAccountWebsite(pending)
+                }
+                open(website.url)
+            } catch (error: Exception) {
+                if (checkout) {
+                    withContext(NonCancellable + Dispatchers.IO) {
+                        setMembershipReturnPending(
+                            before.awaitingMembershipReturn,
+                            before.membershipReturnGeneration,
+                            before.membershipReturnBaselineExpiry,
+                        )
+                    }
+                }
+                throw error
+            }
+            publishPendingAccountWebsite(null)
+            if (checkout) _state.value = _state.value.copy(membershipMessage = null)
+            if (pending.bootCount != null) {
+                withContext(NonCancellable + Dispatchers.IO) {
+                    // The browser is already open. If saving fails, its grant can still only be redeemed once.
+                    val delivered = _state.value
+                    runCatching { persistSession(requireNotNull(delivered.credential), delivered.awaitingMembershipReturn) }
+                }
             }
         }
     }
 
-    private fun clearPendingAccountWebsite() {
-        pendingAccountWebsite = null
-        _state.value = _state.value.copy(pendingWebsitePurpose = null)
+    // Run under mutationMutex on the IO dispatcher before opening or consuming a request.
+    private fun savePendingAccountWebsite(pending: PendingAccountWebsite?, expiredPurpose: AccountWebsitePurpose? = null) {
+        if (pendingAccountWebsite?.bootCount != null || pending?.bootCount != null) {
+            val current = _state.value
+            persistSession(requireNotNull(current.credential), current.awaitingMembershipReturn, website = pending)
+        }
+        publishPendingAccountWebsite(pending, expiredPurpose)
     }
 
-    suspend fun handleSsoCallbackUrl(callbackUrl: String): Result<YunlefunAccount> = withContext(Dispatchers.IO) {
-        runCatching {
-            val (sso, revision) = mutationMutex.withLock {
-                (pendingSso.getAndSet(null) ?: throw YunlefunAccountException.InvalidCallback()) to sessionRevision.get()
+    private fun expireAccountWebsite(pending: PendingAccountWebsite) {
+        // An expired proof is also rejected on restore if the vault is unavailable.
+        runCatching { savePendingAccountWebsite(null, expiredPurpose = pending.purpose) }
+            .onFailure { publishPendingAccountWebsite(null, expiredPurpose = pending.purpose) }
+    }
+
+    private fun publishPendingAccountWebsite(pending: PendingAccountWebsite?, expiredPurpose: AccountWebsitePurpose? = null) {
+        accountWebsiteExpiry?.cancel()
+        pendingAccountWebsite = pending
+        _state.value = _state.value.copy(
+            pendingWebsitePurpose = pending?.purpose,
+            approvedWebsitePurpose = pending?.takeIf { it.approved }?.purpose,
+            expiredWebsitePurpose = expiredPurpose,
+        )
+        accountWebsiteExpiry = pending?.let {
+            scope.launch {
+                delay((pending.handoff.expiresAtMs - SystemClock.elapsedRealtime()).coerceAtLeast(0))
+                mutationMutex.withLock {
+                    if (pendingAccountWebsite === pending) expireAccountWebsite(pending)
+                }
             }
-            val fields = sso.exchangeFields(callbackUrl)
-            val credential = accountService.signIn(fields, deviceID = UUID.randomUUID().toString())
+        }
+    }
+
+    internal suspend fun handleSsoCallbackUrl(callbackUrl: String): Result<YunlefunSignInResult> = withContext(Dispatchers.IO) {
+        runSuspendCatching {
+            val (callback, revision) = mutationMutex.withLock {
+                if (_state.value.credential != null) throw YunlefunAccountException.InvalidCallback()
+                val sso = readPendingSso()
+                val now = System.currentTimeMillis()
+                if (sso == null || !sso.isCurrentAt(now)) {
+                    clearSsoLocked()
+                    throw YunlefunAccountException.InvalidCallback()
+                }
+                val parsed = sso.callbackResult(callbackUrl, now)
+                if (parsed == YunlefunSSO.Callback.SelectAccountOnWeb && sso.inApp) {
+                    val url = newSsoLocked(inApp = false).authorizationUrl
+                    return@runSuspendCatching YunlefunSignInResult.ContinueInBrowser(url)
+                }
+                clearSsoLocked()
+                parsed to sessionRevision.get()
+            }
+            val credential = accountService.signIn(callback.exchangeFields(), deviceID = UUID.randomUUID().toString())
             establishSession(credential, revision)
+            YunlefunSignInResult.SignedIn
         }
     }
 
@@ -1332,19 +1881,30 @@ class YunlefunSessionManager(
     }
 
     internal suspend fun bindWeChat(authorize: suspend () -> String?): Boolean {
-        val (subject, revision) = mutationMutex.withLock {
-            val credential = _state.value.credential ?: throw YunlefunAccountException.ExpiredSession()
-            if (!credential.isValid()) throw YunlefunAccountException.ExpiredSession()
-            credential.subject to sessionRevision.get()
+        val identity = mutationMutex.withLock {
+            _state.value.membershipSession ?: throw YunlefunAccountException.ExpiredSession()
         }
+        withContext(Dispatchers.IO) {
+            credentialForAccountRequest(identity.revision, identity.subject)
+        }
+        assertSessionUnchanged(identity.revision, identity.subject)
         val code = authorize() ?: return false
         withContext(Dispatchers.IO) {
-            val credential = mutationMutex.withLock {
-                assertSessionUnchanged(revision, subject)
-                _state.value.credential ?: throw YunlefunAccountException.ExpiredSession()
+            withMembershipSession(identity) { credential ->
+                assertSessionUnchanged(identity.revision, identity.subject)
+                try {
+                    accountService.bindWeChat(code, credential)
+                } catch (rejected: YunlefunAccountException.ExpiredSession) {
+                    val renewed = credentialForAccountRequest(
+                        identity.revision,
+                        identity.subject,
+                        rejectedAccessToken = credential.accessToken,
+                    )
+                    if (renewed.accessToken == credential.accessToken) throw rejected
+                    // The server may already have used the WeChat code before rejecting the session.
+                    throw WeChatAccountException(WeChatAccountException.Reason.BINDING_REAUTHORIZE)
+                }
             }
-            accountService.bindWeChat(code, credential)
-            assertSessionUnchanged(revision, subject)
         }
         return true
     }
@@ -1362,26 +1922,29 @@ class YunlefunSessionManager(
             mutationMutex.withLock {
                 if (sessionRevision.get() != revision) throw YunlefunAccountException.ExpiredSession()
                 val syncState = accountDao.getSyncState(credential.subject)
-                val cachedDoc = syncState?.lastSyncedDocumentJson?.takeIf { it.isNotBlank() }?.let {
-                    runCatching { UserDataDocument.decode(it) }.getOrNull()
-                } ?: UserDataDocument()
+                val cachedDoc = decodeAccountCache(syncState)
                 coroutineContext.ensureActive()
-                vault.writeSecret(AndroidKeystoreVault.KEY_YUNLEFUN_SESSION_JSON, json.encodeToString(credential))
-                sessionRevision.incrementAndGet()
-                pendingSso.set(null)
-                pendingAccountWebsite = null
+                clearSsoLocked()
+                persistSession(credential, website = null)
+                val newRevision = sessionRevision.incrementAndGet()
+                activeSync?.cancel()
+                syncWaitingForMembership = null
+                publishPendingAccountWebsite(null)
                 clearHydrated()
                 markHydrated(credential.subject)
                 _state.value = AccountSyncUiState(
                     credential = credential,
                     account = profile,
                     entitlement = entitlement,
-                    syncEnabled = syncState?.syncEnabled == true,
+                    syncEnabled = cachedDoc != null && syncState?.syncEnabled == true,
                     isHydrated = true,
-                    lastSyncedAtMs = syncState?.updatedAtMs?.toLong(),
-                    accountDocument = cachedDoc,
+                    accountCacheUnreadable = cachedDoc == null,
+                    lastSyncedAtMs = syncState?.lastSyncedAtMs,
+                    accountDocument = cachedDoc ?: UserDataDocument(),
                     statusMessage = "已登录 ${profile.displayName}",
+                    revision = newRevision,
                 )
+                queueSyncLocked()
             }
             return profile
         } catch (error: Exception) {
@@ -1390,80 +1953,205 @@ class YunlefunSessionManager(
         }
     }
 
-    suspend fun refreshProfileAndEntitlement(): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
-            val (revision, subject) = mutationMutex.withLock {
-                val credential = _state.value.credential ?: throw YunlefunAccountException.ExpiredSession()
-                sessionRevision.get() to credential.subject
-            }
-            membershipCheckMutex.withLock {
-                ensureHydrated(subject, revision)
-                val credential = credentialForAccountRequest(revision, subject)
-                val profile = accountService.account(credential)
-                val entitlement = try {
-                    membershipService.queryEntitlement(credential)
+    fun requestForegroundProfileRefresh() {
+        val current = state.value
+        if (current.isRefreshingProfile) return
+        val session = current.membershipSession ?: return
+        scope.launch { refreshProfileAndEntitlement(session, onlyIfNeeded = true) }
+    }
+
+    internal suspend fun refreshProfileAndEntitlement(
+        expectedSession: MembershipSession? = state.value.membershipSession,
+        onlyIfNeeded: Boolean = false,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        runSuspendCatching {
+            val session = expectedSession ?: throw YunlefunAccountException.ExpiredSession()
+            membershipCheckMutex.withLock profileCheck@{
+                val initial = mutationMutex.withLock start@{
+                    assertSessionUnchanged(session.revision, session.subject)
+                    val current = _state.value
+                    val credential = requireNotNull(current.credential)
+                    if (onlyIfNeeded && credential.isValid() && current.account != null &&
+                        current.entitlement != null && current.profileRefreshError == null
+                    ) return@start null
+                    _state.value = current.copy(isRefreshingProfile = true, profileRefreshError = null)
+                    current
+                } ?: return@profileCheck
+                val initialCredential = requireNotNull(initial.credential)
+                var profileToken = initialCredential.accessToken
+                try {
+                    val profile = try {
+                        withMembershipSessionRetryingAuth(session) { credential ->
+                            profileToken = credential.accessToken
+                            accountService.account(credential)
+                        }
+                    } catch (error: YunlefunAccountException.ExpiredSession) {
+                        tokenRefreshMutex.withLock {
+                            mutationMutex.withLock {
+                                if (isCurrentMembershipSession(session) && _state.value.credential?.accessToken == profileToken) {
+                                    try {
+                                        vault.deleteSecret(AndroidKeystoreVault.KEY_YUNLEFUN_SESSION_JSON)
+                                    } catch (_: Exception) {
+                                        throw YunlefunAccountException.SecureStorage()
+                                    }
+                                    resetLocalSessionLocked("登录已过期，请重新登录。当前使用本机收藏与历史。")
+                                }
+                            }
+                        }
+                        throw error
+                    }
+                    // A checkout return has its own entitlement check and clears the persisted return marker.
+                    val needsEntitlement = initial.entitlement == null || initial.profileRefreshError != null || !initialCredential.isValid()
+                    val checkEntitlement = !onlyIfNeeded || (needsEntitlement && !_state.value.awaitingMembershipReturn)
+                    val entitlement = if (checkEntitlement) {
+                        try {
+                            withMembershipSessionRetryingAuth(session, membershipService::queryEntitlement)
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (_: Exception) {
+                            null
+                        }
+                    } else null
+                    mutationMutex.withLock {
+                        assertSessionUnchanged(session.revision, session.subject)
+                        val current = _state.value
+                        _state.value = current.copy(
+                            account = profile,
+                            entitlement = entitlement ?: current.entitlement,
+                            profileRefreshError = "已刷新账号资料，暂时无法核对会员权益。".takeIf { checkEntitlement && entitlement == null },
+                            statusMessage = if (!onlyIfNeeded && entitlement != null) "已刷新账号与会员状态" else current.statusMessage,
+                        )
+                        if (entitlement != null) handleMembershipSyncRecoveryLocked(entitlement)
+                    }
                 } catch (error: CancellationException) {
                     throw error
-                } catch (_: Exception) {
-                    null
-                }
-                mutationMutex.withLock {
-                    assertSessionUnchanged(revision, subject)
-                    val syncState = accountDao.getSyncState(subject)
-                    val cachedDoc = syncState?.lastSyncedDocumentJson?.takeIf { it.isNotBlank() }?.let {
-                        runCatching { UserDataDocument.decode(it) }.getOrNull()
-                    }?.merging(_state.value.accountDocument) ?: _state.value.accountDocument
-                    _state.value = _state.value.copy(
-                        account = profile,
-                        entitlement = entitlement ?: _state.value.entitlement,
-                        syncEnabled = syncState?.syncEnabled == true || _state.value.syncEnabled,
-                        accountDocument = cachedDoc,
-                        statusMessage = if (entitlement == null) "已刷新账号资料，暂时无法核对会员权益。" else "已刷新账号与会员状态",
-                    )
+                } catch (error: Exception) {
+                    mutationMutex.withLock {
+                        if (isCurrentMembershipSession(session)) {
+                            val message = (error as? YunlefunAccountException)?.message
+                            _state.value = _state.value.copy(profileRefreshError = message ?: "暂时无法刷新账号资料，请重试。")
+                        }
+                    }
+                    throw error
+                } finally {
+                    withContext(NonCancellable) {
+                        mutationMutex.withLock {
+                            if (isCurrentMembershipSession(session)) {
+                                _state.value = _state.value.copy(isRefreshingProfile = false)
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
-    suspend fun checkMembership(reason: MembershipCheckReason) = withContext(Dispatchers.IO) {
+    suspend fun checkMembership(reason: MembershipCheckReason) {
+        checkMembership(reason, expectedSession = null)
+    }
+
+    internal fun requestMembershipRestore(expected: MembershipSession) {
+        scope.launch { checkMembership(MembershipCheckReason.RESTORE, expected) }
+    }
+
+    internal suspend fun recoverMembershipWebsiteReturn(
+        returned: MembershipWebsiteReturn,
+        checks: Flow<Unit>,
+        retryDelaysMs: List<Long> = listOf(3_000L, 7_000L, 15_000L),
+    ): Unit = coroutineScope {
+        if (state.value.membershipWebsiteReturn != returned) return@coroutineScope
+        val timedChecks = flow {
+            for ((index, waitMs) in retryDelaysMs.withIndex()) {
+                delay(waitMs)
+                emit(index == retryDelaysMs.lastIndex)
+            }
+        }
+        val retry = launch {
+            merge(checks.map { false }, timedChecks).collect { finalCheck ->
+                checkMembership(MembershipCheckReason.CHECKOUT_RETURN, returned.session, returned, finalCheck)
+            }
+        }
+        try {
+            state.first { it.membershipWebsiteReturn != returned }
+        } finally {
+            retry.cancel()
+        }
+    }
+
+    internal suspend fun checkMembership(
+        reason: MembershipCheckReason,
+        expectedSession: MembershipSession?,
+        expectedReturn: MembershipWebsiteReturn? = null,
+        finalWebsiteCheck: Boolean = false,
+    ): MembershipCheckResult = withContext(Dispatchers.IO) {
         val identity = mutationMutex.withLock {
             val subject = _state.value.credential?.subject ?: return@withLock null
-            if (reason == MembershipCheckReason.CHECKOUT_RETURN) {
-                if (!_state.value.awaitingMembershipReturn) return@withLock null
-                _state.value = _state.value.copy(awaitingMembershipReturn = false)
-            }
+            if (expectedSession != null && !isCurrentMembershipSession(expectedSession)) return@withLock null
             sessionRevision.get() to subject
-        } ?: return@withContext
+        } ?: return@withContext MembershipCheckResult.NOT_UPDATED
 
         val (revision, subject) = identity
         membershipCheckMutex.withLock {
-            mutationMutex.withLock {
+            val returnGeneration = mutationMutex.withLock claim@{
                 assertSessionUnchanged(revision, subject)
-                _state.value = _state.value.copy(isCheckingMembership = true, membershipMessage = null)
-            }
+                val current = _state.value
+                if (reason == MembershipCheckReason.CHECKOUT_RETURN && !current.awaitingMembershipReturn) {
+                    return@claim null
+                }
+                if (expectedReturn != null && current.membershipWebsiteReturn != expectedReturn) {
+                    return@claim null
+                }
+                _state.value = current.copy(isCheckingMembership = true, membershipMessage = null)
+                current.membershipReturnGeneration
+            } ?: return@withContext MembershipCheckResult.NOT_UPDATED
             try {
-                val credential = credentialForAccountRequest(revision, subject)
-                val entitlement = membershipService.queryEntitlement(credential)
-                mutationMutex.withLock {
+                val entitlement = withMembershipSessionRetryingAuth(
+                    MembershipSession(subject, revision), membershipService::queryEntitlement,
+                )
+                mutationMutex.withLock publish@{
                     assertSessionUnchanged(revision, subject)
+                    if (expectedReturn != null && _state.value.membershipWebsiteReturn != expectedReturn) {
+                        return@publish MembershipCheckResult.NOT_UPDATED
+                    }
+                    val current = _state.value
+                    val checksWebsiteReturn = current.awaitingMembershipReturn &&
+                        returnGeneration == current.membershipReturnGeneration &&
+                        (reason == MembershipCheckReason.CHECKOUT_RETURN || reason == MembershipCheckReason.RESTORE)
+                    val activeExpiry = entitlement.takeIf { it.isActiveAt() }?.expiresAtEpochMs ?: 0L
+                    val returnStillPending = checksWebsiteReturn && activeExpiry <= current.membershipReturnBaselineExpiry
+                    if (checksWebsiteReturn && (!returnStillPending || finalWebsiteCheck)) {
+                        setMembershipReturnPending(false)
+                    }
                     _state.value = _state.value.copy(
                         entitlement = entitlement,
                         membershipMessage = when {
                             reason == MembershipCheckReason.SCREEN -> null
-                            entitlement.isActiveAt() -> "当前账号的会员权益已核对。"
+                            returnStillPending -> "会员有效期尚未更新。若已支付，可稍后再核对。"
+                            activeExpiry > 0L -> "当前账号的会员权益已核对。"
+                            reason == MembershipCheckReason.PLAY_ORDER -> "当前账号尚无有效会员。"
                             else -> "当前账号尚无有效会员。若网页订单正在处理，可以稍后再核对。"
                         },
                     )
+                    handleMembershipSyncRecoveryLocked(entitlement)
+                    MembershipCheckResult.UPDATED
                 }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
-                mutationMutex.withLock {
+                mutationMutex.withLock publish@{
                     assertSessionUnchanged(revision, subject)
+                    if (expectedReturn != null && _state.value.membershipWebsiteReturn != expectedReturn) {
+                        return@publish MembershipCheckResult.NOT_UPDATED
+                    }
                     _state.value = _state.value.copy(
                         membershipMessage = if (error is YunlefunAccountException.ExpiredSession) error.message
                         else "暂时无法核对会员权益，请重试。",
                     )
+                    if (error is IOException || (error as? YunlefunAccountException.Unavailable)?.retryable == true) {
+                        MembershipCheckResult.RETRYABLE_FAILURE
+                    } else {
+                        MembershipCheckResult.NOT_UPDATED
+                    }
                 }
             } finally {
                 withContext(NonCancellable) {
@@ -1477,27 +2165,81 @@ class YunlefunSessionManager(
         }
     }
 
-    suspend fun setSyncEnabled(enabled: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
-            val cred = _state.value.credential ?: throw UserDataSyncException.LoginRequired()
-            val capturedRev = sessionRevision.get()
-            val capturedUid = cred.subject
-            val hydratedDoc = ensureHydrated(capturedUid, capturedRev)
-            if (enabled) {
-                syncService.checkAccess(cred)
+    internal fun requestSyncEnabled(enabled: Boolean, expected: UserLibraryScope) {
+        scope.launch { setSyncEnabled(enabled, expected) }
+    }
+
+    internal suspend fun setSyncEnabled(enabled: Boolean, expected: UserLibraryScope? = null): Result<Unit> = withContext(Dispatchers.IO) {
+        runSuspendCatching {
+            val (session, choice) = mutationMutex.withLock {
+                val current = _state.value
+                if (expected != null && current.libraryScope != expected) throw UserDataSyncException.LibraryChanged()
+                val session = current.membershipSession ?: throw UserDataSyncException.LoginRequired()
+                _state.value = current.copy(isSavingSyncConsent = true)
+                session to ++syncChoiceRevision
             }
+            try {
+                ensureHydrated(session.subject, session.revision)
+                mutationMutex.withLock {
+                    assertSessionUnchanged(session.revision, session.subject)
+                    if (_state.value.accountCacheUnreadable) throw UserDataSyncException.AccountCacheUnreadable()
+                }
+                if (enabled) withSyncCredential(session, request = syncService::checkAccess)
+                mutationMutex.withLock {
+                    assertSessionUnchanged(session.revision, session.subject)
+                    if (choice != syncChoiceRevision) throw CancellationException("同步设置已变更")
+                    persistAccountDocument(session.subject, _state.value.accountDocument, syncEnabled = enabled)
+                    activeSync?.cancel()
+                    syncWaitingForMembership = null
+                    _state.value = _state.value.copy(
+                        syncEnabled = enabled,
+                        isSyncing = false,
+                        deviceLibraryCopyStatus = DeviceLibraryCopyStatus.IDLE,
+                        statusMessage = if (enabled) "已开启账号跨端同步" else "已关闭跨端同步，已切回本机收藏与历史",
+                        syncConsentRevision = _state.value.syncConsentRevision + 1,
+                    )
+                    if (enabled) queueSyncLocked()
+                }
+            } catch (failure: Exception) {
+                if (failure !is CancellationException) mutationMutex.withLock {
+                    if (_state.value.membershipSession == session && choice == syncChoiceRevision) {
+                        _state.value = _state.value.copy(statusMessage = failure.message)
+                    }
+                }
+                throw failure
+            } finally {
+                withContext(NonCancellable) {
+                    mutationMutex.withLock {
+                        val current = _state.value
+                        if (current.membershipSession == session && choice == syncChoiceRevision) {
+                            _state.value = current.copy(isSavingSyncConsent = false)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    internal fun requestDeviceLibraryCopy(expected: UserLibraryScope) {
+        scope.launch {
             mutationMutex.withLock {
-                assertSessionUnchanged(capturedRev, capturedUid)
-                val currentDoc = hydratedDoc.merging(_state.value.accountDocument)
-                persistAccountDocument(capturedUid, currentDoc, syncEnabled = enabled)
-                _state.value = _state.value.copy(
-                    syncEnabled = enabled,
-                    accountDocument = currentDoc,
-                    statusMessage = if (enabled) "已开启账号跨端同步" else "已关闭跨端同步，已切回本机收藏与历史",
-                )
+                val current = _state.value
+                if (current.libraryScope != expected || !current.usesAccountLibrary ||
+                    current.deviceLibraryCopyStatus == DeviceLibraryCopyStatus.COPYING
+                ) return@launch
+                _state.value = current.copy(deviceLibraryCopyStatus = DeviceLibraryCopyStatus.COPYING)
             }
-            if (enabled) {
-                syncNow().getOrThrow()
+            val failure = copyDeviceLibraryToAccount(expected).exceptionOrNull()
+            mutationMutex.withLock {
+                val current = _state.value
+                if (current.libraryScope == expected) {
+                    val status = if (failure == null || failure is CancellationException) {
+                        DeviceLibraryCopyStatus.IDLE
+                    } else {
+                        DeviceLibraryCopyStatus.FAILED
+                    }
+                    _state.value = current.copy(deviceLibraryCopyStatus = status)
+                }
             }
         }
     }
@@ -1505,54 +2247,38 @@ class YunlefunSessionManager(
     /**
      * 显式将本机 `DeviceLibrary` 收藏与历史合并到当前账号库（不会在首次登录时自动静默上传）。
      */
-    suspend fun copyDeviceLibraryToAccount(): Result<Pair<Int, Int>> = withContext(Dispatchers.IO) {
-        runCatching {
-            val cred = _state.value.credential ?: throw UserDataSyncException.LoginRequired()
-            val capturedRev = sessionRevision.get()
-            val capturedUid = cred.subject
-            val baseDoc = ensureHydrated(capturedUid, capturedRev)
-            val devFavs = deviceDao.getAllFavorites().map {
-                UserDataDocument.Favorite(id = it.recipeId, time = it.addedAtMs)
-            }
-            val devHistories = deviceDao.getAllHistories().mapNotNull { entity ->
-                runCatching {
-                    UserDataDocument.Visit(
-                        recipe = UserDataDocument.wireJson.decodeFromString<UserDataDocument.RecipeSnapshot>(entity.snapshotJson),
-                        time = entity.visitedAtMs,
-                    )
-                }.getOrNull()
-            }
-            val deviceDoc = UserDataDocument(
-                favorites = devFavs.take(UserDataDocument.MAX_FAVORITES),
-                histories = devHistories.take(UserDataDocument.MAX_HISTORIES),
-            )
-            val merged = mutationMutex.withLock {
-                assertSessionUnchanged(capturedRev, capturedUid)
-                val combined = baseDoc.merging(_state.value.accountDocument).merging(deviceDoc)
-                persistAccountDocument(capturedUid, combined, syncEnabled = _state.value.syncEnabled)
-                _state.value = _state.value.copy(
-                    accountDocument = combined,
-                    statusMessage = "已将本机记录合并到当前账号（共 ${combined.favorites.size} 条收藏、${combined.histories.size} 条历史）",
+    internal suspend fun copyDeviceLibraryToAccount(expected: UserLibraryScope): Result<Pair<Int, Int>> = withContext(Dispatchers.IO) {
+        runSuspendCatching {
+            val deviceDoc = database.withTransaction {
+                val devFavs = deviceDao.getAllFavorites().map {
+                    UserDataDocument.Favorite(id = it.recipeId, time = it.addedAtMs)
+                }
+                val devHistories = deviceDao.getAllHistories().mapNotNull { entity ->
+                    runCatching {
+                        UserDataDocument.Visit(
+                            recipe = UserDataDocument.wireJson.decodeFromString<UserDataDocument.RecipeSnapshot>(entity.snapshotJson),
+                            time = entity.visitedAtMs,
+                        )
+                    }.getOrNull()
+                }
+                UserDataDocument(
+                    favorites = devFavs.take(UserDataDocument.MAX_FAVORITES),
+                    histories = devHistories.take(UserDataDocument.MAX_HISTORIES),
                 )
-                combined
             }
-            if (_state.value.syncEnabled) {
-                runCatching { syncNow().getOrThrow() }
-            }
+            val merged = editAccountLibrary(expected, statusOnSave = {
+                "已将本机记录合并到当前账号（共 ${it.favorites.size} 条收藏、${it.histories.size} 条历史）"
+            }) { it.merging(deviceDoc) }
             Pair(merged.favorites.size, merged.histories.size)
         }
     }
 
-    suspend fun toggleAccountFavorite(recipeId: Int, currentlyFavorite: Boolean): Boolean = withContext(Dispatchers.IO) {
-        val cred = _state.value.credential ?: throw UserDataSyncException.LoginRequired()
-        val capturedRev = sessionRevision.get()
-        val capturedUid = cred.subject
-        val hydrated = ensureHydrated(capturedUid, capturedRev)
-        val shouldSync = mutationMutex.withLock {
-            assertSessionUnchanged(capturedRev, capturedUid)
-            val current = hydrated.merging(_state.value.accountDocument)
-            val nowMs = System.currentTimeMillis().toDouble()
-            val updated = if (currentlyFavorite) {
+    internal suspend fun toggleAccountFavorite(expected: UserLibraryScope, recipeId: Int, currentlyFavorite: Boolean): Boolean {
+        editAccountLibrary(expected) { current ->
+            val latest = (current.favorites + current.favoriteRemovals).asSequence()
+                .filter { it.id == recipeId }.maxOfOrNull { it.time } ?: 0.0
+            val nowMs = maxOf(System.currentTimeMillis().toDouble(), latest + 1)
+            if (currentlyFavorite) {
                 val nextFavs = current.favorites.filterNot { it.id == recipeId }
                 val nextRemovals = (listOf(UserDataDocument.Favorite(id = recipeId, time = nowMs)) +
                     current.favoriteRemovals.filterNot { it.id == recipeId }).take(UserDataDocument.MAX_REMOVALS)
@@ -1563,25 +2289,17 @@ class YunlefunSessionManager(
                 val nextRemovals = current.favoriteRemovals.filterNot { it.id == recipeId }
                 current.copy(favorites = nextFavs, favoriteRemovals = nextRemovals)
             }
-            persistAccountDocument(capturedUid, updated, syncEnabled = _state.value.syncEnabled)
-            _state.value = _state.value.copy(accountDocument = updated)
-            _state.value.syncEnabled
         }
-        if (shouldSync) {
-            scope.launch { runCatching { syncNow() } }
-        }
-        !currentlyFavorite
+        return !currentlyFavorite
     }
 
-    suspend fun recordAccountVisit(recipe: Recipe) = withContext(Dispatchers.IO) {
-        val cred = _state.value.credential ?: return@withContext
-        val capturedRev = sessionRevision.get()
-        val capturedUid = cred.subject
-        val hydrated = ensureHydrated(capturedUid, capturedRev)
-        mutationMutex.withLock {
-            assertSessionUnchanged(capturedRev, capturedUid)
-            val current = hydrated.merging(_state.value.accountDocument)
-            val nowMs = System.currentTimeMillis().toDouble()
+    internal suspend fun recordAccountVisit(expected: UserLibraryScope, recipe: Recipe) {
+        editAccountLibrary(expected) { current ->
+            val latestVisit = current.histories.asSequence().filter { it.recipe.name == recipe.name }
+                .maxOfOrNull { it.time } ?: 0.0
+            val lastRemoval = current.historyRemovals.asSequence().filter { it.name == recipe.name }
+                .maxOfOrNull { it.time } ?: 0.0
+            val nowMs = maxOf(System.currentTimeMillis().toDouble(), latestVisit + 1, lastRemoval + 1, current.historyClearedAt + 1)
             val visit = UserDataDocument.Visit(
                 recipe = UserDataDocument.RecipeSnapshot(recipe),
                 time = nowMs,
@@ -1590,104 +2308,248 @@ class YunlefunSessionManager(
                 .distinctBy { it.recipe.name to it.time }
                 .sortedByDescending { it.time }
                 .take(UserDataDocument.MAX_HISTORIES)
-            val updated = current.copy(histories = nextHistories)
-            persistAccountDocument(capturedUid, updated, syncEnabled = _state.value.syncEnabled)
-            _state.value = _state.value.copy(accountDocument = updated)
+            current.copy(histories = nextHistories)
         }
     }
 
-    suspend fun removeAccountHistory(recipeName: String, visitedAtMs: Double) = withContext(Dispatchers.IO) {
-        val cred = _state.value.credential ?: return@withContext
-        val capturedRev = sessionRevision.get()
-        val capturedUid = cred.subject
-        val hydrated = ensureHydrated(capturedUid, capturedRev)
-        mutationMutex.withLock {
-            assertSessionUnchanged(capturedRev, capturedUid)
-            val current = hydrated.merging(_state.value.accountDocument)
+    internal suspend fun removeAccountHistory(expected: UserLibraryScope, recipeName: String, visitedAtMs: Double) {
+        editAccountLibrary(expected) { current ->
             val nextHistories = current.histories.filterNot { it.recipe.name == recipeName && it.time == visitedAtMs }
             val nextRemovals = (listOf(UserDataDocument.Removal(name = recipeName, time = visitedAtMs)) +
                 current.historyRemovals.filterNot { it.name == recipeName && it.time == visitedAtMs })
                 .take(UserDataDocument.MAX_REMOVALS)
-            val updated = current.copy(histories = nextHistories, historyRemovals = nextRemovals)
-            persistAccountDocument(capturedUid, updated, syncEnabled = _state.value.syncEnabled)
-            _state.value = _state.value.copy(accountDocument = updated)
+            current.copy(histories = nextHistories, historyRemovals = nextRemovals)
         }
     }
 
-    suspend fun importIntoAccount(incoming: UserDataDocument): Pair<Int, Int> = withContext(Dispatchers.IO) {
-        val cred = _state.value.credential ?: throw UserDataSyncException.LoginRequired()
-        val capturedRev = sessionRevision.get()
-        val capturedUid = cred.subject
-        val hydrated = ensureHydrated(capturedUid, capturedRev)
-        val merged = mutationMutex.withLock {
-            assertSessionUnchanged(capturedRev, capturedUid)
-            val base = hydrated.importMerging(_state.value.accountDocument)
-            val combined = base.importMerging(incoming)
-            persistAccountDocument(capturedUid, combined, syncEnabled = _state.value.syncEnabled)
-            _state.value = _state.value.copy(accountDocument = combined)
-            combined
+    internal suspend fun importIntoAccount(expected: UserLibraryScope, incoming: UserDataDocument): Pair<Int, Int> {
+        val merged = editAccountLibrary(expected) {
+            it.importMerging(incoming, historyCapacity = UserDataDocument.MERGED_HISTORY_CAP)
         }
-        if (_state.value.syncEnabled) {
-            scope.launch { runCatching { syncNow() } }
-        }
-        Pair(merged.favorites.size, merged.histories.size)
+        return Pair(merged.favorites.size, merged.histories.size)
     }
 
-    suspend fun clearAccountHistory() = withContext(Dispatchers.IO) {
-        val cred = _state.value.credential ?: return@withContext
-        val capturedRev = sessionRevision.get()
-        val capturedUid = cred.subject
-        val hydrated = ensureHydrated(capturedUid, capturedRev)
+    internal suspend fun clearAccountHistory(expected: UserLibraryScope) {
+        editAccountLibrary(expected) { current ->
+            current.clearingHistory(System.currentTimeMillis().toDouble())
+        }
+    }
+
+    private suspend fun editAccountLibrary(
+        expected: UserLibraryScope,
+        statusOnSave: ((UserDataDocument) -> String)? = null,
+        edit: (UserDataDocument) -> UserDataDocument,
+    ): UserDataDocument = withContext(Dispatchers.IO) {
+        val session = expected.session ?: throw UserDataSyncException.LoginRequired()
         mutationMutex.withLock {
-            assertSessionUnchanged(capturedRev, capturedUid)
-            val current = hydrated.merging(_state.value.accountDocument)
-            val nowMs = System.currentTimeMillis().toDouble()
-            val updated = current.copy(
-                histories = emptyList(),
-                historyRemovals = emptyList(),
-                historyClearedAt = maxOf(current.historyClearedAt, nowMs),
+            val current = _state.value
+            if (current.libraryScope != expected || !current.usesAccountLibrary || !current.isHydrated) {
+                throw UserDataSyncException.LibraryChanged()
+            }
+            val updated = edit(current.accountDocument)
+            persistAccountDocument(session.subject, updated, syncEnabled = true)
+            _state.value = current.copy(
+                accountDocument = updated,
+                statusMessage = statusOnSave?.invoke(updated) ?: current.statusMessage,
             )
-            persistAccountDocument(capturedUid, updated, syncEnabled = _state.value.syncEnabled)
-            _state.value = _state.value.copy(accountDocument = updated)
+            queueSyncLocked()
+            updated
         }
     }
 
-    suspend fun syncNow(): Result<UserDataDocument> = withContext(Dispatchers.IO) {
-        runCatching {
-            val cred = _state.value.credential ?: throw UserDataSyncException.LoginRequired()
-            val capturedRev = sessionRevision.get()
-            val capturedUid = cred.subject
-            val localBefore = ensureHydrated(capturedUid, capturedRev)
-            _state.value = _state.value.copy(isSyncing = true, statusMessage = null)
-            try {
-                val accepted = syncService.sync(localBefore, cred)
-                mutationMutex.withLock {
-                    // 在锁内校验会话修订号与账号主体，确保 persist 与状态发布不会被并发 signOut/换号穿透
-                    assertSessionUnchanged(capturedRev, capturedUid)
-                    val mergedAfter = _state.value.accountDocument.merging(accepted)
-                    val nowMs = System.currentTimeMillis()
-                    persistAccountDocument(capturedUid, mergedAfter, syncEnabled = true, nowMs = nowMs)
-                    assertSessionUnchanged(capturedRev, capturedUid)
-                    _state.value = _state.value.copy(
-                        isSyncing = false,
-                        lastSyncedAtMs = nowMs,
-                        accountDocument = mergedAfter,
-                        statusMessage = "同步成功（${mergedAfter.favorites.size} 条收藏 / ${mergedAfter.histories.size} 条历史）",
-                    )
-                    mergedAfter
+    suspend fun syncNow(): Result<UserDataDocument> = syncNow(expected = null)
+
+    internal fun requestManualSync(expected: UserLibraryScope) {
+        scope.launch { syncNow(expected) }
+    }
+
+    internal suspend fun syncNow(expected: UserLibraryScope?): Result<UserDataDocument> = withContext(Dispatchers.IO) {
+        runSuspendCatching {
+            val target = mutationMutex.withLock {
+                val current = _state.value
+                if (expected != null && current.libraryScope != expected) throw UserDataSyncException.LibraryChanged()
+                val session = current.membershipSession ?: throw UserDataSyncException.LoginRequired()
+                if (current.accountCacheUnreadable) throw UserDataSyncException.AccountCacheUnreadable()
+                if (!current.syncEnabled) throw UserDataSyncException.Disabled()
+                SyncTarget(session, current.syncConsentRevision)
+            }
+            syncAndScheduleRetry(target)
+        }
+    }
+
+    private suspend fun syncAndScheduleRetry(target: SyncTarget): UserDataDocument {
+        val result = sync(target)
+        if (isTransientSyncFailure(result.exceptionOrNull())) mutationMutex.withLock {
+            if (matchesSyncLocked(target)) queueSyncLocked()
+        }
+        return result.getOrThrow()
+    }
+
+    fun requestForegroundSync() {
+        scope.launch {
+            awaitInitialHydration()
+            mutationMutex.withLock { queueSyncLocked() }
+        }
+    }
+
+    private fun queueSyncLocked() {
+        val current = _state.value
+        val session = current.membershipSession ?: return
+        if (current.syncEnabled && current.isHydrated) {
+            syncRequests.trySend(SyncTarget(session, current.syncConsentRevision))
+        }
+    }
+
+    private fun matchesSyncLocked(target: SyncTarget): Boolean =
+        _state.value.syncEnabled && _state.value.membershipSession == target.session &&
+            _state.value.syncConsentRevision == target.consentRevision
+
+    private fun handleMembershipSyncRecoveryLocked(entitlement: MembershipEntitlement) {
+        if (!entitlement.isActiveAt()) return
+        activeMembershipCheckRevision++
+        val waiting = syncWaitingForMembership ?: return
+        syncWaitingForMembership = null
+        if (matchesSyncLocked(waiting)) queueSyncLocked()
+    }
+
+    private fun isTransientSyncFailure(error: Throwable?): Boolean =
+        error is UserDataSyncException.Unavailable || error is YunlefunAccountException.Unavailable
+
+    private suspend fun runQueuedSync() {
+        for (first in syncRequests) {
+            delay(750)
+            var target = syncRequests.tryReceive().getOrNull() ?: first
+            var retryDelay = 1_000L
+            var retrying = false
+            while (isTransientSyncFailure(sync(target, retrying = retrying).exceptionOrNull())) {
+                val queued = withTimeoutOrNull(retryDelay) { syncRequests.receive() }
+                retrying = queued == null
+                if (queued == null) {
+                    retryDelay = minOf(retryDelay * 2, 30_000L)
+                } else {
+                    target = queued
+                    retryDelay = 1_000L
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                mutationMutex.withLock {
-                    if (sessionRevision.get() == capturedRev && _state.value.credential?.subject == capturedUid) {
+            }
+        }
+    }
+
+    private suspend fun syncCredential(
+        session: MembershipSession,
+        rejectedAccessToken: String? = null,
+    ): YunlefunCredential = try {
+        credentialForAccountRequest(session.revision, session.subject, rejectedAccessToken)
+    } catch (_: YunlefunAccountException.ExpiredSession) {
+        throw UserDataSyncException.LoginRequired()
+    }
+
+    private suspend fun <T> withSyncCredential(
+        session: MembershipSession,
+        confirmAccessBeforeRetry: Boolean = false,
+        request: suspend (YunlefunCredential) -> T,
+    ): T {
+        val credential = syncCredential(session)
+        return try {
+            request(credential)
+        } catch (failure: UserDataSyncException.LoginRequired) {
+            if (!failure.canRefresh) throw failure
+            coroutineContext.ensureActive()
+            val renewed = syncCredential(session, rejectedAccessToken = credential.accessToken)
+            if (renewed.deviceID != credential.deviceID || renewed.accessToken == credential.accessToken) throw failure
+            coroutineContext.ensureActive()
+            // An authentication error can also reflect an account deletion hold.
+            // Check access without a document before repeating the write.
+            val ready = if (confirmAccessBeforeRetry) confirmSyncAccess(session, renewed) else renewed
+            request(ready)
+        }
+    }
+
+    private suspend fun confirmSyncAccess(session: MembershipSession, renewed: YunlefunCredential): YunlefunCredential {
+        var candidate = renewed
+        repeat(2) {
+            val rejection = try {
+                syncService.checkAccess(candidate)
+                null
+            } catch (failure: UserDataSyncException.LoginRequired) {
+                if (!failure.canRefresh) throw failure
+                failure
+            }
+            val current = syncCredential(session)
+            if (current.deviceID != renewed.deviceID) throw UserDataSyncException.LoginRequired()
+            if (current.accessToken == candidate.accessToken) {
+                if (rejection != null) throw rejection
+                return current
+            }
+            candidate = current
+        }
+        throw UserDataSyncException.Unavailable()
+    }
+
+    private suspend fun sync(target: SyncTarget, retrying: Boolean = false): Result<UserDataDocument> = runSuspendCatching {
+        syncMutex.withLock {
+            coroutineScope {
+                val job = coroutineContext[Job]
+                val membershipCheckAtStart = mutationMutex.withLock {
+                    if (!matchesSyncLocked(target)) throw CancellationException("账号或同步设置已变更")
+                    if (retrying && lastTransientSyncTarget !== target) throw CancellationException("同步重试已失效")
+                    activeSync = job
+                    _state.value = _state.value.copy(isSyncing = true, statusMessage = null)
+                    activeMembershipCheckRevision
+                }
+                try {
+                    val accepted = withSyncCredential(target.session, confirmAccessBeforeRetry = true) { credential ->
+                        val local = mutationMutex.withLock {
+                            coroutineContext.ensureActive()
+                            if (!matchesSyncLocked(target)) throw CancellationException("账号或同步设置已变更")
+                            val current = _state.value
+                            if (current.credential?.accessToken != credential.accessToken ||
+                                current.credential.deviceID != credential.deviceID
+                            ) {
+                                throw UserDataSyncException.Unavailable()
+                            }
+                            current.accountDocument
+                        }
+                        syncService.sync(local, credential)
+                    }
+                    mutationMutex.withLock {
+                        coroutineContext.ensureActive()
+                        if (!matchesSyncLocked(target)) throw CancellationException("账号或同步设置已变更")
+                        val merged = _state.value.accountDocument.merging(accepted)
+                        val nowMs = System.currentTimeMillis()
+                        persistAccountDocument(target.session.subject, merged, syncEnabled = true, lastSyncedAtMs = nowMs)
+                        lastTransientSyncTarget = null
+                        syncWaitingForMembership = null
                         _state.value = _state.value.copy(
-                            isSyncing = false,
-                            statusMessage = e.message ?: "暂时无法同步，离线记录已保留。",
+                            lastSyncedAtMs = nowMs,
+                            accountDocument = merged,
+                            statusMessage = "同步成功（${merged.favorites.size} 条收藏 / ${merged.histories.size} 条历史）",
                         )
+                        merged
+                    }
+                } catch (error: Exception) {
+                    if (error !is CancellationException) mutationMutex.withLock {
+                        if (matchesSyncLocked(target)) {
+                            // A newer result supersedes any older timed retry for this account.
+                            lastTransientSyncTarget = target.takeIf { isTransientSyncFailure(error) }
+                            _state.value = _state.value.copy(statusMessage = error.message ?: "暂时无法同步，离线记录已保留。")
+                            syncWaitingForMembership = target.takeIf { error is UserDataSyncException.MembershipRequired }
+                            if (syncWaitingForMembership != null && activeMembershipCheckRevision != membershipCheckAtStart &&
+                                _state.value.entitlement?.isActiveAt() == true
+                            ) {
+                                syncWaitingForMembership = null
+                                queueSyncLocked()
+                            }
+                        }
+                    }
+                    throw error
+                } finally {
+                    withContext(NonCancellable) {
+                        mutationMutex.withLock {
+                            activeSync = null
+                            if (matchesSyncLocked(target)) _state.value = _state.value.copy(isSyncing = false)
+                        }
                     }
                 }
-                throw e
             }
         }
     }
@@ -1695,24 +2557,42 @@ class YunlefunSessionManager(
     suspend fun signOut() = withContext(Dispatchers.IO) {
         val credToRevoke = mutationMutex.withLock {
             val currentCred = _state.value.credential
-            sessionRevision.incrementAndGet()
-            clearPendingAccountWebsite()
-            clearHydrated()
-            _state.value = AccountSyncUiState(statusMessage = "已退出登录，当前使用本机收藏与历史")
             // 在持锁状态下立即吊销本地凭据，避免延迟网络登出完成时误删后来登录的新会话
+            resetLocalSessionLocked("已退出登录，当前使用本机收藏与历史")
             runCatching { vault.deleteSecret(AndroidKeystoreVault.KEY_YUNLEFUN_SESSION_JSON) }
             currentCred
         }
         if (credToRevoke != null) {
-            runCatching { accountService.signOut(credToRevoke) }
+            withContext(NonCancellable) {
+                runCatching { accountService.signOut(credToRevoke) }
+            }
         }
+    }
+
+    private suspend inline fun <T> runSuspendCatching(block: () -> T): Result<T> = try {
+        Result.success(block())
+    } catch (error: CancellationException) {
+        currentCoroutineContext().ensureActive()
+        Result.failure(error)
+    } catch (error: Throwable) {
+        Result.failure(error)
+    }
+
+    private fun resetLocalSessionLocked(message: String) {
+        val newRevision = sessionRevision.incrementAndGet()
+        activeSync?.cancel()
+        syncWaitingForMembership = null
+        publishPendingAccountWebsite(null)
+        clearHydrated()
+        _state.value = AccountSyncUiState(statusMessage = message, revision = newRevision)
+        expireAppSignInLocked()
     }
 
     private suspend fun persistAccountDocument(
         uid: String,
         document: UserDataDocument,
         syncEnabled: Boolean,
-        nowMs: Long = System.currentTimeMillis(),
+        lastSyncedAtMs: Long? = _state.value.lastSyncedAtMs,
     ) {
         document.validate()
         val encoded = UserDataDocument.wireJson.encodeToString(document)
@@ -1721,7 +2601,8 @@ class YunlefunSessionManager(
             syncEnabled = syncEnabled,
             historyClearedAtMs = document.historyClearedAt,
             lastSyncedDocumentJson = encoded,
-            updatedAtMs = nowMs.toDouble(),
+            updatedAtMs = System.currentTimeMillis().toDouble(),
+            lastSyncedAtMs = lastSyncedAtMs,
         )
         val favoriteEntities = document.favorites.map { fav ->
             AccountFavoriteEntity(

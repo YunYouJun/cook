@@ -10,13 +10,8 @@ struct LearnedDishesView: View {
     @Query private var privateRecords: [PrivateRecipeRecord]
     @ScaledMetric(relativeTo: .body) private var tileWidth: CGFloat = 148
 
-    @State private var presentation = Presentation.badges
+    @Binding var browsing: ShowcaseBrowsingState
     @State private var selection: ShowcaseSelection?
-
-    private enum Presentation {
-        case badges
-        case showcase
-    }
 
     private struct ShowcaseSelection: Identifiable {
         let dish: Entry
@@ -44,9 +39,9 @@ struct LearnedDishesView: View {
             } else {
                 let dishes = learnedDishes
                 VStack(spacing: 0) {
-                    Picker("拿手菜视图", selection: $presentation) {
-                        Text("徽章册").tag(Presentation.badges)
-                        Text("展柜").tag(Presentation.showcase)
+                    Picker("拿手菜视图", selection: $browsing.presentation) {
+                        Text("徽章册").tag(ShowcaseBrowsingState.Presentation.badges)
+                        Text("展柜").tag(ShowcaseBrowsingState.Presentation.showcase)
                     }
                     .pickerStyle(.segmented)
                     .accessibilityIdentifier("learnedDishes.presentation")
@@ -54,7 +49,7 @@ struct LearnedDishesView: View {
                     .padding(.horizontal, 20)
                     .padding(.vertical, 8)
 
-                    switch presentation {
+                    switch browsing.presentation {
                     case .badges:
                         if dishes.isEmpty {
                             ContentUnavailableView("还没有拿手菜", systemImage: "medal",
@@ -64,7 +59,11 @@ struct LearnedDishesView: View {
                             badges(dishes)
                         }
                     case .showcase:
-                        LearnedDishShowcaseGallery(dishes: dishes.filter { $0.showcase != nil })
+                        LearnedDishShowcaseGallery(
+                            dishes: dishes.filter { $0.showcase != nil },
+                            selectedID: $browsing.featuredDishID,
+                            viewpoint: viewpoint(for:)
+                        )
                     }
                 }
             }
@@ -74,13 +73,18 @@ struct LearnedDishesView: View {
         .navigationTitle("我的拿手菜")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $selection) { selection in
-            ShowcaseSheet(name: selection.dish.name, learnedAt: selection.dish.record.learnedAt, source: selection.source)
+            ShowcaseSheet(name: selection.dish.name, learnedAt: selection.dish.record.learnedAt,
+                          source: selection.source, viewpoint: viewpoint(for: selection.id))
         }
         .onChange(of: records.progress.learned) { _, learned in
             if let selection, !learned.contains(where: { $0.id == selection.id }) {
                 self.selection = nil
             }
         }
+    }
+
+    private func viewpoint(for id: UUID) -> Binding<ShowcaseViewpoint> {
+        Binding(get: { browsing[viewpoint: id] }, set: { browsing[viewpoint: id] = $0 })
     }
 
     private var learnedDishes: [Entry] {
@@ -169,7 +173,8 @@ struct LearnedDishesView: View {
 
     private struct LearnedDishShowcaseGallery: View {
         let dishes: [Entry]
-        @State private var selectedID: UUID?
+        @Binding var selectedID: UUID?
+        let viewpoint: (UUID) -> Binding<ShowcaseViewpoint>
 
         private var selected: Entry? {
             dishes.first { $0.id == selectedID } ?? dishes.first
@@ -187,7 +192,8 @@ struct LearnedDishesView: View {
                         .pickerStyle(.menu)
                         .accessibilityIdentifier("learnedDishes.featuredDish")
                     }
-                    DishShowcaseView(name: selected.name, learnedAt: selected.record.learnedAt, source: source)
+                    DishShowcaseView(name: selected.name, learnedAt: selected.record.learnedAt,
+                                     source: source, viewpoint: viewpoint(selected.id))
                         .id(selected.id)
                 }
             } else {
@@ -202,11 +208,12 @@ struct LearnedDishesView: View {
         let name: String
         let learnedAt: Date
         let source: DishShowcaseView.Source
+        @Binding var viewpoint: ShowcaseViewpoint
         @Environment(\.dismiss) private var dismiss
 
         var body: some View {
             NavigationStack {
-                DishShowcaseView(name: name, learnedAt: learnedAt, source: source)
+                DishShowcaseView(name: name, learnedAt: learnedAt, source: source, viewpoint: $viewpoint)
                     .navigationTitle("菜肴成就")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
@@ -220,13 +227,14 @@ struct LearnedDishesView: View {
 }
 
 #Preview("我的拿手菜 · 徽章") {
+    @Previewable @State var browsing = ShowcaseBrowsingState()
     if let store = try? RecipeStore.loadBundled(inMemory: true) {
         let records = CookedRecipeRecords()
         let _ = try? records.confirmLearned(.catalog(250), name: "番茄炒蛋")
         let _ = try? records.confirmLearned(.catalog(588), name: "蒸蛋羹")
         let _ = try? records.confirmLearned(.catalog(497), name: "拍黄瓜")
         let _ = try? records.confirmLearned(.personal("preview"), name: "奶奶的葱油拌面")
-        NavigationStack { LearnedDishesView() }
+        NavigationStack { LearnedDishesView(browsing: $browsing) }
             .environment(store)
             .environment(records)
             .environment(ShowcaseAssetLibrary.live())
@@ -236,8 +244,9 @@ struct LearnedDishesView: View {
 }
 
 #Preview("我的拿手菜 · 空状态") {
+    @Previewable @State var browsing = ShowcaseBrowsingState()
     if let store = try? RecipeStore.loadBundled(inMemory: true) {
-        NavigationStack { LearnedDishesView() }
+        NavigationStack { LearnedDishesView(browsing: $browsing) }
             .environment(store)
             .environment(CookedRecipeRecords())
             .environment(ShowcaseAssetLibrary.live())

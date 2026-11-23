@@ -163,6 +163,7 @@ private struct CookDecideSheet: View {
                         .frame(maxWidth: 560)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .accessibilityIdentifier("cook.decide.sheet")
                 } else {
                     VStack(spacing: 12) {
                         contextText(context)
@@ -181,6 +182,8 @@ private struct CookDecideSheet: View {
                     .padding(.bottom, 12)
                     .frame(maxWidth: 560)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("cook.decide.sheet")
 
                     actions(canReroll: pool.count > 1)
                 }
@@ -232,7 +235,7 @@ private struct CookDecideSheet: View {
         Text(context)
             .font(.footnote)
             .foregroundStyle(.secondary)
-            .lineLimit(2)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityIdentifier("cook.decide.context")

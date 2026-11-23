@@ -112,6 +112,20 @@ data class UserDataDocument(
         }
     }
 
+    fun clearingHistory(nowMillis: Double): UserDataDocument {
+        val cutoff = maxOf(nowMillis, historyClearedAt)
+        val futureRemovals = histories.filter { it.time > cutoff }.map { Removal(it.recipe.name, it.time) }
+        val history = UserDataDocument(
+            historyClearedAt = cutoff,
+            historyRemovals = historyRemovals + futureRemovals,
+        ).merging(UserDataDocument(), nowMillis)
+        return copy(
+            histories = emptyList(),
+            historyClearedAt = cutoff,
+            historyRemovals = history.historyRemovals,
+        )
+    }
+
     /**
      * Same last-operation, delete-wins tie-break, historyClearedAt watermark, and deterministic
      * tombstone pruning rules as Web `userData.ts` and iOS `UserDataDocument.swift`.
@@ -187,50 +201,74 @@ data class UserDataDocument(
         )
     }
 
-    /**
-     * SAF 离线文件导出/导入的非破坏性增量合并：
-     * - 保留全部现有收藏与历史，绝不因导入文件的 `favoriteRemovals` / `historyRemovals` / `historyClearedAt` 删除既有记录；
-     * - 也不会将本地既有历史按云端 `MERGED_HISTORY_CAP (200)` 截断。
-     */
-    fun importMerging(incoming: UserDataDocument): UserDataDocument {
-        val favoritesById = latestById(favorites + incoming.favorites)
-        val mergedFavorites = favoritesById.values
-            .sortedWith(compareBy<Favorite> { it.time }.thenBy { it.id })
-            .takeLast(MAX_FAVORITES)
-        val retainedFavIds = mergedFavorites.mapTo(HashSet()) { it.id }
-        val mergedFavoriteRemovals = favoriteRemovals
-            .filterNot { it.id in retainedFavIds }
-            .take(MAX_REMOVALS)
+    /** 用源文件和目标库的删除记录筛选新增条目，优先保留目标库已有的有效记录。 */
+    fun importMerging(incoming: UserDataDocument, historyCapacity: Int = MAX_HISTORIES): UserDataDocument =
+        mergeFileRecords(incoming, MAX_FAVORITES, historyCapacity)
 
-        data class VisitKey(val name: String, val time: Double)
-        val selectedHistories = LinkedHashMap<VisitKey, Visit>()
-        for (entry in histories + incoming.histories) {
-            val key = VisitKey(entry.recipe.name, entry.time)
+    /** 保留能阻止旧备份复活记录的删除标记。当前库的活动条目仍优先。 */
+    fun restoreMerging(incoming: UserDataDocument): UserDataDocument {
+        val combined = mergeFileRecords(incoming, Int.MAX_VALUE, Int.MAX_VALUE)
+        val activeFavorites = combined.favorites.mapTo(HashSet()) { it.id }
+        val activeVisits = combined.histories.mapTo(HashSet()) { Removal(it.recipe.name, it.time) }
+        val incomingCutoff = incoming.historyClearedAt.takeUnless { cutoff ->
+            combined.histories.any { it.time <= cutoff }
+        } ?: 0.0
+        val mergedClearedAt = maxOf(historyClearedAt, incomingCutoff)
+        return combined.copy(
+            favoriteRemovals = latestById(combined.favoriteRemovals + incoming.favoriteRemovals).values
+                .filterNot { it.id in activeFavorites }
+                .sortedWith(compareBy<Favorite> { it.time }.thenBy { it.id })
+                .takeLast(MAX_REMOVALS),
+            historyRemovals = (combined.historyRemovals + incoming.historyRemovals)
+                .distinct()
+                .filter { it !in activeVisits && it.time > mergedClearedAt }
+                .sortedWith(compareBy<Removal> { it.time }.thenBy { it.name })
+                .takeLast(MAX_REMOVALS),
+            historyClearedAt = mergedClearedAt,
+        )
+    }
+
+    private fun mergeFileRecords(incoming: UserDataDocument, favoriteCapacity: Int, historyCapacity: Int): UserDataDocument {
+        val favoriteOrder = compareBy<Favorite> { it.time }.thenBy { it.id }
+        val historyOrder = compareBy<Visit> { it.time }.thenBy { it.recipe.name }
+        val existingFavoriteIds = favorites.mapTo(HashSet()) { it.id }
+        val removalsById = latestById(favoriteRemovals + incoming.favoriteRemovals)
+        val incomingFavorites = incoming.favorites.filter {
+            it.id !in existingFavoriteIds && it.time > (removalsById[it.id]?.time ?: -1.0)
+        }
+        val addedFavorites = latestById(incomingFavorites).values.sortedWith(favoriteOrder)
+            .takeLast((favoriteCapacity - favorites.size).coerceAtLeast(0))
+        val mergedFavorites = (favorites + addedFavorites).sortedWith(favoriteOrder)
+        val retainedFavorites = mergedFavorites.associateBy { it.id }
+        val mergedFavoriteRemovals = favoriteRemovals
+            .filter { it.time >= (retainedFavorites[it.id]?.time ?: -1.0) }
+
+        val clearedThrough = maxOf(historyClearedAt, incoming.historyClearedAt)
+        val removedVisits = (historyRemovals + incoming.historyRemovals).toHashSet()
+        val existingVisits = histories.mapTo(HashSet()) { Removal(it.recipe.name, it.time) }
+        val incomingHistories = incoming.histories.filter {
+            val key = Removal(it.recipe.name, it.time)
+            it.time > clearedThrough && key !in removedVisits && key !in existingVisits
+        }
+        val selectedHistories = LinkedHashMap<Removal, Visit>()
+        for (entry in incomingHistories) {
+            val key = Removal(entry.recipe.name, entry.time)
             val prev = selectedHistories[key]
             if (prev != null && compareUtf16(entry.recipe.orderingKey(), prev.recipe.orderingKey()) >= 0) {
                 continue
             }
             selectedHistories[key] = entry
         }
-        val mergedHistories = selectedHistories.values
-            .sortedWith { a, b ->
-                val cmp = a.time.compareTo(b.time)
-                if (cmp != 0) cmp else compareUtf16(a.recipe.name, b.recipe.name)
-            }
-            .let { list ->
-                if (list.size > MAX_HISTORIES) list.takeLast(MAX_HISTORIES) else list
-            }
-        val retainedHistoryKeys = mergedHistories.mapTo(HashSet()) { VisitKey(it.recipe.name, it.time) }
-        val mergedHistoryRemovals = historyRemovals
-            .filterNot { VisitKey(it.name, it.time) in retainedHistoryKeys }
-            .take(MAX_REMOVALS)
+        val addedHistories = selectedHistories.values.sortedWith(historyOrder)
+            .takeLast((historyCapacity - histories.size).coerceAtLeast(0))
+        val mergedHistories = (histories + addedHistories).sortedWith(historyOrder)
 
         return UserDataDocument(
             version = SUPPORTED_VERSION,
             favorites = mergedFavorites,
             favoriteRemovals = mergedFavoriteRemovals,
             histories = mergedHistories,
-            historyRemovals = mergedHistoryRemovals,
+            historyRemovals = historyRemovals,
             historyClearedAt = historyClearedAt,
         )
     }

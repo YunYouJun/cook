@@ -1,0 +1,66 @@
+[
+  {
+    "name": "known future visits are removed without hiding a newer visit from another device",
+    "now": 1800000000000,
+    "current": {
+      "version": 1,
+      "favorites": [{ "id": 101, "time": 1799999999000 }],
+      "favoriteRemovals": [],
+      "histories": [
+        { "recipe": { "name": "萝卜汤", "stuff": [], "tools": [] }, "time": 1799999999000 },
+        { "recipe": { "name": "番茄炒蛋", "stuff": [], "tools": [] }, "time": 1800000060000 }
+      ],
+      "historyRemovals": [
+        { "name": "面条", "time": 1799999999500 },
+        { "name": "蒸蛋羹", "time": 1800000090000 }
+      ],
+      "historyClearedAt": 1799999998000
+    },
+    "peer": {
+      "version": 1,
+      "favorites": [],
+      "favoriteRemovals": [],
+      "histories": [
+        { "recipe": { "name": "萝卜汤", "stuff": [], "tools": [] }, "time": 1799999999000 },
+        { "recipe": { "name": "番茄炒蛋", "stuff": [], "tools": [] }, "time": 1800000001000 },
+        { "recipe": { "name": "番茄炒蛋", "stuff": [], "tools": [] }, "time": 1800000060000 },
+        { "recipe": { "name": "蒸蛋羹", "stuff": [], "tools": [] }, "time": 1800000090000 }
+      ],
+      "historyRemovals": [],
+      "historyClearedAt": 0
+    },
+    "expectedCutoff": 1800000000000,
+    "expectedRemovals": [
+      { "name": "番茄炒蛋", "time": 1800000060000 },
+      { "name": "蒸蛋羹", "time": 1800000090000 }
+    ],
+    "expectedVisits": [{ "name": "番茄炒蛋", "time": 1800000001000 }]
+  },
+  {
+    "name": "a previously saved future cutoff is preserved without extending it",
+    "now": 1800000000000,
+    "current": {
+      "version": 1,
+      "favorites": [],
+      "favoriteRemovals": [],
+      "histories": [{ "recipe": { "name": "鸡蛋羹", "stuff": [], "tools": [] }, "time": 1800000060000 }],
+      "historyRemovals": [],
+      "historyClearedAt": 1800000030000
+    },
+    "peer": {
+      "version": 1,
+      "favorites": [],
+      "favoriteRemovals": [],
+      "histories": [
+        { "recipe": { "name": "青菜", "stuff": [], "tools": [] }, "time": 1800000010000 },
+        { "recipe": { "name": "鸡蛋羹", "stuff": [], "tools": [] }, "time": 1800000031000 },
+        { "recipe": { "name": "鸡蛋羹", "stuff": [], "tools": [] }, "time": 1800000060000 }
+      ],
+      "historyRemovals": [],
+      "historyClearedAt": 0
+    },
+    "expectedCutoff": 1800000030000,
+    "expectedRemovals": [{ "name": "鸡蛋羹", "time": 1800000060000 }],
+    "expectedVisits": [{ "name": "鸡蛋羹", "time": 1800000031000 }]
+  }
+]

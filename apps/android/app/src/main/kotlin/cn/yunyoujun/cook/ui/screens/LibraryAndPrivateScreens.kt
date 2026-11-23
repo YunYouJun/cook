@@ -1,5 +1,7 @@
 package cn.yunyoujun.cook.ui.screens
 
+import android.app.Activity
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import android.widget.MediaController
@@ -39,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -53,22 +56,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cn.yunyoujun.cook.AppContainer
-import cn.yunyoujun.cook.core.sync.CatalogCategory
-import cn.yunyoujun.cook.core.sync.CatalogEntry
-import cn.yunyoujun.cook.core.sync.itemsIn
 import cn.yunyoujun.cook.core.sync.PrivateRecipe
 import cn.yunyoujun.cook.core.sync.PrivateRecipeFile
-import cn.yunyoujun.cook.core.sync.PrivateRecipeImport
 import cn.yunyoujun.cook.core.sync.PrivateRecipeVideo
 import cn.yunyoujun.cook.data.local.JournalRecipeId
-import cn.yunyoujun.cook.data.local.BoundedIoStreams
-import cn.yunyoujun.cook.data.local.PrivateVideoDraft
+import cn.yunyoujun.cook.data.local.PrivateVideoException
 import cn.yunyoujun.cook.data.repository.CookCatalogSnapshot
-import cn.yunyoujun.cook.ui.components.DecideRandomDialog
+import cn.yunyoujun.cook.platform.exportFilename
+import cn.yunyoujun.cook.platform.exportMimeType
+import cn.yunyoujun.cook.platform.privateRecipeVideoShareIntent
 import cn.yunyoujun.cook.ui.components.RecipeSummaryCard
-import cn.yunyoujun.cook.ui.components.buildDecideContextSummary
+import cn.yunyoujun.cook.ui.navigation.CookNavKey
 import cn.yunyoujun.cook.ui.state.CookSessionController
+import cn.yunyoujun.cook.ui.state.PrivateRecipeImportViewModel
+import cn.yunyoujun.cook.ui.state.PrivateRecipeVideoViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -84,75 +88,38 @@ fun LibraryTabScreen(
     snapshot: CookCatalogSnapshot,
     container: AppContainer,
     sessionController: CookSessionController,
-    onOpenRecipe: (Int) -> Unit,
+    onOpenRecipe: (CookNavKey.RecipeDetail) -> Unit,
     onOpenPrivateRecipes: () -> Unit,
     onOpenPersonalCatalog: () -> Unit,
+    onOpenLibraryTransfer: () -> Unit,
     onOpenAccountSync: () -> Unit = {},
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val favorites by container.userLibraryRepository.observeDeviceFavorites().collectAsState(initial = emptyList())
-    val histories by container.userLibraryRepository.observeDeviceHistories().collectAsState(initial = emptyList())
-    val accountSyncState by container.yunlefunSessionManager.state.collectAsState()
+    val sessions = container.yunlefunSessionManager
+    val accountSyncState by sessions.state.collectAsState()
+    val libraryScope = accountSyncState.libraryScope
+    val favoriteUpdates by remember(container) { container.userLibraryRepository.observeFavorites() }.collectAsState(initial = null)
+    val historyUpdates by remember(container) { container.userLibraryRepository.observeHistories() }.collectAsState(initial = null)
+    val favoriteEntries = favoriteUpdates?.takeIf { it.scope == libraryScope }
+    val historyEntries = historyUpdates?.takeIf { it.scope == libraryScope }
+    val favorites = favoriteEntries?.entries.orEmpty()
+    val histories = historyEntries?.entries.orEmpty()
     val privateState by container.privateRecipesStore.state.collectAsState()
     val catalogState by container.personalCatalogStore.state.collectAsState()
-    val prefs by container.preferencesStore.state.collectAsState()
-    val conditions by sessionController.conditions.collectAsState()
 
     var sectionIndex by rememberSaveable { mutableIntStateOf(0) }
     var query by rememberSaveable { mutableStateOf("") }
     var showRandom by rememberSaveable { mutableStateOf(false) }
+    var lastDecidedId by rememberSaveable { mutableStateOf<Int?>(null) }
     var favoriteError by remember { mutableStateOf<String?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
-    var confirmClearHistory by remember { mutableStateOf(false) }
+    var confirmClearHistory by remember(libraryScope) { mutableStateOf(false) }
     val trimmedQuery = query.trim()
     val ingredient = snapshot.data.normalizer.normalize(trimmedQuery)
     fun matches(name: String, stuff: List<String>): Boolean =
         trimmedQuery.isEmpty() || name.contains(trimmedQuery, ignoreCase = true) || ingredient in stuff
 
     val favoriteIds = remember(favorites) { favorites.mapTo(mutableSetOf()) { it.recipeId } }
-
-    val exportUserDataLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json"),
-    ) { uri: Uri? ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            runCatching {
-                val payload = container.userLibraryRepository.exportUserDataDocumentJson()
-                withContext(Dispatchers.IO) {
-                    context.contentResolver.openOutputStream(uri)?.use { out ->
-                        out.write(payload.toByteArray(Charsets.UTF_8))
-                    } ?: error("无法打开写入目标文件")
-                }
-            }.onSuccess {
-                val label = if (accountSyncState.usesAccountLibrary) "当前账号同步库" else "本机"
-                statusMessage = "已导出${label}收藏与浏览历史 JSON。"
-            }.onFailure { err ->
-                statusMessage = "导出失败：${err.message}"
-            }
-        }
-    }
-
-    val importUserDataLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri: Uri? ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            runCatching {
-                val raw = withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        BoundedIoStreams.readUtf8Bounded(input, maxBytes = 10 * 1024 * 1024)
-                    } ?: error("无法读取选中的文件")
-                }
-                container.userLibraryRepository.importUserDataDocumentJson(raw).getOrThrow()
-            }.onSuccess { (favCount, historyCount) ->
-                val label = if (accountSyncState.usesAccountLibrary) "当前账号同步库" else "本机"
-                statusMessage = "已合并导入数据，${label}共 $favCount 条收藏、$historyCount 条历史。"
-            }.onFailure { err ->
-                statusMessage = "导入未生效：${err.message ?: "格式校验未通过"}"
-            }
-        }
-    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -168,10 +135,11 @@ fun LibraryTabScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text("菜谱与个人库", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Text(
-                        text = if (accountSyncState.usesAccountLibrary) {
-                            "当前模式：云乐坊账号同步库（${accountSyncState.account?.displayName ?: "已登录"}）"
-                        } else {
-                            "当前模式：本机设备库（未开启云端同步）"
+                        text = when {
+                            !accountSyncState.isHydrated -> "正在读取收藏与历史库…"
+                            accountSyncState.usesAccountLibrary ->
+                                "当前模式：云乐坊账号同步库（${accountSyncState.account?.displayName ?: "已登录"}）"
+                            else -> "当前模式：本机设备库（未开启云端同步）"
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -216,12 +184,7 @@ fun LibraryTabScreen(
                 OutlinedButton(onClick = onOpenAccountSync) {
                     Text(if (accountSyncState.usesAccountLibrary) "同步状态" else "云同步")
                 }
-                OutlinedButton(onClick = { exportUserDataLauncher.launch("cook-user-data.json") }) {
-                    Text("导出收藏与历史")
-                }
-                OutlinedButton(onClick = { importUserDataLauncher.launch(arrayOf("application/json", "*/*")) }) {
-                    Text("导入互通 JSON")
-                }
+                OutlinedButton(onClick = onOpenLibraryTransfer) { Text("导入与导出") }
             }
         }
 
@@ -250,7 +213,11 @@ fun LibraryTabScreen(
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                if (sectionIndex == 1 && trimmedQuery.isEmpty()) "还没有收藏菜谱" else "没有匹配的菜谱",
+                                when {
+                                    sectionIndex == 1 && favoriteEntries == null -> "正在读取收藏…"
+                                    sectionIndex == 1 && trimmedQuery.isEmpty() -> "还没有收藏菜谱"
+                                    else -> "没有匹配的菜谱"
+                                },
                                 style = MaterialTheme.typography.titleMedium,
                             )
                         }
@@ -263,13 +230,15 @@ fun LibraryTabScreen(
                         recipe = recipe,
                         match = null,
                         isFavorite = isFavorite,
+                        favoriteEnabled = favoriteEntries != null,
+                        showInstitutionalTag = snapshot.institutionalLowGICatalog?.entry(recipe) != null,
                         onToggleFavorite = {
                             scope.launch {
-                                container.userLibraryRepository.toggleFavorite(recipe.id, isFavorite)
+                                container.userLibraryRepository.toggleFavorite(recipe.id, isFavorite, libraryScope)
                                     .onFailure { favoriteError = it.message ?: "收藏请求失败" }
                             }
                         },
-                        onClick = { onOpenRecipe(recipe.id) },
+                        onClick = { onOpenRecipe(CookNavKey.RecipeDetail(recipe.id)) },
                     )
                 }
             }
@@ -286,7 +255,14 @@ fun LibraryTabScreen(
                 item {
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(20.dp)) {
-                            Text(if (histories.isEmpty()) "暂无最近浏览记录" else "没有匹配的浏览记录", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                when {
+                                    historyEntries == null -> "正在读取浏览记录…"
+                                    histories.isEmpty() -> "暂无最近浏览记录"
+                                    else -> "没有匹配的浏览记录"
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                            )
                         }
                     }
                 }
@@ -312,12 +288,13 @@ fun LibraryTabScreen(
                                 )
                             }
                             if (matchedRecipe != null) {
-                                TextButton(onClick = { onOpenRecipe(matchedRecipe.id) }) { Text("打开") }
+                                TextButton(onClick = { onOpenRecipe(CookNavKey.RecipeDetail(matchedRecipe.id)) }) { Text("打开") }
                             }
                             TextButton(
                                 onClick = {
                                     scope.launch {
-                                        container.userLibraryRepository.removeHistory(item.snapshot.name, item.visitedAtMs)
+                                        container.userLibraryRepository.removeHistory(item.snapshot.name, item.visitedAtMs, libraryScope)
+                                            .onFailure { statusMessage = it.message ?: "未能移除浏览记录，请重试。" }
                                     }
                                 },
                             ) { Text("移除") }
@@ -329,16 +306,17 @@ fun LibraryTabScreen(
     }
 
     if (showRandom) {
-        val randomCandidates = remember(snapshot, prefs, conditions) {
-            sessionController.evaluateCandidates(snapshot, prefs, ignoringKeyword = true)
-        }
-        DecideRandomDialog(
-            recipes = randomCandidates.recipes,
-            matchesById = randomCandidates.matchesById,
-            contextSummary = buildDecideContextSummary(conditions, prefs, ignoringKeyword = true),
-            onOpenRecipe = {
+        CookDecideDialog(
+            snapshot = snapshot,
+            container = container,
+            controller = sessionController,
+            ignoringKeyword = true,
+            avoidFirstId = lastDecidedId,
+            onRecipePreviewed = { lastDecidedId = it },
+            onOpenRecipe = { route ->
+                lastDecidedId = route.recipeId
                 showRandom = false
-                onOpenRecipe(it)
+                onOpenRecipe(route)
             },
             onDismiss = { showRandom = false },
         )
@@ -348,12 +326,23 @@ fun LibraryTabScreen(
         AlertDialog(
             onDismissRequest = { confirmClearHistory = false },
             title = { Text("清空最近浏览") },
-            text = { Text("将清除本机设备库中的全部历史浏览记录，收藏与私房菜不受影响。") },
+            text = {
+                Text(
+                    if (libraryScope.usesAccountLibrary) {
+                        "将清空当前云乐坊账号的全部浏览记录，变更会同步到其他设备。"
+                    } else {
+                        "将清空本机设备库的全部浏览记录。"
+                    },
+                )
+            },
             confirmButton = {
                 Button(
                     onClick = {
                         confirmClearHistory = false
-                        scope.launch { container.userLibraryRepository.clearAllHistory() }
+                        scope.launch {
+                            container.userLibraryRepository.clearAllHistory(libraryScope)
+                                .onFailure { statusMessage = it.message ?: "未能清空浏览记录，请重试。" }
+                        }
                     },
                 ) { Text("确认清空") }
             },
@@ -378,6 +367,7 @@ fun LibraryTabScreen(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PrivateRecipesManageScreen(
+    snapshot: CookCatalogSnapshot,
     container: AppContainer,
     onBack: () -> Unit,
     targetId: String? = null,
@@ -386,56 +376,95 @@ fun PrivateRecipesManageScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state by container.privateRecipesStore.state.collectAsState()
+    val videoEditor = viewModel { PrivateRecipeVideoViewModel(container.privateRecipesStore, container.videoStore) }
+    val importer = viewModel { PrivateRecipeImportViewModel(container.privateRecipesStore) }
+    var query by rememberSaveable { mutableStateOf("") }
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
-    var importPreview by remember { mutableStateOf<Pair<String, PrivateRecipeImport>?>(null) }
-    var bannerText by remember { mutableStateOf<String?>(null) }
+    var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
+    var deleting by remember { mutableStateOf(false) }
+    var deletionError by rememberSaveable { mutableStateOf(false) }
+    var bannerText by rememberSaveable { mutableStateOf<String?>(null) }
     var playingVideoFile by remember { mutableStateOf<Pair<String, File>?>(null) }
-    val visibleRecipes = state.recipes.filter { targetId == null || it.customId == targetId }
+    var pendingVideoExport by rememberSaveable { mutableStateOf<String?>(null) }
+    val term = query.trim()
+    val visibleRecipes = remember(state.recipes, targetId, term) {
+        when {
+            targetId != null -> state.recipes.filter { it.customId == targetId }
+            term.isEmpty() -> state.recipes
+            else -> state.recipes.filter { recipe ->
+                recipe.name.contains(term, ignoreCase = true) || recipe.stuff.any { it.contains(term, ignoreCase = true) }
+            }
+        }
+    }
+
+    fun closeEditor() {
+        videoEditor.finishEditor()
+        showCreateDialog = false
+        editingId = null
+    }
+
+    LaunchedEffect(videoEditor.saved) {
+        if (videoEditor.saved) closeEditor()
+    }
+    LaunchedEffect(videoEditor.message) {
+        videoEditor.message?.let { bannerText = it }
+        videoEditor.clearMessage()
+    }
+    LaunchedEffect(importer.message, importer.plan) {
+        if (importer.plan == null) {
+            importer.message?.let { bannerText = it }
+            importer.clearMessage()
+        }
+    }
+
+    val exportVideoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val id = pendingVideoExport
+        pendingVideoExport = null
+        val uri = result.data?.data?.takeIf { result.resultCode == Activity.RESULT_OK } ?: return@rememberLauncherForActivityResult
+        videoEditor.export(id, uri)
+    }
 
     val exportPortableLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        runCatching {
-            val jsonText = container.privateRecipesStore.exportPortableV1()
-            context.contentResolver.openOutputStream(uri)?.use { it.write(jsonText.toByteArray(Charsets.UTF_8)) }
-                ?: error("无法写入文件")
-        }.onSuccess { bannerText = "已导出跨端通用 v1 私房菜 JSON。" }
-            .onFailure { bannerText = "导出失败：${it.message}" }
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val jsonText = container.privateRecipesStore.exportPortableV1()
+                    context.applicationContext.contentResolver.openOutputStream(uri, "wt")?.use {
+                        it.write(jsonText.toByteArray(Charsets.UTF_8))
+                    } ?: error("无法写入文件")
+                }
+            }
+            result.onSuccess { bannerText = "已导出跨端通用 v1 私房菜 JSON。" }
+                .onFailure { bannerText = "导出失败：${it.message}" }
+        }
     }
 
     val exportBackupLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        runCatching {
-            val jsonText = container.privateRecipesStore.exportBackupV2()
-            context.contentResolver.openOutputStream(uri)?.use { it.write(jsonText.toByteArray(Charsets.UTF_8)) }
-                ?: error("无法写入文件")
-        }.onSuccess { bannerText = "已导出完整备份（含视频元数据）。" }
-            .onFailure { bannerText = "导出失败：${it.message}" }
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val jsonText = container.privateRecipesStore.exportBackupV2()
+                    context.applicationContext.contentResolver.openOutputStream(uri, "wt")?.use {
+                        it.write(jsonText.toByteArray(Charsets.UTF_8))
+                    } ?: error("无法写入文件")
+                }
+            }
+            result.onSuccess { bannerText = "已导出完整备份（含视频元数据）。" }
+                .onFailure { bannerText = "导出失败：${it.message}" }
+        }
     }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            runCatching {
-                val text = withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        BoundedIoStreams.readUtf8Bounded(input, PrivateRecipeFile.BYTE_LIMIT)
-                    } ?: error("无法读取文件")
-                }
-                val plan = container.privateRecipesStore.previewImport(text)
-                text to plan
-            }.onSuccess { preview ->
-                importPreview = preview
-            }.onFailure { err ->
-                bannerText = err.message ?: "导入校验失败，原有私房菜未变化。"
-            }
-        }
+        uri?.let { importer.readFile(context.applicationContext.contentResolver, it) }
     }
 
     Scaffold(
@@ -455,17 +484,44 @@ fun PrivateRecipesManageScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (targetId == null) item {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text("搜索菜名或食材") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = if (query.isNotEmpty()) {
+                        { TextButton(onClick = { query = "" }) { Text("清除搜索") } }
+                    } else null,
+                )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedButton(onClick = { exportPortableLauncher.launch("cook-private-recipes.json") }) {
+                    OutlinedButton(onClick = {
+                        runCatching { exportPortableLauncher.launch("cook-private-recipes.json") }
+                            .onFailure { bannerText = "无法打开系统文件选择器。" }
+                    }) {
                         Text("导出通用 JSON (v1)")
                     }
-                    OutlinedButton(onClick = { exportBackupLauncher.launch("cook-private-recipes-backup.json") }) {
+                    OutlinedButton(onClick = {
+                        runCatching { exportBackupLauncher.launch("cook-private-recipes-backup.json") }
+                            .onFailure { bannerText = "无法打开系统文件选择器。" }
+                    }) {
                         Text("导出原生备份 (v2)")
                     }
-                    OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) }) {
+                    OutlinedButton(
+                        enabled = !importer.working,
+                        onClick = {
+                            runCatching { importLauncher.launch(arrayOf("application/json", "*/*")) }
+                                .onFailure { bannerText = "无法打开系统文件选择器。" }
+                        },
+                    ) {
                         Text("导入私房菜 JSON")
                     }
+                    OutlinedButton(enabled = !importer.working, onClick = {
+                        val clip = context.getSystemService(ClipboardManager::class.java)?.primaryClip
+                        importer.readClipboard(clip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text)
+                    }) { Text("从剪贴板导入") }
                 }
+                if (importer.working && importer.plan == null) Text("正在读取私房菜…")
             }
 
             bannerText?.let { msg ->
@@ -480,7 +536,14 @@ fun PrivateRecipesManageScreen(
                 item {
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(if (targetId == null) "还没有私房菜" else "这道私房菜已不可用", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                when {
+                                    targetId != null -> "这道私房菜已不可用"
+                                    state.recipes.isEmpty() -> "还没有私房菜"
+                                    else -> "没有符合搜索的私房菜"
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                            )
                         }
                     }
                 }
@@ -498,7 +561,10 @@ fun PrivateRecipesManageScreen(
                                     editingId = recipe.customId
                                     showCreateDialog = true
                                 }) { Text("编辑") }
-                                TextButton(onClick = { container.privateRecipesStore.deleteRecipe(recipe.customId) }) {
+                                TextButton(onClick = {
+                                    deletionError = false
+                                    deletingId = recipe.customId
+                                }) {
                                     Text("删除")
                                 }
                             }
@@ -520,23 +586,16 @@ fun PrivateRecipesManageScreen(
                                 onOpenJournal(journalId)
                             }
                             recipe.video?.let { video ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    val noteText = if (video.location == PrivateRecipeVideo.Location.ICLOUD) {
-                                        "🎬 iOS iCloud 视频引用（Android 端仅保留记录，不拉取 iCloud 流）"
-                                    } else {
-                                        "🎬 本地视频附件：${video.originalName}（${video.byteCount / 1024} KB）"
-                                    }
-                                    Text(
-                                        noteText,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                    if (video.location == PrivateRecipeVideo.Location.LOCAL) {
+                                val localVideo = video.location == PrivateRecipeVideo.Location.LOCAL &&
+                                    video.deviceID == container.videoStore.deviceId
+                                val noteText = when {
+                                    localVideo -> "本地视频：${video.originalName}（${video.byteCount / 1024} KB）"
+                                    video.location == PrivateRecipeVideo.Location.ICLOUD -> "请在原 iOS 设备导出 iCloud 视频，再编辑这道菜并选择视频文件。"
+                                    else -> "请在原设备保存视频，再编辑这道菜并选择视频文件。"
+                                }
+                                Text(noteText, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                                if (localVideo) {
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         TextButton(
                                             onClick = {
                                                 runCatching { container.videoStore.playableFile(video) }
@@ -544,6 +603,29 @@ fun PrivateRecipesManageScreen(
                                                     .onFailure { err -> bannerText = err.message ?: "视频无法播放" }
                                             },
                                         ) { Text("播放视频") }
+                                        TextButton(onClick = {
+                                            runCatching {
+                                                val share = privateRecipeVideoShareIntent(context, container.videoStore, video)
+                                                context.startActivity(Intent.createChooser(share, "分享视频文件"))
+                                            }.onFailure { error ->
+                                                bannerText = (error as? PrivateVideoException)?.message ?: "无法打开视频分享。"
+                                            }
+                                        }) { Text("分享视频文件") }
+                                        TextButton(
+                                            enabled = pendingVideoExport == null && !videoEditor.exporting,
+                                            onClick = {
+                                                val picker = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                                                    addCategory(Intent.CATEGORY_OPENABLE)
+                                                    type = video.exportMimeType
+                                                    putExtra(Intent.EXTRA_TITLE, video.exportFilename)
+                                                }
+                                                pendingVideoExport = video.id
+                                                runCatching { exportVideoLauncher.launch(picker) }.onFailure {
+                                                    pendingVideoExport = null
+                                                    bannerText = "无法打开系统文件选择器。"
+                                                }
+                                            },
+                                        ) { Text("保存视频文件") }
                                     }
                                 }
                             }
@@ -552,6 +634,51 @@ fun PrivateRecipesManageScreen(
                 }
             }
         }
+    }
+
+    state.recipes.firstOrNull { it.customId == deletingId }?.let { recipe ->
+        AlertDialog(
+            onDismissRequest = { if (!deleting) deletingId = null },
+            title = { Text("删除这道私人菜谱？") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(recipe.name)
+                    if (deletionError) Text("菜谱未能删除，请重试。", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = !deleting, onClick = {
+                    deleting = true
+                    scope.launch {
+                        try {
+                            val removedVideo = withContext(Dispatchers.IO) {
+                                val store = container.privateRecipesStore
+                                val removed = store.deleteRecipe(recipe.customId)
+                                removed?.video?.let {
+                                    runCatching { store.removeUnreferencedVideo(it, container.videoStore) }.getOrDefault(false)
+                                } ?: true
+                            }
+                            deletingId = null
+                            if (!removedVideo) {
+                                val message = "菜谱已删除，旧视频副本未能清理。"
+                                if (targetId == null) bannerText = message
+                                else Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            }
+                            if (targetId != null) onBack()
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            deletionError = true
+                        } finally {
+                            deleting = false
+                        }
+                    }
+                }) { Text("确认删除") }
+            },
+            dismissButton = {
+                TextButton(enabled = !deleting, onClick = { deletingId = null }) { Text("取消") }
+            },
+        )
     }
 
     playingVideoFile?.let { (recipeTitle, videoFile) ->
@@ -582,6 +709,8 @@ fun PrivateRecipesManageScreen(
                                     }
                                 }
                             },
+                            onReset = null,
+                            onRelease = { it.stopPlayback() },
                         )
                     }
                     Text(
@@ -600,48 +729,30 @@ fun PrivateRecipesManageScreen(
     if (showCreateDialog) {
         val editing = state.recipes.firstOrNull { it.customId == editingId }
         var name by rememberSaveable(editingId) { mutableStateOf(editing?.name.orEmpty()) }
-        var stuffText by rememberSaveable(editingId) { mutableStateOf(editing?.stuff.orEmpty().joinToString("、")) }
-        var toolsText by rememberSaveable(editingId) { mutableStateOf(editing?.tools.orEmpty().joinToString("、")) }
+        val ingredients = rememberSaveable(editingId, saver = PrivateRecipeEditorList.Saver) {
+            PrivateRecipeEditorList(editing?.stuff.orEmpty())
+        }
+        val tools = rememberSaveable(editingId, saver = PrivateRecipeEditorList.Saver) {
+            PrivateRecipeEditorList(editing?.tools.orEmpty())
+        }
+        var catalogField by rememberSaveable(editingId) { mutableStateOf<PrivateRecipeCatalogField?>(null) }
+        val editorScroll = rememberScrollState()
         var note by rememberSaveable(editingId) { mutableStateOf(editing?.note.orEmpty()) }
         val originalSource = editing?.bv?.takeIf { it.isNotEmpty() } ?: editing?.link.orEmpty()
         var source by rememberSaveable(editingId) { mutableStateOf(originalSource) }
-        var keepOriginalVideo by rememberSaveable(editingId) { mutableStateOf(true) }
-        var stagedVideoDraft by remember { mutableStateOf<PrivateVideoDraft?>(null) }
-        var isSaving by remember { mutableStateOf(false) }
-        var isPickingVideo by remember { mutableStateOf(false) }
-        var err by remember { mutableStateOf<String?>(null) }
+        val stagedVideoDraft = videoEditor.draft
+        val hasVideo = stagedVideoDraft != null || (videoEditor.keepOriginal && editing?.video != null)
 
         val pickVideoLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocument(),
-        ) { uri ->
-            if (uri == null) return@rememberLauncherForActivityResult
-            isPickingVideo = true
-            scope.launch {
-                runCatching {
-                    container.videoStore.stageFromUri(uri, displayName = null)
-                }.onSuccess { draft ->
-                    stagedVideoDraft?.let { container.videoStore.discard(it) }
-                    stagedVideoDraft = draft
-                    err = null
-                }.onFailure { e ->
-                    err = e.message ?: "请选择可播放的 MP4、MOV 或 M4V 视频。"
-                }
-                isPickingVideo = false
-            }
-        }
+        ) { uri -> videoEditor.videoChosen(uri) }
 
-        fun closeEditor() {
-            stagedVideoDraft?.let { container.videoStore.discard(it) }
-            showCreateDialog = false
-            editingId = null
-        }
-
-        AlertDialog(
-            onDismissRequest = { if (!isSaving && !isPickingVideo) closeEditor() },
+        if (catalogField == null) AlertDialog(
+            onDismissRequest = { if (!videoEditor.editorBusy) closeEditor() },
             title = { Text(if (editingId == null) "新建私房菜" else "编辑私房菜") },
             text = {
                 Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    modifier = Modifier.verticalScroll(editorScroll),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     OutlinedTextField(
@@ -652,19 +763,25 @@ fun PrivateRecipesManageScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
-                        value = stuffText,
-                        onValueChange = { stuffText = it },
-                        label = { Text("食材（用顿号、或逗号分隔）") },
-                        singleLine = true,
+                        value = ingredients.text,
+                        onValueChange = { ingredients.text = it },
+                        label = { Text("食材（顿号、逗号或换行分隔）") },
+                        maxLines = 3,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    TextButton(enabled = !videoEditor.editorBusy, onClick = { catalogField = PrivateRecipeCatalogField.INGREDIENT }) {
+                        Text(PrivateRecipeCatalogField.INGREDIENT.title)
+                    }
                     OutlinedTextField(
-                        value = toolsText,
-                        onValueChange = { toolsText = it },
-                        label = { Text("厨具（选填，分隔填写）") },
-                        singleLine = true,
+                        value = tools.text,
+                        onValueChange = { tools.text = it },
+                        label = { Text("厨具（选填）") },
+                        maxLines = 3,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    TextButton(enabled = !videoEditor.editorBusy, onClick = { catalogField = PrivateRecipeCatalogField.TOOL }) {
+                        Text(PrivateRecipeCatalogField.TOOL.title)
+                    }
                     OutlinedTextField(
                         value = note,
                         onValueChange = { note = it.take(20000) },
@@ -684,21 +801,19 @@ fun PrivateRecipesManageScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         OutlinedButton(
-                            enabled = !isSaving && !isPickingVideo,
+                            enabled = !videoEditor.editorBusy,
                             onClick = {
-                                pickVideoLauncher.launch(arrayOf("video/mp4", "video/quicktime", "video/x-m4v", "video/*"))
+                                videoEditor.chooseVideo {
+                                    pickVideoLauncher.launch(arrayOf("video/mp4", "video/quicktime", "video/x-m4v", "video/*"))
+                                }
                             },
                         ) {
-                            Text(if (stagedVideoDraft == null && editing?.video == null) "添加本地视频" else "更换视频")
+                            Text(if (hasVideo) "更换视频" else "添加本地视频")
                         }
-                        if (stagedVideoDraft != null || (keepOriginalVideo && editing?.video != null)) {
+                        if (hasVideo) {
                             TextButton(
-                                enabled = !isSaving && !isPickingVideo,
-                                onClick = {
-                                    stagedVideoDraft?.let { container.videoStore.discard(it) }
-                                    stagedVideoDraft = null
-                                    keepOriginalVideo = false
-                                },
+                                enabled = !videoEditor.editorBusy,
+                                onClick = videoEditor::removeVideo,
                             ) { Text("移除视频") }
                         }
                     }
@@ -709,24 +824,24 @@ fun PrivateRecipesManageScreen(
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    err?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                    if (videoEditor.importing) Text("正在读取视频…", style = MaterialTheme.typography.bodySmall)
+                    videoEditor.editorError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                 }
             },
             confirmButton = {
                 Button(
-                    enabled = !isSaving && !isPickingVideo && (editingId == null || editing != null),
+                    enabled = !videoEditor.editorBusy && (editingId == null || editing != null),
                     onClick = {
                         val now = System.currentTimeMillis()
-                        val stuff = stuffText.split('、', ',', '，').map { it.trim() }.filter { it.isNotEmpty() }
-                        val tools = toolsText.split('、', ',', '，').map { it.trim() }.filter { it.isNotEmpty() }
-                        val draftToInstall = stagedVideoDraft
-                        val existingVideo = editing?.video?.takeIf { keepOriginalVideo }
+                        val ingredientNames = ingredients.values
+                        val toolNames = tools.values
+                        val existingVideo = editing?.video?.takeIf { videoEditor.keepOriginal }
                         val validatedCandidate = runCatching {
                             val previous = editing ?: PrivateRecipe(
                                 customId = "custom-${UUID.randomUUID()}",
                                 name = name,
-                                stuff = stuff,
-                                tools = tools,
+                                stuff = ingredientNames,
+                                tools = toolNames,
                                 createdAt = now,
                                 updatedAt = now,
                             )
@@ -738,269 +853,50 @@ fun PrivateRecipesManageScreen(
                             }
                             previous.copy(
                                 name = name.trim(),
-                                stuff = stuff,
-                                tools = tools,
+                                stuff = ingredientNames,
+                                tools = toolNames,
                                 note = note.trim().takeIf { it.isNotEmpty() },
                                 bv = if (sourceChanged) sourceValue.takeIf { isBilibili } else previous.bv,
                                 link = if (sourceChanged) sourceValue.takeIf { it.isNotEmpty() && !isBilibili } else previous.link,
-                                video = draftToInstall?.video ?: existingVideo,
+                                video = stagedVideoDraft?.video ?: existingVideo,
                                 updatedAt = maxOf(now, previous.updatedAt),
                             ).validated()
                         }.getOrElse { e ->
-                            err = e.message ?: "请填写有效菜名与至少一项食材（不超过上限）。"
+                            videoEditor.editorError = e.message ?: "请填写有效菜名与至少一项食材（不超过上限）。"
                             return@Button
                         }
-                        isSaving = true
-                        scope.launch {
-                            var installedVideo = null as PrivateRecipeVideo?
-                            val result = runCatching {
-                                if (draftToInstall != null) {
-                                    installedVideo = container.videoStore.installWithoutDiscarding(draftToInstall)
-                                }
-                                val finalItem = validatedCandidate.copy(video = installedVideo ?: existingVideo)
-                                withContext(Dispatchers.IO) {
-                                    container.privateRecipesStore.upsertRecipe(finalItem)
-                                }
-                            }
-                            result.onSuccess {
-                                isSaving = false
-                                closeEditor()
-                            }.onFailure { e ->
-                                installedVideo?.let { container.videoStore.remove(it) }
-                                isSaving = false
-                                err = e.message ?: "请填写有效菜名与至少一项食材（不超过上限）。"
-                            }
-                        }
+                        videoEditor.save(validatedCandidate)
                     },
-                ) { Text(if (isSaving) "保存中…" else "保存") }
+                ) { Text(if (videoEditor.saving) "保存中…" else "保存") }
             },
             dismissButton = {
                 TextButton(
-                    enabled = !isSaving && !isPickingVideo,
+                    enabled = !videoEditor.editorBusy,
                     onClick = ::closeEditor,
                 ) { Text("取消") }
             },
         )
-    }
-
-    importPreview?.let { (rawJson, plan) ->
-        AlertDialog(
-            onDismissRequest = { importPreview = null },
-            title = { Text("确认导入私房菜") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("将新增：${plan.additions.size} 道")
-                    Text("同内容跳过：${plan.duplicates.size} 道")
-                    Text("编号冲突 / 曾删除记录：${plan.conflicts.size} 道")
-                    if (plan.conflicts.isNotEmpty()) {
-                        Text(
-                            "冲突项可选择「跳过冲突」或「保留带新编号副本」。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        runCatching {
-                            container.privateRecipesStore.commitImport(rawJson, keepCopies = true)
-                        }.onSuccess { count ->
-                            bannerText = "已导入 $count 道私房菜（含保留副本）。"
-                        }.onFailure { err ->
-                            bannerText = err.message ?: "导入失败，原数据未变动。"
-                        }
-                        importPreview = null
-                    },
-                ) { Text(if (plan.conflicts.isNotEmpty()) "导入并保留副本" else "确认导入") }
-            },
-            dismissButton = {
-                Row {
-                    if (plan.conflicts.isNotEmpty()) {
-                        TextButton(
-                            onClick = {
-                                runCatching {
-                                    container.privateRecipesStore.commitImport(rawJson, keepCopies = false)
-                                }.onSuccess { count ->
-                                    bannerText = "已导入 $count 道新私房菜（已跳过冲突）。"
-                                }.onFailure { err ->
-                                    bannerText = err.message ?: "导入失败。"
-                                }
-                                importPreview = null
-                            },
-                        ) { Text("仅新增并跳过冲突") }
-                    }
-                    TextButton(onClick = { importPreview = null }) { Text("取消") }
-                }
-            },
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-fun PersonalCatalogManageScreen(
-    snapshot: CookCatalogSnapshot,
-    container: AppContainer,
-    onBack: () -> Unit,
-) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val state by container.personalCatalogStore.state.collectAsState()
-    var newName by rememberSaveable { mutableStateOf("") }
-    var newCategory by rememberSaveable { mutableStateOf(CatalogCategory.VEGETABLE) }
-    var statusText by remember { mutableStateOf<String?>(null) }
-
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json"),
-    ) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            runCatching {
-                withContext(Dispatchers.IO) {
-                    val payload = container.personalCatalogStore.exportJson()
-                    context.contentResolver.openOutputStream(uri)?.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
-                        ?: error("无法写入文件")
-                }
-            }.onSuccess { statusText = "已导出个人食材词典 JSON。" }
-                .onFailure { statusText = "导出失败：${it.message}" }
-        }
-    }
-
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            runCatching {
-                withContext(Dispatchers.IO) {
-                    val raw = context.contentResolver.openInputStream(uri)?.use { input ->
-                        BoundedIoStreams.readUtf8Bounded(input, maxBytes = 2 * 1024 * 1024)
-                    } ?: error("无法读取文件")
-                    container.personalCatalogStore.importJson(raw)
-                }
-            }.onSuccess { doc ->
-                statusText = "已合并个人词典（本次解析 ${doc.items.size} 条自定义、${doc.hidden.size} 条隐藏内置）。"
-            }.onFailure { err ->
-                Toast.makeText(context, err.message ?: "导入失败", Toast.LENGTH_SHORT).show()
-                statusText = err.message ?: "导入失败，现有词典未变动。"
-            }
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("个人食材/厨具词典") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
+        catalogField?.let { field ->
+            val personalCatalog by container.personalCatalogStore.state.collectAsState()
+            val food = remember(personalCatalog, snapshot) { personalCatalog.toDocument().applyingTo(snapshot.data.food) }
+            val isIngredient = field == PrivateRecipeCatalogField.INGREDIENT
+            PrivateRecipeCatalogPicker(
+                field = field,
+                entries = if (isIngredient) food.vegetable + food.meat + food.staple else food.tools,
+                draft = if (isIngredient) ingredients else tools,
+                normalize = { name -> if (isIngredient) snapshot.data.normalizer.normalize(name) else name.trim() },
+                onClose = { catalogField = null },
             )
-        },
-    ) { inner ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(inner),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { exportLauncher.launch("cook-personal-catalog.json") }) {
-                        Text("导出词典 JSON")
-                    }
-                    OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) }) {
-                        Text("导入词典 JSON")
-                    }
-                }
-            }
-
-            statusText?.let { msg ->
-                item {
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                        Text(msg, modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-
-            item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("添加自定义词条", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        OutlinedTextField(
-                            value = newName,
-                            onValueChange = { newName = it.take(24) },
-                            label = { Text("名称") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CatalogCategory.entries.forEach { cat ->
-                                FilterChip(
-                                    selected = newCategory == cat,
-                                    onClick = { newCategory = cat },
-                                    label = { Text("${cat.emoji} ${cat.title}") },
-                                )
-                            }
-                        }
-                        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                            Button(
-                                enabled = newName.trim().isNotEmpty(),
-                                onClick = {
-                                    container.personalCatalogStore.addCustomEntry(newName, newCategory)
-                                        .onSuccess {
-                                            newName = ""
-                                            statusText = null
-                                        }
-                                        .onFailure { err ->
-                                            statusText = err.message ?: "添加失败"
-                                        }
-                                },
-                            ) { Text("添加") }
-                        }
-                    }
-                }
-            }
-
-            if (state.customEntries.isNotEmpty()) {
-                item {
-                    Text("自定义词条 (${state.customEntries.size})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                }
-                items(state.customEntries, key = { it.id }) { entry ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text("${entry.category.emoji} ${entry.name}（${entry.category.title}）")
-                            TextButton(onClick = { container.personalCatalogStore.removeCustomEntry(entry.id) }) { Text("移除") }
-                        }
-                    }
-                }
-            }
-
-            item {
-                Text("内置词条显示控制（点选隐藏或恢复）", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            }
-            CatalogCategory.entries.forEach { cat ->
-                val sampleItems = snapshot.data.food.itemsIn(cat).take(12)
-                if (sampleItems.isNotEmpty()) {
-                    item(key = "builtin_${cat.rawValue}") {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("${cat.emoji} ${cat.title}", style = MaterialTheme.typography.labelMedium)
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                sampleItems.forEach { stuff ->
-                                    val hidden = CatalogEntry(cat, stuff.name) in state.hiddenEntries
-                                    FilterChip(
-                                        selected = !hidden,
-                                        onClick = { container.personalCatalogStore.toggleHiddenEntry(cat, stuff.name) },
-                                        label = { Text(if (hidden) "已隐藏：${stuff.name}" else stuff.name) },
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
+    }
+
+    importer.plan?.let { plan ->
+        PrivateRecipeImportPreview(
+            plan = plan,
+            working = importer.working,
+            message = importer.message,
+            onCancel = importer::cancel,
+            onConfirm = importer::confirm,
+        )
     }
 }

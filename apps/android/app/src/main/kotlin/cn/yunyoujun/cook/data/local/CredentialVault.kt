@@ -179,6 +179,7 @@ class AndroidKeystoreVault(
 
         const val KEY_DEEPSEEK_API_KEY = "deepseek_api_key"
         const val KEY_YUNLEFUN_SESSION_JSON = "yunlefun_session_json"
+        internal const val KEY_YUNLEFUN_PENDING_SSO = "yunlefun_pending_sso"
 
         @Volatile
         private var registered = false

@@ -38,16 +38,14 @@ class FridgeVisionService(private val transport: HttpTransport = IsolatedHttpPos
         encodeDefaults = true
     }
 
-    suspend fun prepare(jpegSource: ByteArray): ByteArray = withContext(Dispatchers.Default) {
-        val (summary, bitmap) = FridgePhotoInspector.decodeBoundedInMemory(jpegSource)
+    suspend fun prepare(jpegSource: ByteArray, captureRotation: Int? = null): ByteArray = withContext(Dispatchers.Default) {
+        val (summary, bitmap) = FridgePhotoInspector.decodeBoundedInMemory(jpegSource, captureRotation)
         try {
             encode(bitmap, summary.rotationDegrees)
         } finally {
             bitmap.recycle()
         }
     }
-
-    suspend fun prepare(bitmap: Bitmap): ByteArray = encode(bitmap, rotation = 0)
 
     private suspend fun encode(bitmap: Bitmap, rotation: Int): ByteArray = withContext(Dispatchers.Default) {
         val longestEdge = maxOf(bitmap.width, bitmap.height)
@@ -153,9 +151,13 @@ class FridgeVisionService(private val transport: HttpTransport = IsolatedHttpPos
     companion object {
         private const val ENDPOINT = "https://api.yunle.fun/cook-fridge-vision"
         private const val MAX_JPEG_BYTES = 70 * 1024
+        internal const val MAX_NAME_CODE_POINTS = 30
+        private val NAME_CHARACTERS = Regex("[\\p{L}\\p{N} ·()（）-]+")
+        private val LETTER_OR_NUMBER = Regex("[\\p{L}\\p{N}]")
 
+        // Match the cloud function's Unicode categories and count whole code points.
         fun validName(value: String): Boolean =
-            value.length in 1..30 && value.any(Char::isLetterOrDigit) &&
-                value.all { it.isLetterOrDigit() || it in " ·-（）()" }
+            value.codePointCount(0, value.length) in 1..MAX_NAME_CODE_POINTS &&
+                NAME_CHARACTERS.matches(value) && LETTER_OR_NUMBER.containsMatchIn(value)
     }
 }

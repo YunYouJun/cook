@@ -7,6 +7,8 @@ import { favoriteEntries, setFavoriteEntries, toggleFavorite } from '../apps/web
 import { addRecipeHistory, clearRecipeHistories, recipeHistories, removeRecipeHistory } from '../apps/web/app/composables/store/history'
 import { exportLocalUserData, importLocalUserData, localUserData } from '../apps/web/app/composables/store/userData'
 import { userDataMeta } from '../apps/web/app/composables/store/userDataMeta'
+import { mergeUserData, normalizeUserData } from '../apps/web/app/utils/userData'
+import historyClearFixtures from '../packages/data/fixtures/user-data-history-clear.json'
 
 const NOW = 1_800_000_000_000
 const ownerDigest = createHash('sha256').update('u1').digest('hex')
@@ -60,6 +62,22 @@ describe('history tombstones', () => {
     expect(recipeHistories.value).toEqual([])
     expect(userDataMeta.value.historyClearedAt).toBe(NOW)
     expect(userDataMeta.value.historyRemovals).toEqual([])
+  })
+
+  it('stores a bounded clear and a revisit written in the same millisecond', () => {
+    const fixture = historyClearFixtures[0]!
+    localUserData.write(normalizeUserData(fixture.current)!)
+    clearRecipeHistories()
+    expect(recipeHistories.value).toEqual([])
+    expect(userDataMeta.value.historyClearedAt).toBe(fixture.expectedCutoff)
+    expect(userDataMeta.value.historyRemovals).toEqual(fixture.expectedRemovals)
+
+    addRecipeHistory(recipe('萝卜汤'))
+    const merged = mergeUserData(localUserData.read(), normalizeUserData(fixture.peer)!, NOW)
+    expect(merged.histories.map(({ recipe: visited, time }) => ({ name: visited.name, time }))).toEqual([
+      { name: '萝卜汤', time: NOW + 1 },
+      ...fixture.expectedVisits,
+    ])
   })
 })
 

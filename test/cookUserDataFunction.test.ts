@@ -15,7 +15,7 @@ interface FunctionModule {
 const require = createRequire(import.meta.url)
 const fn = require('../cloudfunctions/cook-user-data/index.js') as FunctionModule
 
-function createApp(userInfo: Record<string, unknown> | (() => never), expiry = Date.now() + 86_400_000) {
+function createApp(userInfo: Record<string, unknown> | (() => never), expiry = Date.now() + 86_400_000, access: { expiresAt: number }[] = []) {
   const docs = new Map<string, Record<string, unknown>>()
   const profiles = new Map<string, Record<string, unknown>>()
   const doc = vi.fn((id: string) => ({
@@ -27,7 +27,7 @@ function createApp(userInfo: Record<string, unknown> | (() => never), expiry = D
   }))
   const collection = vi.fn((name: string) => {
     if (name === 'user_memberships')
-      return { doc: () => ({ get: async () => ({ data: [{ expireAt: expiry }] }) }) }
+      return { doc: () => ({ get: async () => ({ data: [{ expireAt: expiry, playSubscriptionAccess: access }] }) }) }
     if (name === 'user_profiles')
       return { doc: (id: string) => ({ get: async () => ({ data: profiles.get(id) }) }) }
     return { doc }
@@ -91,6 +91,21 @@ describe('cook-user-data function', () => {
     expect(docs.get('u1')).toMatchObject({ version: 1, favorites: [{ id: 1, time: 1 }] })
   })
 
+  it('keeps server-side sync available inside verified Play access and closes it at the deadline', async () => {
+    const now = Date.now()
+    const expiry = now + 20_000
+    const { docs } = createApp({ uid: 'u1' }, now - 1, [{ expiresAt: expiry }])
+    await expect(fn.main({ action: 'sync', document })).resolves.toMatchObject({ ok: true })
+    vi.spyOn(Date, 'now').mockReturnValue(expiry)
+    try {
+      await expect(fn.main({ action: 'get' })).resolves.toEqual({ ok: false, code: 'MEMBERSHIP_REQUIRED' })
+      expect(docs.get('u1')?.favorites).toEqual(document.favorites)
+    }
+    finally {
+      vi.restoreAllMocks()
+    }
+  })
+
   it('returns the caller document without CloudBase metadata', async () => {
     createApp({ uid: 'u1' })
     await fn.main({ action: 'set', document })
@@ -106,6 +121,32 @@ describe('cook-user-data function', () => {
   it('returns null for an account without a document', async () => {
     createApp({ uid: 'u2' })
     await expect(fn.main({ action: 'get' })).resolves.toEqual({ ok: true, document: null })
+  })
+
+  it('syncs a first-time library when the gateway reports missing profile, canonical membership and library documents', async () => {
+    const missing = async () => {
+      throw Object.assign(new Error('Document does not exist'), { code: 'DOCUMENT_NOT_FOUND' })
+    }
+    const { collection, docs } = createApp({ uid: 'u1' })
+    const legacyMembership = vi.fn(async () => ({ data: [{ userId: 'u1', expireAt: Date.now() + 60_000 }] }))
+    collection.mockImplementation((name: string) => {
+      if (name === 'user_profiles')
+        return { doc: () => ({ get: missing }) }
+      if (name === 'user_memberships')
+        return { doc: () => ({ get: missing }), where: () => ({ limit: () => ({ get: legacyMembership }) }) }
+      return { doc: (id: string) => ({
+        get: async () => docs.has(id) ? { data: [docs.get(id)] } : missing(),
+        set: async (value: Record<string, unknown>) => {
+          docs.set(id, value)
+          return { updated: 1 }
+        },
+      }) }
+    })
+
+    await expect(fn.main({ action: 'get' })).resolves.toEqual({ ok: true, document: null })
+    await expect(fn.main({ action: 'sync', document })).resolves.toMatchObject({ ok: true, document })
+    await expect(fn.main({ action: 'get' })).resolves.toMatchObject({ ok: true, document })
+    expect(legacyMembership).toHaveBeenCalledTimes(3)
   })
 
   it('rejects malformed or oversized documents', async () => {
@@ -172,6 +213,37 @@ describe('cook-user-data function', () => {
     expect(docs.size).toBe(0)
   })
 
+  it.each(['set', 'sync'])('rolls back %s when deletion starts after the initial access check', async (action) => {
+    const { docs, profiles, runTransaction } = createApp({ uid: 'u1' })
+    runTransaction.mockImplementation(async (run) => {
+      let staged: Record<string, unknown> | undefined
+      const result = await run({
+        collection: (name: string) => {
+          expect(name).toBe('cook_user_data')
+          return {
+            doc: (id: string) => {
+              expect(id).toBe('u1')
+              return {
+                get: async () => ({ data: [] }),
+                set: async (value: Record<string, unknown>) => {
+                  staged = value
+                  profiles.set(id, { deletionStatus: 'pending' })
+                },
+              }
+            },
+          }
+        },
+      })
+      if (staged)
+        docs.set('u1', staged)
+      return result
+    })
+
+    await expect(fn.main({ action, document })).resolves.toEqual({ ok: false, code: 'LOGIN_REQUIRED' })
+    expect(profiles.get('u1')).toEqual({ deletionStatus: 'pending' })
+    expect(docs.has('u1')).toBe(false)
+  })
+
   it('allows an active member to resume sync after cancelling deletion', async () => {
     const { docs, profiles } = createApp({ uid: 'u1' })
     docs.set('u1', document)
@@ -213,5 +285,35 @@ describe('cook-user-data function', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     await expect(fn.main({ action: 'get' })).resolves.toEqual({ ok: false, code: 'INTERNAL_ERROR' })
     error.mockRestore()
+  })
+
+  it('validates record.expireAt bounds and handles wrapped transaction deletion errors', async () => {
+    const future = Date.now() + 60_000
+    createApp({ uid: 'u1' }, 253402300799001)
+    await expect(fn.main({ action: 'capabilities' })).resolves.toEqual({ ok: false, code: 'MEMBERSHIP_REQUIRED' })
+
+    createApp({ uid: 'u1' }, 1.5)
+    await expect(fn.main({ action: 'capabilities' })).resolves.toEqual({ ok: false, code: 'MEMBERSHIP_REQUIRED' })
+
+    createApp({ uid: 'u1' }, 253402300799001, [{ expiresAt: future }])
+    await expect(fn.main({ action: 'capabilities' })).resolves.toEqual({ ok: true, protocolVersion: 2 })
+
+    const { profiles, runTransaction } = createApp({ uid: 'u1' }, future)
+    runTransaction.mockImplementationOnce(async (work) => {
+      try {
+        return await work({
+          collection: () => ({
+            doc: () => ({
+              async get() { return { data: [] } },
+              async set() { profiles.set('u1', { deletionStatus: 'pending' }) },
+            }),
+          }),
+        })
+      }
+      catch (err) {
+        throw new Error(`wrapped: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    })
+    await expect(fn.main({ action: 'sync', document })).resolves.toEqual({ ok: false, code: 'LOGIN_REQUIRED' })
   })
 })

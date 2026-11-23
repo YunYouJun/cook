@@ -79,6 +79,24 @@ final class FridgeVisionUITests: XCTestCase {
     }
 
     @MainActor
+    func testRejectedUploadKeepsThePhotoAndRequiresConsentForTheNewRecipient() {
+        let app = openPreview(result: "rejected")
+        let upload = app.buttons["fridge.vision.upload"]
+        upload.tap()
+
+        let toast = app.staticTexts["fridge.vision.failureToast"]
+        XCTAssertTrue(toast.waitForExistence(timeout: 4))
+        XCTAssertEqual(toast.label, "已重新核对登录状态，请确认照片接收方后再识别。")
+        XCTAssertTrue(app.images["所选冰箱照片"].exists)
+        XCTAssertTrue(app.staticTexts["fridge.vision.recipient"].label.contains("发送给 DeepSeek"))
+        XCTAssertFalse(app.buttons["fridge.vision.save"].exists)
+        XCTAssertTrue(upload.isHittable)
+        upload.tap()
+
+        XCTAssertTrue(app.buttons["fridge.vision.save"].waitForExistence(timeout: 10))
+    }
+
+    @MainActor
     func testEmptyResultShowsToastAndOffersAnotherPhoto() {
         let app = openPreview(result: "empty")
         app.buttons["fridge.vision.upload"].tap()

@@ -37,12 +37,14 @@ import SwiftUI
 
     func renews(_ id: String) -> Bool { renewableProductIDs.contains(id) }
 
-    static func live(accounts: YunlefunAccountStore, isolated: Bool) -> MembershipStore {
+    static func live(accounts: YunlefunAccountStore, isolated: Bool,
+                     onProductionEntitlement: @escaping @MainActor (MembershipEntitlement) -> Void) -> MembershipStore {
         let enabled = CookFeatures.membershipPurchasesEnabled && !isolated
         let catalog = enabled ? MembershipPlan.catalog : [:]
         let disabledTransport: MembershipService.Transport = { _ in throw URLError(.unsupportedURL) }
         let service = MembershipService(accounts: accounts, purchasesEnabled: enabled,
-                                        transport: isolated ? disabledTransport : nil)
+                                        transport: isolated ? disabledTransport : nil,
+                                        onProductionEntitlement: onProductionEntitlement)
         return MembershipStore(commerce: NativeMembershipStoreKit(catalog: catalog), service: service,
                                catalog: catalog, purchasesEnabled: enabled,
                                identity: { MembershipService.identity(accounts: accounts) },

@@ -26,9 +26,12 @@ data class CookingRecord(
     val id: String = UUID.randomUUID().toString(),
 )
 
+@Serializable
 data class LearningConfirmation(val record: CookingRecord, val autoCookedId: String?)
 
-data class JournalEntry(val record: CookingRecord, val cookedId: String?, val learned: Boolean)
+data class JournalEntry(val record: CookingRecord, val cookedId: String?, val learnedId: String?) {
+    val learned: Boolean get() = learnedId != null
+}
 
 @Serializable
 data class CookingJournal(
@@ -39,15 +42,15 @@ data class CookingJournal(
         cooked.any { it.recipeId == recipeId && sameDay(it.dateMs, dateMs, zone) }
 
     fun entries(learnedOnly: Boolean, zone: ZoneId = ZoneId.systemDefault()): List<JournalEntry> {
-        if (learnedOnly) return learned.sortedByDescending { it.dateMs }.map { JournalEntry(it, null, true) }
+        if (learnedOnly) return learned.sortedByDescending { it.dateMs }.map { JournalEntry(it, null, it.id) }
         val milestones = learned.associateBy { it.recipeId }
         val joined = mutableSetOf<String>()
         val timeline = cooked.map { record ->
             val milestone = milestones[record.recipeId]?.takeIf { sameDay(it.dateMs, record.dateMs, zone) }
             milestone?.let { joined.add(it.id) }
-            JournalEntry(record, record.id, milestone != null)
+            JournalEntry(record, record.id, milestone?.id)
         }
-        return (timeline + learned.filterNot { it.id in joined }.map { JournalEntry(it, null, true) })
+        return (timeline + learned.filterNot { it.id in joined }.map { JournalEntry(it, null, it.id) })
             .sortedWith(compareByDescending<JournalEntry> { it.record.dateMs }.thenBy { it.record.id })
     }
 }
@@ -58,21 +61,46 @@ private fun sameDay(firstMs: Long, secondMs: Long, zone: ZoneId): Boolean =
 
 class CookingJournalStore(context: Context) {
     private val file = File(context.applicationContext.filesDir, "cooking-journal-v1.json")
-    private val initial = runCatching {
-        AtomicJsonFiles.readTextRecoverable(file)?.let {
-            AtomicJsonFiles.json.decodeFromString<CookingJournal>(it)
-        } ?: CookingJournal()
-    }
+    private val initial = loadInitialJournal(file)
     val loadFailed = initial.isFailure
     private val mutableState = MutableStateFlow(initial.getOrDefault(CookingJournal()))
     val state = mutableState.asStateFlow()
 
-    @Synchronized
-    fun recordCooked(recipeId: JournalRecipeId, name: String, nowMs: Long = System.currentTimeMillis()) {
-        val journal = state.value
-        if (!journal.cookedOn(recipeId, nowMs)) {
-            save(journal.copy(cooked = journal.cooked + CookingRecord(recipeId, name, nowMs)))
+    private fun loadInitialJournal(target: File): Result<CookingJournal> {
+        val bak = File(target.parentFile, "${target.name}.bak")
+        val hasPrimary = target.isFile && target.length() > 0L
+        val hasBackup = bak.isFile && bak.length() > 0L
+        if (hasPrimary) {
+            val primaryResult = runCatching {
+                AtomicJsonFiles.json.decodeFromString<CookingJournal>(target.readText(Charsets.UTF_8))
+            }
+            if (primaryResult.isSuccess) return primaryResult
+            if (!hasBackup) return primaryResult
         }
+        if (hasBackup) {
+            val backupResult = runCatching {
+                val recovered = AtomicJsonFiles.json.decodeFromString<CookingJournal>(bak.readText(Charsets.UTF_8))
+                runCatching {
+                    java.nio.file.Files.copy(
+                        bak.toPath(),
+                        target.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                    )
+                }
+                recovered
+            }
+            if (backupResult.isSuccess) return backupResult
+            return backupResult
+        }
+        return Result.success(CookingJournal())
+    }
+
+    @Synchronized
+    fun recordCooked(recipeId: JournalRecipeId, name: String, nowMs: Long = System.currentTimeMillis()): Boolean {
+        val journal = state.value
+        if (journal.cookedOn(recipeId, nowMs)) return false
+        save(journal.copy(cooked = journal.cooked + CookingRecord(recipeId, name, nowMs)))
+        return true
     }
 
     @Synchronized
@@ -105,8 +133,21 @@ class CookingJournalStore(context: Context) {
     fun removeCooked(id: String) = save(state.value.copy(cooked = state.value.cooked.filterNot { it.id == id }))
 
     @Synchronized
-    fun removeLearned(recipeId: JournalRecipeId) =
-        save(state.value.copy(learned = state.value.learned.filterNot { it.recipeId == recipeId }))
+    fun removeLearned(id: String) =
+        save(state.value.copy(learned = state.value.learned.filterNot { it.id == id }))
+
+    @Synchronized
+    internal fun restoreBackup(backup: CookingJournal) {
+        val current = state.value
+        val recordIds = (current.cooked + current.learned).mapTo(HashSet()) { it.id }
+        val learned = current.learned.mapTo(HashSet()) { it.recipeId }
+        save(
+            CookingJournal(
+                cooked = current.cooked + backup.cooked.filterNot { it.id in recordIds },
+                learned = current.learned + backup.learned.filterNot { it.id in recordIds || it.recipeId in learned },
+            ),
+        )
+    }
 
     private fun save(journal: CookingJournal) {
         check(!loadFailed) { "做菜足迹暂时无法读取，原始记录已保留。" }

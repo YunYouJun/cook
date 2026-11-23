@@ -17,6 +17,12 @@ enum YunlefunAccountError: LocalizedError {
     }
 }
 
+enum AccountWebHandoffError: LocalizedError {
+    case interrupted
+
+    var errorDescription: String? { "账号交接暂时中断，请重试。" }
+}
+
 struct YunlefunAccount: Decodable, Equatable {
     let id: String
     let name: String?
@@ -68,7 +74,7 @@ enum WeChatSignupNext {
 }
 
 enum WeChatSignupError: LocalizedError {
-    case captchaRequired, captchaInvalid, invalidOTP, restart, existingAccount, accountCreated
+    case captchaRequired, captchaInvalid, invalidOTP, restart, existingAccount, accountCreated, unconfirmed
 
     var errorDescription: String? {
         switch self {
@@ -78,6 +84,7 @@ enum WeChatSignupError: LocalizedError {
         case .restart: return "本次验证已过期，请重新验证手机号。"
         case .existingAccount: return "此手机号已有云乐坊账号，请登录原账号再绑定微信。"
         case .accountCreated: return "云乐坊账号已创建，但未能完成登录。请用手机号登录，再到账号页检查微信绑定。"
+        case .unconfirmed: return "暂时无法确认是否开户。请先用已验证的手机号登录并检查微信绑定，或重新验证手机号。"
         }
     }
 }
@@ -89,6 +96,7 @@ protocol YunlefunAccountServing {
     func account(_ credential: YunlefunCredential) async throws -> YunlefunAccount
     func signOut(_ credential: YunlefunCredential) async throws
     func signInWithWeChat(code: String, deviceID: String) async throws -> YunlefunCredential
+    func registerWithWeChat(proof: String, code: String, deviceID: String) async throws -> YunlefunCredential
     func bindWeChat(code: String, credential: YunlefunCredential) async throws
     func supportsAccountWebHandoff(in transport: YunlefunAccountWebHandoff.Transport) async throws -> Bool
     func approveAccountWebHandoff(fields: [String: String], credential: YunlefunCredential) async throws
@@ -96,6 +104,9 @@ protocol YunlefunAccountServing {
 
 extension YunlefunAccountServing {
     func signInWithWeChat(code: String, deviceID: String) async throws -> YunlefunCredential {
+        throw WeChatAccountError.unavailable
+    }
+    func registerWithWeChat(proof: String, code: String, deviceID: String) async throws -> YunlefunCredential {
         throw WeChatAccountError.unavailable
     }
     func bindWeChat(code: String, credential: YunlefunCredential) async throws {
@@ -114,26 +125,29 @@ struct YunlefunAccountService: YunlefunAccountServing {
     private static let ticketURL = URL(string: "https://api.yunle.fun/sso-ticket")!
     private static let cookOrigin = "https://cook.yunyoujun.cn"
     private static let logger = Logger(subsystem: "fun.yunle.cook", category: "account")
+    private static let defaultSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.httpShouldSetCookies = false
+        config.httpCookieStorage = nil
+        config.urlCredentialStorage = nil
+        config.urlCache = nil
+        config.timeoutIntervalForRequest = 20
+        config.timeoutIntervalForResource = 30
+        return URLSession(configuration: config, delegate: AccountRedirectPolicy(), delegateQueue: nil)
+    }()
     private let transport: Transport
 
     init(transport: Transport? = nil) {
         if let transport { self.transport = transport }
         else {
-            let config = URLSessionConfiguration.ephemeral
-            config.httpShouldSetCookies = false
-            config.httpCookieStorage = nil
-            config.urlCredentialStorage = nil
-            config.urlCache = nil
-            config.timeoutIntervalForRequest = 20
-            config.timeoutIntervalForResource = 30
-            let session = URLSession(configuration: config, delegate: AccountRedirectPolicy(), delegateQueue: nil)
+            let session = Self.defaultSession
             self.transport = { try await session.data(for: $0) }
         }
     }
 
     func signIn(fields: [String: String], deviceID: String) async throws -> YunlefunCredential {
         let data = try await request(Self.ticketURL, fields: fields, origin: Self.cookOrigin)
-        return try await exchangeWeChatTicket(data, deviceID: deviceID)
+        return try await exchangeSsoTicket(data, deviceID: deviceID)
     }
 
     func weChatSignupCaptcha(deviceID: String) async throws -> WeChatSignupCaptcha {
@@ -163,8 +177,12 @@ struct YunlefunAccountService: YunlefunAccountServing {
     }
 
     func registerWithWeChat(proof: String, code: String, deviceID: String) async throws -> YunlefunCredential {
-        let data = try await signupRequest("registerCookWeChat", fields: ["proof": proof, "code": code], deviceID: deviceID)
+        let data = try await signupRequest(Self.weChatRegistrationAction, fields: ["proof": proof, "code": code], deviceID: deviceID)
+        guard (try? JSONDecoder().decode(SignupAcknowledgement.self, from: data))?.ok == true else {
+            throw WeChatSignupError.unconfirmed
+        }
         do { return try await exchangeWeChatTicket(data, deviceID: deviceID) }
+        catch is CancellationError { throw CancellationError() }
         catch { throw WeChatSignupError.accountCreated }
     }
 
@@ -175,7 +193,7 @@ struct YunlefunAccountService: YunlefunAccountServing {
         return try await request(Self.ticketURL, fields: body, deviceID: deviceID, origin: Self.cookOrigin, weChat: true)
     }
 
-    private func exchangeWeChatTicket(_ data: Data, deviceID: String) async throws -> YunlefunCredential {
+    private func exchangeSsoTicket(_ data: Data, deviceID: String) async throws -> YunlefunCredential {
         guard let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               payload["ok"] as? Bool == true, let ticket = payload["ticket"] as? String, !ticket.isEmpty,
               ["access_token", "refresh_token", "session"].allSatisfy({ payload[$0] == nil }) else {
@@ -195,6 +213,10 @@ struct YunlefunAccountService: YunlefunAccountServing {
         let data = try await request(Self.ticketURL, fields: [
             "action": "exchangeCookWeChatCode", "clientId": YunlefunSSO.clientID, "code": code,
         ], origin: Self.cookOrigin, weChat: true)
+        return try await exchangeWeChatTicket(data, deviceID: deviceID)
+    }
+
+    private func exchangeWeChatTicket(_ data: Data, deviceID: String) async throws -> YunlefunCredential {
         guard let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               Set(payload.keys) == ["ok", "ticket", "subject"],
               payload["ok"] as? Bool == true, let ticket = payload["ticket"] as? String,
@@ -259,7 +281,13 @@ struct YunlefunAccountService: YunlefunAccountServing {
     }
 
     func approveAccountWebHandoff(fields: [String: String], credential: YunlefunCredential) async throws {
-        let data = try await request(Self.ticketURL, fields: fields, credential: credential, origin: Self.cookOrigin, timeout: 10)
+        let data: Data
+        do {
+            data = try await request(Self.ticketURL, fields: fields, credential: credential, origin: Self.cookOrigin, timeout: 10)
+        } catch let error as URLError where [.timedOut, .networkConnectionLost, .notConnectedToInternet, .cannotConnectToHost].contains(error.code) {
+            try Task.checkCancellation()
+            throw AccountWebHandoffError.interrupted
+        }
         guard let reply = try? JSONDecoder().decode(WebHandoffApproval.self, from: data), reply.ok else {
             throw YunlefunAccountError.invalidResponse
         }
@@ -290,9 +318,22 @@ struct YunlefunAccountService: YunlefunAccountServing {
             request.httpBody = try JSONEncoder().encode(fields)
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
-        let (data, response) = try await transport(request)
+        let isWeChatRegistration = weChat && fields?["action"] == Self.weChatRegistrationAction
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await transport(request)
+        } catch {
+            if isWeChatRegistration, !(error is CancellationError) {
+                try Task.checkCancellation()
+                throw WeChatSignupError.unconfirmed
+            }
+            throw error
+        }
         guard let http = response as? HTTPURLResponse, http.url == url,
-              data.count < 256 * 1024 else { throw YunlefunAccountError.invalidResponse }
+              data.count < 256 * 1024 else {
+            if isWeChatRegistration { throw WeChatSignupError.unconfirmed }
+            throw YunlefunAccountError.invalidResponse
+        }
         guard (200..<300).contains(http.statusCode) else {
             let failure = try? JSONDecoder().decode(ServiceFailure.self, from: data)
             // Only a fixed endpoint path and HTTP code; never log response bodies, tokens or user identifiers.
@@ -313,11 +354,20 @@ struct YunlefunAccountService: YunlefunAccountServing {
                 case "wechat_code_invalid": throw WeChatAccountError.authorizationFailed
                 case "not_authenticated": throw YunlefunAccountError.expiredSession
                 case "rate_limited": throw WeChatAccountError.rateLimited
-                default: throw WeChatAccountError.unavailable
+                default:
+                    if isWeChatRegistration, failure?.reason != "not_configured",
+                       http.statusCode == 408 || (500..<600).contains(http.statusCode) {
+                        throw WeChatSignupError.unconfirmed
+                    }
+                    throw WeChatAccountError.unavailable
                 }
             }
             if http.statusCode == 401 || ["invalid_grant", "invalid_token", "unauthenticated", "user_not_found", "user_disabled"].contains(failure?.error ?? "") {
                 throw YunlefunAccountError.expiredSession
+            }
+            if url == Self.ticketURL, fields?["action"] == "approveCookWebHandoff", failure?.reason != "not_configured",
+               [408, 500, 502, 503, 504].contains(http.statusCode) {
+                throw AccountWebHandoffError.interrupted
             }
             throw YunlefunAccountError.unavailable
         }
@@ -339,10 +389,12 @@ struct YunlefunAccountService: YunlefunAccountServing {
         let systemBrowser: Bool?
     }
     private struct WebHandoffApproval: Decodable { let ok: Bool }
+    private static let weChatRegistrationAction = "registerCookWeChat"
+    private struct SignupAcknowledgement: Decodable { let ok: Bool }
     private struct SignupResponse: Decodable { let next: String?; let proof: String?; let challenge: String? }
 }
 
-private final class AccountRedirectPolicy: NSObject, URLSessionTaskDelegate {
+private final class AccountRedirectPolicy: NSObject, URLSessionTaskDelegate, Sendable {
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
         completionHandler(nil)

@@ -6,24 +6,25 @@ protocol YunlefunAccountVault {
     func load() throws -> YunlefunCredential?
     func save(_ credential: YunlefunCredential) throws
     func clear() throws
+    func loadApprovedWebsite() throws -> YunlefunAccountStore.ApprovedWebsite?
+    func saveApprovedWebsite(_ website: YunlefunAccountStore.ApprovedWebsite?) throws
 }
 
 struct KeychainYunlefunAccountVault: YunlefunAccountVault {
-    private var query: [String: Any] {
+    private enum Slot: String {
+        case credential = "yunlefun"
+        case approvedWebsite = "approved-account-website"
+    }
+
+    private func query(for slot: Slot) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: "fun.yunle.cook.account",
-         kSecAttrAccount as String: "yunlefun",
+         kSecAttrAccount as String: slot.rawValue,
          kSecAttrSynchronizable as String: false]
     }
 
     func load() throws -> YunlefunCredential? {
-        var query = query
-        query[kSecReturnData as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        if status == errSecItemNotFound { return nil }
-        guard status == errSecSuccess, let data = result as? Data else { throw YunlefunAccountError.secureStorage }
+        guard let data = try loadData(from: .credential) else { return nil }
         guard let credential = try? JSONDecoder().decode(YunlefunCredential.self, from: data),
               !credential.accessToken.isEmpty, !credential.refreshToken.isEmpty,
               !credential.subject.isEmpty, !credential.deviceID.isEmpty else {
@@ -33,8 +34,39 @@ struct KeychainYunlefunAccountVault: YunlefunAccountVault {
     }
 
     func save(_ credential: YunlefunCredential) throws {
+        try saveData(JSONEncoder().encode(credential), to: .credential)
+    }
+
+    func clear() throws { try clear(.credential) }
+
+    func loadApprovedWebsite() throws -> YunlefunAccountStore.ApprovedWebsite? {
+        guard let data = try loadData(from: .approvedWebsite) else { return nil }
+        return try JSONDecoder().decode(YunlefunAccountStore.ApprovedWebsite.self, from: data)
+    }
+
+    func saveApprovedWebsite(_ website: YunlefunAccountStore.ApprovedWebsite?) throws {
+        if let website {
+            try saveData(JSONEncoder().encode(website), to: .approvedWebsite)
+        } else {
+            try clear(.approvedWebsite)
+        }
+    }
+
+    private func loadData(from slot: Slot) throws -> Data? {
+        var query = query(for: slot)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess, let data = result as? Data else { throw YunlefunAccountError.secureStorage }
+        return data
+    }
+
+    private func saveData(_ data: Data, to slot: Slot) throws {
+        let query = query(for: slot)
         let attributes: [String: Any] = [
-            kSecValueData as String: try JSONEncoder().encode(credential),
+            kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
         ]
         let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
@@ -45,8 +77,8 @@ struct KeychainYunlefunAccountVault: YunlefunAccountVault {
         } else if status != errSecSuccess { throw YunlefunAccountError.secureStorage }
     }
 
-    func clear() throws {
-        let status = SecItemDelete(query as CFDictionary)
+    private func clear(_ slot: Slot) throws {
+        let status = SecItemDelete(query(for: slot) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else { throw YunlefunAccountError.secureStorage }
     }
 }
@@ -55,7 +87,10 @@ struct KeychainYunlefunAccountVault: YunlefunAccountVault {
 @MainActor
 final class MemoryYunlefunAccountVault: YunlefunAccountVault {
     var credential: YunlefunCredential?
+    var approvedWebsite: YunlefunAccountStore.ApprovedWebsite?
     func load() throws -> YunlefunCredential? { credential }
     func save(_ credential: YunlefunCredential) throws { self.credential = credential }
     func clear() throws { credential = nil }
+    func loadApprovedWebsite() throws -> YunlefunAccountStore.ApprovedWebsite? { approvedWebsite }
+    func saveApprovedWebsite(_ website: YunlefunAccountStore.ApprovedWebsite?) throws { approvedWebsite = website }
 }

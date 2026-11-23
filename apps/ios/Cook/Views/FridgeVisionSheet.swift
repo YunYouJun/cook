@@ -12,16 +12,16 @@ struct FridgeVisionSheet: View {
     @Environment(\.modelContext) private var context
     @State private var photo: FridgeVisionPhoto?
     @State private var provider: FridgeVisionProvider?
-    @State private var providerQueryID: UUID?
     @State private var upload: Upload?
     @State private var candidates: [FridgeVisionCandidate]?
     @State private var error: String?
     @State private var failureToast: FailureToast?
     @State private var access = Access.checking
     @State private var accessQueryID = UUID()
+    @State private var verifiedRevision: UUID?
     @State private var showingMembership = false
 
-    private enum Access { case checking, signIn, member, membershipRequired, unavailable }
+    private enum Access { case checking, signIn, signInAgain, member, membershipRequired, unavailable }
 
     private struct Upload: Identifiable {
         let id = UUID()
@@ -75,7 +75,6 @@ struct FridgeVisionSheet: View {
                 await checkAccess()
                 await preparePhoto()
             }
-            .task(id: providerQueryID) { await loadProvider() }
             .task(id: upload?.id) { await recognize() }
             .task(id: failureToast?.id) {
                 guard let id = failureToast?.id else { return }
@@ -101,7 +100,7 @@ struct FridgeVisionSheet: View {
                 .disabled(saveNames?.isEmpty != false)
                 .accessibilityIdentifier("fridge.vision.save")
             }
-        } else if photo != nil {
+        } else if access == .member, photo != nil {
             form.bottomActionBar { uploadAction }
         } else {
             form
@@ -168,6 +167,9 @@ struct FridgeVisionSheet: View {
             switch access {
             case .signIn:
                 NavigationLink("登录云乐坊账号") { YunlefunAccountView() }
+            case .signInAgain:
+                Text("请退出后重新登录，当前照片会保留。")
+                NavigationLink("前往账号设置") { YunlefunAccountView() }
             case .membershipRequired:
                 Button("查看会员权益") { showingMembership = true }
                     .accessibilityIdentifier("fridge.vision.membership")
@@ -210,8 +212,6 @@ struct FridgeVisionSheet: View {
     private var uploadAction: some View {
         if upload != nil {
             ProgressView("正在识别食材…").frame(maxWidth: .infinity)
-        } else if providerQueryID != nil {
-            ProgressView("正在确认照片接收方…").frame(maxWidth: .infinity)
         } else if let provider {
             VStack(alignment: .leading, spacing: 8) {
                 Text("照片将\(provider.photoProcessingDescription)。")
@@ -229,10 +229,7 @@ struct FridgeVisionSheet: View {
                 .accessibilityIdentifier("fridge.vision.upload")
             }
         } else {
-            Button {
-                clearFailure()
-                providerQueryID = UUID()
-            } label: {
+            Button(action: refreshAccess) {
                 Text("重新连接识图服务").frame(maxWidth: .infinity)
             }
             .prominentButtonStyle()
@@ -244,33 +241,38 @@ struct FridgeVisionSheet: View {
         FridgeVisionCandidate.names(candidates ?? [], normalizer: store.data.normalizer)
     }
 
-    private func checkAccess() async {
+    private func checkAccess(rejecting rejected: YunlefunCredential? = nil, notice: String? = nil) async {
         guard !Task.isCancelled, access == .checking else { return }
-        #if DEBUG
-            if Self.testPhoto != nil {
-                if ProcessInfo.processInfo.environment["COOK_UI_TEST_FRIDGE_VISION_ACCESS_PENDING"] == "1" { return }
-                if ProcessInfo.processInfo.environment["COOK_UI_TEST_FRIDGE_VISION_NONMEMBER"] == "1" {
-                    access = .membershipRequired
-                } else {
-                    access = .member
-                }
-                return
-            }
-        #endif
-        guard accounts.account != nil else { access = .signIn; return }
         let query = accessQueryID
         let revision = accounts.sessionRevision
         do {
-            guard let endpoint = FridgeVisionService.configuredEndpoint else { throw FridgeVisionError.unavailable }
-            let credential = try await accounts.credentialForAIRequest()
-            guard accounts.sessionRevision == revision, accounts.account?.id == credential.subject else { return }
-            let eligible = try await FridgeVisionService(endpoint: endpoint).hasMembership(credential: credential)
+            let active: FridgeVisionProvider?
+            if Self.testPhoto != nil {
+                let environment = ProcessInfo.processInfo.environment
+                if environment["COOK_UI_TEST_FRIDGE_VISION_ACCESS_PENDING"] == "1" { return }
+                if environment["COOK_UI_TEST_FRIDGE_VISION_NONMEMBER"] == "1" { active = nil }
+                else { active = notice == nil ? .cloudBase : .deepSeek }
+            } else {
+                guard accounts.dataAccountID != nil else {
+                    photo = nil
+                    access = .signIn
+                    return
+                }
+                guard let endpoint = FridgeVisionService.configuredEndpoint else { throw FridgeVisionError.unavailable }
+                active = try await FridgeVisionService(endpoint: endpoint).memberProvider(using: accounts, rejecting: rejected)
+            }
             guard !Task.isCancelled, accessQueryID == query, accounts.sessionRevision == revision else { return }
-            access = eligible ? .member : .membershipRequired
+            provider = active
+            verifiedRevision = active == nil ? nil : revision
+            if active == nil { photo = nil }
+            access = active == nil ? .membershipRequired : .member
+            if active != nil, let notice { showFailure(notice) }
         } catch {
             guard !Task.isCancelled, accessQueryID == query, accounts.sessionRevision == revision else { return }
+            photo = nil
             switch (error as? FridgeVisionError, error as? YunlefunAccountError) {
-            case (.loginRequired, _), (_, .expiredSession): access = .signIn
+            case (.loginRequired, _), (_, .expiredSession): access = accounts.account == nil ? .signIn : .signInAgain
+            case (.membershipRequired, _): access = .membershipRequired
             default:
                 access = .unavailable
                 showFailure((error as? FridgeVisionError)?.errorDescription ?? "暂时无法核对会员资格，请稍后重试。", inline: false)
@@ -286,49 +288,31 @@ struct FridgeVisionSheet: View {
             try Task.checkCancellation()
             guard accessQueryID == query, access == .member else { return }
             photo = prepared
-            providerQueryID = UUID()
         } catch {
             guard !Task.isCancelled, accessQueryID == query else { return }
             showFailure(FridgeVisionError.unreadablePhoto.localizedDescription)
         }
     }
 
-    private func loadProvider() async {
-        guard let providerQueryID, let photo else { return }
-        defer { if self.providerQueryID == providerQueryID { self.providerQueryID = nil } }
-        do {
-            let active: FridgeVisionProvider
-            if Self.testPhoto != nil {
-                active = .cloudBase
-            } else {
-                guard let endpoint = FridgeVisionService.configuredEndpoint else { throw FridgeVisionError.unavailable }
-                active = try await FridgeVisionService(endpoint: endpoint).activeProvider()
-            }
-            try Task.checkCancellation()
-            guard self.providerQueryID == providerQueryID, self.photo?.id == photo.id else { return }
-            provider = active
-        } catch {
-            guard !Task.isCancelled, self.providerQueryID == providerQueryID, self.photo?.id == photo.id else { return }
-            showFailure((error as? FridgeVisionError)?.errorDescription ?? FridgeVisionError.unavailable.localizedDescription)
-        }
-    }
-
     private func recognize() async {
-        guard access == .member, let upload, let photo else { return }
-        let revision = accounts.sessionRevision
+        guard let upload else { return }
+        var submittedCredential: YunlefunCredential?
         defer { if self.upload?.id == upload.id { self.upload = nil } }
+        guard access == .member, let photo, let revision = verifiedRevision, accounts.sessionRevision == revision else { return }
         do {
             let names: [String]
             if Self.testPhoto != nil {
                 switch ProcessInfo.processInfo.environment["COOK_UI_TEST_FRIDGE_VISION_RESULT"] {
                 case "timeout": throw FridgeVisionError.timedOut
                 case "empty": names = []
+                case "rejected" where upload.provider == .cloudBase: throw FridgeVisionError.loginRequired
                 default: names = ["西红柿", "鸡蛋", "牛奶"]
                 }
             } else {
                 guard let endpoint = FridgeVisionService.configuredEndpoint else { throw FridgeVisionError.unavailable }
                 let credential = try await accounts.credentialForAIRequest()
                 guard accounts.sessionRevision == revision, accounts.account?.id == credential.subject else { throw CancellationError() }
+                submittedCredential = credential
                 names = try await FridgeVisionService(endpoint: endpoint).recognize(photo, provider: upload.provider, credential: credential)
             }
             try Task.checkCancellation()
@@ -349,22 +333,30 @@ struct FridgeVisionSheet: View {
                 reset()
                 access = .membershipRequired
                 showFailure(FridgeVisionError.membershipRequired.localizedDescription, inline: false)
+            case (.loginRequired, _) where submittedCredential != nil || Self.testPhoto != nil:
+                await recheckConsent(rejecting: submittedCredential,
+                                     notice: "已重新核对登录状态，请确认照片接收方后再识别。")
             case (.loginRequired, _), (_, .expiredSession):
                 reset()
-                access = .signIn
+                access = accounts.account == nil ? .signIn : .signInAgain
                 showFailure(FridgeVisionError.loginRequired.localizedDescription, inline: false)
             case (.providerChanged, _):
-                showFailure(FridgeVisionError.providerChanged.localizedDescription)
-                provider = nil
-                providerQueryID = UUID()
+                await recheckConsent(notice: FridgeVisionError.providerChanged.localizedDescription)
             default:
                 showFailure((error as? FridgeVisionError)?.errorDescription ?? FridgeVisionError.unavailable.localizedDescription)
             }
         }
     }
 
+    private func recheckConsent(rejecting credential: YunlefunCredential? = nil, notice: String) async {
+        provider = nil
+        verifiedRevision = nil
+        access = .checking
+        await checkAccess(rejecting: credential, notice: notice)
+    }
+
     private func save() {
-        guard let names = saveNames, !names.isEmpty else { return }
+        guard verifiedRevision == accounts.sessionRevision, let names = saveNames, !names.isEmpty else { return }
         do {
             try context.addEstimatedFridgeItems(names, shelfLife: store.data.shelfLife)
             onSaved()
@@ -387,7 +379,7 @@ struct FridgeVisionSheet: View {
     private func reset() {
         photo = nil
         provider = nil
-        providerQueryID = nil
+        verifiedRevision = nil
         upload = nil
         candidates = nil
         clearFailure()

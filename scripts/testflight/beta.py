@@ -100,7 +100,8 @@ def acceptance_errors(candidate, evidence, current=None):
 
 
 def gate(candidate, snapshot, evidence):
-    errors = acceptance_errors(candidate, evidence)
+    public_link = candidate.get('publicLink')
+    errors = [] if public_link else acceptance_errors(candidate, evidence)
     build = snapshot['build']
     attr = build['attributes']
     group = snapshot['group']['attributes']
@@ -117,14 +118,21 @@ def gate(candidate, snapshot, evidence):
         errors.append('build.expiration')
     if attr.get('usesNonExemptEncryption') is not False:
         errors.append('build.compliance')
-    if snapshot['externalState'] not in APPROVED_EXTERNAL_STATES:
+    external_states = ('IN_BETA_TESTING',) if public_link else APPROVED_EXTERNAL_STATES
+    if snapshot['externalState'] not in external_states:
         errors.append('apple.approval')
     if snapshot['group']['id'] != candidate['groupId'] or group.get('isInternalGroup') is not False:
         errors.append('group.identity')
-    if group.get('hasAccessToAllBuilds') is True or snapshot['buildIds'] != [candidate['buildId']]:
+    build_ids = snapshot['buildIds']
+    correct_builds = candidate['buildId'] in build_ids if public_link else build_ids == [candidate['buildId']]
+    if group.get('hasAccessToAllBuilds') is True or not correct_builds:
         errors.append('group.unverified_builds')
-    if candidate.get('testerLimit') != 30 or snapshot['testers'] > 30:
+    testers = snapshot['publicTesters'] if public_link else snapshot['testers']
+    if candidate.get('testerLimit') != 30 or testers > 30:
         errors.append('group.capacity')
+    if public_link and (group.get('publicLink') != public_link or group.get('publicLinkEnabled') is not True
+                        or group.get('publicLinkLimitEnabled') is not True or group.get('publicLinkLimit') != 30):
+        errors.append('group.public_link')
     return errors
 
 
@@ -165,6 +173,7 @@ class Controller:
         detail = next(d for d in details if d['id'] == c['buildId'])
         return {'checkedAt': now(), 'build': build, 'group': group,
                 'buildIds': sorted(b['id'] for b in builds), 'testers': len(testers),
+                'publicTesters': sum(t['attributes'].get('inviteType') == 'PUBLIC_LINK' for t in testers),
                 'externalState': detail['attributes'].get('externalBuildState')}
 
     def set_link(self, enabled):
@@ -181,10 +190,12 @@ class Controller:
 
     def status(self):
         snapshot = self.snapshot()
+        public_link = self.c.get('publicLink')
         result = {'checkedAt': now(), 'buildId': self.c['buildId'],
-                  'acceptancePolicy': self.c.get('acceptancePolicy', 'production'),
-                  'blockers': gate(self.c, snapshot, self.acceptance()),
+                  'acceptancePolicy': None if public_link else self.c.get('acceptancePolicy', 'production'),
+                  'blockers': gate(self.c, snapshot, {} if public_link else self.acceptance()),
                   'externalState': snapshot['externalState'], 'testers': snapshot['testers'],
+                  'publicTesters': snapshot['publicTesters'],
                   'publicLinkEnabled': snapshot['group']['attributes'].get('publicLinkEnabled'),
                   'configuredLimit': snapshot['group']['attributes'].get('publicLinkLimit'),
                   'desiredLimit': 30}
@@ -192,6 +203,16 @@ class Controller:
         return result
 
     def reconcile(self, apply=False):
+        public_link = self.c.get('publicLink')
+        if public_link:
+            snapshot = self.snapshot()
+            errors = gate(self.c, snapshot, {})
+            enabled = snapshot['group']['attributes'].get('publicLinkEnabled') is True
+            if apply and not errors:
+                save(self.directory / 'invitation.json', {'open': True, 'checkedAt': now(),
+                     'buildId': self.c['buildId'], 'url': public_link})
+            return {'open': enabled if apply else None, 'wouldOpen': enabled and not errors,
+                    'blockers': errors, 'changed': False}
         try:
             snapshot = self.snapshot()
             errors = gate(self.c, snapshot, self.acceptance())
@@ -229,6 +250,8 @@ class Controller:
                 'blockers': errors, 'changed': change and apply}
 
     def submit(self, apply=False):
+        if self.c.get('publicLink'):
+            raise ValueError('Beta review requires a candidate assigned to a closed review group')
         s = self.snapshot()
         # Apple review may precede device acceptance, but never opens invitations.
         errors = [e for e in gate(self.c, s, self.acceptance())
@@ -374,5 +397,5 @@ if __name__ == '__main__':
         main()
     except (ValueError, KeyError, TypeError, AttributeError, OSError, RuntimeError, StopIteration, subprocess.TimeoutExpired) as error:
         # Do not echo arbitrary source text, process args, paths or HTTP bodies.
-        print(json.dumps({'error': type(error).__name__, 'message': 'Operation incomplete; invitations must remain closed. Check private configuration and source availability.'}), file=sys.stderr)
+        print(json.dumps({'error': type(error).__name__, 'message': 'Operation incomplete. Check private configuration and source availability.'}), file=sys.stderr)
         sys.exit(1)

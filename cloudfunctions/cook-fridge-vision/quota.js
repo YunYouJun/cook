@@ -9,6 +9,19 @@ class VisionError extends Error {
   }
 }
 
+async function readCounter(ref) {
+  try {
+    const { data } = await ref.get()
+    return Array.isArray(data) ? data[0] : data
+  }
+  catch (error) {
+    // CloudBase can return a 404 for the first use of a daily counter.
+    if (error?.code === 'DOCUMENT_NOT_FOUND')
+      return null
+    throw error
+  }
+}
+
 async function reserveQuota(db, { quotaSalt, userDailyLimit, dailyRequestBudget }, uid, now) {
   const day = new Date(now + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)
   const subject = createHmac('sha256', quotaSalt).update(uid).digest('hex')
@@ -23,8 +36,7 @@ async function reserveQuota(db, { quotaSalt, userDailyLimit, dailyRequestBudget 
         for (const [key, limit, code] of counters) {
           const id = createHash('sha256').update(key).digest('hex')
           const ref = transaction.collection(COLLECTION).doc(id)
-          const { data } = await ref.get()
-          const value = Array.isArray(data) ? data[0] : data
+          const value = await readCounter(ref)
           const count = value == null ? 0 : value.count
           if (!Number.isSafeInteger(count) || count < 0)
             throw new VisionError('SERVICE_UNAVAILABLE')

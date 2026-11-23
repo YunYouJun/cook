@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.PagerSnapDistance
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -44,11 +45,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -62,12 +65,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cn.yunyoujun.cook.core.ai.SearchIntent
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import cn.yunyoujun.cook.core.dietary.InstitutionalLowGICatalog
 import cn.yunyoujun.cook.core.model.DietaryGoal
 import cn.yunyoujun.cook.core.model.Recipe
 import cn.yunyoujun.cook.core.model.RecommendationMode
@@ -89,13 +103,18 @@ fun RecipeSummaryCard(
     onToggleFavorite: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showInstitutionalTag: Boolean = false,
+    isSelected: Boolean = false,
+    favoriteEnabled: Boolean = true,
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .semantics { if (isSelected) selected = true }
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            containerColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
         ),
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -124,7 +143,7 @@ fun RecipeSummaryCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                TextButton(onClick = onToggleFavorite) {
+                TextButton(onClick = onToggleFavorite, enabled = favoriteEnabled) {
                     Text(if (isFavorite) "★ 已收藏" else "☆ 收藏")
                 }
             }
@@ -175,7 +194,7 @@ fun RecipeSummaryCard(
             val badges = buildList {
                 recipe.difficulty?.takeIf { it.isNotEmpty() }?.let { add(it) }
                 if (recipe.tools.isNotEmpty()) add(recipe.tools.joinToString("/"))
-                recipe.tags.take(3).forEach { add(it) }
+                recipe.tags.filter { it != InstitutionalLowGICatalog.TAG || showInstitutionalTag }.take(3).forEach { add(it) }
             }
             if (badges.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(6.dp))
@@ -201,89 +220,13 @@ fun RecipeSummaryCard(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun SearchIntentReviewDialog(
-    intent: SearchIntent,
-    onConfirm: (SearchIntent) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("智能条件预览（需确认应用）") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "以下条件由${if (intent.source.rawValue == "local") "本机词典" else "DeepSeek"}解析产生，请确认后再应用，系统不会悄悄修改你的长期偏好：",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (intent.query.stuff.isNotEmpty()) {
-                    Text("识别食材：${intent.query.stuff.joinToString("、")}", style = MaterialTheme.typography.bodyMedium)
-                }
-                if (intent.query.avoid.isNotEmpty()) {
-                    Text("避开食材：${intent.query.avoid.joinToString("、")}", style = MaterialTheme.typography.bodyMedium)
-                }
-                intent.query.tool?.let {
-                    Text("厨具：$it", style = MaterialTheme.typography.bodyMedium)
-                }
-                if (intent.query.difficulty.isNotEmpty()) {
-                    Text("难度：${intent.query.difficulty.joinToString("、")}", style = MaterialTheme.typography.bodyMedium)
-                }
-                if (intent.query.methodGroups.isNotEmpty()) {
-                    Text("做法：${intent.query.methodGroups.joinToString("、")}", style = MaterialTheme.typography.bodyMedium)
-                }
-                if (intent.query.noSpicy) {
-                    Text("辣度：不吃辣", style = MaterialTheme.typography.bodyMedium)
-                }
-                intent.goal?.let {
-                    Text("建议饮食目标：${it.title}", style = MaterialTheme.typography.bodyMedium)
-                }
-                if (intent.unresolved.isNotEmpty()) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
-                        shape = MaterialTheme.shapes.small,
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Text(
-                                "以下要求未转换为固定筛选：",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            intent.unresolved.forEach { item ->
-                                Text("• $item", style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    }
-                }
-                if (intent.isEmpty && intent.unresolved.isEmpty()) {
-                    Text("暂未提取到明确的食材或厨具条件。", style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(intent) },
-                enabled = !intent.isEmpty,
-            ) {
-                Text("应用条件")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        },
-    )
-}
-
 fun buildDecideContextSummary(
     conditions: CookSessionConditions,
     prefs: DevicePreferencesSnapshot,
     ignoringKeyword: Boolean,
 ): String? {
     val parts = buildList {
-        prefs.rememberedDietaryGoal?.let { add("饮食目标：${it.title}") }
+        conditions.dietaryGoal(prefs)?.let { add("饮食目标：${it.title}") }
         if (conditions.selectedStuff.isNotEmpty()) {
             add("已有食材：${conditions.selectedStuff.joinToString("、")}")
             val modeLabel = when (prefs.mode) {
@@ -314,6 +257,7 @@ fun buildDecideContextSummary(
     return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DecideRandomDialog(
     recipes: List<Recipe>,
@@ -321,336 +265,467 @@ fun DecideRandomDialog(
     onDismiss: () -> Unit,
     matchesById: Map<Int, RecipeMatch> = emptyMap(),
     contextSummary: String? = null,
+    dietaryNote: (Recipe) -> String? = { null },
+    sceneReason: (Recipe) -> String? = { null },
+    onClearScene: (() -> Unit)? = null,
+    avoidFirstId: Int? = null,
+    onRecipePreviewed: (Int) -> Unit = {},
+    onOpenFilters: (() -> Unit)? = null,
+    filtersOpen: Boolean = false,
 ) {
     val byId = remember(recipes) { recipes.associateBy { it.id } }
-    val poolKey = byId.keys.toList()
-    val shuffled = rememberSaveable(poolKey) { poolKey.shuffled().toIntArray() }
-    val order = remember(shuffled, byId) { shuffled.asList().mapNotNull(byId::get) }
-    key(poolKey) {
-        RandomRecipeCards(
-            order = order,
-            matchesById = matchesById,
-            contextSummary = contextSummary,
-            onOpenRecipe = onOpenRecipe,
-            onDismiss = onDismiss,
-        )
+    val poolKey = remember(byId) { byId.keys.sorted() }
+    // The modal window can be recreated when density changes.
+    val pages = key(poolKey) {
+        val deck = rememberSaveable {
+            mutableStateOf(
+                if (byId.isEmpty()) intArrayOf() else {
+                    val first = drawRecipe(byId, avoidFirstId)
+                    if (byId.size > 1) intArrayOf(first, drawRecipe(byId, first)) else intArrayOf(first)
+                },
+            )
+        }
+        val pager = rememberPagerState { deck.value.size }
+        val revealedCount = rememberSaveable { mutableIntStateOf(1) }
+        RandomRecipePages(deck, pager, revealedCount)
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun RandomRecipeCards(
-    order: List<Recipe>,
-    matchesById: Map<Int, RecipeMatch>,
-    contextSummary: String?,
-    onOpenRecipe: (Int) -> Unit,
-    onDismiss: () -> Unit,
-) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         dragHandle = { BottomSheetDefaults.DragHandle() },
     ) {
-        if (order.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 24.dp)
-                    .navigationBarsPadding(),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(
-                    text = "今天吃什么",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-                if (!contextSummary.isNullOrBlank()) {
-                    Text(
-                        text = contextSummary,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Text(
-                    text = "当前候选池为空，请放宽条件后再随机决定。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                OutlinedButton(
-                    onClick = onDismiss,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text("关闭")
-                }
+        key(poolKey) {
+            RandomRecipeCards(
+                pool = byId,
+                pages = pages,
+                matchesById = matchesById,
+                contextSummary = contextSummary,
+                dietaryNote = dietaryNote,
+                sceneReason = sceneReason,
+                onClearScene = onClearScene,
+                onRecipePreviewed = onRecipePreviewed,
+                onOpenRecipe = onOpenRecipe,
+                onDismiss = onDismiss,
+                onOpenFilters = onOpenFilters,
+                filtersOpen = filtersOpen,
+            )
+        }
+    }
+}
+
+internal class RandomRecipePages(
+    val deck: MutableState<IntArray>,
+    val pager: PagerState,
+    val revealedCount: MutableIntState,
+) {
+    fun stageReroll(pool: Map<Int, Recipe>): Int {
+        val currentPage = pager.settledPage
+        // The pager can settle before the effect that records the page in history runs.
+        val nextPage = maxOf(revealedCount.intValue, currentPage + 1)
+        val ids = deck.value
+        val stagedId = ids.getOrNull(nextPage)
+        val visibleId = ids[currentPage]
+        if (stagedId == null) {
+            deck.value = ids + drawRecipe(pool, visibleId, ids.last())
+        } else if (pool[stagedId]?.name == pool[visibleId]?.name) {
+            deck.value = ids.copyOf().also { it[nextPage] = drawRecipe(pool, visibleId, ids[nextPage - 1]) }
+        }
+        return nextPage
+    }
+}
+
+private fun drawRecipe(pool: Map<Int, Recipe>, currentId: Int?, precedingId: Int? = currentId): Int {
+    val currentName = pool[currentId]?.name
+    val precedingName = pool[precedingId]?.name
+    val otherRecipes = pool.values.filter { it.id != currentId }
+    val otherNames = otherRecipes.filter { it.name != currentName }
+    return otherNames.filter { it.name != precedingName }
+        .ifEmpty { otherNames }
+        .ifEmpty { otherRecipes }
+        .ifEmpty { pool.values.toList() }
+        .random().id
+}
+
+private fun decideRecipeMeta(recipe: Recipe): String = buildList {
+    if (recipe.tools.isNotEmpty()) {
+        add(recipe.tools.joinToString(" / ") { if (it == "一口大锅") "炒锅" else it })
+    }
+    recipe.difficulty?.takeIf { it.isNotEmpty() }?.let(::add)
+}.joinToString(" · ")
+
+private fun decideIngredientText(recipe: Recipe): String? =
+    recipe.stuff.takeIf { it.isNotEmpty() }?.joinToString("、", prefix = "用料：")
+
+private fun decideMatchText(match: RecipeMatch): String =
+    if (match.missingStuff.isEmpty()) "所需食材已齐"
+    else "还差 ${match.missingStuff.size} 样：${match.missingStuff.joinToString("、")}"
+
+@Composable
+private fun DecideContext(text: String, largeText: Boolean, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = if (largeText) Int.MAX_VALUE else 2,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun RandomRecipeCards(
+    pool: Map<Int, Recipe>,
+    pages: RandomRecipePages,
+    matchesById: Map<Int, RecipeMatch>,
+    contextSummary: String?,
+    dietaryNote: (Recipe) -> String?,
+    sceneReason: (Recipe) -> String?,
+    onClearScene: (() -> Unit)?,
+    onRecipePreviewed: (Int) -> Unit,
+    onOpenRecipe: (Int) -> Unit,
+    onDismiss: () -> Unit,
+    onOpenFilters: (() -> Unit)?,
+    filtersOpen: Boolean,
+) {
+    val fontScale = LocalDensity.current.fontScale
+    val largeText = fontScale >= 1.5f
+    if (pool.isEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            DecideHeader(onOpenFilters, onDismiss)
+            if (!contextSummary.isNullOrBlank()) {
+                DecideContext(contextSummary, largeText)
             }
-            return@ModalBottomSheet
-        }
-
-        val pager = rememberPagerState { order.size }
-        var revealedCount by rememberSaveable { mutableIntStateOf(1) }
-        var lastSettled by rememberSaveable { mutableIntStateOf(0) }
-        val context = LocalContext.current
-        val scope = rememberCoroutineScope()
-        val haptic = LocalHapticFeedback.current
-        val selected = order.getOrNull(pager.currentPage)
-
-        LaunchedEffect(pager.settledPage, order.size) {
-            revealedCount = maxOf(revealedCount, pager.settledPage + 1)
-            if (pager.settledPage != lastSettled) {
-                lastSettled = pager.settledPage
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            Text(
+                text = if (onClearScene != null) {
+                    "当前场景下没有符合条件的菜。可以取消场景或调整筛选。"
+                } else {
+                    "当前候选池为空，请放宽条件后再随机决定。"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (onClearScene != null) {
+                TextButton(onClick = onClearScene, enabled = !filtersOpen) { Text("取消这次场景") }
             }
         }
+        return
+    }
 
-        fun moveTo(page: Int) {
-            if (!pager.isScrollInProgress && page in order.indices && page != pager.currentPage) {
-                scope.launch {
-                    if (abs(page - pager.currentPage) <= 3) {
-                        pager.animateScrollToPage(
-                            page,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMediumLow,
-                            ),
-                        )
-                    } else {
-                        pager.scrollToPage(page)
-                    }
-                }
-            }
+    val canReroll = pool.size > 1
+    var deck by pages.deck
+    val pager = pages.pager
+    var revealedCount by pages.revealedCount
+    var lastSettled by remember(pager) { mutableIntStateOf(pager.settledPage) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+    val selectedId = deck.getOrNull(pager.settledPage)
+    val selectedRecipe = pool[selectedId]
+    val canAct = !pager.isScrollInProgress && !filtersOpen
+    val pageNumber = pager.settledPage + 1
+    val pageTotal = maxOf(revealedCount, pageNumber)
+    val canGoBack = canAct && pager.settledPage > 0
+    val canGoForward = canAct && canReroll
+    val pageDescription = "第 $pageNumber 道，共 $pageTotal 道"
+    val recipeDescription = selectedRecipe?.let { recipe ->
+        listOfNotNull(
+            recipe.name,
+            decideRecipeMeta(recipe).takeIf { it.isNotEmpty() },
+            decideIngredientText(recipe),
+            dietaryNote(recipe),
+            sceneReason(recipe),
+            matchesById[recipe.id]?.let(::decideMatchText),
+        ).joinToString("，")
+    }
+
+    LaunchedEffect(pager.settledPage) {
+        revealedCount = maxOf(revealedCount, pager.settledPage + 1)
+        if (canReroll && deck.size == revealedCount) {
+            deck += drawRecipe(pool, deck.last())
         }
-
-        val next = {
-            if (order.size > 1 && !pager.isScrollInProgress) {
-                moveTo(if (revealedCount < order.size) revealedCount else (pager.currentPage + 1) % order.size)
-            }
+        selectedId?.let(onRecipePreviewed)
+        if (pager.settledPage != lastSettled) {
+            lastSettled = pager.settledPage
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
-        val onShake by rememberUpdatedState(next)
-        val detector = remember(context) { DeviceShakeDetector(context) { onShake() } }
-        DisposableEffect(detector) {
-            detector.start()
-            onDispose { detector.stop() }
+    }
+
+    fun moveTo(page: Int): Boolean {
+        if (pager.isScrollInProgress || filtersOpen || page !in deck.indices || page == pager.settledPage) {
+            return false
         }
-
-        val preferredCardHeight = (240f * LocalDensity.current.fontScale.coerceIn(1f, 1.5f)).dp
-        val hintText = when {
-            order.size <= 1 -> "当前条件下仅此一道"
-            detector.hasAccelerometer -> "左右滑动翻看，摇一摇换一道"
-            else -> "左右滑动翻看随机菜谱"
-        }
-
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val cardHeight = if (constraints.hasBoundedHeight) {
-                minOf(preferredCardHeight, (maxHeight - 248.dp).coerceAtLeast(120.dp))
-            } else {
-                preferredCardHeight
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "今天吃什么",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        ) {
-                            Text(
-                                text = "${pager.currentPage + 1} / ${maxOf(revealedCount, pager.currentPage + 1)}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            )
-                        }
-                        TextButton(onClick = onDismiss) {
-                            Text("关闭")
-                        }
-                    }
-                }
-
-                Text(
-                    text = contextSummary ?: "按当前条件从 ${order.size} 道菜里挑一道",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                )
-
-                HorizontalPager(
-                    state = pager,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(cardHeight)
-                        .testTag("decide.pager"),
-                    contentPadding = PaddingValues(horizontal = 24.dp),
-                    pageSpacing = 12.dp,
-                    beyondViewportPageCount = 1,
-                    flingBehavior = PagerDefaults.flingBehavior(
-                        state = pager,
-                        pagerSnapDistance = PagerSnapDistance.atMost(1),
+        scope.launch {
+            if (abs(page - pager.currentPage) <= 3) {
+                pager.animateScrollToPage(
+                    page,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
                     ),
-                ) { index ->
-                    val recipe = order[index]
-                    val match = matchesById[recipe.id]
-                    val metaText = buildList {
-                        if (recipe.tools.isNotEmpty()) {
-                            add(recipe.tools.joinToString(" / ") { if (it == "一口大锅") "炒锅" else it })
-                        }
-                        recipe.difficulty?.takeIf { it.isNotEmpty() }?.let(::add)
-                    }.joinToString(" · ")
+                )
+            } else {
+                pager.scrollToPage(page)
+            }
+        }
+        return true
+    }
 
-                    ElevatedCard(
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        ),
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer {
-                                val pageOffset = ((pager.currentPage - index) + pager.currentPageOffsetFraction).coerceIn(-1f, 1f)
-                                val progress = 1f - abs(pageOffset)
-                                val scale = 0.94f + 0.06f * progress
-                                scaleX = scale
-                                scaleY = scale
-                                alpha = 0.84f + 0.16f * progress
-                            },
-                    ) {
-                        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = maxHeight)
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(horizontal = 20.dp, vertical = 18.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
-                            ) {
+    fun reroll(): Boolean {
+        if (!canReroll || pager.isScrollInProgress || filtersOpen) return false
+        return moveTo(pages.stageReroll(pool))
+    }
+
+    fun moveForward(): Boolean {
+        val targetPage = pager.settledPage + 1
+        return if (targetPage < revealedCount) moveTo(targetPage) else reroll()
+    }
+
+    val onShake by rememberUpdatedState<() -> Unit> { reroll() }
+    val detector = remember(context) { DeviceShakeDetector(context) { onShake() } }
+    LifecycleResumeEffect(detector, filtersOpen, canReroll) {
+        if (canReroll && !filtersOpen) detector.start()
+        onPauseOrDispose { detector.stop() }
+    }
+
+    val preferredCardHeight = (240f * fontScale.coerceIn(1f, 1.5f)).dp
+    val hintText = when {
+        !canReroll -> "当前条件下仅此一道"
+        detector.hasAccelerometer -> "左右滑动翻看，摇一摇换一道"
+        else -> "左右滑动翻看随机菜谱"
+    }
+
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val cardHeight = if (constraints.hasBoundedHeight) {
+            minOf(preferredCardHeight, (maxHeight - 298.dp).coerceAtLeast(120.dp))
+        } else {
+            preferredCardHeight
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            DecideHeader(onOpenFilters, onDismiss, Modifier.padding(horizontal = 24.dp))
+
+            DecideContext(
+                contextSummary ?: "按当前条件从 ${pool.size} 道菜里挑一道",
+                largeText,
+                Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            )
+
+            HorizontalPager(
+                state = pager,
+                userScrollEnabled = canReroll && !filtersOpen,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(cardHeight)
+                    // Keep the same accessibility focus and actions as the visible card changes.
+                    .semantics {
+                        recipeDescription?.let { contentDescription = it }
+                        stateDescription = pageDescription
+                        liveRegion = LiveRegionMode.Polite
+                        customActions = buildList {
+                            if (canGoBack) {
+                                add(CustomAccessibilityAction("上一道") { moveTo(pager.settledPage - 1) })
+                            }
+                            if (canGoForward) {
+                                add(CustomAccessibilityAction("下一道", ::moveForward))
+                            }
+                        }
+                    }
+                    .testTag("decide.pager"),
+                contentPadding = PaddingValues(horizontal = 24.dp),
+                pageSpacing = 12.dp,
+                beyondViewportPageCount = 1,
+                flingBehavior = PagerDefaults.flingBehavior(
+                    state = pager,
+                    pagerSnapDistance = PagerSnapDistance.atMost(1),
+                ),
+            ) { index ->
+                val recipe = pool.getValue(deck[index])
+                val match = matchesById[recipe.id]
+                val metaText = decideRecipeMeta(recipe)
+
+                ElevatedCard(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clearAndSetSemantics { hideFromAccessibility() }
+                        .graphicsLayer {
+                            val pageOffset = ((pager.currentPage - index) + pager.currentPageOffsetFraction).coerceIn(-1f, 1f)
+                            val progress = 1f - abs(pageOffset)
+                            val scale = 0.94f + 0.06f * progress
+                            scaleX = scale
+                            scaleY = scale
+                            alpha = 0.84f + 0.16f * progress
+                        },
+                ) {
+                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = maxHeight)
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 20.dp, vertical = 18.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
+                        ) {
+                            if (!largeText) {
                                 Text(
                                     text = recipe.emojis.orEmpty().take(3).joinToString("").ifEmpty { "🍽️" },
                                     fontSize = 40.sp,
                                     textAlign = TextAlign.Center,
                                 )
+                            }
+                            Text(
+                                text = recipe.name,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                maxLines = if (largeText) Int.MAX_VALUE else 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (metaText.isNotEmpty()) {
                                 Text(
-                                    text = recipe.name,
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.Bold,
+                                    text = metaText,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
                                 )
-                                if (metaText.isNotEmpty()) {
-                                    Text(
-                                        text = metaText,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = TextAlign.Center,
-                                    )
-                                }
-                                if (recipe.stuff.isNotEmpty()) {
-                                    Text(
-                                        text = "用料：${recipe.stuff.joinToString("、")}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = TextAlign.Center,
-                                    )
-                                }
-                                if (match != null) {
-                                    val matchText = if (match.missingStuff.isEmpty()) {
-                                        "所需食材已齐"
+                            }
+                            decideIngredientText(recipe)?.let { ingredients ->
+                                Text(
+                                    text = ingredients,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                            dietaryNote(recipe)?.let { note ->
+                                Text(
+                                    text = note,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                            sceneReason(recipe)?.let { reason ->
+                                Text(
+                                    text = reason,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                            if (match != null) {
+                                Text(
+                                    text = decideMatchText(match),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (match.missingStuff.isEmpty()) {
+                                        MaterialTheme.colorScheme.primary
                                     } else {
-                                        "还差 ${match.missingStuff.size} 样：${match.missingStuff.joinToString("、")}"
-                                    }
-                                    Text(
-                                        text = matchText,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (match.missingStuff.isEmpty()) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.tertiary
-                                        },
-                                        textAlign = TextAlign.Center,
-                                    )
-                                }
+                                        MaterialTheme.colorScheme.tertiary
+                                    },
+                                    textAlign = TextAlign.Center,
+                                )
                             }
                         }
                     }
                 }
+            }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = hintText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(
+                    onClick = { moveTo(pager.settledPage - 1) },
+                    enabled = canGoBack,
+                ) { Text("上一道") }
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    modifier = Modifier.semantics { hideFromAccessibility() },
                 ) {
-                    Text(
-                        text = hintText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (order.size > 1) {
-                        TextButton(
-                            onClick = { moveTo(pager.currentPage - 1) },
-                            enabled = pager.currentPage > 0,
-                        ) {
-                            Text("上一道")
-                        }
-                    }
+                    Text("$pageNumber / $pageTotal", modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
                 }
+                TextButton(
+                    onClick = { moveForward() },
+                    enabled = canGoForward,
+                ) { Text("下一道") }
+            }
 
-                Row(
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 16.dp)
+                    .navigationBarsPadding(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                OutlinedButton(
+                    onClick = { reroll() },
+                    enabled = canReroll && canAct,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 16.dp)
-                        .navigationBarsPadding(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        .weight(1f)
+                        .heightIn(min = 48.dp),
                 ) {
-                    OutlinedButton(
-                        onClick = next,
-                        enabled = order.size > 1,
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 48.dp),
-                    ) {
-                        Text("换一道")
-                    }
-                    Button(
-                        onClick = { selected?.let { onOpenRecipe(it.id) } },
-                        enabled = selected != null,
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 48.dp),
-                    ) {
-                        Text("看做法")
-                    }
+                    Text("换一道")
+                }
+                Button(
+                    onClick = { if (!pager.isScrollInProgress) selectedId?.let(onOpenRecipe) },
+                    enabled = selectedId != null && canAct,
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp),
+                ) {
+                    Text("看做法")
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DecideHeader(onOpenFilters: (() -> Unit)?, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text("今天吃什么", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Row {
+            onOpenFilters?.let { TextButton(onClick = it) { Text("筛选") } }
+            TextButton(onClick = onDismiss) { Text("关闭") }
         }
     }
 }

@@ -59,6 +59,18 @@ export function mergeUserData(a: UserData, b: UserData, now = Date.now()): UserD
   return { favorites, favoriteRemovals, histories, historyRemovals, historyClearedAt }
 }
 
+export function clearUserDataHistory(current: Pick<UserData, 'histories' | 'historyRemovals' | 'historyClearedAt'>, now = Date.now()) {
+  const historyClearedAt = Math.max(now, current.historyClearedAt)
+  // A known visit from a fast clock can be deleted by identity without hiding unseen later visits.
+  const futureRemovals = current.histories
+    .filter(visit => visit.time > historyClearedAt)
+    .map(({ recipe, time }) => ({ name: recipe.name, time }))
+  return {
+    ...mergeHistories([], [...current.historyRemovals, ...futureRemovals], historyClearedAt, now),
+    historyClearedAt,
+  }
+}
+
 export function isSameUserData(a: UserData, b: UserData): boolean {
   return JSON.stringify(toPlain(a)) === JSON.stringify(toPlain(b))
 }

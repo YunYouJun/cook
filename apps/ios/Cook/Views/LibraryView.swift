@@ -30,26 +30,28 @@ struct LibraryView: View {
     @State private var detailPath = NavigationPath()
     @State private var unavailableShareID: Int?
     @State private var confirmingClear = false
+    @State private var historyRemovalFailed = false
     @State private var compactColumn: NavigationSplitViewColumn = .sidebar
     @State private var decideRequest: CookDecideRequest?
     @State private var lastDecidedID: Int?
 
-    private var recipes: [Recipe] {
-        let base: [Recipe]
-        switch scope {
-        case .all:
-            base = store.recipes
-        case .favorites:
-            base = activeFavoriteIDs.compactMap { store.recipesById[$0] }
-        case .recent:
-            base = activeVisitIDs.compactMap { store.recipesById[$0] }
+    private struct RecentVisit: Identifiable {
+        enum ID: Hashable {
+            case account(revision: UUID, name: String, time: Double)
+            case device(PersistentIdentifier)
         }
-        return store.filter(base, query: query)
+
+        let id: ID
+        let name: String
+        let ingredients: [String]
+        let recipe: Recipe?
+        let date: Date
+        let remove: () throws -> Void
     }
 
     var body: some View {
-        let visible = recipes
         let favoriteIds = Set(activeFavoriteIDs)
+        let recent = scope == .recent ? recentVisits : []
 
         NavigationSplitView(preferredCompactColumn: $compactColumn) {
             List(selection: $selection) {
@@ -63,15 +65,20 @@ struct LibraryView: View {
                 .listRowInsets(EdgeInsets())
 
                 Section {
-                    if visible.isEmpty {
-                        ContentUnavailableView(emptyTitle, systemImage: emptySymbol)
-                    }
-                    ForEach(visible) { recipe in
-                        NavigationLink(value: RecipeRoute(recipe: recipe)) {
-                            RecipeRow(recipe: recipe)
+                    if scope == .recent {
+                        let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let ingredient = store.data.normalizer.normalize([text]).first ?? text
+                        let visible = recent.filter { text.isEmpty || $0.name.contains(text) || $0.ingredients.contains(ingredient) }
+                        if visible.isEmpty { ContentUnavailableView(emptyTitle, systemImage: emptySymbol) }
+                        ForEach(visible) { visit in
+                            recentRow(visit, isFavorite: visit.recipe.map { favoriteIds.contains($0.id) } ?? false)
                         }
-                        .recipeActions(recipe, isFavorite: favoriteIds.contains(recipe.id), store: store) {
-                            withAnimation(.snappy) { favoriteActions.set(recipe.id, isFavorite: !favoriteIds.contains(recipe.id)) }
+                    } else {
+                        let base = scope == .favorites ? activeFavoriteIDs.compactMap { store.recipesById[$0] } : store.recipes
+                        let visible = store.filter(base, query: query)
+                        if visible.isEmpty { ContentUnavailableView(emptyTitle, systemImage: emptySymbol) }
+                        ForEach(visible) { recipe in
+                            recipeLink(recipe, isFavorite: favoriteIds.contains(recipe.id)) { RecipeRow(recipe: recipe) }
                         }
                     }
                 }
@@ -93,7 +100,7 @@ struct LibraryView: View {
                     .accessibilityHint("按当前食材、忌口和饮食目标随机选一道")
                     .accessibilityIdentifier("library.random")
                 }
-                if scope == .recent, !activeVisitIDs.isEmpty {
+                if scope == .recent, !recent.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("清空") { confirmingClear = true }
                     }
@@ -104,6 +111,11 @@ struct LibraryView: View {
                     if let accountData, accountData.usesAccountLibrary { accountData.clearHistory() }
                     else { context.clearHistory() }
                 }
+            }
+            .alert("未能移除浏览记录", isPresented: $historyRemovalFailed) {
+                Button("好", role: .cancel) {}
+            } message: {
+                Text("请稍后重试。")
             }
         } detail: {
             NavigationStack(path: $detailPath) {
@@ -141,6 +153,45 @@ struct LibraryView: View {
         }
     }
 
+    private func recipeLink<Content: View>(_ recipe: Recipe, isFavorite: Bool, @ViewBuilder content: () -> Content) -> some View {
+        NavigationLink(value: RecipeRoute(recipe: recipe), label: content)
+            .recipeActions(recipe, isFavorite: isFavorite, store: store) {
+                withAnimation(.snappy) { favoriteActions.set(recipe.id, isFavorite: !isFavorite) }
+            }
+    }
+
+    private func recentRow(_ visit: RecentVisit, isFavorite: Bool) -> some View {
+        let label = VStack(alignment: .leading, spacing: 4) {
+            if let recipe = visit.recipe {
+                RecipeRow(recipe: recipe)
+            } else {
+                Text(visit.name).font(.headline)
+                Text("当前版本找不到这道菜").font(.subheadline).foregroundStyle(.secondary)
+            }
+            Text(visit.date.formatted(date: .abbreviated, time: .shortened))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .combine)
+        return Group {
+            if let recipe = visit.recipe {
+                recipeLink(recipe, isFavorite: isFavorite) { label }
+            } else {
+                label
+            }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) { removeVisit(visit) } label: { Label("移除", systemImage: "trash") }
+        }
+        .accessibilityAction(named: Text("移除浏览记录")) { removeVisit(visit) }
+    }
+
+    private func removeVisit(_ visit: RecentVisit) {
+        do { try withAnimation(.snappy) { try visit.remove() } }
+        catch is CancellationError { }
+        catch { historyRemovalFailed = true }
+    }
+
     private var emptyTitle: String {
         if !query.isEmpty {
             return "没有找到相关的菜"
@@ -156,8 +207,28 @@ struct LibraryView: View {
         accountData?.usesAccountLibrary == true ? accountData!.favoriteIDs : uniqueRecipeIds(favorites.map(\.recipeId))
     }
 
-    private var activeVisitIDs: [Int] {
-        accountData?.usesAccountLibrary == true ? accountData!.visitIDs(recipeIdByName: store.recipeIdByName) : uniqueRecipeIds(visits.map(\.recipeId))
+    private var recentVisits: [RecentVisit] {
+        if let accountData, accountData.usesAccountLibrary {
+            let revision = accountData.libraryRevision
+            return accountData.snapshot.document.histories.reversed().map { visit in
+                let name = visit.recipe.name
+                let recipe = store.recipeIdByName[name].flatMap { store.recipesById[$0] }
+                return RecentVisit(id: .account(revision: revision, name: name, time: visit.time), name: name, ingredients: recipe?.stuff ?? visit.recipe.stuff,
+                                   recipe: recipe, date: Date(timeIntervalSince1970: visit.time / 1000)) {
+                    try accountData.removeVisit(visit, expectedRevision: revision)
+                }
+            }
+        }
+        return visits.map { visit in
+            let id = visit.recipeId
+            let date = visit.visitedAt
+            let recipe = store.recipesById[id]
+            return RecentVisit(id: .device(visit.persistentModelID), name: recipe?.name ?? "已下架菜谱", ingredients: recipe?.stuff ?? [],
+                               recipe: recipe, date: date) {
+                guard accountData?.usesAccountLibrary != true else { throw CancellationError() }
+                try context.removeVisit(recipeId: id, visitedAt: date)
+            }
+        }
     }
 
     private var emptySymbol: String {

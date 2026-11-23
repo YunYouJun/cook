@@ -2,10 +2,7 @@ package cn.yunyoujun.cook.ui.screens
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
+import android.text.format.DateFormat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,8 +16,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -47,24 +46,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import cn.yunyoujun.cook.AppContainer
-import cn.yunyoujun.cook.BuildConfig
 import cn.yunyoujun.cook.core.model.RecommendationMode
-import cn.yunyoujun.cook.data.local.AiProviderMode
-import cn.yunyoujun.cook.data.local.AndroidKeystoreVault
 import cn.yunyoujun.cook.data.local.AppThemeMode
 import cn.yunyoujun.cook.data.local.SignalConsentState
 import cn.yunyoujun.cook.data.remote.YunlefunAccountWebHandoff
 import cn.yunyoujun.cook.data.remote.AccountWebsitePurpose
-import cn.yunyoujun.cook.data.remote.AppFeedbackCategory
-import cn.yunyoujun.cook.data.remote.FeedbackClient
-import cn.yunyoujun.cook.data.remote.FeedbackReceipt
+import cn.yunyoujun.cook.data.remote.DeviceLibraryCopyStatus
+import cn.yunyoujun.cook.data.remote.YunlefunSSO
 import cn.yunyoujun.cook.data.repository.CookCatalogSnapshot
-import cn.yunyoujun.cook.ui.components.TagFlowChips
+import cn.yunyoujun.cook.platform.canOpenYunlefunAuthorizationApp
+import cn.yunyoujun.cook.ui.state.AccountBrowserFlow
 import kotlinx.coroutines.launch
+import java.util.Date
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -76,13 +79,16 @@ fun SettingsTabScreen(
     onOpenPrivateRecipes: () -> Unit,
     onOpenPersonalCatalog: () -> Unit,
     onOpenAiSettings: () -> Unit,
-    onOpenFeedback: () -> Unit,
+    onOpenHelp: () -> Unit,
     onOpenRecipeData: () -> Unit,
+    onOpenAbout: () -> Unit,
     onOpenPrivacy: () -> Unit,
     onOpenCookingJournal: () -> Unit,
+    onOpenDeviceBackup: () -> Unit = {},
 ) {
     val prefs by container.preferencesStore.state.collectAsState()
     val accountState by container.yunlefunSessionManager.state.collectAsState()
+    var preference by rememberSaveable { mutableStateOf<CookingPreference?>(null) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -140,23 +146,8 @@ fun SettingsTabScreen(
 
         item {
             Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("常备调料（默认视为家里已有）", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    TagFlowChips(
-                        items = snapshot.data.pantry.options,
-                        selectedItems = prefs.pantry.toSet(),
-                        onToggle = { container.preferencesStore.togglePantryItem(it) },
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                    Text("忌口清单（选菜时自动避开）", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    val commonAvoid = (snapshot.data.food.vegetable + snapshot.data.food.meat + snapshot.data.food.staple)
-                        .map { it.name }
-                        .take(24)
-                    TagFlowChips(
-                        items = commonAvoid,
-                        selectedItems = prefs.avoid.toSet(),
-                        onToggle = { container.preferencesStore.toggleAvoidItem(it) },
-                    )
+                Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
+                    CookingPreferenceRows(prefs, onOpen = { preference = it })
                 }
             }
         }
@@ -186,11 +177,21 @@ fun SettingsTabScreen(
             }
         }
 
+        item { FridgeReminderControls(container.preferencesStore) }
+
         item {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
-                    val accountSubtitle = if (accountState.account != null) {
-                        "${accountState.account?.displayName} · ${if (accountState.syncEnabled) "已开启跨端同步" else "仅本机记录"}"
+                    val journal by container.cookingJournalStore.state.collectAsState()
+                    val journalSubtitle = when {
+                        container.cookingJournalStore.loadFailed -> "暂时无法读取"
+                        journal.cooked.isEmpty() && journal.learned.isEmpty() -> "回看做过和学会的菜"
+                        else -> "学会 ${journal.learned.size} 道 · 做过 ${journal.cooked.size} 次"
+                    }
+                    val accountSubtitle = if (accountState.credential != null) {
+                        val name = accountState.account?.displayName ?: "已登录"
+                        val library = if (accountState.syncEnabled) "已开启跨端同步" else "仅本机记录"
+                        "$name · $library"
                     } else {
                         "SSO v3 登录 · 显式云同步 · 会员权益读取"
                     }
@@ -200,33 +201,45 @@ fun SettingsTabScreen(
                     HorizontalDivider()
                     SettingsNavRow("AI 辅助与 DeepSeek Key", prefs.aiProviderMode.title, onOpenAiSettings)
                     HorizontalDivider()
-                    SettingsNavRow("做菜足迹", "回看做过和学会的菜", onOpenCookingJournal)
+                    SettingsNavRow("做菜足迹", journalSubtitle, onOpenCookingJournal)
+                    HorizontalDivider()
+                    SettingsNavRow("本机备份与换机", "保存本机数据或从文件分项恢复", onOpenDeviceBackup)
                     HorizontalDivider()
                     SettingsNavRow("我的私房菜", "自建做法与 JSON 备份", onOpenPrivateRecipes)
                     HorizontalDivider()
                     SettingsNavRow("个人食材与厨具词典", "增删自定义与隐藏内置", onOpenPersonalCatalog)
                     HorizontalDivider()
-                    SettingsNavRow("意见反馈与菜谱投稿", "平台标识 android · 含支持工单与邮件兜底", onOpenFeedback)
+                    SettingsNavRow("帮助与反馈", "意见反馈、菜谱投稿与支持中心", onOpenHelp)
                     HorizontalDivider()
                     SettingsNavRow("内置菜谱数据说明", "${snapshot.data.meta.total} 道菜 · ${snapshot.data.meta.dataVersion}", onOpenRecipeData)
                     HorizontalDivider()
-                    SettingsNavRow("隐私与本地存储说明", "设备库隔离 · Keystore AES-GCM", onOpenPrivacy)
+                    SettingsNavRow("隐私政策", "本机数据、可选服务与隐私选择", onOpenPrivacy)
+                    HorizontalDivider()
+                    SettingsNavRow("关于云食册", "版本、更新日志与项目链接", onOpenAbout)
                 }
             }
         }
+    }
 
-        item {
-            Text(
-                text = "云食册 Android (${BuildConfig.VERSION_NAME} · ${BuildConfig.APPLICATION_ID})",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    preference?.let { page ->
+        val personalCatalog by container.personalCatalogStore.state.collectAsState()
+        val food = remember(personalCatalog, snapshot) {
+            personalCatalog.toDocument().applyingTo(snapshot.data.food)
+        }
+        Dialog(
+            onDismissRequest = { preference = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            CookingPreferenceEditor(
+                page, food, snapshot.data.normalizer, snapshot.data.pantry, prefs, container.preferencesStore,
+                onBack = { preference = null },
             )
         }
     }
 }
 
 @Composable
-private fun SettingsNavRow(
+internal fun SettingsNavRow(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
@@ -247,257 +260,15 @@ private fun SettingsNavRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-fun AiSettingsScreen(
-    container: AppContainer,
-    onBack: () -> Unit,
-) {
-    val prefs by container.preferencesStore.state.collectAsState()
-    val scope = rememberCoroutineScope()
-    var keyInput by remember { mutableStateOf("") }
-    var hasStoredKey by remember {
-        mutableStateOf(
-            runCatching { !container.vault.readSecret(AndroidKeystoreVault.KEY_DEEPSEEK_API_KEY).isNullOrBlank() }
-                .getOrDefault(false),
-        )
-    }
-    var vaultMessage by remember { mutableStateOf<String?>(null) }
-    var checkingKey by remember { mutableStateOf(false) }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("AI 辅助设置") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
-            )
-        },
-    ) { inner ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(inner).padding(16.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text("选择提供方", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                AiProviderMode.entries.forEach { mode ->
-                    FilterChip(
-                        selected = prefs.aiProviderMode == mode,
-                        onClick = { container.preferencesStore.setAiProviderMode(mode) },
-                        label = { Text(mode.title) },
-                    )
-                }
-            }
-
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("DeepSeek 个人 Key（BYOK）", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        text = if (hasStoredKey) "当前设备已安全保存 Key（使用 Android Keystore AES-256-GCM 加密，不参与系统自动备份）。" else "尚未配置个人 Key。即使不配置，也可免费使用本机词典智能找菜。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedTextField(
-                        value = keyInput,
-                        onValueChange = { keyInput = it.take(512) },
-                        label = { Text("输入新的 DeepSeek API Key (sk-...)") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            enabled = !checkingKey && container.deepSeekClient.validKey(keyInput.trim()),
-                            onClick = {
-                                runCatching {
-                                    container.vault.writeSecret(AndroidKeystoreVault.KEY_DEEPSEEK_API_KEY, keyInput.trim())
-                                }.onSuccess {
-                                    hasStoredKey = true
-                                    keyInput = ""
-                                    container.preferencesStore.setAiProviderMode(AiProviderMode.BYOK_DEEPSEEK)
-                                    vaultMessage = "已加密写入本机安全密钥库。"
-                                }.onFailure { err ->
-                                    vaultMessage = err.message ?: "安全密钥库不可用，未保存明文。"
-                                }
-                            },
-                        ) { Text("加密保存 Key") }
-                        OutlinedButton(
-                            enabled = !checkingKey && (hasStoredKey || container.deepSeekClient.validKey(keyInput.trim())),
-                            onClick = {
-                                val key = keyInput.trim()
-                                checkingKey = true
-                                scope.launch {
-                                    try {
-                                        val active = key.ifEmpty {
-                                            container.vault.readSecret(AndroidKeystoreVault.KEY_DEEPSEEK_API_KEY).orEmpty()
-                                        }
-                                        vaultMessage = if (container.deepSeekClient.checkConnection(active)) {
-                                            "连接成功，当前余额可用。"
-                                        } else {
-                                            "Key 可用，当前余额不足。"
-                                        }
-                                    } catch (e: kotlinx.coroutines.CancellationException) {
-                                        throw e
-                                    } catch (e: Exception) {
-                                        vaultMessage = if (e is IllegalStateException || e is IllegalArgumentException) {
-                                            e.message ?: "连接测试失败。"
-                                        } else {
-                                            "连接测试失败，请检查网络后重试。"
-                                        }
-                                    } finally {
-                                        checkingKey = false
-                                    }
-                                }
-                            },
-                        ) { Text(if (checkingKey) "测试中…" else "测试连接") }
-                        if (hasStoredKey) {
-                            OutlinedButton(
-                                enabled = !checkingKey,
-                                onClick = {
-                                    runCatching { container.vault.deleteSecret(AndroidKeystoreVault.KEY_DEEPSEEK_API_KEY) }
-                                        .onSuccess {
-                                            hasStoredKey = false
-                                            vaultMessage = "已清除本机 Key。"
-                                        }
-                                        .onFailure { vaultMessage = it.message }
-                                },
-                            ) { Text("清除 Key") }
-                        }
-                    }
-                    vaultMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-fun AppFeedbackScreen(
-    snapshot: CookCatalogSnapshot,
-    container: AppContainer,
-    onBack: () -> Unit,
-) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var category by rememberSaveable { mutableStateOf(AppFeedbackCategory.IDEA) }
-    var note by rememberSaveable { mutableStateOf("") }
-    var contact by rememberSaveable { mutableStateOf("") }
-    var submitting by remember { mutableStateOf(false) }
-    var receipt by remember { mutableStateOf<FeedbackReceipt?>(null) }
-    var message by remember { mutableStateOf<String?>(null) }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("意见反馈与支持") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
-            )
-        },
-    ) { inner ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(inner).padding(16.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text("选择反馈类型", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AppFeedbackCategory.entries.forEach { cat ->
-                    FilterChip(
-                        selected = category == cat,
-                        onClick = { category = cat },
-                        label = { Text(cat.label) },
-                    )
-                }
-            }
-
-            OutlinedTextField(
-                value = note,
-                onValueChange = { note = it.take(FeedbackClient.MAX_FEEDBACK_NOTE) },
-                label = { Text("详细说明（最多 ${FeedbackClient.MAX_FEEDBACK_NOTE} 字）") },
-                placeholder = { Text(category.placeholder) },
-                minLines = 3,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            OutlinedTextField(
-                value = contact,
-                onValueChange = { contact = it.take(FeedbackClient.MAX_CONTACT) },
-                label = { Text("联系方式（选填，便于回访或查看工单进度）") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Button(
-                enabled = !submitting && note.trim().isNotEmpty(),
-                onClick = {
-                    submitting = true
-                    message = null
-                    scope.launch {
-                        runCatching {
-                            container.feedbackClient.sendAppFeedback(
-                                category = category,
-                                note = note,
-                                contact = contact,
-                                recipeVersion = snapshot.data.meta.dataVersion,
-                            )
-                        }.onSuccess { res ->
-                            submitting = false
-                            receipt = res
-                            message = if (res != null) "提交成功！回执编号：${res.id}" else "反馈已提交，感谢你的建议！"
-                        }.onFailure { err ->
-                            submitting = false
-                            message = err.message ?: "提交失败，可尝试下方邮件草稿或微信客服入口。"
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(if (submitting) "正在提交…" else "提交反馈（平台：android）")
-            }
-
-            message?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
-            receipt?.ticketUrl?.let { ticketUrl ->
-                OutlinedButton(
-                    onClick = {
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ticketUrl))) }
-                    },
-                ) { Text("查看工单进度 ($ticketUrl)") }
-            }
-
-            HorizontalDivider()
-            Text("备用联系渠道", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val lines = listOf("类型：${category.label}", "说明：${note.trim()}", "联系方式：${contact.trim()}")
-                OutlinedButton(
-                    onClick = {
-                        val mailUri = FeedbackClient.buildMailToUri(category.label, lines)
-                        runCatching { context.startActivity(Intent(Intent.ACTION_SENDTO, mailUri)) }
-                            .onFailure { Toast.makeText(context, "未安装邮件客户端，请使用复制邮箱内容", Toast.LENGTH_SHORT).show() }
-                    },
-                ) { Text("发送邮件 (${FeedbackClient.SUPPORT_EMAIL})") }
-                OutlinedButton(
-                    onClick = {
-                        val text = FeedbackClient.buildMailPreviewText(category.label, lines)
-                        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        cm.setPrimaryClip(ClipData.newPlainText("cook-feedback", text))
-                        Toast.makeText(context, "已复制反馈模板到剪贴板", Toast.LENGTH_SHORT).show()
-                    },
-                ) { Text("复制反馈邮件文本") }
-                snapshot.links.wecomKf?.let { url ->
-                    OutlinedButton(
-                        onClick = { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } },
-                    ) { Text("联系人工客服") }
-                }
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipeDataSettingsScreen(
     snapshot: CookCatalogSnapshot,
     onBack: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val version = snapshot.data.meta.dataVersion
+    var copied by remember(version) { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -511,7 +282,18 @@ fun RecipeDataSettingsScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text("数据协议版本：schema v${snapshot.data.meta.schemaVersion}", style = MaterialTheme.typography.bodyMedium)
-            Text("数据包指纹版本：${snapshot.data.meta.dataVersion}", style = MaterialTheme.typography.bodyMedium)
+            SelectionContainer {
+                Text("数据包指纹版本：$version", style = MaterialTheme.typography.bodyMedium)
+            }
+            OutlinedButton(onClick = {
+                val clipboard = context.getSystemService(ClipboardManager::class.java)
+                if (clipboard != null) {
+                    clipboard.setPrimaryClip(ClipData.newPlainText("菜谱数据版本", version))
+                    copied = true
+                }
+            }) {
+                Text(if (copied) "已复制版本标识" else "复制版本标识")
+            }
             Text("内置菜谱总量：${snapshot.data.meta.total} 道", style = MaterialTheme.typography.bodyMedium)
             Text("图文正文条数：${snapshot.textLibrary?.count ?: 0} 篇", style = MaterialTheme.typography.bodyMedium)
             Text(
@@ -528,82 +310,61 @@ fun RecipeDataSettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text("数据来源", modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.titleMedium)
+            SettingsNavRow("菜谱与食材数据", "食用手册开源项目") {
+                context.openExternalLink("https://github.com/YunYouJun/cook/tree/main/packages/data")
+            }
+            snapshot.textLibrary?.source?.let { source ->
+                SettingsNavRow("图文做法", source.name) { context.openExternalLink(source.url) }
+            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun PrivacySettingsScreen(onBack: () -> Unit) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("隐私与本地存储说明") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
-            )
-        },
-    ) { inner ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(inner).padding(16.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text("1. 本地设备库与账号库隔离", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Text(
-                "设备库和账号库分开保存。跨端同步需主动开启；冰箱、做菜足迹、搜索历史、私房菜和个人词典保存在设备上。",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text("2. 安全密钥库", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Text(
-                "AI API Key 与登录凭据由 Android Keystore 硬件主密钥配合 AES-256-GCM AEAD 加密写入专属非备份目录，已关闭系统自动云备份（android:allowBackup=\"false\"）。",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text("3. 网络请求隔离", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Text(
-                "在 AI 设置点按「测试连接」会用所选 Key 查询 DeepSeek 余额。联网识别须确认发送本次输入；批量识图会先展示照片和接收方，确认后才上传去除元数据的照片。",
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-    }
-}
+private enum class AccountSyncConfirmation { ENABLE, COPY_DEVICE_LIBRARY }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun AccountAndSyncScreen(
+internal fun AccountAndSyncScreen(
     container: AppContainer,
+    accountBrowser: AccountBrowserFlow,
     onBack: () -> Unit,
     onOpenWeChatSignup: () -> Unit = {},
     onOpenMembership: () -> Unit = {},
+    onOpenLibraryTransfer: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val sessions = container.yunlefunSessionManager
     val state by sessions.state.collectAsState()
+    val libraryScope = state.libraryScope
     var manualCallbackUrl by remember { mutableStateOf("") }
     var websiteCallback by remember { mutableStateOf("") }
-    var openingWebsite by remember { mutableStateOf(false) }
+    val browserBusy by accountBrowser.busy.collectAsState()
+    val accountWebsiteApproved = state.approvedWebsitePurpose == AccountWebsitePurpose.ACCOUNT_SETTINGS
     var accountWebsiteMessage by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(state.awaitingAccountWebsite) {
-        if (!state.awaitingAccountWebsite) websiteCallback = ""
+    var syncConfirmation by remember(libraryScope) {
+        mutableStateOf<AccountSyncConfirmation?>(null)
     }
 
-    fun openAccountWebsite(callback: String? = null) {
-        openingWebsite = true
+    LaunchedEffect(state.awaitingAccountWebsite, accountWebsiteApproved) {
+        if (!state.awaitingAccountWebsite || accountWebsiteApproved) websiteCallback = ""
+    }
+
+    fun completeSignIn(callback: String) {
+        manualCallbackUrl = ""
+        accountBrowser.completeSignIn(sessions, callback)
+    }
+
+    fun approveAccountWebsite(callback: String) {
         accountWebsiteMessage = null
-        scope.launch {
-            try {
-                val open: (String) -> Unit = { url -> context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-                if (callback == null) open(sessions.beginAccountWebsite())
-                else sessions.openAccountWebsiteFromCallback(callback, AccountWebsitePurpose.ACCOUNT_SETTINGS, open)
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                if (e is android.content.ActivityNotFoundException) sessions.cancelAccountWebsite()
-                accountWebsiteMessage = "暂时无法打开账号管理，请检查网络或重新打开。"
-            } finally {
-                openingWebsite = false
-            }
-        }
+        accountBrowser.approveWebsite(sessions, callback, AccountWebsitePurpose.ACCOUNT_SETTINGS)
+    }
+
+    fun openAccountWebsite() {
+        val session = state.membershipSession ?: return
+        accountWebsiteMessage = null
+        accountBrowser.beginWebsite(sessions, AccountWebsitePurpose.ACCOUNT_SETTINGS, expectedSession = session)
     }
 
     Scaffold(
@@ -630,43 +391,55 @@ fun AccountAndSyncScreen(
 
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("云乐坊 SSO v3 登录", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text("云乐坊账号", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     if (state.credential == null) {
-                        Text(
-                            "使用系统浏览器发起 PKCE S256 授权（10 分钟有效期、一次性消费）。首次登录不会自动上传本机收藏与历史。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Button(
-                            onClick = {
-                                val authUrl = container.yunlefunSessionManager.beginSsoAuthorization()
-                                runCatching {
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(authUrl)))
-                                }.onFailure {
-                                    Toast.makeText(context, "未找到可用的系统浏览器", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                        ) {
-                            Text("浏览器登录云乐坊账号")
+                        val appSignInNonce = state.appSignInNonce
+                        if (appSignInNonce == null) {
+                            Text(
+                                "首次登录不会自动上传本机收藏与历史。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Button(
+                                enabled = !browserBusy,
+                                onClick = {
+                                    accountBrowser.beginSignIn(
+                                        sessions, preferApp = context.canOpenYunlefunAuthorizationApp(),
+                                    )
+                                },
+                            ) { Text("登录云乐坊") }
+                        } else {
+                            Text("请在云乐坊 App 确认登录。", style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(enabled = !browserBusy, onClick = {
+                                manualCallbackUrl = ""
+                                accountBrowser.continueSignInOnWeb(sessions, appSignInNonce)
+                            }) { Text("改用浏览器") }
+                            TextButton(enabled = !browserBusy, onClick = {
+                                manualCallbackUrl = ""
+                                accountBrowser.cancelAppSignIn(sessions, appSignInNonce)
+                            }) { Text("取消本次登录") }
                         }
+                        PasteAccountCallbackButton(
+                            label = "粘贴并验证登录",
+                            enabled = !browserBusy,
+                            isExpectedCallback = YunlefunSSO::isSignInCallback,
+                            onSubmit = ::completeSignIn,
+                        )
                         OutlinedTextField(
                             value = manualCallbackUrl,
                             onValueChange = { manualCallbackUrl = it },
+                            enabled = !browserBusy,
                             label = { Text("若未自动跳回 App，可粘贴回调完整链接 (#ylf_sso=...)") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
                         if (manualCallbackUrl.isNotBlank()) {
                             OutlinedButton(
-                                onClick = {
-                                    val target = manualCallbackUrl.trim()
-                                    manualCallbackUrl = ""
-                                    scope.launch {
-                                        container.yunlefunSessionManager.handleSsoCallbackUrl(target)
-                                    }
-                                },
+                                enabled = !browserBusy,
+                                onClick = { completeSignIn(manualCallbackUrl.trim()) },
                             ) { Text("验证回调并完成登录") }
                         }
+                        if (browserBusy) Text("正在处理登录…")
                     } else {
                         Text(
                             text = "当前账号：${state.account?.displayName ?: state.credential?.subject ?: "已授权"}",
@@ -686,42 +459,74 @@ fun AccountAndSyncScreen(
                                 color = if (ent.isActiveAt()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                        state.profileRefreshError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
-                                enabled = !openingWebsite && !state.awaitingAccountWebsite,
+                                enabled = !browserBusy && !state.awaitingAccountWebsite,
                                 onClick = { openAccountWebsite() },
-                            ) { Text(if (openingWebsite) "正在打开…" else "管理云乐坊账号") }
-                            TextButton(onClick = {
-                                val url = Uri.parse(YunlefunAccountWebHandoff.SETTINGS_URL)
-                                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, url)) }
-                                    .onFailure { Toast.makeText(context, "未找到可用的系统浏览器", Toast.LENGTH_SHORT).show() }
-                            }) { Text("申请注销账号") }
+                            ) { Text(if (browserBusy) "正在打开…" else "管理云乐坊账号") }
+                            TextButton(
+                                enabled = !browserBusy && !state.awaitingAccountWebsite,
+                                onClick = ::openAccountWebsite,
+                            ) { Text("申请注销账号") }
                             OutlinedButton(
+                                enabled = !state.isRefreshingProfile,
                                 onClick = {
-                                    scope.launch { container.yunlefunSessionManager.refreshProfileAndEntitlement() }
+                                    scope.launch { sessions.refreshProfileAndEntitlement(libraryScope.session) }
                                 },
-                            ) { Text("刷新资料与会员权益") }
+                            ) { Text(if (state.isRefreshingProfile) "正在刷新账号资料…" else "刷新资料与会员权益") }
                             OutlinedButton(
                                 onClick = {
                                     scope.launch { container.yunlefunSessionManager.signOut() }
                                 },
                             ) { Text("退出登录") }
                         }
+                        Text(
+                            "注销需在云乐坊网站提交。提交前请核对网页显示的账号。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         if (state.awaitingAccountWebsite) {
-                            Text("浏览器若停留在授权回调页，请复制回调链接并在这里继续。")
-                            OutlinedTextField(
-                                value = websiteCallback,
-                                onValueChange = { websiteCallback = it.take(256) },
-                                label = { Text("账号管理回调链接") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(enabled = websiteCallback.isNotBlank() && !openingWebsite, onClick = {
-                                    openAccountWebsite(websiteCallback.trim())
-                                }) { Text("继续打开") }
-                                TextButton(onClick = { scope.launch { sessions.cancelAccountWebsite() } }) { Text("取消") }
+                            if (!accountWebsiteApproved) {
+                                Text("浏览器若停留在授权回调页，请复制回调链接并在这里继续。")
+                                PasteAccountCallbackButton(
+                                    label = "粘贴并继续",
+                                    enabled = !browserBusy,
+                                    isExpectedCallback = YunlefunAccountWebHandoff::isCallback,
+                                    onSubmit = ::approveAccountWebsite,
+                                )
+                                OutlinedTextField(
+                                    value = websiteCallback,
+                                    onValueChange = { websiteCallback = it.take(256) },
+                                    label = { Text("账号管理回调链接") },
+                                    enabled = !browserBusy,
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
                             }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    enabled = !browserBusy && (accountWebsiteApproved || websiteCallback.isNotBlank()),
+                                    onClick = {
+                                        if (accountWebsiteApproved) accountBrowser.resumeWebsite(sessions, AccountWebsitePurpose.ACCOUNT_SETTINGS)
+                                        else approveAccountWebsite(websiteCallback.trim())
+                                    },
+                                ) { Text(if (accountWebsiteApproved) "继续打开账号管理" else "继续打开") }
+                                TextButton(enabled = !browserBusy, onClick = {
+                                    scope.launch {
+                                        sessions.cancelAccountWebsite().onFailure {
+                                            accountWebsiteMessage = it.message ?: "暂时无法取消授权，请重试。"
+                                        }
+                                    }
+                                }) { Text("取消") }
+                            }
+                        }
+                        if (state.expiredWebsitePurpose == AccountWebsitePurpose.ACCOUNT_SETTINGS) {
+                            Text(
+                                "账号管理授权已过期，请重新打开账号管理。",
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                            )
                         }
                         accountWebsiteMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     }
@@ -730,6 +535,7 @@ fun AccountAndSyncScreen(
                         authorization = container.weChatAuthorization,
                         sessions = sessions,
                         subject = state.credential?.subject,
+                        revision = state.revision,
                         onOpenSignup = onOpenWeChatSignup,
                     )
                 }
@@ -752,38 +558,103 @@ fun AccountAndSyncScreen(
                         }
                         Switch(
                             checked = state.syncEnabled,
-                            enabled = state.credential != null && !state.isSyncing,
+                            modifier = Modifier.semantics { contentDescription = "账号跨端同步" },
+                            enabled = state.credential != null && state.isHydrated && !state.accountCacheUnreadable &&
+                                !state.isSavingSyncConsent,
                             onCheckedChange = { enabled ->
-                                scope.launch { container.yunlefunSessionManager.setSyncEnabled(enabled) }
+                                if (enabled) syncConfirmation = AccountSyncConfirmation.ENABLE
+                                else sessions.requestSyncEnabled(false, libraryScope)
                             },
                         )
                     }
 
-                    Text(
-                        text = "当前账号缓存：${state.accountDocument.favorites.size} 条收藏 · ${state.accountDocument.histories.size} 条历史",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                    if (state.accountCacheUnreadable) {
+                        Text(
+                            "账号缓存无法读取，已暂停同步并保留原记录。当前使用本机收藏和历史。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    } else {
+                        Text(
+                            text = "当前账号缓存：${state.accountDocument.favorites.size} 条收藏 · ${state.accountDocument.histories.size} 条历史",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
 
+                    if (state.usesAccountLibrary) {
+                        state.lastSyncedAtMs?.let { timestamp ->
+                            val date = Date(timestamp)
+                            val day = DateFormat.getMediumDateFormat(context).format(date)
+                            val time = DateFormat.getTimeFormat(context).format(date)
+                            Text(
+                                text = "上次同步 $day $time",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    if (state.isSavingSyncConsent) {
+                        Text(
+                            if (state.syncEnabled) "正在保存同步设置…" else "正在核对同步资格…",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (state.deviceLibraryCopyStatus == DeviceLibraryCopyStatus.FAILED) {
+                        Text(
+                            "未能复制本机记录，原有记录已保留。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+
+                    val canSync = state.usesAccountLibrary && !state.isSyncing && !state.isSavingSyncConsent
+                    val copying = state.deviceLibraryCopyStatus == DeviceLibraryCopyStatus.COPYING
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         OutlinedButton(
-                            enabled = state.credential != null && !state.isSyncing,
-                            onClick = {
-                                scope.launch { container.yunlefunSessionManager.copyDeviceLibraryToAccount() }
-                            },
+                            enabled = canSync && !copying,
+                            onClick = { syncConfirmation = AccountSyncConfirmation.COPY_DEVICE_LIBRARY },
                         ) {
-                            Text("将本机记录复制到当前账号")
+                            Text(if (copying) "正在复制…" else "将本机记录复制到当前账号")
                         }
                         Button(
-                            enabled = state.usesAccountLibrary && !state.isSyncing,
-                            onClick = {
-                                scope.launch { container.yunlefunSessionManager.syncNow() }
-                            },
+                            enabled = canSync,
+                            onClick = { sessions.requestManualSync(libraryScope) },
                         ) {
                             Text(if (state.isSyncing) "正在同步…" else "立即同步")
                         }
                     }
                 }
             }
+            SettingsNavRow("导入与导出", "在设备间迁移收藏和浏览历史", onOpenLibraryTransfer)
         }
+    }
+
+    syncConfirmation?.let { action ->
+        val enabling = action == AccountSyncConfirmation.ENABLE
+        AlertDialog(
+            onDismissRequest = { syncConfirmation = null },
+            title = { Text(if (enabling) "启用账号同步？" else "复制到当前云乐坊账号？") },
+            text = {
+                Text(
+                    if (enabling) {
+                        "账号的收藏和浏览历史会通过腾讯云 CloudBase 跨端同步。已有本机记录可在开启后手动复制。"
+                    } else {
+                        "现有本机收藏和浏览历史会加入当前账号并上传到云端，本机记录也会保留。"
+                    },
+                )
+            },
+            dismissButton = { TextButton(onClick = { syncConfirmation = null }) { Text("取消") } },
+            confirmButton = {
+                TextButton(onClick = {
+                    syncConfirmation = null
+                    if (enabling) {
+                        sessions.requestSyncEnabled(true, libraryScope)
+                    } else {
+                        sessions.requestDeviceLibraryCopy(libraryScope)
+                    }
+                }) { Text(if (enabling) "启用同步" else "复制记录") }
+            },
+        )
     }
 }

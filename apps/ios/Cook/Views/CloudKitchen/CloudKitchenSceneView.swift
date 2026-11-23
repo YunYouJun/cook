@@ -8,14 +8,15 @@ enum CloudKitchenSceneStatus { case loading, ready, failed }
 
 private let kitchenSignposter = OSSignposter(subsystem: "fun.yunle.cook", category: .pointsOfInterest)
 
-/// RealityKit renders the shared USDZ locally. Only semantic actions cross the
-/// boundary; the scene never owns ingredients or recommendation state.
+/// RealityKit renders the shared USDZ locally and reports actions and completed camera gestures.
 struct CloudKitchenSceneView: UIViewRepresentable {
     let selected: [String]
     let cooking: Bool
     let dark: Bool
     let reduceMotion: Bool
     let allowsRotation: Bool
+    let viewpoint: CloudKitchenCameraOrbit.Viewpoint
+    let onViewpointChange: (CloudKitchenCameraOrbit.Viewpoint) -> Void
     let onSelect: (String) -> Void
     let onCook: () -> Void
     let onStatus: (CloudKitchenSceneStatus) -> Void
@@ -158,7 +159,7 @@ struct CloudKitchenSceneView: UIViewRepresentable {
                 return
             }
             potHome = pot.transform
-            orbit = CloudKitchenCameraOrbit(framing: asset.camera)
+            orbit = CloudKitchenCameraOrbit(framing: asset.camera, viewpoint: owner.viewpoint)
             potFood = model.findEntity(named: "PotFood")
             flame = model.findEntity(named: "StoveFlame")
             steam = (0..<6).compactMap { model.findEntity(named: "Steam_\($0)") }
@@ -194,11 +195,11 @@ struct CloudKitchenSceneView: UIViewRepresentable {
             let selectionChanged = owner.selected != next.selected
             let cookingChanged = owner.cooking != next.cooking || owner.reduceMotion != next.reduceMotion
             let appearanceChanged = owner.dark != next.dark
-            let rotationChanged = owner.allowsRotation != next.allowsRotation
+            let viewpointChanged = owner.viewpoint != next.viewpoint || owner.allowsRotation != next.allowsRotation
             owner = next
             pan?.isEnabled = root != nil && next.allowsRotation && !next.cooking
-            if rotationChanged, !next.allowsRotation {
-                orbit?.reset()
+            if viewpointChanged {
+                orbit?.restore(next.viewpoint)
                 fitCamera()
             }
             if next.reduceMotion {
@@ -333,6 +334,11 @@ struct CloudKitchenSceneView: UIViewRepresentable {
         }
 
         @objc private func rotate(_ gesture: UIPanGestureRecognizer) {
+            if gesture.state == .cancelled {
+                orbit?.restore(owner.viewpoint)
+                fitCamera()
+                return
+            }
             guard owner.allowsRotation, !owner.cooking, root != nil, let view else { return }
             switch gesture.state {
             case .began:
@@ -342,6 +348,9 @@ struct CloudKitchenSceneView: UIViewRepresentable {
                 let translation = gesture.translation(in: view)
                 orbit?.updateDrag(translation: CGSize(width: translation.x, height: translation.y), viewport: view.bounds.size)
                 fitCamera()
+                if gesture.state == .ended, let viewpoint = orbit?.viewpoint {
+                    owner.onViewpointChange(viewpoint)
+                }
             default: break
             }
         }

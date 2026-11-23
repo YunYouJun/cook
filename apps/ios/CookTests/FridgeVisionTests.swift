@@ -15,6 +15,22 @@ final class FridgeVisionTests: XCTestCase {
         XCTAssertNil(FridgeVisionCandidate.names(rows + [FridgeVisionCandidate(name: "苹果、香蕉")], normalizer: normalizer))
     }
 
+    func testSelectedNamesMatchTheServerUnicodeRules() throws {
+        struct NameCase: Decodable {
+            let input: String
+            let expected: String?
+        }
+        let fixture = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "fridge-vision-names", withExtension: "json"))
+        let cases = try JSONDecoder().decode([NameCase].self, from: Data(contentsOf: fixture))
+        let normalizer = StuffNormalizer(aliases: [:])
+        for example in cases {
+            let names = FridgeVisionCandidate.names([.init(name: example.input)], normalizer: normalizer)
+            XCTAssertEqual(names?.first.map { Array($0.utf8) }, example.expected.map { Array($0.utf8) }, example.input)
+        }
+        XCTAssertTrue(FridgeVisionCandidate.validName(String(repeating: "𫚕", count: 30)))
+        XCTAssertFalse(FridgeVisionCandidate.validName(String(repeating: "𫚕", count: 31)))
+    }
+
     func testUploadPreparationResizesAndDropsOriginalGPSMetadata() async throws {
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
@@ -64,19 +80,19 @@ final class FridgeVisionTests: XCTestCase {
         XCTAssertEqual(result, ["鸡蛋", "牛奶"])
     }
 
-    func testDiscoveringPhotoRecipientSendsNeitherPhotoNorAccount() async throws {
+    func testMembershipCheckReturnsTheCurrentRecipientWithoutSendingThePhoto() async throws {
         let endpoint = FridgeVisionService.productionURL
         let service = FridgeVisionService(endpoint: endpoint) { request in
             XCTAssertEqual(request.httpMethod, "GET")
             XCTAssertNil(request.httpBody)
-            XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer access")
             XCTAssertEqual(request.cachePolicy, .reloadIgnoringLocalCacheData)
-            let reply = Data(#"{"ok":true,"schemaVersion":1,"provider":"cloudbase"}"#.utf8)
+            let reply = Data(#"{"ok":true,"schemaVersion":1,"provider":"cloudbase","member":true}"#.utf8)
             return (reply, HTTPURLResponse(url: endpoint, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
-        let provider = try await service.activeProvider()
+        let provider = try await service.memberProvider(credential: FridgeVisionAccountFixture.credential)
         XCTAssertEqual(provider, .cloudBase)
-        XCTAssertTrue(provider.photoProcessingDescription.contains("腾讯云 CloudBase"))
+        XCTAssertTrue(provider?.photoProcessingDescription.contains("腾讯云 CloudBase") == true)
     }
 
     func testChecksMembershipWithOnlyTheAccountTokenBeforeAPhotoIsSelected() async throws {
@@ -88,10 +104,54 @@ final class FridgeVisionTests: XCTestCase {
             let reply = Data(#"{"ok":true,"schemaVersion":1,"provider":"deepseek","member":false}"#.utf8)
             return (reply, HTTPURLResponse(url: endpoint, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
-        let credential = YunlefunCredential(accessToken: "access", refreshToken: "refresh", subject: "subject",
-                                            expiresAt: .now.addingTimeInterval(600), deviceID: "device")
-        let member = try await service.hasMembership(credential: credential)
-        XCTAssertFalse(member)
+        let provider = try await service.memberProvider(credential: FridgeVisionAccountFixture.credential)
+        XCTAssertNil(provider)
+    }
+
+    func testMembershipCheckRenewsRejectedCredentialOnceBeforeReturningTheRecipient() async throws {
+        let accountService = FridgeVisionAccountFixture()
+        let accounts = await accountService.makeAccountStore()
+        let endpoint = FridgeVisionService.productionURL
+        let requests = FridgeVisionRequestLog()
+        let service = FridgeVisionService(endpoint: endpoint) { request in
+            let token = await requests.record(request)
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertNil(request.httpBody)
+            let status = token == "Bearer access" ? 401 : 200
+            let data = Data(#"{"ok":true,"schemaVersion":1,"provider":"deepseek","member":true}"#.utf8)
+            return (data, HTTPURLResponse(url: endpoint, statusCode: status, httpVersion: nil, headerFields: nil)!)
+        }
+
+        let provider = try await service.memberProvider(using: accounts)
+        let history = await requests.methodsAndTokens
+        XCTAssertEqual(provider, .deepSeek)
+        XCTAssertEqual(accountService.refreshCount, 1)
+        XCTAssertEqual(history, ["GET Bearer access", "GET Bearer renewed"])
+    }
+
+    func testRecheckingAfterRejectedUploadDoesNotResendThePhotoOrRenewTwice() async throws {
+        let accountService = FridgeVisionAccountFixture()
+        let accounts = await accountService.makeAccountStore()
+        let endpoint = FridgeVisionService.productionURL
+        let requests = FridgeVisionRequestLog()
+        let service = FridgeVisionService(endpoint: endpoint) { request in
+            _ = await requests.record(request)
+            if request.httpMethod == "GET" { XCTAssertNil(request.httpBody) }
+            return (Data(), HTTPURLResponse(url: endpoint, statusCode: 401, httpVersion: nil, headerFields: nil)!)
+        }
+        let credential = try await accounts.credentialForRequest()
+
+        do {
+            _ = try await service.recognize(FridgeVisionPhoto(jpeg: Data([1])), provider: .cloudBase, credential: credential)
+            XCTFail("Expected the first photo request to be rejected")
+        } catch FridgeVisionError.loginRequired { }
+        do {
+            _ = try await service.memberProvider(using: accounts, rejecting: credential)
+            XCTFail("A second rejection must require signing in again")
+        } catch FridgeVisionError.loginRequired { }
+        let history = await requests.methodsAndTokens
+        XCTAssertEqual(history, ["POST Bearer access", "GET Bearer renewed"])
+        XCTAssertEqual(accountService.refreshCount, 1)
     }
 
     func testAnUploadDeniedAfterMembershipExpiresHasASpecificError() async throws {
@@ -122,4 +182,43 @@ final class FridgeVisionTests: XCTestCase {
             // The preview can fetch the new recipient without repeating the upload.
         }
     }
+}
+
+private actor FridgeVisionRequestLog {
+    private(set) var methodsAndTokens: [String] = []
+
+    func record(_ request: URLRequest) -> String {
+        let token = request.value(forHTTPHeaderField: "Authorization") ?? ""
+        methodsAndTokens.append("\(request.httpMethod ?? "") \(token)")
+        return token
+    }
+}
+
+@MainActor
+private final class FridgeVisionAccountFixture: YunlefunAccountServing {
+    static let credential = YunlefunCredential(accessToken: "access", refreshToken: "refresh", subject: "subject",
+                                               expiresAt: .distantFuture, deviceID: "device")
+    private(set) var refreshCount = 0
+
+    func makeAccountStore() async -> YunlefunAccountStore {
+        let vault = MemoryYunlefunAccountVault()
+        vault.credential = Self.credential
+        let store = YunlefunAccountStore(service: self, vault: vault)
+        await store.restore()
+        return store
+    }
+
+    func signIn(fields: [String: String], deviceID: String) async throws -> YunlefunCredential { Self.credential }
+
+    func refresh(_ credential: YunlefunCredential) async throws -> YunlefunCredential {
+        refreshCount += 1
+        return YunlefunCredential(accessToken: "renewed", refreshToken: "renewed-refresh", subject: credential.subject,
+                                   expiresAt: .distantFuture, deviceID: credential.deviceID)
+    }
+
+    func account(_ credential: YunlefunCredential) async throws -> YunlefunAccount {
+        YunlefunAccount(id: credential.subject, name: nil, username: nil, status: "ACTIVE", isAnonymous: false)
+    }
+
+    func signOut(_ credential: YunlefunCredential) async throws { }
 }

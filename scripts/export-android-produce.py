@@ -2,9 +2,10 @@
 # requires-python = ">=3.12,<3.13"
 # dependencies = ["onnx==1.22.0", "onnxruntime==1.23.2", "tokenizers==0.23.3", "numpy==2.5.5"]
 # ///
-"""Export the on-demand Android produce classifier from the MIT-licensed TinyCLIP model."""
+"""Export the Android produce classifier and its manifest from the MIT-licensed TinyCLIP model."""
 
 import hashlib
+import json
 import tempfile
 from pathlib import Path
 from urllib.request import urlopen
@@ -135,7 +136,14 @@ def main():
         model = scratch / "classifier.onnx"
         export_classifier(source, vectors, model)
         destination.mkdir(parents=True, exist_ok=True)
-        (destination / "classifier.onnx").write_bytes(model.read_bytes())
+        payload = model.read_bytes()
+        digest = hashlib.sha256(payload).hexdigest()
+        (destination / "classifier.onnx").write_bytes(payload)
+        (destination / "model.json").write_text(json.dumps({
+            "file": f"classifier-{digest}.onnx",
+            "bytes": len(payload),
+            "sha256": digest,
+        }, indent=2) + "\n", encoding="utf-8")
         (destination / "labels.txt").write_text(
             "\n".join([*PRODUCE, *(f"other_{index}" for index in range(len(OTHER_SUBJECTS)))]) + "\n",
             encoding="utf-8",

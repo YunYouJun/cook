@@ -93,6 +93,28 @@ import XCTest
         do { _ = try await service.entitlement(for: identity); XCTFail("Missing lane must be rejected") } catch { }
     }
 
+    func testOnlyValidatedProductionEntitlementsNotifyAccountSync() async throws {
+        let accounts = await accounts(), identity = try XCTUnwrap(MembershipService.identity(accounts: accounts))
+        let data = try response(["membership": ["isActive": true, "expireAt": 1_900_000_000_000]])
+        let sandboxData = try response(["ledgerEnvironment": "Sandbox", "membership": ["isActive": true, "expireAt": 1_900_000_000_000]])
+        let harness = MembershipHTTPFixture(data: data)
+        var reported: [MembershipEntitlement] = []
+        let production = MembershipService(accounts: accounts, purchasesEnabled: true, environment: .production,
+                                           transport: { try await harness.send($0) }, onProductionEntitlement: { reported.append($0) })
+        let entitlement = try await production.entitlement(for: identity)
+        XCTAssertEqual(reported, [entitlement])
+
+        await harness.setData(sandboxData)
+        do {
+            _ = try await production.entitlement(for: identity)
+            XCTFail("A mismatched ledger may not confirm production sync access")
+        } catch MembershipPurchaseFailure.environmentMismatch {}
+        let sandbox = MembershipService(accounts: accounts, purchasesEnabled: true, environment: .sandbox,
+                                        transport: { try await harness.send($0) }, onProductionEntitlement: { reported.append($0) })
+        _ = try await sandbox.entitlement(for: identity)
+        XCTAssertEqual(reported, [entitlement])
+    }
+
     func testDisabledAndXcodeServicesNeverReachTheGateway() async throws {
         let accounts = await accounts(), identity = try XCTUnwrap(MembershipService.identity(accounts: accounts))
         let harness = MembershipHTTPFixture(data: Data())

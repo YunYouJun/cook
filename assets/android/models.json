@@ -1,9 +1,4 @@
 {
-  "android/cloud-kitchen.glb": {
-    "file": "cloud-kitchen-7a0d567b4619bf01646698ee85fbcf65a7849bfd0daa746451f877da104c5057.glb",
-    "bytes": 3946336,
-    "sha256": "7a0d567b4619bf01646698ee85fbcf65a7849bfd0daa746451f877da104c5057"
-  },
   "android/showcase-plate.glb": {
     "file": "showcase-plate-acd503335c452fddec691edb4027609c67a999e7859dedcdd7f68af5e894942c.glb",
     "bytes": 61828,

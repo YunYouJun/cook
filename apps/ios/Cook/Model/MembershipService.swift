@@ -34,11 +34,14 @@ enum MembershipServiceFailure: Error { case unavailable, invalidResponse, notRea
     private let accounts: YunlefunAccountStore
     private let purchasesEnabled: Bool
     private let transport: Transport
+    private let onProductionEntitlement: @MainActor (MembershipEntitlement) -> Void
     private static let gateway = URL(string: "https://yunlefun-8g7ybcxc7345c490.api.tcloudbasegateway.com/v1/functions/")!
 
     init(accounts: YunlefunAccountStore, purchasesEnabled: Bool,
-         environment: MembershipStoreEnvironment? = nil, transport: Transport? = nil) {
+         environment: MembershipStoreEnvironment? = nil, transport: Transport? = nil,
+         onProductionEntitlement: @escaping @MainActor (MembershipEntitlement) -> Void = { _ in }) {
         self.accounts = accounts; self.purchasesEnabled = purchasesEnabled
+        self.onProductionEntitlement = onProductionEntitlement
         self.environment = environment ?? (Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt" ? .sandbox : .production)
         if let transport { self.transport = transport }
         else {
@@ -61,7 +64,7 @@ enum MembershipServiceFailure: Error { case unavailable, invalidResponse, notRea
         guard environment != .xcode else { throw MembershipServiceFailure.notReady }
         let body = try await request(environment == .sandbox ? "account-api-sandbox" : "account-api",
                                      fields: ["action": "getAccount"], identity: identity)
-        if environment == .sandbox { try requireLane(body) }
+        if environment == .sandbox || body["ledgerEnvironment"] != nil { try requireLane(body) }
         guard let membership = body["membership"] as? [String: Any], let activeValue = membership["isActive"] as? NSNumber,
               CFGetTypeID(activeValue) == CFBooleanGetTypeID() else {
             throw MembershipServiceFailure.invalidResponse
@@ -76,8 +79,10 @@ enum MembershipServiceFailure: Error { case unavailable, invalidResponse, notRea
         let milliseconds = (membership["expireAt"] as? NSNumber)?.doubleValue
         guard milliseconds.map({ $0.isFinite && (0...253_402_300_799_000).contains($0) }) ?? true,
               !active || milliseconds.map({ $0 > 0 }) == true else { throw MembershipServiceFailure.invalidResponse }
-        return MembershipEntitlement(userID: identity.userID,
-                                     expiresAt: active ? milliseconds.map { Date(timeIntervalSince1970: $0 / 1000) } : nil)
+        let entitlement = MembershipEntitlement(userID: identity.userID,
+                                                expiresAt: active ? milliseconds.map { Date(timeIntervalSince1970: $0 / 1000) } : nil)
+        if environment == .production { onProductionEntitlement(entitlement) }
+        return entitlement
     }
 
     func supportedProducts(for identity: MembershipPurchaseIdentity) async throws -> Set<String> {

@@ -285,8 +285,15 @@ final class CloudKitchenUITests: XCTestCase {
         // Selection and camera changes replace projected accessibility snapshots.
         // Resolve the unique element again for each action and state wait.
         var tomato: XCUIElement { kitchenButton("kitchen.scene.tomato", in: app) }
-        func cameraMarkerFrame() -> CGRect {
-            app.buttons.matching(identifier: "kitchen.scene.pot").element.frame
+        func cameraMarkerOffset() -> CGPoint? {
+            let potButton = kitchenButton("kitchen.scene.pot", in: app)
+            let eggButton = kitchenButton("kitchen.scene.egg", in: app)
+            guard potButton.exists, eggButton.exists else { return nil }
+            let pot = potButton.frame
+            let egg = eggButton.frame
+            guard !pot.isEmpty, !pot.isInfinite, !egg.isEmpty, !egg.isInfinite else { return nil }
+            // Compare the projections relative to each other so a changed scroll offset does not move the marker.
+            return CGPoint(x: pot.midX - egg.midX, y: pot.midY - egg.midY)
         }
         var rotation: XCUIElement { app.buttons.matching(identifier: "kitchen.rotation").element }
         reveal(tomato, in: app)
@@ -296,24 +303,25 @@ final class CloudKitchenUITests: XCTestCase {
         if rotation.value as? String == "已开启" { rotation.tap() }
         rotation.tap()
         XCTAssertEqual(rotation.value as? String, "已开启")
-        // The tomato is close to the orbit center and can stay almost fixed on
-        // a wide screen. The off-center pot is a reliable camera-motion marker.
-        let original = cameraMarkerFrame()
-        guard !original.isEmpty, !original.isInfinite else {
-            XCTFail("旋转前应能定位锅的投影：\(original)")
+        guard let original = cameraMarkerOffset() else {
+            XCTFail("旋转前应能定位锅和鸡蛋的投影")
             return
         }
-        var observed = original
-        func distanceMatches(_ check: (CGFloat) -> Bool) -> Bool {
-            // X and Y must come from the same projection and accessibility snapshot.
-            observed = cameraMarkerFrame()
-            return !observed.isEmpty && !observed.isInfinite
-                && check(hypot(observed.midX - original.midX, observed.midY - original.midY))
+        var observed: CGPoint?
+        func distanceMatches(_ reference: CGPoint, _ check: (CGFloat) -> Bool) -> Bool {
+            observed = cameraMarkerOffset()
+            return observed.map { check(hypot($0.x - reference.x, $0.y - reference.y)) } ?? false
+        }
+        func expectCamera(at reference: CGPoint, message: String) {
+            let expectation = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                distanceMatches(reference) { $0 < 2 }
+            }, object: nil)
+            XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 10), .completed, message)
         }
         let start = tomato.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 90, dy: -20)))
         let moved = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            distanceMatches { $0 > 3 }
+            distanceMatches(original) { $0 > 3 }
         }, object: nil)
         let movementResult = XCTWaiter.wait(for: [moved], timeout: 10)
         if movementResult != .completed {
@@ -323,36 +331,45 @@ final class CloudKitchenUITests: XCTestCase {
             add(hierarchy)
             capture(app, name: "kitchen-rotation-not-observed")
         }
-        XCTAssertEqual(movementResult, .completed, "锅的起始投影 \(original)，当前投影 \(observed)")
+        XCTAssertEqual(movementResult, .completed, "锅的起始投影 \(original)，当前投影 \(String(describing: observed))")
+        guard let turned = observed else { return XCTFail("应能读取旋转后的投影") }
         XCTAssertFalse(tomato.isSelected, "Dragging must not select an ingredient")
         tomato.tap()
         waitUntil(tomato, "isSelected == true")
+
+        app.selectCookingPresentation("食材快选")
+        app.selectCookingPresentation("云厨房")
+        reveal(tomato, in: app)
+        XCTAssertTrue(tomato.waitForExistence(timeout: 10))
+        XCTAssertTrue(tomato.isSelected)
+        expectCamera(at: turned, message: "切回云厨房后应保留旋转角度")
+
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        XCTAssertTrue(tomato.waitForExistence(timeout: 10))
+        XCTAssertTrue(tomato.isSelected)
+        expectCamera(at: turned, message: "回到前台后应恢复旋转角度")
+
         tomato.tap()
         waitUntil(tomato, "isSelected == false")
-
+        reveal(rotation, in: app)
         rotation.tap()
         XCTAssertEqual(rotation.value as? String, "已关闭")
-        let restored = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            distanceMatches { $0 < 2 }
-        }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 10), .completed,
-                       "关闭旋转后锅应回到起始投影 \(original)，最后投影 \(observed)")
+        expectCamera(at: original, message: "关闭旋转后应回到初始视角")
         rotation.tap()
 
-        // Recreating the scene uses a fresh clone and keeps the interaction preference.
+        // After resetting, reopening keeps both the preference and the reset viewpoint.
         app.selectCookingPresentation("食材快选")
         app.selectCookingPresentation("云厨房")
         reveal(tomato, in: app)
         XCTAssertTrue(tomato.waitForExistence(timeout: 10))
         XCTAssertEqual(rotation.value as? String, "已开启")
+        expectCamera(at: original, message: "重新启用旋转后应从复位的视角开始")
         rotation.tap()
         XCTAssertEqual(rotation.value as? String, "已关闭")
-        let reset = cameraMarkerFrame()
         let resetStart = tomato.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         resetStart.press(forDuration: 0.1, thenDragTo: resetStart.withOffset(CGVector(dx: 90, dy: 0)))
-        let afterDisabledDrag = cameraMarkerFrame()
-        XCTAssertEqual(afterDisabledDrag.midX, reset.midX, accuracy: 2)
-        XCTAssertEqual(afterDisabledDrag.midY, reset.midY, accuracy: 2)
+        expectCamera(at: original, message: "关闭旋转后拖动应保留固定视角")
         tomato.tap()
         waitUntil(tomato, "isSelected == true")
         XCUIDevice.shared.press(.home)

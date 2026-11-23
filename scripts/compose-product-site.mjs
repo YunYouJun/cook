@@ -36,7 +36,8 @@ const legacyRoutes = [
   '/auth/callback',
 ]
 const protectedPaths = ['_nuxt', 'auth', '.well-known', 'sw.js', 'about']
-const requiredWebFiles = ['index.html', 'sw.js', '.well-known/apple-app-site-association', '.well-known/cook-build.json', 'auth/wechat/index.html', 'about/index.html', 'about/terms.html']
+const appleAssociationPath = '.well-known/apple-app-site-association'
+const requiredWebFiles = ['index.html', 'sw.js', appleAssociationPath, '.well-known/cook-build.json', 'auth/wechat/index.html', 'about/index.html', 'about/terms.html']
 const iosBetaGuideRoute = 'guide/ios-beta'
 const defaultRoot = fileURLToPath(new URL('../', import.meta.url))
 
@@ -115,6 +116,7 @@ export function composeProductSite(repositoryRoot = defaultRoot) {
   const root = realpathSync(resolve(repositoryRoot))
   const web = join(root, 'dist')
   const docs = join(root, 'docs/.vitepress/dist')
+  const productAssociation = join(root, 'docs/.vitepress/apple-app-site-association.json')
   const output = join(root, 'dist-site')
 
   assertOutputPath(root, output)
@@ -125,9 +127,12 @@ export function composeProductSite(repositoryRoot = defaultRoot) {
     requirePath(join(web, path))
   for (const path of ['index.html', '404.html', 'terms.html', `${iosBetaGuideRoute}.html`])
     requirePath(join(docs, path))
+  requirePath(productAssociation)
   requirePath(join(root, 'edgeone.json'))
   // Validate configuration before replacing an earlier successful composition.
   JSON.parse(readFileSync(join(root, 'edgeone.json'), 'utf8'))
+  const productAssociationJson = readFileSync(productAssociation, 'utf8')
+  JSON.parse(productAssociationJson)
   assertAssetCompatibility(web, docs)
 
   for (const source of [realpathSync(web), realpathSync(docs)]) {
@@ -155,6 +160,8 @@ export function composeProductSite(repositoryRoot = defaultRoot) {
       filter: source => source !== join(web, '200.html'),
     })
     cpSync(docs, staging, { recursive: true, dereference: true })
+    // The product domain owns recipe links. Native SSO and WeChat use the web app domain.
+    writeFileSync(join(staging, appleAssociationPath), productAssociationJson)
     // EdgeOne can serve the exact asset path even when its clean URL rewrite is unavailable.
     cpSync(join(staging, `${iosBetaGuideRoute}.html`), join(staging, iosBetaGuideRoute), { force: false, errorOnExist: true })
     for (const route of legacyRoutes) {

@@ -107,6 +107,20 @@ public struct UserDataDocument: Codable, Equatable, Sendable {
         return result
     }
 
+    public func clearingHistory(now: Double) -> UserDataDocument {
+        let cutoff = max(now, historyClearedAt)
+        var history = UserDataDocument()
+        history.historyClearedAt = cutoff
+        history.historyRemovals = historyRemovals + histories.filter { $0.time > cutoff }.map {
+            Removal(name: $0.recipe.name, time: $0.time)
+        }
+        var cleared = self
+        cleared.histories = []
+        cleared.historyClearedAt = cutoff
+        cleared.historyRemovals = history.merging(UserDataDocument(), now: now).historyRemovals
+        return cleared
+    }
+
     private static func latest(_ values: [Favorite]) -> [Int: Favorite] {
         values.reduce(into: [:]) { result, item in
             if item.time > result[item.id]?.time ?? -1 { result[item.id] = item }

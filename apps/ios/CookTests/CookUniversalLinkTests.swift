@@ -46,8 +46,9 @@ final class CookUniversalLinkTests: XCTestCase {
         XCTAssertEqual(router.tab, .library)
         XCTAssertEqual(router.takeSharedRecipeID(), 0)
         XCTAssertNil(router.takeSharedRecipeID())
-        XCTAssertTrue(router.openUniversalLink(url))
-        XCTAssertEqual(router.takeSharedRecipeID(), 0)
+        let withoutSlash = try XCTUnwrap(URL(string: "https://cook.yunle.fun/recipes/share?id=250"))
+        XCTAssertTrue(router.openUniversalLink(withoutSlash))
+        XCTAssertEqual(router.takeSharedRecipeID(), 250)
     }
 
     func testSharedRecipeRejectsAmbiguousAndInvalidIDs() throws {

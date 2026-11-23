@@ -70,6 +70,7 @@ const docs = [
     <nav aria-label="法律与项目链接">
       <a href="/terms">用户协议</a>
       <a href="/privacy">iOS 隐私政策</a>
+      <a href="/privacy-android">Android 隐私政策</a>
       <a :href="links.github">开源项目与来源说明</a>
     </nav>
   </div>

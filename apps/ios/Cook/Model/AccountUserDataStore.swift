@@ -26,18 +26,27 @@ final class AccountUserDataStore {
     var isEnabled: Bool { snapshot.enabled }
     var usesAccountLibrary: Bool { ownerID != nil && snapshot.enabled }
     var favoriteIDs: [Int] { snapshot.document.favorites.reversed().map(\.id) }
+    var libraryRevision: UUID { generation }
 
     @ObservationIgnored private let cache: AccountUserDataCaching
     @ObservationIgnored private let service: UserDataSyncServing
     @ObservationIgnored private let credential: () async throws -> YunlefunCredential
+    @ObservationIgnored private let renewCredential: (YunlefunCredential) async throws -> YunlefunCredential
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var generation = UUID()
     @ObservationIgnored private var pending = false
     @ObservationIgnored private var retry = 0
+    @ObservationIgnored private var membershipCheckRevision = UUID()
+    @ObservationIgnored private var checkedMembershipExpiry: Date?
+    @ObservationIgnored private var waitingForMembership = false
 
     init(cache: AccountUserDataCaching, service: UserDataSyncServing? = nil,
-         credential: @escaping () async throws -> YunlefunCredential) {
-        self.cache = cache; self.service = service ?? UserDataSyncService(); self.credential = credential
+         credential: @escaping () async throws -> YunlefunCredential,
+         renewCredential: @escaping (YunlefunCredential) async throws -> YunlefunCredential = { _ in throw UserDataSyncFailure.loginRequired }) {
+        self.cache = cache
+        self.service = service ?? UserDataSyncService()
+        self.credential = credential
+        self.renewCredential = renewCredential
     }
 
     func activate(_ uid: String?) {
@@ -63,9 +72,8 @@ final class AccountUserDataStore {
         let current = generation
         do {
             if enabled {
-                let auth = try await credential()
-                guard current == generation, auth.subject == uid else { return }
-                try await service.checkAccess(credential: auth)
+                try await withSyncCredential(uid: uid, generation: current, request: service.checkAccess)
+                try Task.checkCancellation()
                 guard current == generation, ownerID == uid else { return }
             }
             var next = snapshot
@@ -74,6 +82,8 @@ final class AccountUserDataStore {
             invalidate()
             message = nil
             if enabled { requestSync() }
+        } catch is CancellationError {
+            return
         } catch {
             guard generation == current else { return }
             message = error.localizedDescription
@@ -94,15 +104,26 @@ final class AccountUserDataStore {
     func recordVisit(_ recipe: Recipe, now: Double = Date().timeIntervalSince1970 * 1000) {
         var value = snapshot.document
         let latest = value.histories.filter { $0.recipe.name == recipe.name }.map(\.time).max() ?? 0
-        value.histories.append(.init(recipe: .init(recipe: recipe), time: max(now, latest + 1, value.historyClearedAt + 1)))
+        let lastRemoval = value.historyRemovals.filter { $0.name == recipe.name }.map(\.time).max() ?? 0
+        let time = max(now, latest + 1, lastRemoval + 1, value.historyClearedAt + 1)
+        value.histories.append(.init(recipe: .init(recipe: recipe), time: time))
         do { try update(value) }
         catch { message = UserDataSyncFailure.localStorage.localizedDescription }
     }
 
-    func clearHistory(now: Double = Date().timeIntervalSince1970 * 1000) {
+    func removeVisit(_ visit: UserDataDocument.Visit, expectedRevision: UUID) throws {
+        guard expectedRevision == generation, usesAccountLibrary else { throw CancellationError() }
         var value = snapshot.document
-        value.historyClearedAt = max(now, value.historyClearedAt, value.histories.map(\.time).max() ?? 0)
-        do { try update(value) }
+        let name = visit.recipe.name
+        func matches(_ item: UserDataDocument.Visit) -> Bool { item.recipe.name == name && item.time == visit.time }
+        guard value.histories.contains(where: matches) else { return }
+        value.histories.removeAll(where: matches)
+        value.historyRemovals.append(.init(name: name, time: visit.time))
+        try update(value)
+    }
+
+    func clearHistory(now: Double = Date().timeIntervalSince1970 * 1000) {
+        do { try update(snapshot.document.clearingHistory(now: now)) }
         catch { message = UserDataSyncFailure.localStorage.localizedDescription }
     }
 
@@ -111,16 +132,15 @@ final class AccountUserDataStore {
         try update(snapshot.document.merging(document))
     }
 
-    func visitIDs(recipeIdByName: [String: Int]) -> [Int] {
-        uniqueRecipeIds(snapshot.document.histories.reversed().compactMap { recipeIdByName[$0.recipe.name] })
-    }
-
     func exportText() -> String {
         guard let data = try? JSONEncoder().encode(snapshot.document),
               var object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return "" }
         object["app"] = "cook"
-        object["exportedAt"] = Date().timeIntervalSince1970 * 1000
-        guard let result = try? JSONSerialization.data(withJSONObject: object, options: .sortedKeys) else { return "" }
+        object["exportedAt"] = WebUserData.milliseconds(Date())
+        guard let result = try? JSONSerialization.data(
+            withJSONObject: object,
+            options: [.sortedKeys, .withoutEscapingSlashes],
+        ) else { return "" }
         return String(decoding: result, as: UTF8.self)
     }
 
@@ -146,6 +166,17 @@ final class AccountUserDataStore {
         isSyncing = false
         pending = false
         retry = 0
+        checkedMembershipExpiry = nil
+        waitingForMembership = false
+    }
+
+    func membershipDidCheck(_ entitlement: MembershipEntitlement) {
+        guard usesAccountLibrary, !cacheFailed, entitlement.userID == ownerID else { return }
+        membershipCheckRevision = UUID()
+        checkedMembershipExpiry = entitlement.expiresAt
+        guard waitingForMembership, entitlement.isActive(at: .now) else { return }
+        waitingForMembership = false
+        requestSync()
     }
 
     func requestSync(delay: Double = 0) {
@@ -161,16 +192,69 @@ final class AccountUserDataStore {
         }
     }
 
-    private func sync(_ current: UUID) async {
-        guard let uid = ownerID, usesAccountLibrary else { return }
-        isSyncing = true
-        pending = false
-        var retryDelay: Double?
+    private func withSyncCredential<T>(uid: String, generation current: UUID, recheckAccess: Bool = false,
+                                       request: (YunlefunCredential) async throws -> T) async throws -> T {
+        func validate(_ auth: YunlefunCredential) throws {
+            try Task.checkCancellation()
+            guard generation == current, ownerID == uid else { throw CancellationError() }
+            guard auth.subject == uid else { throw UserDataSyncFailure.loginRequired }
+        }
+
         do {
             let auth = try await credential()
-            guard generation == current else { return }
-            guard auth.subject == uid else { throw UserDataSyncFailure.loginRequired }
-            let accepted = try await service.sync(snapshot.document, credential: auth)
+            try validate(auth)
+            do { return try await request(auth) }
+            catch UserDataSyncFailure.accessTokenRejected {
+                try validate(auth)
+                let renewed = try await renewCredential(auth)
+                try validate(renewed)
+                guard renewed.deviceID == auth.deviceID, renewed.accessToken != auth.accessToken else {
+                    throw UserDataSyncFailure.loginRequired
+                }
+                let ready = recheckAccess ? try await confirmSyncAccess(renewed, validate: validate) : renewed
+                return try await request(ready)
+            }
+        } catch YunlefunAccountError.expiredSession {
+            throw UserDataSyncFailure.loginRequired
+        }
+    }
+
+    // Confirm access without sending the document. Another request can rotate the token while we wait.
+    private func confirmSyncAccess(_ renewed: YunlefunCredential, validate: (YunlefunCredential) throws -> Void)
+        async throws -> YunlefunCredential {
+        var candidate = renewed
+        for _ in 0..<2 {
+            let rejected: Bool
+            do {
+                try await service.checkAccess(credential: candidate)
+                rejected = false
+            } catch UserDataSyncFailure.accessTokenRejected {
+                rejected = true
+            }
+            try validate(candidate)
+            let active = try await credential()
+            try validate(active)
+            guard active.deviceID == renewed.deviceID else { throw UserDataSyncFailure.loginRequired }
+            if active.accessToken == candidate.accessToken {
+                if rejected { throw UserDataSyncFailure.accessTokenRejected }
+                return active
+            }
+            candidate = active
+        }
+        throw UserDataSyncFailure.unavailable
+    }
+
+    private func sync(_ current: UUID) async {
+        guard let uid = ownerID, usesAccountLibrary else { return }
+        let membershipCheckAtStart = membershipCheckRevision
+        isSyncing = true
+        pending = false
+        waitingForMembership = false
+        var retryDelay: Double?
+        do {
+            let accepted = try await withSyncCredential(uid: uid, generation: current, recheckAccess: true) { auth in
+                try await service.sync(snapshot.document, credential: auth)
+            }
             try Task.checkCancellation()
             guard generation == current, ownerID == uid else { return }
             var next = snapshot
@@ -186,6 +270,14 @@ final class AccountUserDataStore {
         } catch {
             guard generation == current else { return }
             message = (error as? UserDataSyncFailure)?.localizedDescription ?? UserDataSyncFailure.unavailable.localizedDescription
+            switch error as? UserDataSyncFailure {
+            case .loginRequired, .accessTokenRejected: pending = false
+            case .membershipRequired:
+                // A successful check may have arrived while this request was still in flight.
+                pending = membershipCheckRevision != membershipCheckAtStart && checkedMembershipExpiry.map { $0 > .now } == true
+                waitingForMembership = !pending
+            default: break
+            }
             if case UserDataSyncFailure.unavailable = error { retryDelay = min(30, pow(2, Double(retry))); retry += 1 }
             else if case YunlefunAccountError.unavailable = error { retryDelay = min(30, pow(2, Double(retry))); retry += 1 }
             else if error is URLError { retryDelay = min(30, pow(2, Double(retry))); retry += 1 }

@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["QT792GAY4C.fun.yunle.cook"],
+        "components": [
+          { "/": "/recipes/share", "?": { "id": "?*" } },
+          { "/": "/recipes/share/", "?": { "id": "?*" } }
+        ]
+      }
+    ]
+  }
+}
