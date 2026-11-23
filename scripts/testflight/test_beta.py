@@ -17,6 +17,7 @@ class BetaTests(unittest.TestCase):
         self.c = beta.read(Path(__file__).with_name('candidate.json'))
         # Keep default production-policy tests independent of the live candidate policy.
         self.c.pop('acceptancePolicy', None)
+        self.c.pop('publicLink', None)
         evidence = self.directory / 'device-evidence.txt'
         evidence.write_text('Synthetic device evidence for isolated gate tests, never production.')
         check = {'passed': True, 'testedAt': '2026-10-01T00:00:00Z',
@@ -77,6 +78,33 @@ class BetaTests(unittest.TestCase):
         self.s['testers'] = 31
         self.assertTrue({'apple.approval', 'build.expired', 'group.unverified_builds', 'group.capacity'}
                         <= set(beta.gate(self.c, self.s, self.e)))
+
+    def test_published_update_counts_public_testers_and_preserves_the_existing_link(self):
+        url = 'https://testflight.apple.com/join/Example'
+        self.c['publicLink'] = url
+        self.s['group']['attributes'].update(publicLink=url, publicLinkEnabled=True,
+                                             publicLinkLimitEnabled=True, publicLinkLimit=30)
+        self.s.update(externalState='IN_BETA_TESTING', testers=35, publicTesters=30)
+        self.s['buildIds'].append('older-build')
+        c = self.controller()
+        with patch.object(c, 'snapshot', return_value=self.s), patch.object(c, 'set_link') as mutate:
+            self.assertEqual(c.reconcile(True)['blockers'], [])
+            self.assertEqual(beta.read(self.directory / 'invitation.json')['url'], url)
+            self.s['publicTesters'] = 31
+            self.assertIn('group.capacity', c.reconcile(True)['blockers'])
+            self.s['group']['attributes']['publicLinkEnabled'] = False
+            self.assertIn('group.public_link', c.reconcile(True)['blockers'])
+            with self.assertRaises(ValueError):
+                c.submit(True)
+            mutate.assert_not_called()
+
+    def test_published_link_read_failure_cannot_close_it(self):
+        self.c['publicLink'] = 'https://testflight.apple.com/join/Example'
+        c = self.controller()
+        with patch.object(c, 'snapshot', side_effect=RuntimeError('offline')), patch.object(c, 'set_link') as mutate:
+            with self.assertRaises(RuntimeError):
+                c.reconcile(True)
+            mutate.assert_not_called()
 
     def test_approved_build_does_not_require_another_review(self):
         for state in beta.APPROVED_EXTERNAL_STATES:

@@ -1,0 +1,4 @@
+interface:
+  display_name: "云食册 TestFlight 定向邀请"
+policy:
+  allow_implicit_invocation: false
