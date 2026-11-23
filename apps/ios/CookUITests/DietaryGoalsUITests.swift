@@ -221,14 +221,15 @@ final class DietaryGoalsUITests: XCTestCase {
 
     @MainActor
     private func waitForGoalPicker(in app: XCUIApplication) {
-        let done = app.cookingToolbarButton("dietary.done")
-        XCTAssertEqual(done.waitForState("exists == true AND isHittable == true", timeout: 10), .completed,
-                       "饮食目标弹层应完成呈现并可操作")
-        XCTAssertTrue(app.navigationBars.matching(identifier: "饮食目标").element.exists)
+        XCTAssertTrue(app.navigationBars.matching(identifier: "饮食目标").element.waitForExistence(timeout: 10),
+                      "饮食目标弹层应完成呈现")
         // Xcode 27 can stall in its lazy first-match snapshot traversal after
         // reopening this nested sheet. Resolve the uniquely identified List
         // with ambiguity checking before querying any of its options.
         XCTAssertTrue(app.collectionViews.matching(identifier: "dietary.choices").element.waitForExistence(timeout: 10))
+        let done = app.cookingToolbarButton("dietary.done")
+        XCTAssertEqual(done.waitForState("exists == true AND isEnabled == true", timeout: 10), .completed,
+                       "饮食目标弹层应完成呈现并可操作")
     }
 
     @MainActor
@@ -647,10 +648,15 @@ final class DietaryGoalsUITests: XCTestCase {
         XCTAssertTrue(done.waitForExistence(timeout: 5))
         assertRememberControlAbsent(in: app)
         done.tap()
+        XCTAssertTrue(app.navigationBars.matching(identifier: "饮食目标").element.waitForNonExistence(timeout: 10))
         assertGoalValue("不限目标", in: app, standaloneResults: true)
-        let candidate = app.collectionViews.matching(identifier: "dietary.results").firstMatch
-            .buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "dietary.recipe.")).firstMatch
+        let results = app.collectionViews.matching(identifier: "dietary.results").element
+        XCTAssertTrue(results.waitForExistence(timeout: 10), "取消目标后继续浏览当前目录，不退回空页面")
+        let heading = results.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "当前候选")).firstMatch
+        XCTAssertTrue(heading.waitForExistence(timeout: 10), "取消目标后继续浏览当前目录，不退回空页面")
+        let candidate = results.buttons.element(boundBy: 0)
         XCTAssertTrue(candidate.waitForExistence(timeout: 10), "取消目标后继续浏览当前目录，不退回空页面")
+        XCTAssertTrue(candidate.identifier.hasPrefix("dietary.recipe."), "取消目标后继续浏览当前目录，不退回空页面")
     }
 
     @MainActor
