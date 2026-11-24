@@ -136,6 +136,28 @@ protocol ManagedStepGuidanceServing: Sendable {
     var isConfigured: Bool { get }
     func capabilities(credential: YunlefunCredential) async throws -> ManagedStepGuidanceCapability
     func complete(_ prompt: StepGuidancePrompt, credential: YunlefunCredential) async throws -> StepGuidanceResponse
+    func capabilities(authorization: CookAIAuthorization) async throws -> ManagedStepGuidanceCapability
+    func complete(_ prompt: StepGuidancePrompt, authorization: CookAIAuthorization) async throws -> StepGuidanceResponse
+}
+
+extension ManagedStepGuidanceServing {
+    func capabilities(authorization: CookAIAuthorization) async throws -> ManagedStepGuidanceCapability {
+        switch authorization {
+        case let .yunlefunBearer(credential):
+            return try await capabilities(credential: credential)
+        case .appleJWS:
+            throw StepGuidanceError.unavailable
+        }
+    }
+
+    func complete(_ prompt: StepGuidancePrompt, authorization: CookAIAuthorization) async throws -> StepGuidanceResponse {
+        switch authorization {
+        case let .yunlefunBearer(credential):
+            return try await complete(prompt, credential: credential)
+        case .appleJWS:
+            throw StepGuidanceError.unavailable
+        }
+    }
 }
 
 /// The managed path probes its own capability and validates its own response envelope.
@@ -153,14 +175,18 @@ struct ManagedStepGuidanceService: ManagedStepGuidanceServing {
     }
 
     static var configuredEndpoint: URL? {
-        guard CookFeatures.onlineAIEnabled,
+        guard CookFeatures.hasAnyOnlineAICapability,
               let value = Bundle.main.object(forInfoDictionaryKey: "CookAIGuidanceServiceURL") as? String,
               !value.isEmpty else { return nil }
         return URL(string: value).flatMap(approvedEndpoint)
     }
 
     func capabilities(credential: YunlefunCredential) async throws -> ManagedStepGuidanceCapability {
-        let body = try await request(["action": "capabilities"], credential: credential)
+        try await capabilities(authorization: .yunlefunBearer(credential))
+    }
+
+    func capabilities(authorization: CookAIAuthorization) async throws -> ManagedStepGuidanceCapability {
+        let body = try await request(["action": "capabilities"], authorization: authorization)
         guard let object = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
               Set(object.keys) == ["ok", "serviceVersion", "enabled", "membership"],
               let membership = object["membership"] as? [String: Any],
@@ -186,6 +212,10 @@ struct ManagedStepGuidanceService: ManagedStepGuidanceServing {
     }
 
     func complete(_ prompt: StepGuidancePrompt, credential: YunlefunCredential) async throws -> StepGuidanceResponse {
+        try await complete(prompt, authorization: .yunlefunBearer(credential))
+    }
+
+    func complete(_ prompt: StepGuidancePrompt, authorization: CookAIAuthorization) async throws -> StepGuidanceResponse {
         var fields: [String: Any] = [
             "action": "guidance",
             "schemaVersion": prompt.request.schemaVersion,
@@ -200,7 +230,7 @@ struct ManagedStepGuidanceService: ManagedStepGuidanceServing {
             "contextRevision": prompt.request.contextRevision,
         ]
         if let question = prompt.request.question { fields["question"] = question }
-        let body = try await request(fields, credential: credential)
+        let body = try await request(fields, authorization: authorization)
         guard let object = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
               Set(object.keys) == ["ok", "guidance"], object["ok"] as? Bool == true,
               let guidance = object["guidance"] as? [String: Any],
@@ -224,19 +254,20 @@ struct ManagedStepGuidanceService: ManagedStepGuidanceServing {
         }
     }
 
-    private func request(_ fields: [String: Any], credential: YunlefunCredential) async throws -> Data {
+    private func request(_ fields: [String: Any], authorization: CookAIAuthorization) async throws -> Data {
         try Task.checkCancellation()
         guard let endpoint else { throw StepGuidanceError.notDeployed }
-        guard credential.expiresAt > Date(), !credential.subject.isEmpty, !credential.accessToken.isEmpty,
-              credential.accessToken.utf8.count <= 16_384,
-              credential.accessToken.unicodeScalars.allSatisfy({ (33 ... 126).contains($0.value) }) else {
-            throw StepGuidanceError.loginRequired
+        guard authorization.isValidForTransmission else {
+            switch authorization {
+            case .yunlefunBearer: throw StepGuidanceError.loginRequired
+            case .appleJWS: throw StepGuidanceError.membershipRequired
+            }
         }
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.timeoutInterval = 35
         request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("Bearer \(credential.accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(authorization.headerValue, forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("no-store", forHTTPHeaderField: "Cache-Control")

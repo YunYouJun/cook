@@ -1,0 +1,30 @@
+{
+  "configurations": [
+    {
+      "id": "1C69F838-CFE1-4DC4-9B98-6073E4FD24D0",
+      "name": "Local StoreKit",
+      "options": {}
+    }
+  ],
+  "defaultOptions": {
+    "storeKitConfiguration": {
+      "identifier": "StoreKitValidation/Fixtures/CookProProducts.storekit"
+    },
+    "targetForVariableExpansion": {
+      "containerPath": "container:Cook.xcodeproj",
+      "identifier": "8A5EE9C004E2579DCB7B2054",
+      "name": "Cook"
+    }
+  },
+  "testTargets": [
+    {
+      "parallelizable": false,
+      "target": {
+        "containerPath": "container:Cook.xcodeproj",
+        "identifier": "D5C6DB7E05956C37AB2521F8",
+        "name": "CookProStoreKitTests"
+      }
+    }
+  ],
+  "version": 1
+}

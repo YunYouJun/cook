@@ -100,7 +100,8 @@ enum PrivateRecipePersistence {
         try PrivateRecipeSnapshot(context.fetch(FetchDescriptor<PrivateRecipeRecord>()))
     }
 
-    static func save(_ recipe: PrivateRecipe, replacing original: PrivateRecipe?, in container: ModelContainer) throws {
+    static func save(_ recipe: PrivateRecipe, replacing original: PrivateRecipe?, in container: ModelContainer,
+                     newRecipeLimit: Int? = nil) throws {
         let context = ModelContext(container)
         context.autosaveEnabled = false
         let records = try context.fetch(FetchDescriptor<PrivateRecipeRecord>())
@@ -109,6 +110,7 @@ enum PrivateRecipePersistence {
         // Do not overwrite an edit/delete that arrived while the editor was open.
         guard current == original, !snapshot.deletedIDs.contains(recipe.customId) else { throw EditError.changed }
         _ = try recipe.validated()
+        try requireCapacity(adding: current == nil ? 1 : 0, current: snapshot.recipes.count, limit: newRecipeLimit)
         guard current != nil || snapshot.recipes.count < PrivateRecipeFile.recipeLimit else { throw PrivateRecipeFileError.tooMany }
         if let currentRecord = records.filter({ $0.customId == recipe.customId }).max(by: { $0.updatedAt < $1.updatedAt }) {
             currentRecord.payload = try PrivateRecipeNativeFile.export(recipes: [recipe], exportedAt: recipe.updatedAt)
@@ -136,17 +138,24 @@ enum PrivateRecipePersistence {
         try context.save()
     }
 
-    static func importRecipes(_ incoming: [PrivateRecipe], keepCopies: Bool, in container: ModelContainer) throws -> Int {
+    static func importRecipes(_ incoming: [PrivateRecipe], keepCopies: Bool, in container: ModelContainer,
+                              newRecipeLimit: Int? = nil) throws -> Int {
         let context = ModelContext(container)
         context.autosaveEnabled = false
         let snapshot = try snapshot(in: context)
         let plan = PrivateRecipeImport(current: snapshot.recipes, incoming: incoming, deletedIDs: snapshot.deletedIDs)
         let records = try plan.recordsToInsert(keepCopies: keepCopies, currentIDs: Set(snapshot.recipes.map(\.customId)).union(snapshot.deletedIDs))
+        try requireCapacity(adding: records.count, current: snapshot.recipes.count, limit: newRecipeLimit)
         // Validate every item before inserting anything, then commit the whole import once.
         let models = try records.map { try PrivateRecipeRecord($0) }
         models.forEach { context.insert($0) }
         try context.save()
         return models.count
+    }
+
+    private static func requireCapacity(adding count: Int, current: Int, limit: Int?) throws {
+        guard count > 0, let limit else { return }
+        guard count <= limit - current else { throw CookFeatureQuotaError.privateRecipes(limit) }
     }
 
     enum EditError: LocalizedError {

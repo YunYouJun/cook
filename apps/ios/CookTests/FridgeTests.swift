@@ -1,3 +1,4 @@
+import CookCore
 import SwiftData
 import XCTest
 @testable import Cook
@@ -12,6 +13,26 @@ final class FridgeTests: XCTestCase {
 
     private func day(_ month: Int, _ day: Int, hour: Int = 0) -> Date {
         calendar.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour))!
+    }
+
+    func testBatchIntakeEnforcesCapacityBeforeWritingAndKeepsExistingStock() throws {
+        let container = Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let limit = CookEntitlementPolicy.freeFridgeInStockLimit
+        let shelfLife = try RecipeStore.loadBundled(inMemory: true).data.shelfLife
+        let existingNames = Array(repeating: "辣椒", count: limit - 1)
+        try context.addEstimatedFridgeItems(existingNames, shelfLife: shelfLife, limit: limit)
+        let stock = FetchDescriptor<FridgeItem>(predicate: FridgeItem.inStock)
+
+        XCTAssertThrowsError(try context.addEstimatedFridgeItems(["番茄", "鸡蛋"], shelfLife: shelfLife, limit: limit)) {
+            XCTAssertEqual($0 as? CookFeatureQuotaError, .fridge(limit))
+        }
+        XCTAssertEqual(try context.fetch(stock).map(\.name), existingNames)
+
+        let reviewed = FridgeItem(name: "番茄", days: 3, at: .now)
+        try context.saveFridgeIntake(reviewed, limit: limit)
+        XCTAssertThrowsError(try context.saveFridgeIntake(FridgeItem(name: "鸡蛋", days: 3, at: .now), limit: limit))
+        XCTAssertEqual(try context.fetchCount(stock), limit)
     }
 
     func testFreshnessCountsCalendarDays() {

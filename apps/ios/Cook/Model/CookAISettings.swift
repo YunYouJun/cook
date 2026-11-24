@@ -107,16 +107,23 @@ final class MemoryCookAIKeyVault: CookAIKeyVault {
     func clear() throws { key = nil }
 }
 
+enum ManagedCookAIAuthMode: Equatable {
+    case none
+    case appleJWS
+    case yunlefunAccount
+}
+
 /// Only the provider preference is persisted in defaults; secrets stay in the vault.
 @MainActor @Observable
 final class CookAISettings {
     static let providerKey = "cook.ai.provider"
-    let onlineAIEnabled: Bool
+    private(set) var onlineAIEnabled: Bool
     private(set) var provider: CookAIProvider = .local
     private(set) var hasAPIKey = false
     private(set) var message: String?
     private(set) var managedStatus: ManagedCookAIStatus = .unconfigured
     private(set) var managedValidUntil: Date?
+    private(set) var managedAuthMode: ManagedCookAIAuthMode = .none
     @ObservationIgnored private let defaults: UserDefaults?
     @ObservationIgnored private let vault: CookAIKeyVault
     @ObservationIgnored private let managedService: ManagedCookAIServing
@@ -124,6 +131,8 @@ final class CookAISettings {
     @ObservationIgnored private var requestedProvider: CookAIProvider
     @ObservationIgnored private var managedSubject: String?
     @ObservationIgnored private weak var managedAccounts: YunlefunAccountStore?
+    @ObservationIgnored private weak var managedPro: CookProStore?
+    @ObservationIgnored private var managedAppleJWS: String?
     @ObservationIgnored private var managedRevision: UUID?
     @ObservationIgnored private var capabilityGeneration = UUID()
     @ObservationIgnored private var capabilityTask: Task<ManagedCookAICapability, Error>?
@@ -139,26 +148,56 @@ final class CookAISettings {
         self.now = now
         requestedProvider = .local
         guard onlineAIEnabled else { return }
+        loadSavedPreferences()
+    }
+
+    private func loadSavedPreferences() {
         let saved = defaults?.string(forKey: Self.providerKey).flatMap(CookAIProvider.init(rawValue:)) ?? .local
         requestedProvider = saved
         managedStatus = managedService.isConfigured ? .loginRequired : .unconfigured
         do {
             hasAPIKey = try self.vault.load().map(Self.isValidKey) ?? false
             provider = saved == .ownDeepSeek && hasAPIKey ? .ownDeepSeek : .local
-            if saved == .ownDeepSeek && !hasAPIKey { defaults?.set(provider.rawValue, forKey: Self.providerKey); requestedProvider = .local }
+            if saved == .ownDeepSeek && !hasAPIKey {
+                defaults?.set(provider.rawValue, forKey: Self.providerKey)
+                requestedProvider = .local
+            }
         } catch {
             message = CookAISettingsError.secureStorage.localizedDescription
         }
     }
 
-    var canUseOwnDeepSeek: Bool { provider == .ownDeepSeek && hasAPIKey }
+    func updateRegionalAvailability(_ allowed: Bool) {
+        guard allowed != onlineAIEnabled else { return }
+        if allowed {
+            onlineAIEnabled = true
+            loadSavedPreferences()
+        } else {
+            onlineAIEnabled = false
+            requestedProvider = .local
+            clearManagedCapability(status: .unconfigured)
+            provider = .local
+        }
+    }
+
+    var canUseOwnDeepSeek: Bool { onlineAIEnabled && provider == .ownDeepSeek && hasAPIKey }
     var isManagedConfigured: Bool { onlineAIEnabled && managedService.isConfigured }
     var wantsManagedDeepSeek: Bool { requestedProvider == .managedDeepSeek }
     var isManagedAvailable: Bool {
-        managedStatus == .ready && managedValidUntil.map { $0 > now() } == true
-            && managedAccounts?.sessionRevision == managedRevision && managedAccounts?.account?.id == managedSubject
+        guard onlineAIEnabled, managedStatus == .ready,
+              let validUntil = managedValidUntil, validUntil > now() else { return false }
+        switch managedAuthMode {
+        case .appleJWS:
+            guard let jws = managedAppleJWS else { return false }
+            return managedPro?.appleAIAuthorization == .appleJWS(jws)
+        case .yunlefunAccount:
+            return managedAccounts?.sessionRevision == managedRevision
+                && managedAccounts?.account?.id == managedSubject
+        case .none:
+            return false
+        }
     }
-    var canUseManagedDeepSeek: Bool { provider == .managedDeepSeek && isManagedAvailable }
+    var canUseManagedDeepSeek: Bool { onlineAIEnabled && provider == .managedDeepSeek && isManagedAvailable }
     var canUseRemote: Bool { canUseOwnDeepSeek || canUseManagedDeepSeek }
 
     @discardableResult
@@ -235,12 +274,63 @@ final class CookAISettings {
 
     /// A capability is short-lived and is discarded whenever the account lifecycle changes.
     func invalidateManagedCapability(accounts: YunlefunAccountStore) {
+        if managedAuthMode == .appleJWS, isManagedAvailable { return }
         clearManagedCapability(status: !isManagedConfigured ? .unconfigured : (accounts.account == nil ? .loginRequired : .needsRefresh))
     }
 
     func refreshManagedCapability(accounts: YunlefunAccountStore) async {
+        await refreshManagedCapability(accounts: accounts, pro: nil)
+    }
+
+    func refreshManagedCapability(accounts: YunlefunAccountStore, pro: CookProStore?) async {
         clearManagedCapability(status: .checking)
         guard isManagedConfigured else { managedStatus = .unconfigured; return }
+
+        if let pro, pro.isAISubscriptionAllowedInCurrentRegion, pro.hasActiveAISubscription {
+            guard case let .appleJWS(jws)? = pro.appleAIAuthorization else {
+                managedStatus = .membershipRequired
+                return
+            }
+            let generation = capabilityGeneration
+            let service = managedService
+            let task = Task {
+                try await service.capabilities(authorization: .appleJWS(jws))
+            }
+            capabilityTask = task
+            do {
+                let capability = try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
+                try Task.checkCancellation()
+                guard capabilityGeneration == generation else { return }
+                guard pro.appleAIAuthorization == .appleJWS(jws) else {
+                    clearManagedCapability(status: .needsRefresh)
+                    return
+                }
+                capabilityTask = nil
+                if let expiration = capability.membershipExpiresAt, expiration <= now() {
+                    managedStatus = .expired
+                    return
+                }
+                guard capability.membershipIsActive else { managedStatus = .membershipRequired; return }
+                guard capability.enabled, let expiration = capability.membershipExpiresAt else {
+                    managedStatus = .failed(.unavailable)
+                    return
+                }
+                managedAuthMode = .appleJWS
+                managedPro = pro
+                managedAppleJWS = jws
+                managedValidUntil = min(now().addingTimeInterval(60), expiration)
+                managedStatus = .ready
+                if requestedProvider == .managedDeepSeek { provider = .managedDeepSeek }
+                scheduleExpiry()
+            } catch {
+                guard capabilityGeneration == generation else { return }
+                capabilityTask = nil
+                if error is CancellationError { managedStatus = .needsRefresh }
+                else { managedStatus = .failed((error as? ManagedCookAIError) ?? .unavailable) }
+            }
+            return
+        }
+
         guard let subject = accounts.account?.id else { managedStatus = .loginRequired; return }
         let revision = accounts.sessionRevision
         let generation = capabilityGeneration
@@ -270,23 +360,29 @@ final class CookAISettings {
                 managedStatus = .failed(.unavailable)
                 return
             }
+            managedAuthMode = .yunlefunAccount
             managedSubject = subject
             managedAccounts = accounts
             managedRevision = revision
             managedValidUntil = min(now().addingTimeInterval(60), expiration)
             managedStatus = .ready
             if requestedProvider == .managedDeepSeek { provider = .managedDeepSeek }
-            let delay = max(0, managedValidUntil!.timeIntervalSince(now()))
-            expiryTask = Task { [weak self] in
-                do { try await Task.sleep(for: .seconds(delay)) } catch { return }
-                self?.expireManagedCapabilityIfNeeded()
-            }
+            scheduleExpiry()
         } catch {
             guard capabilityGeneration == generation else { return }
             capabilityTask = nil
             if error is CancellationError { managedStatus = .needsRefresh }
             else if let accountError = error as? YunlefunAccountError, case .expiredSession = accountError { managedStatus = .loginRequired }
             else { managedStatus = .failed((error as? ManagedCookAIError) ?? .unavailable) }
+        }
+    }
+
+    private func scheduleExpiry() {
+        guard let managedValidUntil else { return }
+        let delay = max(0, managedValidUntil.timeIntervalSince(now()))
+        expiryTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(delay)) } catch { return }
+            self?.expireManagedCapabilityIfNeeded()
         }
     }
 
@@ -300,10 +396,51 @@ final class CookAISettings {
         }
     }
 
+    func managedAuthorization(accounts: YunlefunAccountStore, pro: CookProStore?) async throws -> CookAIAuthorization {
+        guard onlineAIEnabled else { throw CookAISettingsError.notEnabled }
+        if let authorization = pro?.appleAIAuthorization { return authorization }
+        return .yunlefunBearer(try await accounts.credentialForAIRequest())
+    }
+
     func parseManaged(text: String, data: CookData, availableGoals: [DietaryGoal],
                       accounts: YunlefunAccountStore) async throws -> SearchIntent {
+        try await parseManaged(text: text, data: data, availableGoals: availableGoals, accounts: accounts, pro: nil)
+    }
+
+    func parseManaged(text: String, data: CookData, availableGoals: [DietaryGoal],
+                      accounts: YunlefunAccountStore, pro: CookProStore?) async throws -> SearchIntent {
         expireManagedCapabilityIfNeeded()
-        guard canUseManagedDeepSeek, let revision = managedRevision, let subject = managedSubject,
+        guard canUseManagedDeepSeek else { throw ManagedCookAIError.membershipRequired }
+
+        if managedAuthMode == .appleJWS {
+            guard let pro, let jws = managedAppleJWS, pro.appleAIAuthorization == .appleJWS(jws) else {
+                throw ManagedCookAIError.membershipRequired
+            }
+            let generation = capabilityGeneration
+            func appleRequestIsCurrent() -> Bool {
+                capabilityGeneration == generation && provider == .managedDeepSeek
+                    && pro.appleAIAuthorization == .appleJWS(jws)
+            }
+            do {
+                let result = try await managedService.parse(
+                    text: text,
+                    authorization: .appleJWS(jws),
+                    data: data,
+                    availableGoals: availableGoals
+                )
+                try Task.checkCancellation()
+                guard appleRequestIsCurrent() else { throw CancellationError() }
+                return result
+            } catch let error as ManagedCookAIError {
+                guard appleRequestIsCurrent() else { throw CancellationError() }
+                if error == .loginRequired { clearManagedCapability(status: .membershipRequired) }
+                else if error == .membershipRequired { clearManagedCapability(status: .membershipRequired) }
+                else if error == .accountUnavailable || error == .unavailable { clearManagedCapability(status: .failed(error)) }
+                throw error
+            }
+        }
+
+        guard let revision = managedRevision, let subject = managedSubject,
               accounts.sessionRevision == revision, accounts.account?.id == subject else {
             throw ManagedCookAIError.membershipRequired
         }
@@ -338,8 +475,11 @@ final class CookAISettings {
         capabilityTask = nil
         expiryTask?.cancel()
         expiryTask = nil
+        managedAuthMode = .none
         managedSubject = nil
         managedAccounts = nil
+        managedPro = nil
+        managedAppleJWS = nil
         managedRevision = nil
         managedValidUntil = nil
         managedStatus = status

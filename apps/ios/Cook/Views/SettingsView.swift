@@ -2,10 +2,37 @@ import SwiftUI
 
 /// 首页只保留账号摘要和按用途分组的入口，具体设置由各二级页管理。
 struct SettingsView: View {
+    @Environment(CookAISettings.self) private var ai
+    @Environment(CookProStore.self) private var pro
+
     var body: some View {
         NavigationStack {
             List {
                 YunlefunAccountSection()
+                if CookFeatures.proStoreEnabled {
+                    Section {
+                        NavigationLink { CookProPaywallView() } label: {
+                            HStack {
+                                SettingsRowLabel(
+                                    pro.isAISubscriptionAllowedInCurrentRegion ? "Cook Pro 与云端 AI" : "Cook Pro 永久买断",
+                                    symbol: "crown.fill",
+                                    color: .orange
+                                )
+                                Spacer()
+                                if pro.hasActiveAISubscription && pro.isAISubscriptionAllowedInCurrentRegion {
+                                    Text("订阅生效中")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                } else if pro.hasProAccess {
+                                    Text("已买断")
+                                        .font(.caption)
+                                        .foregroundStyle(.green)
+                                }
+                            }
+                        }
+                        .accessibilityIdentifier("settings.pro")
+                    }
+                }
                 if CookFeatures.membershipUIEnabled {
                     Section {
                         NavigationLink { MembershipView() } label: {
@@ -27,7 +54,7 @@ struct SettingsView: View {
                     }
                 }
                 Section("设置") {
-                    if CookFeatures.onlineAIEnabled {
+                    if ai.onlineAIEnabled {
                         NavigationLink { AISettingsView() } label: {
                             SettingsRowLabel("AI 设置", symbol: "sparkles", color: .purple)
                         }
@@ -64,6 +91,7 @@ struct SettingsView: View {
 
 #Preview {
     SettingsView().environment(YunlefunAccountStore(vault: MemoryYunlefunAccountVault()))
-        .environment(CookAISettings(defaults: nil, vault: MemoryCookAIKeyVault()))
+        .environment(CookAISettings(defaults: nil, vault: MemoryCookAIKeyVault(), managedService: ManagedCookAIService(endpoint: nil)))
+        .environment(CookProStore.isolated())
         .environment(CookedRecipeRecords())
 }

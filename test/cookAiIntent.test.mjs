@@ -305,6 +305,8 @@ test('deployed entry point keeps its startup routing snapshot and accesses only 
         }
         if (name === './quota')
           return require('../cloudfunctions/cook-ai-intent/quota.js')
+        if (name === './apple-iap-auth')
+          return require('../cloudfunctions/cook-ai-intent/apple-iap-auth.js')
         return require(name)
       },
     }
@@ -867,4 +869,83 @@ test('expired counter cleanup is bounded and deletes explicit expired IDs only',
   removed.length = 0
   assert.equal(await cleanupExpiredQuota(database, NOW), 1)
   assert.deepEqual(removed, ['e'.repeat(64)])
+})
+
+test('AppleJWS overseas subscriptions work without CloudBase login and block expired/revoked/mainland requests', async () => {
+  const { AppleIAPAuthError } = require('../cloudfunctions/cook-ai-intent/apple-iap-auth.js')
+  const { createHandler } = require('../cloudfunctions/cook-ai-intent/index.js')
+  const appleHeader = { Authorization: 'AppleJWS eyJhbGciOiJFUzI1NiJ9.eyJwYXlsb2FkIjoxfQ.c2ln' }
+  const db = new FakeDatabase()
+
+  const handler = createHandler({
+    config: CONFIG,
+    contract: CONTRACT,
+    now: () => NOW,
+    verifyIdentity: async () => { throw new Error('Bearer identity must not run for AppleJWS') },
+    readMembership: async () => { throw new Error('Bearer membership must not run for AppleJWS') },
+    verifyAppleJWS: async () => ({
+      uid: 'apple:tx-overseas-1',
+      membership: { isActive: true, expireAt: NOW + 60_000 },
+    }),
+    reserveQuota: createQuotaReservation(db, CONFIG),
+    complete: async () => intent(),
+  })
+
+  const caps = await handler({
+    httpMethod: 'POST',
+    headers: appleHeader,
+    body: JSON.stringify({ action: 'capabilities' }),
+  })
+  assert.equal(caps.statusCode, 200)
+  assert.deepEqual(JSON.parse(caps.body), {
+    ok: true,
+    serviceVersion: 1,
+    enabled: true,
+    membership: { isActive: true, expireAt: NOW + 60_000 },
+  })
+  assert.equal(db.rows.size, 0)
+
+  const parsed = await handler({
+    ...event(),
+    headers: appleHeader,
+  })
+  assert.equal(parsed.statusCode, 200)
+  assert.equal(JSON.parse(parsed.body).ok, true)
+  assert.equal(db.rows.size, 3)
+
+  // Mainland storefront maps REGION_UNAVAILABLE -> 503 SERVICE_UNAVAILABLE
+  const mainlandHandler = createHandler({
+    config: CONFIG,
+    contract: CONTRACT,
+    now: () => NOW,
+    verifyIdentity: async () => { throw new Error('unused') },
+    readMembership: async () => { throw new Error('unused') },
+    verifyAppleJWS: async () => { throw new AppleIAPAuthError('REGION_UNAVAILABLE', 'mainland_china_storefront') },
+    reserveQuota: async () => { throw new Error('unused') },
+    complete: async () => { throw new Error('unused') },
+  })
+  await assertCode(mainlandHandler, { ...event(), headers: appleHeader }, 503, 'SERVICE_UNAVAILABLE')
+
+  // Expired AppleJWS subscription fails with 403 MEMBERSHIP_REQUIRED and reports enabled=false on capabilities
+  const expiredHandler = createHandler({
+    config: CONFIG,
+    contract: CONTRACT,
+    now: () => NOW,
+    verifyIdentity: async () => { throw new Error('unused') },
+    readMembership: async () => { throw new Error('unused') },
+    verifyAppleJWS: async () => ({
+      uid: 'apple:tx-overseas-1',
+      membership: { isActive: false, expireAt: NOW - 10 },
+    }),
+    reserveQuota: async () => { throw new Error('unused') },
+    complete: async () => { throw new Error('unused') },
+  })
+  const expiredCaps = await expiredHandler({
+    httpMethod: 'POST',
+    headers: appleHeader,
+    body: JSON.stringify({ action: 'capabilities' }),
+  })
+  assert.equal(expiredCaps.statusCode, 200)
+  assert.equal(JSON.parse(expiredCaps.body).enabled, false)
+  await assertCode(expiredHandler, { ...event(), headers: appleHeader }, 403, 'MEMBERSHIP_REQUIRED')
 })

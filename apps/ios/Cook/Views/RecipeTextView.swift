@@ -29,6 +29,7 @@ struct RecipeTextContent: View {
     @Environment(KitchenWorkbench.self) private var workbench
     @Environment(CookAISettings.self) private var ai
     @Environment(YunlefunAccountStore.self) private var accounts
+    @Environment(CookProStore.self) private var pro
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let recipe: Recipe
@@ -171,6 +172,8 @@ struct RecipeTextContent: View {
         .onChange(of: guidanceScope) {
             guidance.invalidate()
         }
+        .onChange(of: pro.appleAIAuthorization) { guidance.invalidate() }
+        .onChange(of: ai.onlineAIEnabled) { guidance.invalidate() }
         .onDisappear {
             guidance.invalidate()
         }
@@ -212,6 +215,7 @@ struct RecipeTextContent: View {
     private func performGuidance(_ prompt: StepGuidancePrompt) async throws -> StepGuidanceResponse {
         let provider = ai.provider
         let revision = accounts.sessionRevision
+        let initialAppleAuthorization = pro.appleAIAuthorization
         let runtime = StepGuidanceRuntime.current
         do {
             let response: StepGuidanceResponse
@@ -222,22 +226,27 @@ struct RecipeTextContent: View {
                 let key = try ai.apiKeyForRequest()
                 response = try await runtime.personal.complete(prompt, key: key)
             case .managedDeepSeek:
-                let credential = try await accounts.credentialForAIRequest()
-                guard ai.provider == provider, accounts.sessionRevision == revision else {
-                    throw CancellationError()
+                let auth = try await ai.managedAuthorization(accounts: accounts, pro: pro)
+                func requestIsCurrent() -> Bool {
+                    guard ai.onlineAIEnabled, ai.provider == provider else { return false }
+                    switch auth {
+                    case .appleJWS:
+                        return initialAppleAuthorization == auth && pro.appleAIAuthorization == auth
+                    case .yunlefunBearer:
+                        return accounts.sessionRevision == revision
+                    }
                 }
-                let capability = try await runtime.managed.capabilities(credential: credential)
+                guard requestIsCurrent() else { throw CancellationError() }
+                let capability = try await runtime.managed.capabilities(authorization: auth)
+                guard requestIsCurrent() else { throw CancellationError() }
                 guard capability.enabled else {
                     throw capability.membershipIsActive ? StepGuidanceError.notDeployed : .membershipRequired
                 }
-                guard ai.provider == provider, accounts.sessionRevision == revision else {
-                    throw CancellationError()
-                }
-                response = try await runtime.managed.complete(prompt, credential: credential)
+                response = try await runtime.managed.complete(prompt, authorization: auth)
+                guard requestIsCurrent() else { throw CancellationError() }
             }
-            guard ai.provider == provider, accounts.sessionRevision == revision else {
-                throw CancellationError()
-            }
+            try Task.checkCancellation()
+            guard ai.onlineAIEnabled, ai.provider == provider else { throw CancellationError() }
             return response
         } catch let error as CookAISettingsError {
             switch error {

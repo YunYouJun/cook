@@ -1,5 +1,6 @@
 const { Buffer } = require('node:buffer')
 const process = require('node:process')
+const { AppleIAPAuthError, createAppleJWSVerifier, parseAuthorizationHeader } = require('./apple-iap-auth')
 const { QuotaError, cleanupExpiredQuota, createQuotaReservation } = require('./quota')
 
 const ENV_ID = 'yunlefun-8g7ybcxc7345c490'
@@ -122,18 +123,6 @@ function response(statusCode, value) {
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
     body: JSON.stringify(value),
   }
-}
-
-function bearerToken(headers) {
-  if (!isRecord(headers))
-    throw new IntentServiceError('LOGIN_REQUIRED')
-  const entries = Object.entries(headers).filter(([key]) => key.toLowerCase() === 'authorization')
-  if (entries.length !== 1 || typeof entries[0][1] !== 'string')
-    throw new IntentServiceError('LOGIN_REQUIRED')
-  const match = /^Bearer ([\x21-\x7E]{1,8192})$/i.exec(entries[0][1])
-  if (!match)
-    throw new IntentServiceError('LOGIN_REQUIRED')
-  return match[1]
 }
 
 function requestBody(event) {
@@ -343,7 +332,7 @@ function createAdapters({ fetchImpl = globalThis.fetch, getModel = getCloudBaseM
 }
 
 /** Dependencies keep authorization, atomic admission and provider calls independently testable. */
-function createHandler({ verifyIdentity, readMembership, reserveQuota, complete, config, contract, compatibleContracts = [], now = Date.now, logFailure = () => {} }) {
+function createHandler({ verifyIdentity, readMembership, verifyAppleJWS, reserveQuota, complete, config, contract, compatibleContracts = [], now = Date.now, logFailure = () => {} }) {
   const contracts = Array.isArray(compatibleContracts) ? [contract, ...compatibleContracts] : []
   const contractKey = value => JSON.stringify([value.schemaVersion, value.policyVersion, value.dataVersion])
   const validContracts = contracts.length > 0 && contracts.length <= 5 && contracts.every(validContract)
@@ -351,11 +340,24 @@ function createHandler({ verifyIdentity, readMembership, reserveQuota, complete,
   return async (event) => {
     try {
       const body = requestBody(event)
-      const token = bearerToken(event.headers)
-      const identity = await verifyIdentity(token)
-      if (!identity || typeof identity.uid !== 'string' || !identity.uid)
-        throw new IntentServiceError('LOGIN_REQUIRED')
-      const membership = await readMembership(token)
+      const auth = parseAuthorizationHeader(event.headers)
+      let identity
+      let membership
+      if (auth.scheme === 'apple_jws') {
+        if (typeof verifyAppleJWS !== 'function')
+          throw new IntentServiceError('SERVICE_UNAVAILABLE', 'missing_apple_verifier')
+        const verified = await verifyAppleJWS(auth.token, { now })
+        if (!verified || typeof verified.uid !== 'string' || !verified.uid || !isRecord(verified.membership))
+          throw new IntentServiceError('LOGIN_REQUIRED')
+        identity = { uid: verified.uid }
+        membership = verified.membership
+      }
+      else {
+        identity = await verifyIdentity(auth.token)
+        if (!identity || typeof identity.uid !== 'string' || !identity.uid)
+          throw new IntentServiceError('LOGIN_REQUIRED')
+        membership = await readMembership(auth.token)
+      }
       const currentTime = now()
       const active = membership?.isActive === true && Number.isSafeInteger(membership.expireAt) && membership.expireAt > currentTime
       const ready = config?.enabled === true && validContracts
@@ -382,10 +384,14 @@ function createHandler({ verifyIdentity, readMembership, reserveQuota, complete,
       return response(200, { ok: true, intent })
     }
     catch (error) {
-      const code = (error instanceof IntentServiceError || error instanceof QuotaError) && Object.hasOwn(STATUS, error.code)
-        ? error.code
+      const rawCode = error?.code === 'REGION_UNAVAILABLE' ? 'SERVICE_UNAVAILABLE' : error?.code
+      const isKnownError = error instanceof IntentServiceError
+        || error instanceof QuotaError
+        || error instanceof AppleIAPAuthError
+      const code = isKnownError && Object.hasOwn(STATUS, rawCode)
+        ? rawCode
         : 'SERVICE_UNAVAILABLE'
-      if (error instanceof IntentServiceError && error.diagnostic)
+      if (isKnownError && error?.diagnostic)
         logFailure(code, error.diagnostic)
       return response(STATUS[code], { ok: false, code })
     }
@@ -426,6 +432,13 @@ function loadCompatibleContracts() {
   catch { return null }
 }
 
+let defaultAppleVerifier
+function getDefaultAppleVerifier() {
+  if (!defaultAppleVerifier)
+    defaultAppleVerifier = createAppleJWSVerifier()
+  return defaultAppleVerifier
+}
+
 // Each deployed instance keeps one environment snapshot; switching requires a config deployment.
 const deploymentConfig = Object.freeze(readConfig())
 
@@ -435,6 +448,7 @@ async function main(event) {
   const adapters = createAdapters({ config, contract })
   return createHandler({
     ...adapters,
+    verifyAppleJWS: (jws, options) => getDefaultAppleVerifier()(jws, options),
     config,
     contract,
     compatibleContracts: loadCompatibleContracts(),

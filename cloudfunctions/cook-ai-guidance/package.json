@@ -5,6 +5,7 @@
   "private": true,
   "main": "index.js",
   "dependencies": {
+    "@apple/app-store-server-library": "^3.1.0",
     "@cloudbase/node-sdk": "4.2.1"
   }
 }

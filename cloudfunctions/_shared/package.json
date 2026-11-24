@@ -1,0 +1,5 @@
+{
+  "name": "cook-cloudfunctions-shared",
+  "type": "commonjs",
+  "private": true
+}

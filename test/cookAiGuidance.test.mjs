@@ -355,3 +355,89 @@ test('deployed modules keep separate contracts and diagnostic classes', () => {
   assert.notEqual(GuidanceServiceError, intentModule._internal.IntentServiceError)
   assert.ok(require('../cloudfunctions/cook-ai-guidance/package.json').dependencies['@cloudbase/node-sdk'])
 })
+
+test('AppleJWS overseas subscriptions authenticate capabilities and step guidance without Bearer login', async () => {
+  const { createRequire } = await import('node:module')
+  const req = createRequire(import.meta.url)
+  const { AppleIAPAuthError } = req('../cloudfunctions/cook-ai-guidance/apple-iap-auth.js')
+  const { createHandler } = req('../cloudfunctions/cook-ai-guidance/index.js')
+  const sources = req('../cloudfunctions/cook-ai-guidance/sources.json')
+  const [firstRecipeID, firstRecipe] = Object.entries(sources.recipes)[0]
+  const appleHeader = { Authorization: 'AppleJWS eyJhbGciOiJFUzI1NiJ9.eyJwYXlsb2FkIjoxfQ.c2ln' }
+  const nowValue = 1_760_000_000_000
+  const reservedUIDs = []
+
+  const handler = createHandler({
+    config: {
+      enabled: true,
+      provider: 'cloudbase',
+      model: 'deepseek-v4.1-flash',
+      apiKey: '',
+      quotaSalt: 's'.repeat(32),
+      userDailyLimit: 20,
+      userMinuteLimit: 5,
+      dailyRequestBudget: 100,
+    },
+    snapshot: sources,
+    now: () => nowValue,
+    verifyIdentity: async () => { throw new Error('Bearer identity must not run for AppleJWS') },
+    readMembership: async () => { throw new Error('Bearer membership must not run for AppleJWS') },
+    verifyAppleJWS: async () => ({
+      uid: 'apple:tx-guidance-1',
+      membership: { isActive: true, expireAt: nowValue + 60_000 },
+    }),
+    reserveQuota: async ({ uid }) => { reservedUIDs.push(uid) },
+    complete: async context => ({
+      status: 'answer',
+      answer: `参考当前步骤「${context.currentStep}」即可。`,
+      sourceIDs: [context.currentStepSourceID],
+    }),
+  })
+
+  const caps = await handler({
+    httpMethod: 'POST',
+    headers: appleHeader,
+    body: JSON.stringify({ action: 'capabilities' }),
+  })
+  assert.equal(caps.statusCode, 200)
+  assert.equal(JSON.parse(caps.body).enabled, true)
+
+  const guidanceRes = await handler({
+    httpMethod: 'POST',
+    headers: appleHeader,
+    body: JSON.stringify({
+      action: 'guidance',
+      schemaVersion: sources.schemaVersion,
+      policyVersion: sources.policyVersion,
+      dataVersion: sources.dataVersion,
+      sourceFingerprint: firstRecipe.sourceFingerprint,
+      recipeID: Number(firstRecipeID),
+      stepID: firstRecipe.steps[0].id,
+      servings: 2,
+      kind: 'explain',
+      requestID: 'req-apple-1',
+      contextRevision: 'ctx-1',
+    }),
+  })
+  assert.equal(guidanceRes.statusCode, 200)
+  assert.equal(JSON.parse(guidanceRes.body).ok, true)
+  assert.deepEqual(reservedUIDs, ['apple:tx-guidance-1'])
+
+  const mainlandHandler = createHandler({
+    config: { enabled: true },
+    snapshot: sources,
+    now: () => nowValue,
+    verifyIdentity: async () => { throw new Error('unused') },
+    readMembership: async () => { throw new Error('unused') },
+    verifyAppleJWS: async () => { throw new AppleIAPAuthError('REGION_UNAVAILABLE', 'mainland_china_storefront') },
+    reserveQuota: async () => { throw new Error('unused') },
+    complete: async () => { throw new Error('unused') },
+  })
+  const blocked = await mainlandHandler({
+    httpMethod: 'POST',
+    headers: appleHeader,
+    body: JSON.stringify({ action: 'capabilities' }),
+  })
+  assert.equal(blocked.statusCode, 503)
+  assert.deepEqual(JSON.parse(blocked.body), { ok: false, code: 'SERVICE_UNAVAILABLE' })
+})

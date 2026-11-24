@@ -6,12 +6,14 @@ struct LearnedDishesView: View {
     @Environment(CookedRecipeRecords.self) private var records
     @Environment(RecipeStore.self) private var store
     @Environment(ShowcaseAssetLibrary.self) private var showcases
+    @Environment(CookProStore.self) private var pro
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query private var privateRecords: [PrivateRecipeRecord]
     @ScaledMetric(relativeTo: .body) private var tileWidth: CGFloat = 148
 
     @Binding var browsing: ShowcaseBrowsingState
     @State private var selection: ShowcaseSelection?
+    @State private var showingProPaywall = false
 
     private struct ShowcaseSelection: Identifiable {
         let dish: Entry
@@ -62,7 +64,10 @@ struct LearnedDishesView: View {
                         LearnedDishShowcaseGallery(
                             dishes: dishes.filter { $0.showcase != nil },
                             selectedID: $browsing.featuredDishID,
-                            viewpoint: viewpoint(for:)
+                            viewpoint: viewpoint(for:),
+                            showcaseIndices: showcaseIndices(in: dishes),
+                            pro: pro,
+                            onRequestUpgrade: { showingProPaywall = true }
                         )
                     }
                 }
@@ -75,6 +80,11 @@ struct LearnedDishesView: View {
         .sheet(item: $selection) { selection in
             ShowcaseSheet(name: selection.dish.name, learnedAt: selection.dish.record.learnedAt,
                           source: selection.source, viewpoint: viewpoint(for: selection.id))
+        }
+        .sheet(isPresented: $showingProPaywall) {
+            NavigationStack {
+                CookProPaywallView(highlight: .showcase, showsDismissButton: true)
+            }
         }
         .onChange(of: records.progress.learned) { _, learned in
             if let selection, !learned.contains(where: { $0.id == selection.id }) {
@@ -95,16 +105,33 @@ struct LearnedDishesView: View {
         }
     }
 
+    private func showcaseIndices(in dishes: [Entry]) -> [UUID: Int] {
+        var result: [UUID: Int] = [:]
+        var nextIndex = 0
+        for dish in dishes where dish.showcase != nil {
+            result[dish.id] = nextIndex
+            nextIndex += 1
+        }
+        return result
+    }
+
     private func badges(_ dishes: [Entry]) -> some View {
+        let showcaseIndices = showcaseIndices(in: dishes)
         let columns = [GridItem(dynamicTypeSize.isAccessibilitySize ? .flexible() : .adaptive(minimum: tileWidth), spacing: 12)]
         return ScrollView {
             LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
                 ForEach(dishes) { dish in
                     if let showcase = dish.showcase {
+                        let index = showcaseIndices[dish.id] ?? Int.max
+                        let unlocked = pro.canOpenSpecialShowcase(index: index)
                         Button {
-                            selection = ShowcaseSelection(dish: dish, source: showcase)
+                            if unlocked {
+                                selection = ShowcaseSelection(dish: dish, source: showcase)
+                            } else {
+                                showingProPaywall = true
+                            }
                         } label: {
-                            tile(for: dish)
+                            tile(for: dish, isLocked: !unlocked)
                         }
                         .buttonStyle(.plain)
                         .accessibilityHint("查看菜肴成就")
@@ -122,7 +149,7 @@ struct LearnedDishesView: View {
         .accessibilityIdentifier("learnedDishes.collection")
     }
 
-    private func tile(for dish: Entry) -> some View {
+    private func tile(for dish: Entry, isLocked: Bool = false) -> some View {
         let learnedAt = dish.record.learnedAt
         let usesLargeText = dynamicTypeSize.isAccessibilitySize
         let layout = usesLargeText
@@ -137,9 +164,15 @@ struct LearnedDishesView: View {
                     .foregroundStyle(CookingJournalPalette.warmInk)
                     .accessibilityLabel("首次学会 \(CookingDates.celebration(learnedAt))")
                 if dish.showcase != nil {
-                    Label("查看成就", systemImage: "sparkles")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(CookingJournalPalette.warmInk)
+                    if isLocked {
+                        Label("Cook Pro 解锁 3D", systemImage: "lock.fill")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Label("查看成就", systemImage: "sparkles")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(CookingJournalPalette.warmInk)
+                    }
                 }
                 if let unavailable = dish.unavailable {
                     Text(unavailable).font(.caption).foregroundStyle(.secondary)
@@ -175,6 +208,9 @@ struct LearnedDishesView: View {
         let dishes: [Entry]
         @Binding var selectedID: UUID?
         let viewpoint: (UUID) -> Binding<ShowcaseViewpoint>
+        let showcaseIndices: [UUID: Int]
+        let pro: CookProStore
+        let onRequestUpgrade: () -> Void
 
         private var selected: Entry? {
             dishes.first { $0.id == selectedID } ?? dishes.first
@@ -182,6 +218,8 @@ struct LearnedDishesView: View {
 
         var body: some View {
             if let selected, let source = selected.showcase {
+                let index = showcaseIndices[selected.id] ?? Int.max
+                let unlocked = pro.canOpenSpecialShowcase(index: index)
                 VStack(spacing: 0) {
                     if dishes.count > 1 {
                         Picker("展出菜品", selection: Binding(get: { selected.id }, set: { selectedID = $0 })) {
@@ -192,9 +230,20 @@ struct LearnedDishesView: View {
                         .pickerStyle(.menu)
                         .accessibilityIdentifier("learnedDishes.featuredDish")
                     }
-                    DishShowcaseView(name: selected.name, learnedAt: selected.record.learnedAt,
-                                     source: source, viewpoint: viewpoint(selected.id))
-                        .id(selected.id)
+                    if unlocked {
+                        DishShowcaseView(name: selected.name, learnedAt: selected.record.learnedAt,
+                                         source: source, viewpoint: viewpoint(selected.id))
+                            .id(selected.id)
+                    } else {
+                        ContentUnavailableView {
+                            Label(selected.name, systemImage: "lock.fill")
+                        } description: {
+                            Text("第 1 道特色菜免费体验 3D 展示。解锁 Cook Pro 后即可浏览全部学会菜品的 3D 展示。")
+                        } actions: {
+                            Button("解锁全部 3D 展示", action: onRequestUpgrade)
+                                .prominentButtonStyle()
+                        }
+                    }
                 }
             } else {
                 ContentUnavailableView("还没有可展出的菜", systemImage: "cube",
@@ -238,6 +287,7 @@ struct LearnedDishesView: View {
             .environment(store)
             .environment(records)
             .environment(ShowcaseAssetLibrary.live())
+            .environment(CookProStore.isolated())
             .modelContainer(Persistence.makeContainer(inMemory: true))
             .preferredColorScheme(.dark)
     }
@@ -250,6 +300,7 @@ struct LearnedDishesView: View {
             .environment(store)
             .environment(CookedRecipeRecords())
             .environment(ShowcaseAssetLibrary.live())
+            .environment(CookProStore.isolated())
             .modelContainer(Persistence.makeContainer(inMemory: true))
     }
 }
