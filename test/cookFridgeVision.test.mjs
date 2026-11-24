@@ -389,3 +389,61 @@ test('a quota read failure blocks recognition and writes no counters', async () 
     assert.equal(modelCalls, 0)
   }
 })
+
+test('AppleJWS overseas subscriptions authenticate GET/POST vision requests and reject mainland storefronts', async () => {
+  const { createRequire } = await import('node:module')
+  const req = createRequire(import.meta.url)
+  const { AppleIAPAuthError } = req('../cloudfunctions/cook-fridge-vision/apple-iap-auth.js')
+  const appleHeader = { Authorization: 'AppleJWS eyJhbGciOiJFUzI1NiJ9.eyJwYXlsb2FkIjoxfQ.c2ln' }
+  const admitted = []
+  const config = { enabled: true, provider: 'cloudbase' }
+
+  const handler = createHandler({
+    config,
+    verifyIdentity: async () => { throw new Error('Bearer identity must not run for AppleJWS') },
+    readMembership: async () => { throw new Error('Bearer membership must not run for AppleJWS') },
+    verifyAppleJWS: async () => ({
+      uid: 'apple:tx-vision-1',
+      membership: { isActive: true, expireAt: Date.now() + 60_000 },
+    }),
+    async admit(uid) {
+      admitted.push(uid)
+    },
+    async recognize() {
+      return ['番茄', '鸡蛋']
+    },
+  })
+
+  const discovery = await handler({ httpMethod: 'GET', headers: appleHeader })
+  assert.equal(discovery.statusCode, 200)
+  assert.deepEqual(JSON.parse(discovery.body), {
+    ok: true,
+    schemaVersion: 1,
+    provider: 'cloudbase',
+    member: true,
+  })
+  assert.deepEqual(admitted, [])
+
+  const okPost = await handler({
+    ...event({ provider: 'cloudbase' }),
+    headers: appleHeader,
+  })
+  assert.equal(okPost.statusCode, 200)
+  assert.deepEqual(JSON.parse(okPost.body), { ok: true, schemaVersion: 1, ingredients: ['番茄', '鸡蛋'] })
+  assert.deepEqual(admitted, ['apple:tx-vision-1'])
+
+  const mainlandHandler = createHandler({
+    config,
+    verifyIdentity: async () => { throw new Error('unused') },
+    readMembership: async () => { throw new Error('unused') },
+    verifyAppleJWS: async () => { throw new AppleIAPAuthError('REGION_UNAVAILABLE', 'mainland_china_storefront') },
+    async admit() { throw new Error('unused') },
+    async recognize() { throw new Error('unused') },
+  })
+  const rejected = await mainlandHandler({
+    ...event({ provider: 'cloudbase' }),
+    headers: appleHeader,
+  })
+  assert.equal(rejected.statusCode, 503)
+  assert.deepEqual(JSON.parse(rejected.body), { ok: false, code: 'SERVICE_UNAVAILABLE' })
+})

@@ -8,6 +8,7 @@ import UIKit
 /// 同一次选图可用于本机单份录入或经用户确认的会员批量识图。
 struct FridgePhotoSheet: View {
     @Environment(RecipeStore.self) private var store
+    @Environment(CookAISettings.self) private var ai
     @Environment(\.dismiss) private var dismiss
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var input: ScanInput?
@@ -29,7 +30,8 @@ struct FridgePhotoSheet: View {
         let data: Data
     }
 
-    private var canUseBatch: Bool { FridgeVisionSheet.isAvailable && input != nil }
+    private var canUseOnlineVision: Bool { ai.onlineAIEnabled && FridgeVisionSheet.isAvailable }
+    private var canUseBatch: Bool { canUseOnlineVision && input != nil }
     private var suggestsBatch: Bool { canUseBatch && result?.suggestsBatchReview == true && !showingSingleItem }
 
     var body: some View {
@@ -56,9 +58,9 @@ struct FridgePhotoSheet: View {
                                 ProgressView(loadingPhoto ? "正在读取照片…" : "正在识别食材和日期…")
                             }
                         } header: {
-                            Text(FridgeVisionSheet.isAvailable ? "拍食材或包装" : "拍包装或一份蔬果")
+                            Text(canUseOnlineVision ? "拍食材或包装" : "拍包装或一份蔬果")
                         } footer: {
-                            if FridgeVisionSheet.isAvailable {
+                            if canUseOnlineVision {
                                 Text("先在本机识别食材和日期。照片里有多种食材时，可用同一张照片继续批量识图。")
                             } else {
                                 Text("包装请拍清生产日期、保质期或到期日。一次识别一份食材；照片仅在本机处理，不保存或上传。")
@@ -231,6 +233,8 @@ struct FridgePhotoSheet: View {
     if let store = try? RecipeStore.loadBundled(inMemory: true) {
         FridgePhotoSheet()
             .environment(store)
+            .environment(CookAISettings(defaults: nil, vault: MemoryCookAIKeyVault(), managedService: ManagedCookAIService(endpoint: nil)))
+            .environment(CookProStore.isolated())
             .modelContainer(Persistence.makeContainer(inMemory: true))
     }
 }
@@ -239,6 +243,7 @@ struct FridgePhotoSheet: View {
     if let store = try? RecipeStore.loadBundled(inMemory: true) {
         NavigationStack {
             FridgePhotoReview(scan: FridgeLabelScan(text: "", names: ["草莓"]), onRetake: {})
+                .environment(CookProStore.isolated())
                 .navigationTitle("确认识别结果")
                 .navigationBarTitleDisplayMode(.inline)
         }
@@ -251,6 +256,7 @@ struct FridgePhotoSheet: View {
 
 private struct FridgePhotoReview: View {
     @Environment(RecipeStore.self) private var store
+    @Environment(CookProStore.self) private var pro
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     let scan: FridgeLabelScan
@@ -265,6 +271,7 @@ private struct FridgePhotoReview: View {
     @State private var hasProductionDate: Bool
     @State private var productionDay: Date
     @State private var saveError = false
+    @State private var quotaMessage: String?
     @State private var category = FridgeCategoryChoice.automatic
 
     init(scan: FridgeLabelScan, onRetake: @escaping () -> Void, onBatch: (() -> Void)? = nil) {
@@ -401,6 +408,9 @@ private struct FridgePhotoReview: View {
         } message: {
             Text("请检查设备的可用储存空间后重试，当前识别结果已保留。")
         }
+        .alert("冰箱容量", isPresented: Binding(get: { quotaMessage != nil }, set: { if !$0 { quotaMessage = nil } })) {
+            Button("好", role: .cancel) {}
+        } message: { Text(quotaMessage ?? "") }
     }
 
     private var canCalculate: Bool {
@@ -444,12 +454,12 @@ private struct FridgePhotoReview: View {
             let starting = "\(startDay.formatted(date: .numeric, time: .omitted))\(cut ? "切开" : "购买")。"
             item.storageAdvice = starting + (advice.map { "\($0.condition) 建议 \($0.days) 天内吃完。" } ?? "通用天数估算，请自行核对。")
         }
-        context.insert(item)
         do {
-            try context.save()
+            try context.saveFridgeIntake(item, limit: pro.fridgeItemLimit)
             dismiss()
+        } catch let quota as CookFeatureQuotaError {
+            quotaMessage = quota.localizedDescription
         } catch {
-            context.delete(item)
             saveError = true
         }
     }

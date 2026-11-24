@@ -1,0 +1,107 @@
+{
+  "identifier": "A2E94F7E-9B18-4B1C-8A0E-C3E4A11B7B99",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "28.00",
+      "familyShareable": true,
+      "internalID": "11B2E0D0-7E3B-4A0F-9D2B-4E12B1E08801",
+      "localizations": [
+        {
+          "description": "一次买断，永久解锁无限冰箱食材、无限私房菜谱与全部 3D 菜品展示（无需登录）。",
+          "displayName": "Cook Pro 永久买断",
+          "locale": "zh_CN"
+        },
+        {
+          "description": "One-time unlock for unlimited fridge items, unlimited private recipes, and all 3D dish showcases.",
+          "displayName": "Cook Pro Lifetime",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "fun.yunle.cook.pro_lifetime",
+      "referenceName": "Cook Pro Lifetime",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {
+    "_locale": "zh_CN",
+    "_storefront": "USA",
+    "_storeKitErrors": []
+  },
+  "subscriptionGroups": [
+    {
+      "id": "C6E8149A-0D52-41B9-A0BA-2A8D8362B190",
+      "localizations": [
+        {
+          "description": "海外地区免登录云端 AI 服务，含全部 Cook Pro 本机权益。",
+          "displayName": "云食册海外云端 AI",
+          "locale": "zh_CN"
+        },
+        {
+          "description": "Login-free Cloud AI subscription outside Mainland China, including all Cook Pro local features.",
+          "displayName": "Cook Cloud AI",
+          "locale": "en_US"
+        }
+      ],
+      "name": "Cook Cloud AI",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "18.00",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "8D179923-9A70-4A43-9072-7C80F8C30002",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "包含全部 Cook Pro 买断权益 + AI 智能找菜、冰箱批量识图、步骤原文讲解。",
+              "displayName": "云端 AI 月度订阅",
+              "locale": "zh_CN"
+            },
+            {
+              "description": "All Cook Pro features + Cloud AI search intent, batch fridge photo scan, and step guidance.",
+              "displayName": "Cloud AI Monthly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "fun.yunle.cook.ai_month",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Cook Cloud AI Monthly",
+          "subscriptionGroupID": "C6E8149A-0D52-41B9-A0BA-2A8D8362B190",
+          "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "128.00",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "8D179923-9A70-4A43-9072-7C80F8C30003",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "包含全部 Cook Pro 买断权益 + 全年海外云端 AI 服务。",
+              "displayName": "云端 AI 年度订阅",
+              "locale": "zh_CN"
+            },
+            {
+              "description": "All Cook Pro features + a full year of Cloud AI access.",
+              "displayName": "Cloud AI Yearly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "fun.yunle.cook.ai_year",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Cook Cloud AI Yearly",
+          "subscriptionGroupID": "C6E8149A-0D52-41B9-A0BA-2A8D8362B190",
+          "type": "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

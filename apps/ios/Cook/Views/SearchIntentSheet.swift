@@ -8,6 +8,7 @@ struct SearchIntentSheet: View {
     @Environment(CookSearchHistory.self) private var searchHistory
     @Environment(CookAISettings.self) private var ai
     @Environment(YunlefunAccountStore.self) private var accounts
+    @Environment(CookProStore.self) private var pro
     @Environment(\.dismiss) private var dismiss
     @State private var draft: SearchIntentDraft
     @State private var confirmsSending = false
@@ -33,11 +34,11 @@ struct SearchIntentSheet: View {
                         .disabled(draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         .accessibilityIdentifier("intent.local")
                     if ai.canUseRemote {
-                        Button(ai.canUseManagedDeepSeek ? "智能找菜 · 会员 DeepSeek" : "智能找菜 · DeepSeek") { confirmsSending = true }
+                        Button(ai.canUseManagedDeepSeek ? "智能找菜 · 云端 DeepSeek" : "智能找菜 · DeepSeek") { confirmsSending = true }
                             .disabled(draft.isLoading || draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             .accessibilityIdentifier("intent.smart")
-                    } else if ai.wantsManagedDeepSeek, ai.isManagedConfigured, accounts.account != nil {
-                        Button("重新检查会员 AI") { Task { await ai.refreshManagedCapability(accounts: accounts) } }
+                    } else if ai.wantsManagedDeepSeek, ai.isManagedConfigured, accounts.account != nil || pro.hasActiveAISubscription {
+                        Button("重新检查 AI 服务") { Task { await ai.refreshManagedCapability(accounts: accounts, pro: pro) } }
                             .disabled(ai.managedStatus == .checking)
                     }
                     if ai.managedStatus == .checking, ai.wantsManagedDeepSeek {
@@ -85,11 +86,13 @@ struct SearchIntentSheet: View {
                         .accessibilityIdentifier("intent.apply")
                 }
             }
-            .confirmationDialog(ai.canUseManagedDeepSeek ? "通过云乐坊会员服务识别本次文本？" : "发送本次文本到 DeepSeek？", isPresented: $confirmsSending, titleVisibility: .visible) {
+            .confirmationDialog(ai.canUseManagedDeepSeek ? (ai.managedAuthMode == .appleJWS ? "通过云食册 AI 订阅识别本次文本？" : "通过云乐坊会员服务识别本次文本？") : "发送本次文本到 DeepSeek？", isPresented: $confirmsSending, titleVisibility: .visible) {
                 Button("发送并智能识别") { recognize() }
             } message: {
                 Text(ai.canUseManagedDeepSeek
-                     ? "本次文本会经云乐坊服务发送给 DeepSeek。云乐坊使用登录凭据核验会员和额度，不发送收藏、历史或已保存偏好；本次调用使用会员内置服务。"
+                     ? (ai.managedAuthMode == .appleJWS
+                        ? "本次文本经云食册服务发送给 DeepSeek，使用 App Store 订阅凭据核验资格，不发送收藏、历史或已保存偏好，无需登录云乐坊账号。"
+                        : "本次文本会经云乐坊服务发送给 DeepSeek。云乐坊使用登录凭据核验会员和额度，不发送收藏、历史或已保存偏好；本次调用使用会员内置服务。")
                      : "仅发送上方本次文本及公共词典、筛选规则，不发送账号、收藏、历史或已保存偏好。使用你自己的 Key，费用由你的 DeepSeek 账号承担。")
             }
             .alert("暂时无法应用", isPresented: Binding(get: { applyError != nil }, set: { if !$0 { applyError = nil } })) {
@@ -98,7 +101,7 @@ struct SearchIntentSheet: View {
         }
         .task {
             parseLocally()
-            if ai.wantsManagedDeepSeek, !ai.isManagedAvailable { await ai.refreshManagedCapability(accounts: accounts) }
+            if ai.wantsManagedDeepSeek, !ai.isManagedAvailable { await ai.refreshManagedCapability(accounts: accounts, pro: pro) }
         }
         .onChange(of: draft.text) { draft.inputChanged(); applyError = nil }
         .onChange(of: ai.provider) { draft.cancel(); confirmsSending = false }
@@ -210,7 +213,7 @@ struct SearchIntentSheet: View {
         draft.parseRemotely { text in
             guard ai.provider == provider else { throw CancellationError() }
             if provider == .managedDeepSeek {
-                return try await ai.parseManaged(text: text, data: data, availableGoals: goals, accounts: accounts)
+                return try await ai.parseManaged(text: text, data: data, availableGoals: goals, accounts: accounts, pro: pro)
             }
             guard provider == .ownDeepSeek else { throw CookAISettingsError.notEnabled }
             let key = try ai.apiKeyForRequest()

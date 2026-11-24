@@ -23,6 +23,7 @@ struct CookApp: App {
     @State private var ai: CookAISettings
     @State private var userData: AccountUserDataStore
     @State private var membership: MembershipStore
+    @State private var pro: CookProStore
     #if DEBUG
         @State private var videoFixtureLoaded = false
     #endif
@@ -60,6 +61,8 @@ struct CookApp: App {
         _cookedRecipes = State(initialValue: CookedRecipeRecords(defaults: cookingDefaults))
         let accounts = YunlefunAccountStore(vault: inMemory ? MemoryYunlefunAccountVault() : KeychainYunlefunAccountVault())
         _accounts = State(initialValue: accounts)
+        let pro = CookProStore.live(isolated: inMemory)
+        _pro = State(initialValue: pro)
         let disabledSyncTransport: UserDataSyncService.Transport = { _ in throw URLError(.notConnectedToInternet) }
         var syncTransport: UserDataSyncService.Transport? = inMemory ? disabledSyncTransport : nil
         var syncCredential: () async throws -> YunlefunCredential = { try await accounts.credentialForRequest() }
@@ -190,6 +193,7 @@ struct CookApp: App {
                     .environment(workbench)
                     .environment(accounts)
                     .environment(membership)
+                    .environment(pro)
                     .environment(ai)
                     .environment(\.accountUserData, userData)
                     .environment(\.privateRecipeVideos, privateVideos)
@@ -210,14 +214,29 @@ struct CookApp: App {
                             }
                         #endif
                         await accounts.restore()
+                        if CookFeatures.proStoreEnabled || CookFeatures.overseasAIEnabled { await pro.start() }
+                        ai.updateRegionalAvailability(pro.isOnlineAIAllowedInCurrentRegion)
                         if CookFeatures.membershipUIEnabled || CookFeatures.membershipPurchasesEnabled { await membership.reload() }
-                        if ai.wantsManagedDeepSeek { await ai.refreshManagedCapability(accounts: accounts) }
+                        if ai.onlineAIEnabled && (ai.wantsManagedDeepSeek || pro.hasActiveAISubscription) {
+                            await ai.refreshManagedCapability(accounts: accounts, pro: pro)
+                        }
                     }
                     .onChange(of: accounts.sessionRevision) {
                         ai.invalidateManagedCapability(accounts: accounts)
                         membership.accountChanged()
                         if CookFeatures.membershipUIEnabled || CookFeatures.membershipPurchasesEnabled {
                             Task { await membership.reload() }
+                        }
+                    }
+                    .onChange(of: pro.isOnlineAIAllowedInCurrentRegion) { _, allowed in
+                        ai.updateRegionalAvailability(allowed)
+                        if allowed && (ai.wantsManagedDeepSeek || pro.hasActiveAISubscription) {
+                            Task { await ai.refreshManagedCapability(accounts: accounts, pro: pro) }
+                        }
+                    }
+                    .onChange(of: pro.aiSubscriptionJWS) {
+                        if ai.onlineAIEnabled {
+                            Task { await ai.refreshManagedCapability(accounts: accounts, pro: pro) }
                         }
                     }
                     .onChange(of: accounts.dataAccountID, initial: true) { _, uid in
@@ -234,6 +253,8 @@ struct CookApp: App {
                         if phase == .active {
                             ai.expireManagedCapabilityIfNeeded()
                             Task {
+                                if CookFeatures.proStoreEnabled || CookFeatures.overseasAIEnabled { await pro.refreshEntitlements() }
+                                ai.updateRegionalAvailability(pro.isOnlineAIAllowedInCurrentRegion)
                                 await accounts.refreshIfNeeded()
                                 if CookFeatures.membershipUIEnabled || CookFeatures.membershipPurchasesEnabled {
                                     await membership.coordinator.refresh()

@@ -50,6 +50,25 @@ final class PrivateRecipePersistenceTests: XCTestCase {
         XCTAssertFalse(snapshot.recipes.contains { $0.customId == "would-add" })
     }
 
+    func testFreeQuotaCountsNewRecipesButPreservesExistingEditsAndDuplicateImports() throws {
+        let container = Persistence.makeContainer(inMemory: true)
+        let original = recipe()
+        let limit = 1
+        try PrivateRecipePersistence.save(original, replacing: nil, in: container, newRecipeLimit: limit)
+        let additional = recipe(id: "custom-additional")
+        XCTAssertThrowsError(try PrivateRecipePersistence.save(additional, replacing: nil, in: container, newRecipeLimit: limit)) {
+            XCTAssertEqual($0 as? CookFeatureQuotaError, .privateRecipes(limit))
+        }
+        XCTAssertThrowsError(try PrivateRecipePersistence.importRecipes([original, additional], keepCopies: true,
+                                                                      in: container, newRecipeLimit: limit))
+        XCTAssertEqual(try PrivateRecipePersistence.importRecipes([original], keepCopies: true, in: container, newRecipeLimit: limit), 0)
+        var edited = original
+        edited.name = "修改后的蒸蛋"
+        edited.updatedAt += 1
+        try PrivateRecipePersistence.save(edited, replacing: original, in: container, newRecipeLimit: limit)
+        XCTAssertEqual(try PrivateRecipePersistence.snapshot(in: ModelContext(container)).recipes, [edited])
+    }
+
     func testDeletedIDDoesNotReviveFromAnOldFile() throws {
         let container = Persistence.makeContainer(inMemory: true)
         let original = recipe()

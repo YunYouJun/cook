@@ -111,7 +111,7 @@ struct FridgeVisionService: Sendable {
     static let productionURL = URL(string: "https://api.yunle.fun/cook-fridge-vision")!
     private static let maxResponseBytes = 8192
     static var configuredEndpoint: URL? {
-        guard CookFeatures.onlineAIEnabled,
+        guard CookFeatures.hasAnyOnlineAICapability,
               let value = Bundle.main.object(forInfoDictionaryKey: "CookFridgeVisionServiceURL") as? String,
               value == productionURL.absoluteString else { return nil }
         return productionURL
@@ -150,16 +150,24 @@ struct FridgeVisionService: Sendable {
     }
 
     func memberProvider(credential: YunlefunCredential) async throws -> FridgeVisionProvider? {
-        let data = try await send(request(method: "GET", timeout: 15, credential: credential))
+        try await memberProvider(authorization: .yunlefunBearer(credential))
+    }
+
+    func memberProvider(authorization: CookAIAuthorization) async throws -> FridgeVisionProvider? {
+        let data = try await send(request(method: "GET", timeout: 15, authorization: authorization))
         guard let wire = try? JSONDecoder().decode(MembershipResponse.self, from: data), wire.ok, wire.schemaVersion == 1
         else { throw FridgeVisionError.invalidResponse }
         return wire.member ? wire.provider : nil
     }
 
     func recognize(_ photo: FridgeVisionPhoto, provider: FridgeVisionProvider, credential: YunlefunCredential) async throws -> [String] {
+        try await recognize(photo, provider: provider, authorization: .yunlefunBearer(credential))
+    }
+
+    func recognize(_ photo: FridgeVisionPhoto, provider: FridgeVisionProvider, authorization: CookAIAuthorization) async throws -> [String] {
         guard (1...FridgeVisionPhoto.maxJPEGBytes).contains(photo.jpeg.count) else { throw FridgeVisionError.unreadablePhoto }
 
-        var request = try request(method: "POST", timeout: 40, credential: credential)
+        var request = try request(method: "POST", timeout: 40, authorization: authorization)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let encoder = JSONEncoder()
         encoder.outputFormatting = .withoutEscapingSlashes
@@ -172,7 +180,7 @@ struct FridgeVisionService: Sendable {
         return wire.ingredients
     }
 
-    private func request(method: String, timeout: TimeInterval, credential: YunlefunCredential) throws -> URLRequest {
+    private func request(method: String, timeout: TimeInterval, authorization: CookAIAuthorization) throws -> URLRequest {
         guard endpoint == Self.productionURL else { throw FridgeVisionError.unavailable }
         var request = URLRequest(url: endpoint)
         request.httpMethod = method
@@ -180,9 +188,15 @@ struct FridgeVisionService: Sendable {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("no-store", forHTTPHeaderField: "Cache-Control")
-        guard credential.expiresAt > Date(), (1...8192).contains(credential.accessToken.utf8.count),
-              credential.accessToken.utf8.allSatisfy({ (33...126).contains($0) }) else { throw FridgeVisionError.loginRequired }
-        request.setValue("Bearer \(credential.accessToken)", forHTTPHeaderField: "Authorization")
+        switch authorization {
+        case let .yunlefunBearer(credential):
+            guard authorization.isValidForTransmission, credential.accessToken.utf8.count <= 8192 else {
+                throw FridgeVisionError.loginRequired
+            }
+        case .appleJWS:
+            guard authorization.isValidForTransmission else { throw FridgeVisionError.membershipRequired }
+        }
+        request.setValue(authorization.headerValue, forHTTPHeaderField: "Authorization")
         return request
     }
 

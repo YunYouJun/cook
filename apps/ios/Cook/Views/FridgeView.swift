@@ -7,6 +7,7 @@ import UIKit
 struct FridgeView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(CookSession.self) private var session
+    @Environment(CookProStore.self) private var pro
     @Environment(\.modelContext) private var context
     @Environment(AppRouter.self) private var router
     @Query(filter: FridgeItem.inStock, sort: \FridgeItem.expiresAt) private var items: [FridgeItem]
@@ -23,9 +24,9 @@ struct FridgeView: View {
     private enum Route: Hashable { case history }
 
     private enum Sheet: Identifiable {
-        case manual, photo, categories, edit(FridgeItem)
+        case manual, photo, categories, edit(FridgeItem), proPaywall
 
-        enum ID: Hashable { case manual, photo, categories, edit(PersistentIdentifier) }
+        enum ID: Hashable { case manual, photo, categories, edit(PersistentIdentifier), proPaywall }
 
         var id: ID {
             switch self {
@@ -33,7 +34,16 @@ struct FridgeView: View {
             case .photo: return .photo
             case .categories: return .categories
             case let .edit(item): return .edit(item.persistentModelID)
+            case .proPaywall: return .proPaywall
             }
+        }
+    }
+
+    private func openAddSheet(_ target: Sheet) {
+        if pro.canAddFridgeItem(currentInStockCount: items.count) {
+            sheet = target
+        } else {
+            sheet = .proPaywall
         }
     }
 
@@ -54,7 +64,7 @@ struct FridgeView: View {
                     } description: {
                         Text("把买回来的食材记在这里，快过期时提醒你，还能直接看看用它们能做什么。")
                     } actions: {
-                        Button("放点食材") { sheet = .manual }
+                        Button("放点食材") { openAddSheet(.manual) }
                             .buttonStyle(.borderedProminent)
                     }
                 } else {
@@ -101,12 +111,12 @@ struct FridgeView: View {
                     Button("冰箱历史", systemImage: "clock.arrow.circlepath") { path.append(Route.history) }
                         .accessibilityIdentifier("fridge.history")
                     Button("管理分类", systemImage: "folder") { sheet = .categories }
-                    Button { sheet = .photo } label: {
+                    Button { openAddSheet(.photo) } label: {
                         Label("拍照识别", systemImage: "camera")
                     }
                     .accessibilityIdentifier("fridge.photo.open")
                     Button {
-                        sheet = .manual
+                        openAddSheet(.manual)
                     } label: {
                         Label("放进冰箱", systemImage: "plus")
                     }
@@ -125,6 +135,10 @@ struct FridgeView: View {
                 case .photo: FridgePhotoSheet()
                 case .categories: FridgeCategoryManager()
                 case let .edit(item): FridgeItemSheet(item: item)
+                case .proPaywall:
+                    NavigationStack {
+                        CookProPaywallView(highlight: .fridge, showsDismissButton: true)
+                    }
                 }
             }
         }
@@ -450,6 +464,8 @@ private extension View {
 /// 放进冰箱：从食材词典点选，词典里没有的可以自己输入；到期日按默认保质期估
 struct AddFridgeSheet: View {
     @Environment(RecipeStore.self) private var store
+    @Environment(CookProStore.self) private var pro
+    @State private var quotaMessage: String?
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @State private var selected: [String] = []
@@ -510,6 +526,9 @@ struct AddFridgeSheet: View {
             .navigationTitle("放进冰箱")
             .navigationBarTitleDisplayMode(.inline)
             .fridgeSaveError(isPresented: $saveError)
+            .alert("冰箱容量", isPresented: Binding(get: { quotaMessage != nil }, set: { if !$0 { quotaMessage = nil } })) {
+                Button("好", role: .cancel) {}
+            } message: { Text(quotaMessage ?? "") }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }
@@ -555,8 +574,11 @@ struct AddFridgeSheet: View {
 
     private func save() {
         do {
-            try context.addEstimatedFridgeItems(selected, shelfLife: store.data.shelfLife, categoryKey: category.storedKey)
+            try context.addEstimatedFridgeItems(selected, shelfLife: store.data.shelfLife,
+                                                 categoryKey: category.storedKey, limit: pro.fridgeItemLimit)
             dismiss()
+        } catch let quota as CookFeatureQuotaError {
+            quotaMessage = quota.localizedDescription
         } catch {
             saveError = true
         }

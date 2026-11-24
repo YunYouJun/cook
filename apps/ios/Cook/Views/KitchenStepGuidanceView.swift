@@ -102,7 +102,7 @@ struct RecipeStepGuidancePanel: View {
                 answer(response)
             } else if !ai.canUseRemote {
                 HStack(spacing: 8) {
-                    Text(ai.provider == .managedDeepSeek ? ai.managedStatus.message : "选择个人 Key 或会员内置服务后，才可按需讲解。")
+                    Text(ai.provider == .managedDeepSeek ? ai.managedStatus.message : "选择个人 Key 或云端 AI 服务后，才可按需讲解。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     Spacer()

@@ -4,9 +4,11 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct PrivateRecipesView: View {
+    @Environment(CookProStore.self) private var pro
     @Environment(\.modelContext) private var context
     @Query private var records: [PrivateRecipeRecord]
     @State private var editor: RecipeEditorItem?
+    @State private var showingPaywall = false
     @State private var incoming: RecipeImportItem?
     @State private var exporting: PrivateRecipeDocument?
     @State private var showingExporter = false
@@ -62,12 +64,17 @@ struct PrivateRecipesView: View {
         .navigationTitle("我的菜谱")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("新建菜谱", systemImage: "plus") { editor = RecipeEditorItem(recipe: nil) }
+                Button("新建菜谱", systemImage: "plus") { openNewRecipeEditor() }
                     .labelStyle(.iconOnly)
             }
         }
         .modifier(PrivateRecipeSearch(query: $query))
         .sheet(item: $editor) { item in PrivateRecipeEditor(original: item.recipe) }
+        .sheet(isPresented: $showingPaywall) {
+            NavigationStack {
+                CookProPaywallView(highlight: .privateRecipes, showsDismissButton: true)
+            }
+        }
         .sheet(item: $incoming) { item in PrivateRecipeImportView(recipes: item.recipes) }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.json, .plainText]) { result in
             do {
@@ -91,6 +98,15 @@ struct PrivateRecipesView: View {
         .alert("私人菜谱", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
             Button("好", role: .cancel) {}
         } message: { Text(message ?? "") }
+    }
+
+    private func openNewRecipeEditor() {
+        let currentCount = (try? snapshot.get())?.recipes.count ?? records.count
+        if pro.canAddPrivateRecipe(currentCount: currentCount) {
+            editor = RecipeEditorItem(recipe: nil)
+        } else {
+            showingPaywall = true
+        }
     }
 
     private func recipeLabel(_ recipe: PrivateRecipe) -> some View {
@@ -285,6 +301,7 @@ struct PrivateRecipeEditorList {
 }
 
 private struct PrivateRecipeEditor: View {
+    @Environment(CookProStore.self) private var pro
     let original: PrivateRecipe?
     @Environment(RecipeStore.self) private var store
     @Environment(\.modelContext) private var context
@@ -425,7 +442,11 @@ private struct PrivateRecipeEditor: View {
                         pending = try await files.stageExisting(video)
                         draft = pending
                     }
-                    let cleaned = try await PrivateRecipeVideoPersistence.save(recipe, replacing: original, draft: pending, inCloud: inCloud, in: context.container, files: files)
+                    let cleaned = try await PrivateRecipeVideoPersistence.save(
+                        recipe, replacing: original, draft: pending, inCloud: inCloud, in: context.container, files: files
+                    ) {
+                        try PrivateRecipePersistence.save($0, replacing: $1, in: $2, newRecipeLimit: pro.privateRecipeLimit)
+                    }
                     if !cleaned { NotificationCenter.default.post(name: .privateVideoCleanupFailed, object: nil) }
                 } catch {
                     if !(error is CancellationError) { self.error = error.localizedDescription }
@@ -440,6 +461,7 @@ private struct PrivateRecipeEditor: View {
 }
 
 private struct PrivateRecipeImportView: View {
+    @Environment(CookProStore.self) private var pro
     let recipes: [PrivateRecipe]
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -482,7 +504,8 @@ private struct PrivateRecipeImportView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("确认导入") {
                         do {
-                            _ = try PrivateRecipePersistence.importRecipes(recipes, keepCopies: keepCopies, in: context.container)
+                            _ = try PrivateRecipePersistence.importRecipes(recipes, keepCopies: keepCopies, in: context.container,
+                                                                           newRecipeLimit: pro.privateRecipeLimit)
                             dismiss()
                         } catch { self.error = error.localizedDescription }
                     }.disabled(plan == nil)

@@ -366,9 +366,24 @@ extension ModelContext {
         return item
     }
 
-    /// Manual and photo batch intake use the same dates and save the entire selection together.
-    func addEstimatedFridgeItems(_ names: [String], shelfLife: ShelfLife, categoryKey: String? = nil, at date: Date = Date()) throws {
+    func saveFridgeIntake(_ item: FridgeItem, limit: Int?) throws {
         try saveUserChange {
+            try requireFridgeCapacity(adding: 1, limit: limit)
+            insert(item)
+        }
+    }
+
+    private func requireFridgeCapacity(adding count: Int, limit: Int?) throws {
+        guard count > 0, let limit else { return }
+        let existing = try fetchCount(FetchDescriptor<FridgeItem>(predicate: FridgeItem.inStock))
+        guard count <= limit - existing else { throw CookFeatureQuotaError.fridge(limit) }
+    }
+
+    /// Manual and photo batch intake use the same dates and save the entire selection together.
+    func addEstimatedFridgeItems(_ names: [String], shelfLife: ShelfLife, categoryKey: String? = nil,
+                                 at date: Date = Date(), limit: Int? = nil) throws {
+        try saveUserChange {
+            try requireFridgeCapacity(adding: names.count, limit: limit)
             for name in names {
                 let advice = ProduceStorageAdvice.recommendation(for: name)
                 let item = FridgeItem(name: name, days: advice?.days ?? shelfLife.days(for: name), at: date)
@@ -496,4 +511,18 @@ extension Recipe {
 func uniqueStrings(_ names: [String]) -> [String] {
     var seen = Set<String>()
     return names.filter { seen.insert($0).inserted }
+}
+
+enum CookFeatureQuotaError: LocalizedError, Equatable {
+    case fridge(Int)
+    case privateRecipes(Int)
+
+    var errorDescription: String? {
+        switch self {
+        case let .fridge(limit):
+            return "免费版最多可新增至 \(limit) 样在库食材。请减少本次添加的数量，或解锁 Cook Pro。"
+        case let .privateRecipes(limit):
+            return "免费版最多可新增至 \(limit) 道私人菜谱。请减少本次新增的数量，或解锁 Cook Pro。"
+        }
+    }
 }

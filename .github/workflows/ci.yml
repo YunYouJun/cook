@@ -124,7 +124,8 @@ jobs:
         run: |
           node scripts/generate-ai-intent-contract.mjs --check
           node scripts/generate-ai-guidance-sources.mjs --check
-          node --test test/cookAiIntent.test.mjs test/aiIntentContract.test.mjs test/cookAiGuidance.test.mjs test/aiGuidanceSources.test.mjs test/cookFridgeVision.test.mjs
+          node scripts/sync-apple-iap-auth.mjs --check
+          node --test test/appleIapAuth.test.mjs test/cookAiIntent.test.mjs test/aiIntentContract.test.mjs test/cookAiGuidance.test.mjs test/aiGuidanceSources.test.mjs test/cookFridgeVision.test.mjs
       - run: pnpm run validate
       - run: pnpm run amounts:check
       - name: Check recipe ids against base branch
@@ -316,7 +317,8 @@ jobs:
     needs: [changes, ios-core-reuse]
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.skip_native != 'true') && (needs.ios-core-reuse.result != 'success' || needs.ios-core-reuse.outputs.verified != 'true') }}
     runs-on: xcode-27
-    timeout-minutes: 20
+    # Leave room for both signed suites and runner cleanup.
+    timeout-minutes: 28
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -334,6 +336,19 @@ jobs:
         env:
           DEVICE: ${{ steps.environment.outputs[matrix.device] }}
         run: bash scripts/run-ios-storekit-tests.sh
+      - name: Verify local Cook Pro catalog and entitlement
+        if: matrix.device == 'iphone'
+        timeout-minutes: 8
+        env:
+          DEVICE: ${{ steps.environment.outputs[matrix.device] }}
+        run: |
+          xcodebuild test -project apps/ios/Cook.xcodeproj -scheme CookProStoreKit \
+            -destination "id=$DEVICE" -destination-timeout 180 -parallel-testing-enabled NO \
+            -onlyUsePackageVersionsFromResolvedFile -skipPackageUpdates \
+            -derivedDataPath "$RUNNER_TEMP/cook-derived-data" -collect-test-diagnostics never \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
+            -resultBundlePath "$RUNNER_TEMP/xcresult/$DEVICE-cook-pro-storekit.xcresult" \
+            COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-
       - name: Show StoreKit failures
         timeout-minutes: 5
         if: ${{ failure() || cancelled() }}

@@ -34,9 +34,33 @@ protocol ManagedCookAIServing: Sendable {
     func capabilities(credential: YunlefunCredential) async throws -> ManagedCookAICapability
     func parse(text: String, credential: YunlefunCredential, data: CookData,
                availableGoals: [DietaryGoal]) async throws -> SearchIntent
+    func capabilities(authorization: CookAIAuthorization) async throws -> ManagedCookAICapability
+    func parse(text: String, authorization: CookAIAuthorization, data: CookData,
+               availableGoals: [DietaryGoal]) async throws -> SearchIntent
 }
 
-/// The server validates the current bearer identity, membership and quotas on every parse.
+extension ManagedCookAIServing {
+    func capabilities(authorization: CookAIAuthorization) async throws -> ManagedCookAICapability {
+        switch authorization {
+        case let .yunlefunBearer(credential):
+            return try await capabilities(credential: credential)
+        case .appleJWS:
+            throw ManagedCookAIError.unavailable
+        }
+    }
+
+    func parse(text: String, authorization: CookAIAuthorization, data: CookData,
+               availableGoals: [DietaryGoal]) async throws -> SearchIntent {
+        switch authorization {
+        case let .yunlefunBearer(credential):
+            return try await parse(text: text, credential: credential, data: data, availableGoals: availableGoals)
+        case .appleJWS:
+            throw ManagedCookAIError.unavailable
+        }
+    }
+}
+
+/// The server validates the current bearer identity or Apple JWS, membership and quotas on every parse.
 struct ManagedCookAIService: ManagedCookAIServing {
     typealias Transport = @Sendable (URLRequest) async throws -> (Data, URLResponse)
     private let endpoint: URL?
@@ -49,14 +73,18 @@ struct ManagedCookAIService: ManagedCookAIServing {
     }
 
     static var configuredEndpoint: URL? {
-        guard CookFeatures.onlineAIEnabled,
+        guard CookFeatures.hasAnyOnlineAICapability,
               let value = Bundle.main.object(forInfoDictionaryKey: "CookAIServiceURL") as? String,
               !value.isEmpty else { return nil }
         return URL(string: value).flatMap(approvedEndpoint)
     }
 
     func capabilities(credential: YunlefunCredential) async throws -> ManagedCookAICapability {
-        let body = try await request(["action": "capabilities"], credential: credential)
+        try await capabilities(authorization: .yunlefunBearer(credential))
+    }
+
+    func capabilities(authorization: CookAIAuthorization) async throws -> ManagedCookAICapability {
+        let body = try await request(["action": "capabilities"], authorization: authorization)
         guard let object = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
               Set(object.keys).isSubset(of: ["ok", "serviceVersion", "enabled", "membership", "code"]),
               let membership = object["membership"] as? [String: Any],
@@ -76,12 +104,17 @@ struct ManagedCookAIService: ManagedCookAIServing {
 
     func parse(text: String, credential: YunlefunCredential, data: CookData,
                availableGoals: [DietaryGoal]) async throws -> SearchIntent {
+        try await parse(text: text, authorization: .yunlefunBearer(credential), data: data, availableGoals: availableGoals)
+    }
+
+    func parse(text: String, authorization: CookAIAuthorization, data: CookData,
+               availableGoals: [DietaryGoal]) async throws -> SearchIntent {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, text.count <= 1_000 else {
             throw ManagedCookAIError.invalidInput
         }
         let body = try await request(["action": "parse", "schemaVersion": SearchIntent.currentSchemaVersion,
                                       "policyVersion": SearchIntent.currentPolicyVersion,
-                                      "dataVersion": data.meta.dataVersion, "text": text], credential: credential)
+                                      "dataVersion": data.meta.dataVersion, "text": text], authorization: authorization)
         guard let object = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
               Set(object.keys) == ["ok", "intent"], let rawIntent = object["intent"] as? [String: Any] else {
             throw ManagedCookAIError.invalidResponse
@@ -93,19 +126,20 @@ struct ManagedCookAIService: ManagedCookAIServing {
         } catch is CookAIIntentValidationFailure { throw ManagedCookAIError.invalidResponse }
     }
 
-    private func request(_ fields: [String: Any], credential: YunlefunCredential) async throws -> Data {
+    private func request(_ fields: [String: Any], authorization: CookAIAuthorization) async throws -> Data {
         try Task.checkCancellation()
         guard let endpoint else { throw ManagedCookAIError.unconfigured }
-        guard credential.expiresAt > Date(), !credential.subject.isEmpty, !credential.accessToken.isEmpty,
-              credential.accessToken.utf8.count <= 16_384,
-              credential.accessToken.unicodeScalars.allSatisfy({ (33...126).contains($0.value) }) else {
-            throw ManagedCookAIError.loginRequired
+        guard authorization.isValidForTransmission else {
+            switch authorization {
+            case .yunlefunBearer: throw ManagedCookAIError.loginRequired
+            case .appleJWS: throw ManagedCookAIError.membershipRequired
+            }
         }
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.timeoutInterval = 45
         request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("Bearer \(credential.accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(authorization.headerValue, forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("no-store", forHTTPHeaderField: "Cache-Control")

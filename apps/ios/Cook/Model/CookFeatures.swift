@@ -5,6 +5,18 @@ enum CookFeatures {
         Bundle.main.object(forInfoDictionaryKey: "CookOnlineAIEnabled") as? String == "YES"
     }
 
+    static var overseasAIEnabled: Bool {
+        Bundle.main.object(forInfoDictionaryKey: "CookOverseasAIEnabled") as? String == "YES"
+    }
+
+    static var hasAnyOnlineAICapability: Bool {
+        onlineAIEnabled || overseasAIEnabled
+    }
+
+    static var proStoreEnabled: Bool {
+        Bundle.main.object(forInfoDictionaryKey: "CookProStoreEnabled") as? String == "YES"
+    }
+
     static var membershipUIEnabled: Bool {
         #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("-ui-testing-membership") { return true }

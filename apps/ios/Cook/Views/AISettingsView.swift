@@ -4,7 +4,9 @@ import SwiftUI
 struct AISettingsView: View {
     @Environment(CookAISettings.self) private var settings
     @Environment(YunlefunAccountStore.self) private var accounts
+    @Environment(CookProStore.self) private var pro
     @State private var showsKeyEditor = false
+    @State private var showingPaywallHighlight: CookProHighlight?
 
     var body: some View {
         Form {
@@ -32,41 +34,71 @@ struct AISettingsView: View {
         .sheet(isPresented: $showsKeyEditor) {
             DeepSeekKeyEditor()
         }
-        .task(id: accounts.sessionRevision) { await settings.refreshManagedCapability(accounts: accounts) }
+        .sheet(item: $showingPaywallHighlight) { highlight in
+            NavigationStack {
+                CookProPaywallView(highlight: highlight, showsDismissButton: true)
+            }
+        }
+        .task(id: CapabilityKey(session: accounts.sessionRevision, jws: pro.aiSubscriptionJWS)) {
+            await settings.refreshManagedCapability(accounts: accounts, pro: pro)
+        }
+    }
+
+    private struct CapabilityKey: Equatable {
+        let session: UUID
+        let jws: String?
     }
 
     @ViewBuilder
     private var managedProvider: some View {
         switch settings.managedStatus {
         case .checking:
-            providerLabel(.managedDeepSeek, detail: "正在核验会员资格…", isChecking: true)
+            providerLabel(.managedDeepSeek, detail: "正在核验服务资格…", isChecking: true)
         case .loginRequired:
-            NavigationLink { YunlefunAccountView() } label: {
-                providerLabel(.managedDeepSeek, detail: "登录云乐坊后核验资格")
+            if CookFeatures.proStoreEnabled && pro.isOnlineAIAllowedInCurrentRegion && !CookFeatures.membershipUIEnabled {
+                Button { showingPaywallHighlight = .cloudAI } label: {
+                    providerLabel(.managedDeepSeek, detail: "订阅海外云端 AI · 无需登录云乐坊账号", accessory: "chevron.right")
+                }
+                .buttonStyle(.plain)
+            } else {
+                NavigationLink { YunlefunAccountView() } label: {
+                    providerLabel(.managedDeepSeek, detail: "登录云乐坊后核验资格")
+                }
             }
         case .ready where settings.isManagedAvailable:
             Button { settings.selectProvider(.managedDeepSeek) } label: {
-                providerLabel(.managedDeepSeek, detail: "云乐坊会员专享 · 无需 API Key", accessory: selectionMark(for: .managedDeepSeek))
+                let subtitle = settings.managedAuthMode == .appleJWS
+                    ? "App Store 订阅专享 · 免登录 · 无需 API Key"
+                    : "云乐坊会员专享 · 无需 API Key"
+                providerLabel(.managedDeepSeek, detail: subtitle, accessory: selectionMark(for: .managedDeepSeek))
             }
             .buttonStyle(.plain)
             .accessibilityAddTraits(settings.provider == .managedDeepSeek ? .isSelected : [])
         case .unconfigured:
             providerLabel(.managedDeepSeek, detail: "此版本暂未开放")
         default:
-            let detail = switch settings.managedStatus {
-            case .membershipRequired: "当前账号未开通云乐坊会员"
-            case .expired: "云乐坊会员已到期"
-            case .ready: "会员资格需要重新核验"
-            default: settings.managedStatus.message
+            if CookFeatures.proStoreEnabled && pro.isOnlineAIAllowedInCurrentRegion
+                && !CookFeatures.membershipUIEnabled && !pro.hasActiveAISubscription && accounts.account == nil {
+                Button { showingPaywallHighlight = .cloudAI } label: {
+                    providerLabel(.managedDeepSeek, detail: "订阅海外云端 AI · 无需登录云乐坊账号", accessory: "chevron.right")
+                }
+                .buttonStyle(.plain)
+            } else {
+                let detail = switch settings.managedStatus {
+                case .membershipRequired: "当前未开通云端 AI 服务"
+                case .expired: "云端 AI 订阅或会员已到期"
+                case .ready: "使用资格需要重新核验"
+                default: settings.managedStatus.message
+                }
+                Button {
+                    Task { await settings.refreshManagedCapability(accounts: accounts, pro: pro) }
+                } label: {
+                    providerLabel(.managedDeepSeek, detail: detail, accessory: "arrow.clockwise")
+                }
+                .buttonStyle(.plain)
+                .disabled(accounts.isBusy)
+                .accessibilityHint("重新核验服务资格")
             }
-            Button {
-                Task { await settings.refreshManagedCapability(accounts: accounts) }
-            } label: {
-                providerLabel(.managedDeepSeek, detail: detail, accessory: "arrow.clockwise")
-            }
-            .buttonStyle(.plain)
-            .disabled(accounts.isBusy)
-            .accessibilityHint("重新核验会员资格")
         }
     }
 
@@ -91,8 +123,17 @@ struct AISettingsView: View {
                 .accessibilityIdentifier("aiSettings.editKey")
             }
         } else {
-            Button { showsKeyEditor = true } label: {
-                providerLabel(.ownDeepSeek, detail: "仅支持 DeepSeek · 添加 Key", accessory: "chevron.right")
+            Button {
+                if !pro.effectiveProAccess && CookFeatures.proStoreEnabled {
+                    showingPaywallHighlight = .byok
+                } else {
+                    showsKeyEditor = true
+                }
+            } label: {
+                let detail = (!pro.effectiveProAccess && CookFeatures.proStoreEnabled)
+                    ? "Cook Pro 可用 · 仅支持 DeepSeek"
+                    : "仅支持 DeepSeek · 添加 Key"
+                providerLabel(.ownDeepSeek, detail: detail, accessory: "chevron.right")
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("aiSettings.addKey")
@@ -310,4 +351,5 @@ private struct DeepSeekKeyEditor: View {
     NavigationStack { AISettingsView() }
         .environment(CookAISettings(defaults: nil, vault: MemoryCookAIKeyVault(), managedService: ManagedCookAIService(endpoint: nil)))
         .environment(YunlefunAccountStore(vault: MemoryYunlefunAccountVault()))
+        .environment(CookProStore.isolated(storefrontCountryCode: "USA", mainlandAIEnabled: false, overseasAIEnabled: true))
 }

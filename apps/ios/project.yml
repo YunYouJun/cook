@@ -66,6 +66,8 @@ targets:
         # cook-feedback 云函数的 HTTP 访问地址（docs/dev/data.md），生成工程前 export COOK_FEEDBACK_URL=…；不填时保留支持中心和邮件草稿入口，不发筛选信号
         CookFeedbackURL: ${COOK_FEEDBACK_URL}
         CookOnlineAIEnabled: $(COOK_ONLINE_AI_ENABLED)
+        CookOverseasAIEnabled: $(COOK_OVERSEAS_AI_ENABLED)
+        CookProStoreEnabled: $(COOK_PRO_STORE_ENABLED)
         # Override the build setting with an empty value to disable managed AI in a build.
         CookAIServiceURL: $(COOK_AI_SERVICE_URL)
         # Guidance has its own capability and deployment gate; never infer it from search.
@@ -132,6 +134,8 @@ targets:
         COOK_MEMBERSHIP_UI_ENABLED: NO
         COOK_MEMBERSHIP_PURCHASES_ENABLED: NO
         COOK_ONLINE_AI_ENABLED: NO
+        COOK_OVERSEAS_AI_ENABLED: NO
+        COOK_PRO_STORE_ENABLED: NO
         COOK_AI_SERVICE_URL: https://api.yunle.fun/cook-ai-intent
         COOK_AI_GUIDANCE_SERVICE_URL: https://api.yunle.fun/cook-ai-guidance
         # An empty override hides online vision without affecting offline photo recognition.
@@ -143,6 +147,8 @@ targets:
       configs:
         Debug:
           COOK_ONLINE_AI_ENABLED: YES
+          COOK_OVERSEAS_AI_ENABLED: YES
+          COOK_PRO_STORE_ENABLED: YES
   CookTests:
     type: bundle.unit-test
     platform: iOS
@@ -187,12 +193,27 @@ targets:
     platform: iOS
     sources:
       - path: StoreKitValidation
+        excludes: [Pro, Fixtures/CookProProducts.storekit]
     dependencies:
       - target: Cook
     settings:
       base:
         GENERATE_INFOPLIST_FILE: true
         PRODUCT_BUNDLE_IDENTIFIER: fun.yunle.cook.storekit-tests
+  CookProStoreKitTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: StoreKitValidation/Pro
+      - path: StoreKitValidation/Fixtures/CookProProducts.storekit
+        type: file
+        buildPhase: resources
+    dependencies:
+      - target: Cook
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: true
+        PRODUCT_BUNDLE_IDENTIFIER: fun.yunle.cook.pro-storekit-tests
 schemes:
   Cook:
     build:
@@ -216,4 +237,14 @@ schemes:
       # Keep StoreKit local in CLI runs; scheme run options alone are not reliable.
       testPlans:
         - path: StoreKitValidation/CookMembershipStoreKit.xctestplan
+          defaultPlan: true
+  CookProStoreKit:
+    build:
+      targets:
+        Cook: all
+        CookProStoreKitTests: [test]
+    test:
+      config: Debug
+      testPlans:
+        - path: StoreKitValidation/CookProStoreKit.xctestplan
           defaultPlan: true

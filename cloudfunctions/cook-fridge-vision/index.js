@@ -1,5 +1,6 @@
 const { Buffer } = require('node:buffer')
 const process = require('node:process')
+const { AppleIAPAuthError, authorizationHeaders, createAppleJWSVerifier, parseAuthorizationHeader } = require('./apple-iap-auth')
 const { VisionError, cleanupExpiredQuota, reserveQuota } = require('./quota')
 
 const ENV_ID = 'yunlefun-8g7ybcxc7345c490'
@@ -49,19 +50,6 @@ function response(statusCode, body) {
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'Vary': 'Authorization' },
     body: JSON.stringify(body),
   }
-}
-
-function authorizationHeaders(headers) {
-  return Object.entries(headers ?? {}).filter(([name]) => name.toLowerCase() === 'authorization')
-}
-
-function bearerToken(headers) {
-  const entries = authorizationHeaders(headers)
-  const value = entries.length === 1 ? entries[0][1] : null
-  const match = typeof value === 'string' && /^Bearer ([\x21-\x7E]{1,8192})$/i.exec(value)
-  if (!match)
-    throw new VisionError('LOGIN_REQUIRED')
-  return match[1]
 }
 
 function membershipActive(membership, at) {
@@ -246,7 +234,22 @@ function createAdapters({ apiKey, provider }, fetchImpl = globalThis.fetch, getM
   }
 }
 
-function createHandler({ config, verifyIdentity, readMembership, admit, recognize, now = Date.now }) {
+function createHandler({ config, verifyIdentity, readMembership, verifyAppleJWS, admit, recognize, now = Date.now }) {
+  async function authenticateRequest(headers) {
+    const auth = parseAuthorizationHeader(headers)
+    if (auth.scheme === 'apple_jws') {
+      if (typeof verifyAppleJWS !== 'function')
+        throw new VisionError('SERVICE_UNAVAILABLE')
+      const verified = await verifyAppleJWS(auth.token, { now })
+      if (!verified || typeof verified.uid !== 'string' || !verified.uid || typeof verified.membership !== 'object' || verified.membership === null)
+        throw new VisionError('LOGIN_REQUIRED')
+      return { uid: verified.uid, membership: verified.membership }
+    }
+    const uid = await verifyIdentity(auth.token)
+    const membership = await readMembership(auth.token)
+    return { uid, membership }
+  }
+
   return async (event) => {
     try {
       if (!['GET', 'POST'].includes(event?.httpMethod))
@@ -260,15 +263,12 @@ function createHandler({ config, verifyIdentity, readMembership, admit, recogniz
         // Recipient discovery needs no account. A signed-in app may separately check access before choosing a photo.
         if (!authorizationHeaders(event.headers).length)
           return response(200, discovery)
-        const token = bearerToken(event.headers)
-        await verifyIdentity(token)
-        const membership = await readMembership(token)
+        const { membership } = await authenticateRequest(event.headers)
         return response(200, { ...discovery, member: membershipActive(membership, now()) })
       }
-      const token = bearerToken(event.headers)
+      parseAuthorizationHeader(event.headers)
       const image = parseImage(event, config.provider)
-      const uid = await verifyIdentity(token)
-      const membership = await readMembership(token)
+      const { uid, membership } = await authenticateRequest(event.headers)
       const admissionTime = now()
       if (!membershipActive(membership, admissionTime))
         throw new VisionError('MEMBERSHIP_REQUIRED')
@@ -280,11 +280,20 @@ function createHandler({ config, verifyIdentity, readMembership, admit, recogniz
       return response(200, { ok: true, schemaVersion: 1, ingredients })
     }
     catch (error) {
-      const code = error instanceof VisionError && Object.hasOwn(STATUS, error.code) ? error.code : 'SERVICE_UNAVAILABLE'
+      const rawCode = error?.code === 'REGION_UNAVAILABLE' ? 'SERVICE_UNAVAILABLE' : error?.code
+      const isKnownError = error instanceof VisionError || error instanceof AppleIAPAuthError
+      const code = isKnownError && Object.hasOwn(STATUS, rawCode) ? rawCode : 'SERVICE_UNAVAILABLE'
       // Never log event bodies, headers, provider errors or raw model output.
       return response(STATUS[code], { ok: false, code })
     }
   }
+}
+
+let defaultAppleVerifier
+function getDefaultAppleVerifier() {
+  if (!defaultAppleVerifier)
+    defaultAppleVerifier = createAppleJWSVerifier()
+  return defaultAppleVerifier
 }
 
 let cloudBaseModel
@@ -302,6 +311,7 @@ let database
 exports.main = createHandler({
   config,
   ...createAdapters(config),
+  verifyAppleJWS: (jws, options) => getDefaultAppleVerifier()(jws, options),
   async admit(uid, now) {
     if (!database) {
       const cloudbase = require('@cloudbase/node-sdk')
