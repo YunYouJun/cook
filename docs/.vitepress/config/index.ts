@@ -17,12 +17,13 @@ export default defineConfig(withYunlefun({
   lang: 'zh-CN',
   title: '云食册',
   cleanUrls: true,
-  description: '有什么食材，就做什么菜。云食册产品官网、iOS 发布信息与食用手册使用文档。',
+  description: '有什么食材，就做什么菜。云食册产品官网、App Store 下载入口与食用手册使用文档。',
   lastUpdated: true,
   ignoreDeadLinks: 'localhostLinks',
   srcExclude: ['public/**/*.md'],
   head: [
     ['meta', { name: 'author', content: 'YunYouJun' }],
+    ['meta', { name: 'apple-itunes-app', content: 'app-id=6824589542' }],
     ['link', { rel: 'icon', href: '/favicon.ico?v=2', sizes: 'any' }],
     ['link', { rel: 'icon', href: brandIcon, type: 'image/svg+xml', sizes: 'any' }],
   ],
@@ -102,7 +103,7 @@ export default defineConfig(withYunlefun({
     nav: [
       { text: '产品官网', link: '/' },
       { text: '使用指南', link: '/guide/getting-started' },
-      { text: 'iOS 测试安装', link: '/guide/ios-beta#testflight' },
+      { text: 'App Store 下载', link: 'https://apps.apple.com/app/id6824589542' },
       { text: '开发文档', link: '/dev/cli' },
       { text: '方案记录', link: '/decisions/' },
       { text: 'iOS 隐私政策', link: '/privacy' },

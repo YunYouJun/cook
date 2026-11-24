@@ -1,207 +1,531 @@
 <script setup lang="ts">
 import { iosVersion, links } from '../constants'
 import { productFaq } from '../structured-data'
+import AppStoreBadge from './AppStoreBadge.vue'
+import AppStoreQr from './AppStoreQr.vue'
 import BetaFeedbackGroup from './BetaFeedbackGroup.vue'
 
 const docs = [
-  { title: '使用指南', text: '从选食材到打开做法', link: '/guide/getting-started' },
-  { title: '一句话找菜', text: '描述食材、口味与忌口', link: '/guide/sentence-input' },
-  { title: '开发文档', text: 'CLI、菜谱数据与移动应用', link: '/dev/cli' },
-  { title: '方案记录', text: '了解产品背后的决定', link: '/decisions/' },
+  { icon: '🧭', title: '使用指南', text: '从选食材到打开做法，新手三分钟上手', link: '/guide/getting-started' },
+  { icon: '💬', title: '一句话找菜', text: '用大白话描述手头食材、口味与忌口', link: '/guide/sentence-input' },
+  { icon: '🛠️', title: '开发文档', text: 'CLI、MCP 工具、菜谱数据与原生客户端', link: '/dev/cli' },
+  { icon: '📝', title: '方案记录', text: '了解云食册产品演进背后的每一次取舍', link: '/decisions/' },
 ]
 </script>
 
 <template>
-  <section id="availability" class="services" aria-labelledby="availability-title">
-    <div>
-      <h2 id="availability-title" class="section-title">
-        现在，先做一顿饭
-      </h2>
-      <p class="section-lead">
-        食用手册网页版打开即用。云食册 iOS {{ iosVersion }} 已开放 TestFlight 外测，需要 iOS 17 / iPadOS 17 或更新版本。
-      </p>
-      <p><strong>首批开放 30 个体验名额，通过公开链接自助加入。</strong>可用名额以 TestFlight 页面为准；iOS 版尚未在 App Store 正式上架。</p>
-      <div class="service-actions">
-        <a class="service-button vp-raw" :href="links.testflight" target="_blank" rel="noopener noreferrer">安装 iOS 测试版</a>
-        <a class="service-link" :href="links.betaGuide">查看测试说明</a>
-        <a class="service-link vp-raw" :href="links.web" target="_self">打开网页版</a>
+  <section id="download" class="download-section" aria-labelledby="download-title" data-reveal>
+    <span id="availability" class="sr-anchor" aria-hidden="true" />
+    <div class="download-spotlight">
+      <div class="spotlight-copy">
+        <div class="app-identity">
+          <img class="app-squircle" src="/brand/cook-favicon.svg" width="56" height="56" alt="">
+          <div>
+            <span class="live-badge">
+              <span class="live-dot" aria-hidden="true" />
+              App Store 正式上架 · v{{ iosVersion }}
+            </span>
+            <p class="app-subtitle">
+              云食册 · 原食用手册
+            </p>
+          </div>
+        </div>
+
+        <h2 id="download-title" class="section-title">
+          今晚这顿饭，从云食册开始。
+        </h2>
+        <p class="spotlight-lead">
+          支持 iPhone 与 iPad（iOS 17 及以上），免费下载、免登录即用。无论在回家路上先翻菜单，还是在厨房里跟着步骤慢慢做，这盏小灯都随时为你亮着。
+        </p>
+
+        <div class="spotlight-actions">
+          <AppStoreBadge size="lg" />
+          <a class="web-fallback-btn vp-raw" :href="links.web" target="_self">
+            <span>打开网页版</span>
+            <span aria-hidden="true">↗</span>
+          </a>
+        </div>
       </div>
-      <BetaFeedbackGroup />
-      <p class="service-note">
-        以前在 cook.yunle.fun 用过网页版？<a class="service-link" href="/guide/web-domain">查看旧版数据导出与迁移说明</a>。
-      </p>
-      <p class="service-note">
-        微信原生 SDK 与微信登录尚未接入，仅为后续计划。可用功能与登录方式以实际版本及后续公告为准。
-      </p>
-    </div>
-    <div class="faq">
-      <h3 class="faq-title">
-        使用前，你可能想知道
-      </h3>
-      <details v-for="(item, index) in productFaq" :key="item.question" :open="index === 0">
-        <summary>{{ item.question }}</summary>
-        <p>{{ item.answer }}</p>
-      </details>
+
+      <div class="spotlight-qr">
+        <AppStoreQr />
+      </div>
     </div>
   </section>
 
-  <nav class="docs-links" aria-label="使用与开发文档">
-    <a v-for="doc in docs" :key="doc.link" :href="doc.link">
-      <strong>{{ doc.title }}</strong>
-      <span>{{ doc.text }}</span>
+  <section class="support-section" aria-label="常见问题与社区交流" data-reveal style="--reveal-delay: 80ms">
+    <div class="faq">
+      <h3 class="faq-title">
+        下载前，你可能想了解
+      </h3>
+      <div class="faq-list">
+        <details v-for="(item, index) in productFaq" :key="item.question" class="faq-item" :open="index === 0">
+          <summary>
+            <span>{{ item.question }}</span>
+            <svg class="faq-chevron" viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m6 8 4 4 4-4" />
+            </svg>
+          </summary>
+          <p>{{ item.answer }}</p>
+        </details>
+      </div>
+    </div>
+
+    <div class="community-stack">
+      <BetaFeedbackGroup />
+      <section id="contact" class="contact-card" aria-labelledby="contact-title">
+        <h2 id="contact-title" class="contact-title">
+          有建议，或者需要帮助？
+        </h2>
+        <p>产品问题、菜谱纠错、隐私与数据删除请求，都可以随时联系开发者。反馈时欢迎附上版本号与截图。</p>
+        <div class="contact-links">
+          <a href="mailto:me@yunyoujun.cn">me@yunyoujun.cn</a>
+          <a :href="links.support" target="_blank" rel="noopener noreferrer">前往云乐坊支持中心 ↗</a>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <div class="quiet-notes" data-reveal style="--reveal-delay: 90ms">
+    <span>想抢先体验测试版？查看 <a :href="links.betaGuide">TestFlight 尝鲜说明</a></span>
+    <span aria-hidden="true">·</span>
+    <a href="/guide/web-domain">旧版 cook.yunle.fun 数据迁移指南</a>
+    <span aria-hidden="true">·</span>
+    <span>注：微信原生登录尚未接入，基础功能免登录即用</span>
+  </div>
+
+  <nav class="docs-links" aria-label="使用与开发文档" data-reveal style="--reveal-delay: 100ms">
+    <a v-for="doc in docs" :key="doc.link" :href="doc.link" class="doc-card vp-raw">
+      <span class="doc-icon" aria-hidden="true">{{ doc.icon }}</span>
+      <div class="doc-body">
+        <strong>{{ doc.title }}</strong>
+        <span>{{ doc.text }}</span>
+      </div>
+      <span class="doc-arrow" aria-hidden="true">→</span>
     </a>
   </nav>
 
-  <section id="contact" class="contact" aria-labelledby="contact-title">
-    <div>
-      <h2 id="contact-title" class="section-title">
-        有建议，或者需要帮助？
-      </h2>
-      <p>产品问题、菜谱纠错、隐私与数据删除请求，都可以联系开发者。反馈时请写下版本、遇到的问题和必要的截图。</p>
-    </div>
-    <div class="contact-links">
-      <a href="mailto:me@yunyoujun.cn">me@yunyoujun.cn</a>
-      <a :href="links.support">前往云乐坊支持中心</a>
-    </div>
-  </section>
-
-  <div class="product-footer">
-    <p>运营主体：海州区云乐坊信息技术工作室<br>开发者 / 开源项目版权所有者：云游君（YunYouJun）<br>© 2022 云游君（YunYouJun）</p>
+  <footer class="product-footer">
+    <p>
+      运营主体：海州区云乐坊信息技术工作室<br>
+      开发者 / 开源项目版权所有者：云游君（YunYouJun）<br>
+      © 2022–2026 云游君（YunYouJun） · <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">苏ICP备2023020936号</a>
+    </p>
     <nav aria-label="法律与项目链接">
       <a href="/terms">用户协议</a>
       <a href="/privacy">iOS 隐私政策</a>
       <a href="/privacy-android">Android 隐私政策</a>
-      <a :href="links.github">开源项目与来源说明</a>
+      <a :href="links.github" target="_blank" rel="noopener noreferrer">开源项目与来源说明</a>
     </nav>
-  </div>
+  </footer>
 </template>
 
 <style scoped>
-.services {
-  display: grid;
-  gap: 48px;
+.download-section {
+  position: relative;
   padding: 96px 8px 0;
 }
-.services p,
-.contact p {
-  max-width: 44em;
-  line-height: 1.85;
-  margin-top: 20px;
+
+.sr-anchor {
+  position: absolute;
+  top: 0;
 }
-.service-actions {
+
+.download-spotlight {
+  display: grid;
+  gap: 32px;
+  align-items: center;
+  padding: clamp(28px, 4.5vw, 48px);
+  border-radius: 32px;
+  border: 1px solid var(--cook-glass-border);
+  background:
+    radial-gradient(64% 90% at 92% 14%, rgba(250, 204, 21, 0.2), transparent 65%),
+    radial-gradient(60% 80% at 10% 90%, rgba(249, 115, 22, 0.1), transparent 70%), var(--cook-surface-elevated);
+  box-shadow:
+    0 32px 68px -32px rgba(48, 36, 20, 0.22),
+    var(--cook-glass-shadow);
+}
+
+.dark .download-spotlight {
+  background:
+    radial-gradient(64% 90% at 92% 14%, rgba(251, 146, 60, 0.14), transparent 65%),
+    radial-gradient(60% 80% at 10% 90%, rgba(56, 189, 248, 0.14), transparent 70%), var(--cook-surface-elevated);
+}
+
+@media (min-width: 920px) {
+  .download-spotlight {
+    grid-template-columns: minmax(0, 1.35fr) auto;
+    gap: 48px;
+  }
+}
+
+.app-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.app-squircle {
+  width: 56px;
+  height: 56px;
+  border-radius: 15px;
+  box-shadow: 0 12px 24px -10px rgba(10, 122, 90, 0.45);
+}
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: var(--cook-leaf-soft);
+  color: var(--cook-leaf);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.app-subtitle {
+  margin-top: 5px;
+  color: var(--cook-hero-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.spotlight-lead {
+  margin-top: 16px;
+  max-width: 42em;
+  color: var(--cook-hero-muted);
+  font-size: 16px;
+  line-height: 1.8;
+  text-wrap: pretty;
+}
+
+.spotlight-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 20px;
+  gap: 14px;
   margin-top: 28px;
 }
-.service-button {
+
+.web-fallback-btn {
   display: inline-flex;
   align-items: center;
-  min-height: 48px;
-  padding: 8px 24px;
-  border-radius: var(--cook-control-radius);
-  background: var(--sky-2);
-  box-shadow: var(--cook-control-shadow);
-  color: var(--cook-action-text);
+  justify-content: center;
+  gap: 6px;
+  min-height: 56px;
+  padding: 0 22px;
+  border-radius: 16px;
+  border: 1px solid var(--cook-glass-border);
+  background: var(--cook-glass-bg);
+  color: var(--cook-hero-text);
+  font-size: 16px;
   font-weight: 600;
+  text-decoration: none;
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    color 0.22s ease;
 }
-.service-button:is(:hover, :focus-visible) {
-  color: var(--cook-action-text);
+
+.web-fallback-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--cook-leaf);
+  color: var(--cook-leaf);
 }
-.service-link,
+
+.spotlight-qr {
+  justify-self: center;
+}
+
+@media (max-width: 767px) {
+  .spotlight-qr {
+    display: none;
+  }
+  .spotlight-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+  .spotlight-actions :deep(.app-store-badge),
+  .web-fallback-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Support & FAQ */
+.support-section {
+  display: grid;
+  gap: 32px;
+  padding: 84px 8px 0;
+}
+
+@media (min-width: 920px) {
+  .support-section {
+    grid-template-columns: 1.15fr 0.95fr;
+    gap: 44px;
+    align-items: start;
+  }
+}
+
+.faq-title {
+  margin: 0 0 18px;
+  color: var(--cook-hero-text);
+  font-family: var(--cook-font-display);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.faq-list {
+  display: grid;
+  gap: 12px;
+}
+
+.faq-item {
+  padding: 16px 20px;
+  border-radius: 18px;
+  border: 1px solid var(--cook-glass-border);
+  background: var(--cook-glass-bg);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.faq-item[open] {
+  background: var(--cook-surface-elevated);
+  border-color: rgba(224, 159, 31, 0.45);
+}
+
+.faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--cook-hero-text);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-chevron {
+  flex-shrink: 0;
+  color: var(--cook-hero-muted);
+  transition: transform 0.25s ease;
+}
+
+.faq-item[open] .faq-chevron {
+  transform: rotate(180deg);
+  color: var(--cook-flame-2);
+}
+
+.faq-item p {
+  margin-top: 12px;
+  color: var(--cook-hero-muted);
+  font-size: 14px;
+  line-height: 1.78;
+  text-wrap: pretty;
+}
+
+.community-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.contact-card {
+  padding: 24px 22px;
+  border-radius: 22px;
+  border: 1px solid var(--cook-glass-border);
+  background: var(--cook-glass-bg);
+}
+
+.contact-title {
+  color: var(--cook-hero-text);
+  font-family: var(--cook-font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.contact-card p {
+  margin-top: 10px;
+  color: var(--cook-hero-muted);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.contact-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-top: 16px;
+}
+
 .contact-links a {
-  color: var(--vp-c-brand-1);
+  color: var(--cook-leaf);
+  font-size: 14px;
+  font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
-.service-note {
-  color: var(--vp-c-text-2);
-  font-size: 14px;
+
+.quiet-notes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 40px 8px 0;
+  color: var(--cook-hero-muted);
+  font-size: 12px;
+  line-height: 1.65;
 }
-.faq-title {
-  font-family: var(--cook-font-display);
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0 0 16px;
+
+.quiet-notes a {
+  color: var(--cook-leaf);
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
-.faq details {
-  border-bottom: 1px solid var(--vp-c-divider);
-  padding: 16px 0;
-}
-.faq summary {
-  cursor: pointer;
-  font-weight: 600;
-  min-height: 28px;
-}
-.faq p {
-  color: var(--vp-c-text-2);
-  font-size: 15px;
-  margin-top: 12px;
-}
+
+/* Docs Quick Grid */
 .docs-links {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px 32px;
-  margin: 80px 8px 0;
-  padding: 32px 0;
-  border-block: 1px solid var(--vp-c-divider);
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+  margin: 36px 8px 0;
 }
-.docs-links a {
+
+.doc-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid var(--cook-glass-border);
+  background: var(--cook-glass-bg);
+  text-decoration: none;
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    background-color 0.22s ease;
+}
+
+.doc-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--cook-leaf);
+  background: var(--cook-surface-elevated);
+}
+
+.doc-icon {
   display: grid;
-  gap: 6px;
-  padding: 8px 0;
-}
-.docs-links strong {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--cook-action-secondary);
   font-size: 18px;
 }
-.docs-links span {
-  font-size: 14px;
-  color: var(--vp-c-text-2);
-}
-.docs-links a:hover strong {
-  color: var(--vp-c-brand-1);
-}
-.contact {
+
+.doc-body {
   display: grid;
-  gap: 24px;
-  padding: 72px 8px 56px;
+  gap: 4px;
+  min-width: 0;
 }
-.contact-links {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  justify-content: center;
+
+.doc-body strong {
+  color: var(--cook-hero-text);
+  font-size: 16px;
+  font-weight: 650;
 }
+
+.doc-body span {
+  color: var(--cook-hero-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.doc-arrow {
+  margin-left: auto;
+  color: var(--cook-hero-muted);
+  transition:
+    transform 0.2s ease,
+    color 0.2s ease;
+}
+
+.doc-card:hover .doc-arrow {
+  transform: translateX(3px);
+  color: var(--cook-leaf);
+}
+
+/* Footer */
 .product-footer {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 24px;
-  padding: 24px 8px 40px;
-  border-top: 1px solid var(--vp-c-divider);
-  color: var(--vp-c-text-2);
+  margin-top: 56px;
+  padding: 28px 8px 44px;
+  border-top: 1px solid var(--cook-glass-border);
+  color: var(--cook-hero-muted);
   font-size: 14px;
   line-height: 1.85;
 }
+
 .product-footer nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 12px 22px;
   align-items: center;
 }
+
 .product-footer a {
+  color: inherit;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
-@media (min-width: 960px) {
-  .services {
-    grid-template-columns: 1.15fr 1fr;
-    gap: 64px;
+
+.product-footer a:hover {
+  color: var(--cook-leaf);
+}
+
+@media (max-width: 639px) {
+  .download-section,
+  .support-section {
+    padding: 68px 0 0;
   }
-  .contact {
-    grid-template-columns: 1.5fr 1fr;
-    gap: 64px;
+  .quiet-notes {
+    margin: 32px 0 0;
+  }
+  .docs-links {
+    margin: 28px 0 0;
+  }
+  .product-footer {
+    padding-inline: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .web-fallback-btn,
+  .faq-chevron,
+  .doc-card,
+  .doc-arrow {
+    transition: none;
+  }
+  .web-fallback-btn:hover,
+  .doc-card:hover {
+    transform: none;
   }
 }
 </style>
