@@ -27,10 +27,10 @@ const FRESH = [
 ]
 
 const chapters: { id: ChapterId, title: string, short: string, text: string, duration: number }[] = [
-  { id: 'pick', title: '点几样食材', short: '点食材', text: '点一下冰箱里有的，食材飞进篮子，能做几道马上跳出来。', duration: 8200 },
-  { id: 'sentence', title: '说一句话', short: '说句话', text: `打一句「${SENTENCE}」，自动拆成食材和口味。`, duration: 7600 },
-  { id: 'fridge', title: '快过期了提醒你', short: '临期提醒', text: '记下买回来的食材，主动开启提醒后，由设备在本地通知你。', duration: 8400 },
-  { id: 'random', title: '今天吃什么', short: '随机', text: '拿不定主意就摇一摇手机，换一道。', duration: 7400 },
+  { id: 'pick', title: '点几样手头食材', short: '点食材', text: '点一下手边现有的食材，它们会轻巧飞进篮子，能做几道菜马上跳出来。', duration: 8200 },
+  { id: 'sentence', title: '说一句大白话', short: '说句话', text: `打一句「${SENTENCE}」，自动帮你拆成食材与忌口口味。`, duration: 7600 },
+  { id: 'fridge', title: '食材快过期，温柔提醒你', short: '临期提醒', text: '记下刚买回来的蔬果食材，开启本地提醒后，在快到期前叫你吃掉它。', duration: 8400 },
+  { id: 'random', title: '纠结时摇一摇', short: '随机', text: '实在拿不定主意，就摇一摇手机，把晚餐交给一点小惊喜。', duration: 7400 },
 ]
 
 /** Own scene state and cancelable playback for the homepage phone demonstration. */

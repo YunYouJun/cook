@@ -154,7 +154,12 @@ describe('product site citation metadata', () => {
       'url': 'https://cook.yunyoujun.cn/',
       'isAccessibleForFree': true,
     })
-    expect(ios).toMatchObject({ '@id': 'https://cook.yunle.fun/#ios', 'name': '云食册', 'sameAs': ['https://testflight.apple.com/join/KTTJNhDh'] })
+    expect(ios).toMatchObject({
+      '@id': 'https://cook.yunle.fun/#ios',
+      'name': '云食册',
+      'downloadUrl': 'https://apps.apple.com/app/id6824589542',
+      'sameAs': ['https://apps.apple.com/app/id6824589542', 'https://testflight.apple.com/join/KTTJNhDh'],
+    })
     expect(faq).toMatchObject({
       mainEntity: productFaq.map(item => ({ name: item.question, acceptedAnswer: { text: item.answer } })),
     })

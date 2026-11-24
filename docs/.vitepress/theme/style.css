@@ -1,4 +1,4 @@
-/* A cloud kitchen welcome, followed by the quieter native app showcase. */
+/* Sunlit Cloud Kitchen warm cream palette, emerald brand accents, and docs spacing. */
 :root {
   --vp-c-brand-1: #2563eb;
   --vp-c-brand-2: #1d4ed8;
@@ -12,29 +12,44 @@
   --vp-c-brand-soft: rgba(124, 192, 255, 0.16);
 }
 .cook-landing {
-  --cook-font-body: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
-  --cook-font-display: 'Yuanti SC', 'YouYuan', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --cook-font-body:
+    'PingFang SC', -apple-system, BlinkMacSystemFont, 'Hiragino Sans GB', 'Helvetica Neue', 'Microsoft YaHei',
+    sans-serif;
+  --cook-font-display:
+    'SF Pro Display', 'PingFang SC', 'Hiragino Sans GB', -apple-system, BlinkMacSystemFont, 'Microsoft YaHei',
+    sans-serif;
   --cook-heading-weight: 700;
-  --cook-heading-spacing: 0;
+  --cook-heading-spacing: -0.025em;
   --sky-1: #82b5f2;
-  --sky-2: #3469e0;
-  --sky-3: #2552ba;
-  --cloud: #edf2ff;
+  --sky-2: #2f64d8;
+  --sky-3: #224cb0;
+  --cloud: #f4efe6;
   --yolk: #f2c84b;
-  --ink: #26385f;
-  --mist: #e2efff;
-  --cook-hero-background: #edf6ff;
-  --cook-hero-text: #163355;
-  --cook-hero-muted: #526b88;
-  --cook-panel-background: #f8fbff;
-  --cook-panel-border: #cfddeb;
-  --cook-chip-background: #fffefa;
-  --cook-chip-hover: #fff3cb;
-  --cook-chip-selected: #e4edff;
-  --cook-chip-selected-text: #284f9d;
-  --cook-chip-selected-border: #3469e0;
+  --ink: #263244;
+  --mist: #f7efe0;
+  --cook-leaf: #0a7a5a;
+  --cook-leaf-soft: rgba(12, 145, 107, 0.11);
+  --cook-flame-1: #f97316;
+  --cook-flame-2: #ea580c;
+  --cook-warm-glow: rgba(249, 115, 22, 0.18);
+  --cook-hero-background: #fffbf3;
+  --cook-hero-text: #1f2937;
+  --cook-hero-muted: #5b6472;
+  --cook-panel-background: rgba(255, 253, 248, 0.94);
+  --cook-panel-border: #e5d8c5;
+  --cook-glass-bg: rgba(255, 252, 246, 0.88);
+  --cook-glass-border: rgba(202, 184, 158, 0.45);
+  --cook-glass-shadow: 0 18px 42px -24px rgba(58, 42, 22, 0.16), 0 2px 8px -2px rgba(58, 42, 22, 0.06);
+  --cook-surface-elevated: #fffdf9;
+  --cook-chip-background: #fffefb;
+  --cook-chip-hover: #fff4cc;
+  --cook-chip-selected: #fff2c2;
+  --cook-chip-selected-text: #6b3d00;
+  --cook-chip-selected-border: #e09f1f;
+  --cook-check-bg: #d98a0b;
+  --cook-check-text: #ffffff;
   --cook-action-text: #fff;
-  --cook-action-secondary: #e1edfc;
+  --cook-action-secondary: rgba(247, 238, 223, 0.9);
   --cook-pot-fill: #83b8f6;
   --cook-control-radius: 18px;
   --cook-cloud-radius: 999px;
@@ -43,19 +58,24 @@
   --cook-cloud-offset: 10px;
   --cook-control-shadow: 0 3px 0 var(--cook-panel-border);
   --cook-panel-shadow: 0 5px 0 var(--cook-panel-border);
-  --cook-ticket-background: #fffdf7;
-  --cook-ticket-text: #253750;
-  --cook-ticket-muted: #667184;
-  --cook-ticket-dish: #f3eee3;
-  --cook-dock-shadow: #dae6f3;
+  --cook-ticket-background: #fffdf8;
+  --cook-ticket-text: #2a241c;
+  --cook-ticket-muted: #6c645a;
+  --cook-ticket-dish: #f6efe2;
+  --cook-dock-shadow: #ddd0bc;
   width: 100%;
   max-width: none;
   margin: 0;
   padding: 0 clamp(16px, 4vw, 64px);
-  background: var(--cook-hero-background);
+  background:
+    radial-gradient(64% 560px at 84% 4%, rgba(253, 224, 178, 0.56), transparent 72%),
+    radial-gradient(52% 480px at 14% 8%, rgba(205, 229, 255, 0.4), transparent 74%),
+    linear-gradient(180deg, #fffbf3 0%, #fdf6ea 38%, #faf4ea 72%, #fffaf2 100%);
   color: var(--vp-c-text-1);
   font-family: var(--cook-font-body);
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
 }
 /* Custom product sections own their spacing; prose defaults must not move UI elements. */
 .cook-landing :is(h1, h2, h3, p, ul, ol, li, figure, dl, dt, dd, summary, img) {
@@ -69,65 +89,122 @@
   border: 0;
 }
 .dark .cook-landing {
-  --sky-2: #a6bdff;
-  --sky-3: #c2d1ff;
+  --sky-2: #8fb4ff;
+  --sky-3: #b7cdff;
   --cloud: #35445e;
   --ink: #eef2ff;
-  --mist: #303b53;
-  --cook-hero-background: #202b43;
-  --cook-hero-text: #f4f3eb;
-  --cook-hero-muted: #bec7db;
-  --cook-panel-background: #29364d;
-  --cook-panel-border: #53617b;
-  --cook-chip-background: #33415c;
-  --cook-chip-hover: #405171;
+  --mist: #2d3a52;
+  --cook-leaf: #6ee7b7;
+  --cook-leaf-soft: rgba(110, 231, 183, 0.14);
+  --cook-flame-1: #fb923c;
+  --cook-flame-2: #ea580c;
+  --cook-warm-glow: rgba(251, 146, 60, 0.18);
+  --cook-hero-background: #141b29;
+  --cook-hero-text: #f5f2eb;
+  --cook-hero-muted: #b8c2d6;
+  --cook-panel-background: rgba(29, 39, 59, 0.9);
+  --cook-panel-border: #485672;
+  --cook-glass-bg: rgba(24, 33, 51, 0.84);
+  --cook-glass-border: rgba(148, 178, 214, 0.2);
+  --cook-glass-shadow: 0 20px 48px -24px rgba(5, 10, 20, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --cook-surface-elevated: rgba(31, 41, 62, 0.94);
+  --cook-chip-background: #2b3750;
+  --cook-chip-hover: #394868;
   --cook-chip-selected: #f2cd65;
-  --cook-chip-selected-text: #26385f;
+  --cook-chip-selected-text: #2a1d06;
   --cook-chip-selected-border: #f2cd65;
-  --cook-action-text: #233457;
-  --cook-action-secondary: #394863;
+  --cook-check-bg: #b45309;
+  --cook-check-text: #ffffff;
+  --cook-action-text: #1b2844;
+  --cook-action-secondary: rgba(50, 62, 88, 0.88);
   --cook-pot-fill: #8db6ed;
   --cook-panel-shadow: none;
-  --cook-ticket-background: #2b3441;
-  --cook-ticket-text: #e7edf7;
-  --cook-ticket-muted: #bec8d8;
-  --cook-ticket-dish: #3d4758;
-  --cook-dock-shadow: #0c192c;
+  --cook-ticket-background: #252f42;
+  --cook-ticket-text: #eef2fb;
+  --cook-ticket-muted: #b4bfd4;
+  --cook-ticket-dish: #364257;
+  --cook-dock-shadow: #0b111e;
+  background:
+    radial-gradient(58% 520px at 82% 5%, rgba(251, 146, 60, 0.12), transparent 72%),
+    radial-gradient(54% 520px at 16% 12%, rgba(96, 165, 250, 0.1), transparent 74%),
+    linear-gradient(180deg, #141b29 0%, #172031 44%, #161e2e 74%, #121824 100%);
 }
 
 .cook-landing .landing-header,
 .cook-landing #product-main {
-  max-width: 1280px;
+  max-width: 1240px;
   margin-inline: auto;
 }
 .cook-landing .landing-details {
   --cook-font-display: var(--cook-font-body);
-  --cook-heading-weight: 650;
-  --cook-heading-spacing: -0.035em;
+  --cook-heading-weight: 700;
+  --cook-heading-spacing: -0.025em;
   max-width: 1120px;
   margin-inline: auto;
 }
 .cook-landing .screens,
-.cook-landing .app-only {
+.cook-landing .app-only,
+.cook-landing .warm-story {
   padding: 96px 8px 0;
 }
+.cook-landing .section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--cook-glass-border);
+  background: var(--cook-glass-bg);
+  color: var(--cook-hero-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
 .cook-landing .section-title {
-  margin: 0;
+  margin: 14px 0 0;
+  color: var(--cook-hero-text);
   font-family: var(--cook-font-display);
-  font-size: clamp(32px, 4.5vw, 44px);
+  font-size: clamp(32px, 4vw, 44px);
   font-weight: var(--cook-heading-weight);
-  line-height: 1.25;
+  line-height: 1.22;
   letter-spacing: var(--cook-heading-spacing);
+  text-wrap: balance;
 }
 .cook-landing .section-lead {
-  margin: 12px 0 0;
-  font-size: 17px;
+  margin: 14px 0 0;
+  max-width: 44em;
+  font-size: 16px;
   line-height: 1.8;
-  color: var(--vp-c-text-2);
+  color: var(--cook-hero-muted);
+  text-wrap: pretty;
 }
 .cook-landing :is(a, button, summary):focus-visible {
-  outline: 3px solid var(--vp-c-brand-1);
+  outline: 3px solid var(--cook-leaf);
   outline-offset: 4px;
+}
+
+.cook-landing :is(#kitchen, #screens, #highlights, #download, #availability, #contact) {
+  scroll-margin-top: 96px;
+}
+
+/* Progressive scroll reveals */
+.cook-landing.reveal-ready [data-reveal]:not([data-revealed='true']) {
+  opacity: 0;
+  transform: translateY(20px);
+}
+.cook-landing.reveal-ready [data-reveal] {
+  transition:
+    opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms),
+    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cook-landing.reveal-ready [data-reveal],
+  .cook-landing.reveal-ready [data-reveal]:not([data-revealed='true']) {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 /* VitePress starts centering the sidebar at 90rem. Use the same width for the header. */
@@ -239,5 +316,13 @@
 @media (max-width: 639px) {
   .cook-landing {
     padding-inline: 16px;
+  }
+  .cook-landing .screens,
+  .cook-landing .app-only,
+  .cook-landing .warm-story {
+    padding: 68px 0 0;
+  }
+  .cook-landing .section-lead {
+    font-size: 16px;
   }
 }

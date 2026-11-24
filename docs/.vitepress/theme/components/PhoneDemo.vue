@@ -78,7 +78,10 @@ const icons = {
                 :style="{ animationDuration: `${chapter.duration}ms` }"
               />
             </span>
-            <span class="chapter-title"><span class="is-long">{{ chapter.title }}</span><span class="is-short">{{ chapter.short }}</span></span>
+            <span class="chapter-head">
+              <span class="chapter-num" aria-hidden="true">0{{ index + 1 }}</span>
+              <span class="chapter-title"><span class="is-long">{{ chapter.title }}</span><span class="is-short">{{ chapter.short }}</span></span>
+            </span>
             <span class="chapter-text">{{ chapter.text }}</span>
           </button>
         </li>
@@ -88,187 +91,197 @@ const icons = {
       </p>
       <div class="demo-foot">
         <button type="button" class="pause" @click="togglePause">
-          {{ reduced ? '查看本节结果' : running ? '暂停演示' : '播放 / 重播本节' }}
+          <svg v-if="running" viewBox="0 0 20 20" width="14" height="14" fill="currentColor" aria-hidden="true">
+            <rect x="5" y="4" width="3.5" height="12" rx="1" />
+            <rect x="11.5" y="4" width="3.5" height="12" rx="1" />
+          </svg>
+          <svg v-else viewBox="0 0 20 20" width="14" height="14" fill="currentColor" aria-hidden="true">
+            <path d="M6 4.5v11l9-5.5-9-5.5Z" />
+          </svg>
+          <span>{{ reduced ? '查看本节结果' : running ? '暂停演示' : playback === 'finished' ? '重播本节演示' : '播放本节演示' }}</span>
         </button>
-        <span>网页模拟界面，使用真实菜谱数据；不是 App 录屏。每次播放一节，暂停后重播。</span>
+        <span class="demo-caption">真实菜谱数据驱动，点左侧章节即可切换场景。</span>
         <noscript>演示需要 JavaScript；下方可查看真实截图。</noscript>
       </div>
     </div>
 
-    <div class="phone" :class="{ 'is-shaking': shaking }" aria-hidden="true">
-      <div ref="screenEl" class="screen">
-        <div class="island" />
-        <div class="status">
-          <span>9:41</span>
-          <span class="status-icons">
-            <svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" /><rect x="5" y="5.5" width="3" height="6.5" rx="1" /><rect x="10" y="3" width="3" height="9" rx="1" /><rect x="15" y="0" width="3" height="12" rx="1" /></svg>
-            <svg viewBox="0 0 26 12"><rect x="0.5" y="0.5" width="22" height="11" rx="3.5" fill="none" stroke="currentColor" opacity="0.4" /><rect x="2" y="2" width="17" height="8" rx="2" /><rect x="24" y="4" width="1.6" height="4" rx="0.8" opacity="0.4" /></svg>
-          </span>
-        </div>
+    <div class="phone-stage">
+      <div class="phone-halo" :class="`is-${chapters[active]!.id}`" aria-hidden="true" />
+      <div class="phone" :class="{ 'is-shaking': shaking }" aria-hidden="true">
+        <div ref="screenEl" class="screen">
+          <div class="island" />
+          <div class="status">
+            <span>9:41</span>
+            <span class="status-icons">
+              <svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" /><rect x="5" y="5.5" width="3" height="6.5" rx="1" /><rect x="10" y="3" width="3" height="9" rx="1" /><rect x="15" y="0" width="3" height="12" rx="1" /></svg>
+              <svg viewBox="0 0 26 12"><rect x="0.5" y="0.5" width="22" height="11" rx="3.5" fill="none" stroke="currentColor" opacity="0.4" /><rect x="2" y="2" width="17" height="8" rx="2" /><rect x="24" y="4" width="1.6" height="4" rx="0.8" opacity="0.4" /></svg>
+            </span>
+          </div>
 
-        <Transition :name="transitionName">
-          <section v-if="screen === 'cook'" key="cook" class="scr">
-            <div class="toolbar">
-              <span class="round"><svg viewBox="0 0 24 24"><path :d="icons.filter" /></svg></span>
-              <span class="capsule" :class="{ 'is-dim': !selected.length }">清空</span>
-            </div>
-            <h3 class="large-title">
-              做菜
-            </h3>
-            <div class="search" data-demo="search" :class="{ 'is-focused': searching }">
-              <svg viewBox="0 0 24 24"><path :d="icons.search" /></svg>
-              <span v-if="searching" class="search-text">{{ query }}<i class="caret" /></span>
-              <span v-else class="search-placeholder">说说有什么，如：土豆和鸡蛋，不要辣</span>
-            </div>
-            <Transition name="notice">
-              <div v-if="notice" class="card notice">
-                <svg viewBox="0 0 24 24"><path :d="icons.check" /></svg>
-                <span>{{ notice }}</span>
+          <Transition :name="transitionName">
+            <section v-if="screen === 'cook'" key="cook" class="scr">
+              <div class="toolbar">
+                <span class="round"><svg viewBox="0 0 24 24"><path :d="icons.filter" /></svg></span>
+                <span class="capsule" :class="{ 'is-dim': !selected.length }">清空</span>
               </div>
-            </Transition>
-            <template v-for="group in stuffGroups.slice(0, 2)" :key="group.title">
-              <p class="group-title">
-                {{ group.title }}
-              </p>
-              <div class="card chip-grid">
-                <span
-                  v-for="item in group.items"
-                  :key="item.name"
-                  class="chip"
-                  :class="{ 'is-on': selected.includes(item.name) }"
-                  :data-demo="`chip-${item.name}`"
-                >
-                  <i>{{ item.emoji }}</i>{{ item.name }}
-                </span>
+              <h3 class="large-title">
+                做菜
+              </h3>
+              <div class="search" data-demo="search" :class="{ 'is-focused': searching }">
+                <svg viewBox="0 0 24 24"><path :d="icons.search" /></svg>
+                <span v-if="searching" class="search-text">{{ query }}<i class="caret" /></span>
+                <span v-else class="search-placeholder">说说有什么，如：土豆和鸡蛋，不要辣</span>
               </div>
-            </template>
-            <div class="see-wrap">
-              <span
-                :key="bounceKey"
-                class="see"
-                :class="{ 'is-off': !selected.length, 'is-bounce': bounceKey > 0 }"
-                data-demo="see"
-              >
-                <span v-if="basket.length" class="basket">
-                  <i v-for="name in basket" :key="name">{{ emojiOf(name) }}</i>
-                </span>
-                <span v-if="selected.length">看看能做什么（<b class="count">{{ displayCount }}</b>）</span>
-                <template v-else>先选几样食材</template>
-              </span>
-            </div>
-          </section>
-
-          <section v-else-if="screen === 'results'" key="results" class="scr">
-            <div class="toolbar">
-              <span class="round"><svg viewBox="0 0 24 24"><path :d="icons.back" /></svg></span>
-            </div>
-            <h3 class="large-title">
-              能做的菜
-            </h3>
-            <div class="card cell">
-              <span>推荐方式</span>
-              <span class="secondary">全部推荐</span>
-            </div>
-            <p class="footnote">
-              已选：{{ resultStuff.join('、') }}<template v-if="noSpicy">
-                ；不吃辣
-              </template>
-            </p>
-            <template v-for="group in resultGroups" :key="group.label">
-              <p class="group-title">
-                {{ group.label }}
-              </p>
-              <div class="card">
-                <div v-for="{ match, index } in group.items" :key="match.recipe.id ?? `${match.recipe.name}-${index}`" class="row" :style="{ '--i': index }">
-                  <span class="row-emoji">{{ thumbnail(match.recipe) }}</span>
-                  <span class="row-body">
-                    <b>{{ match.recipe.name }}</b>
-                    <small>{{ meta(match.recipe) }}</small>
-                    <small v-if="match.missingStuff.length" class="missing">还缺 {{ match.missingStuff.join('、') }}</small>
+              <Transition name="notice">
+                <div v-if="notice" class="card notice">
+                  <svg viewBox="0 0 24 24"><path :d="icons.check" /></svg>
+                  <span>{{ notice }}</span>
+                </div>
+              </Transition>
+              <template v-for="group in stuffGroups.slice(0, 2)" :key="group.title">
+                <p class="group-title">
+                  {{ group.title }}
+                </p>
+                <div class="card chip-grid">
+                  <span
+                    v-for="item in group.items"
+                    :key="item.name"
+                    class="chip"
+                    :class="{ 'is-on': selected.includes(item.name) }"
+                    :data-demo="`chip-${item.name}`"
+                  >
+                    <i>{{ item.emoji }}</i>{{ item.name }}
                   </span>
-                  <svg class="row-next" viewBox="0 0 24 24"><path :d="icons.next" /></svg>
+                </div>
+              </template>
+              <div class="see-wrap">
+                <span
+                  :key="bounceKey"
+                  class="see"
+                  :class="{ 'is-off': !selected.length, 'is-bounce': bounceKey > 0 }"
+                  data-demo="see"
+                >
+                  <span v-if="basket.length" class="basket">
+                    <i v-for="name in basket" :key="name">{{ emojiOf(name) }}</i>
+                  </span>
+                  <span v-if="selected.length">看看能做什么（<b class="count">{{ displayCount }}</b>）</span>
+                  <template v-else>先选几样食材</template>
+                </span>
+              </div>
+            </section>
+
+            <section v-else-if="screen === 'results'" key="results" class="scr">
+              <div class="toolbar">
+                <span class="round"><svg viewBox="0 0 24 24"><path :d="icons.back" /></svg></span>
+              </div>
+              <h3 class="large-title">
+                能做的菜
+              </h3>
+              <div class="card cell">
+                <span>推荐方式</span>
+                <span class="secondary">全部推荐</span>
+              </div>
+              <p class="footnote">
+                已选：{{ resultStuff.join('、') }}<template v-if="noSpicy">
+                  ；不吃辣
+                </template>
+              </p>
+              <template v-for="group in resultGroups" :key="group.label">
+                <p class="group-title">
+                  {{ group.label }}
+                </p>
+                <div class="card">
+                  <div v-for="{ match, index } in group.items" :key="match.recipe.id ?? `${match.recipe.name}-${index}`" class="row" :style="{ '--i': index }">
+                    <span class="row-emoji">{{ thumbnail(match.recipe) }}</span>
+                    <span class="row-body">
+                      <b>{{ match.recipe.name }}</b>
+                      <small>{{ meta(match.recipe) }}</small>
+                      <small v-if="match.missingStuff.length" class="missing">还缺 {{ match.missingStuff.join('、') }}</small>
+                    </span>
+                    <svg class="row-next" viewBox="0 0 24 24"><path :d="icons.next" /></svg>
+                  </div>
+                </div>
+              </template>
+            </section>
+
+            <section v-else-if="screen === 'fridge'" key="fridge" class="scr">
+              <div class="toolbar is-end">
+                <span class="round"><svg viewBox="0 0 24 24"><path :d="icons.plus" /></svg></span>
+              </div>
+              <h3 class="large-title">
+                冰箱
+              </h3>
+              <div class="group-head">
+                <p class="group-title">
+                  快过期
+                </p>
+                <span class="link" data-demo="use-soon">只用这几样做菜</span>
+              </div>
+              <div class="card">
+                <div v-for="item in SOON" :key="item.name" class="row">
+                  <span class="row-emoji is-small">{{ emojiOf(item.name) }}</span>
+                  <span class="row-body">
+                    <b>{{ item.name }}</b>
+                    <small>{{ addedText(item.added) }}</small>
+                  </span>
+                  <span class="expiry is-soon">{{ item.label }}</span>
                 </div>
               </div>
-            </template>
-          </section>
-
-          <section v-else-if="screen === 'fridge'" key="fridge" class="scr">
-            <div class="toolbar is-end">
-              <span class="round"><svg viewBox="0 0 24 24"><path :d="icons.plus" /></svg></span>
-            </div>
-            <h3 class="large-title">
-              冰箱
-            </h3>
-            <div class="group-head">
+              <p class="footnote">
+                今天到后天到期的，先用掉。
+              </p>
               <p class="group-title">
-                快过期
+                还新鲜
               </p>
-              <span class="link" data-demo="use-soon">只用这几样做菜</span>
-            </div>
-            <div class="card">
-              <div v-for="item in SOON" :key="item.name" class="row">
-                <span class="row-emoji is-small">{{ emojiOf(item.name) }}</span>
-                <span class="row-body">
-                  <b>{{ item.name }}</b>
-                  <small>{{ addedText(item.added) }}</small>
-                </span>
-                <span class="expiry is-soon">{{ item.label }}</span>
+              <div class="card">
+                <div v-for="item in FRESH" :key="item.name" class="row">
+                  <span class="row-emoji is-small">{{ emojiOf(item.name) }}</span>
+                  <span class="row-body">
+                    <b>{{ item.name }}</b>
+                    <small>{{ addedText(item.added) }}</small>
+                  </span>
+                  <span class="expiry">{{ item.label }}</span>
+                </div>
               </div>
-            </div>
-            <p class="footnote">
-              今天到后天到期的，先用掉。
-            </p>
-            <p class="group-title">
-              还新鲜
-            </p>
-            <div class="card">
-              <div v-for="item in FRESH" :key="item.name" class="row">
-                <span class="row-emoji is-small">{{ emojiOf(item.name) }}</span>
-                <span class="row-body">
-                  <b>{{ item.name }}</b>
-                  <small>{{ addedText(item.added) }}</small>
-                </span>
-                <span class="expiry">{{ item.label }}</span>
-              </div>
-            </div>
-          </section>
+            </section>
 
-          <section v-else key="random" class="scr scr-random">
-            <h3 class="large-title">
-              今天吃什么
-            </h3>
-            <div class="rand-card">
-              <span :key="tossKey" class="rand-emoji" :class="{ 'is-toss': tossKey > 0 }">{{ shuffleEmoji || thumbnail(card) }}</span>
-              <b class="rand-name" :class="{ 'is-redacted': shuffleEmoji }">{{ card.name }}</b>
-              <small :class="{ 'is-redacted': shuffleEmoji }">{{ meta(card) }}</small>
-              <span class="link" :style="{ opacity: shuffleEmoji ? 0 : 1 }">看做法 ›</span>
+            <section v-else key="random" class="scr scr-random">
+              <h3 class="large-title">
+                今天吃什么
+              </h3>
+              <div class="rand-card">
+                <span :key="tossKey" class="rand-emoji" :class="{ 'is-toss': tossKey > 0 }">{{ shuffleEmoji || thumbnail(card) }}</span>
+                <b class="rand-name" :class="{ 'is-redacted': shuffleEmoji }">{{ card.name }}</b>
+                <small :class="{ 'is-redacted': shuffleEmoji }">{{ meta(card) }}</small>
+                <span class="link" :style="{ opacity: shuffleEmoji ? 0 : 1 }">看做法 ›</span>
+              </div>
+              <span class="roll" data-demo="roll">
+                <svg viewBox="0 0 24 24"><path :d="icons.dice" /></svg>换一道
+              </span>
+            </section>
+          </Transition>
+
+          <Transition name="banner">
+            <div v-if="banner" class="banner">
+              <img src="/brand/cook-favicon.svg" alt="" width="20" height="20">
+              <div>
+                <p class="banner-head">
+                  <b>冰箱里有食材快到期了</b><span>现在</span>
+                </p>
+                <p>豆腐今天到期，菠菜明天到期，看看能做什么吧。</p>
+              </div>
             </div>
-            <span class="roll" data-demo="roll">
-              <svg viewBox="0 0 24 24"><path :d="icons.dice" /></svg>换一道
+          </Transition>
+
+          <nav class="tabbar">
+            <span v-for="item in tabs" :key="item.id" class="tab" :class="{ 'is-on': tab === item.id }">
+              <svg viewBox="0 0 24 24"><path :d="item.icon" /></svg>
+              <small>{{ item.label }}</small>
             </span>
-          </section>
-        </Transition>
+          </nav>
 
-        <Transition name="banner">
-          <div v-if="banner" class="banner">
-            <img src="/brand/cook-app-icon.svg" alt="" width="20" height="20">
-            <div>
-              <p class="banner-head">
-                <b>冰箱里有食材快到期了</b><span>现在</span>
-              </p>
-              <p>豆腐今天到期，菠菜明天到期，看看能做什么吧。</p>
-            </div>
-          </div>
-        </Transition>
-
-        <nav class="tabbar">
-          <span v-for="item in tabs" :key="item.id" class="tab" :class="{ 'is-on': tab === item.id }">
-            <svg viewBox="0 0 24 24"><path :d="item.icon" /></svg>
-            <small>{{ item.label }}</small>
-          </span>
-        </nav>
-
-        <span v-if="touch.n" :key="touch.n" class="touch" :style="{ left: `${touch.x}px`, top: `${touch.y}px` }" />
+          <span v-if="touch.n" :key="touch.n" class="touch" :style="{ left: `${touch.x}px`, top: `${touch.y}px` }" />
+        </div>
       </div>
     </div>
   </div>
@@ -278,17 +291,17 @@ const icons = {
 .demo {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 32px;
+  gap: 36px;
   justify-items: center;
 }
 
 @media (min-width: 960px) {
   .demo {
-    grid-template-columns: minmax(0, 400px) auto;
+    grid-template-columns: minmax(0, 440px) auto;
     justify-content: center;
     align-items: center;
     justify-items: stretch;
-    gap: 120px;
+    gap: 56px;
   }
 }
 
@@ -296,7 +309,7 @@ const icons = {
 
 .demo-side {
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
 }
 
 .chapters {
@@ -311,7 +324,7 @@ const icons = {
 @media (min-width: 960px) {
   .chapters {
     grid-template-columns: 1fr;
-    gap: 4px;
+    gap: 10px;
   }
 }
 
@@ -324,15 +337,32 @@ const icons = {
   display: grid;
   gap: 8px;
   width: 100%;
-  padding: 0;
+  padding: 8px 6px;
+  border-radius: 16px;
+  border: 1px solid transparent;
   text-align: left;
-  color: var(--vp-c-text-2);
+  color: var(--cook-hero-muted);
   cursor: pointer;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (min-width: 960px) {
   .chapter {
-    padding: 16px 0 18px;
+    padding: 15px 18px 16px;
+    background: var(--cook-glass-bg);
+    border-color: var(--cook-glass-border);
+  }
+  .chapter:hover {
+    transform: translateX(4px);
+    border-color: var(--sky-2);
+  }
+  .chapter.is-active {
+    background: var(--cook-surface-elevated);
+    border-color: var(--sky-2);
+    box-shadow: var(--cook-glass-shadow);
   }
 }
 
@@ -348,7 +378,7 @@ const icons = {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: var(--vp-c-brand-1);
+  background: var(--sky-2);
   transform-origin: left;
   animation: fill linear both;
 }
@@ -363,16 +393,46 @@ const icons = {
   }
 }
 
+.chapter-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chapter-num {
+  display: none;
+  place-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--cook-action-secondary);
+  color: var(--sky-2);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 960px) {
+  .chapter-num {
+    display: grid;
+  }
+}
+
+.chapter.is-active .chapter-num {
+  background: var(--sky-2);
+  color: var(--cook-action-text);
+}
+
 .chapter-title {
   font-family: var(--cook-font-display);
-  font-size: 15px;
+  font-size: 14px;
+  font-weight: 650;
   line-height: 1.3;
   transition: color 0.2s ease;
 }
 
 .chapter.is-active .chapter-title,
 .chapter:hover .chapter-title {
-  color: var(--vp-c-text-1);
+  color: var(--cook-hero-text);
 }
 
 .chapter-title .is-long {
@@ -380,10 +440,12 @@ const icons = {
 }
 
 @media (min-width: 960px) {
+  .chapter-title {
+    font-size: 19px;
+  }
   .chapter-title .is-long {
     display: inline;
   }
-
   .chapter-title .is-short {
     display: none;
   }
@@ -391,15 +453,12 @@ const icons = {
 
 .chapter-text {
   display: none;
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: 14.5px;
+  line-height: 1.68;
+  color: var(--cook-hero-muted);
 }
 
 @media (min-width: 960px) {
-  .chapter-title {
-    font-size: 24px;
-  }
-
   .chapter-text {
     display: block;
     max-height: 0;
@@ -409,7 +468,6 @@ const icons = {
       max-height 0.35s ease,
       opacity 0.35s ease;
   }
-
   .chapter.is-active .chapter-text {
     max-height: 6em;
     opacity: 1;
@@ -419,15 +477,14 @@ const icons = {
 .chapter:focus-visible {
   outline: 3px solid var(--vp-c-brand-1);
   outline-offset: 4px;
-  border-radius: 4px;
 }
 
 .chapter-now {
-  min-height: 3.4em;
-  margin: 16px 0 0;
-  font-size: 15px;
-  line-height: 1.7;
-  color: var(--vp-c-text-2);
+  min-height: 3.2em;
+  margin: 14px 0 0;
+  font-size: 14.5px;
+  line-height: 1.68;
+  color: var(--cook-hero-muted);
 }
 
 @media (min-width: 960px) {
@@ -440,29 +497,41 @@ const icons = {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 16px;
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--vp-c-text-3);
+  gap: 10px 16px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: var(--cook-hero-muted);
 }
 
 @media (min-width: 960px) {
   .demo-foot {
-    margin-top: 24px;
+    margin-top: 22px;
   }
 }
 
 .pause {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   min-height: 44px;
-  padding: 4px 12px;
+  padding: 6px 16px;
   border-radius: 999px;
+  border: 1px solid var(--cook-glass-border);
+  background: var(--cook-surface-elevated);
+  box-shadow: var(--cook-glass-shadow);
+  color: var(--cook-hero-text);
   font-size: 13px;
-  color: var(--vp-c-text-2);
-  box-shadow: inset 0 0 0 1px var(--vp-c-divider);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .pause:hover {
-  color: var(--vp-c-text-1);
+  transform: translateY(-1px);
+  border-color: var(--sky-2);
+  color: var(--sky-2);
 }
 
 .pause:focus-visible {
@@ -470,7 +539,43 @@ const icons = {
   outline-offset: 2px;
 }
 
-/* ---------- 手机 ---------- */
+.demo-caption {
+  line-height: 1.5;
+}
+
+/* ---------- 手机与氛围光晕 ---------- */
+
+.phone-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.phone-halo {
+  position: absolute;
+  inset: -12% -18%;
+  border-radius: 50%;
+  filter: blur(42px);
+  opacity: 0.72;
+  transition: background 0.6s ease;
+  pointer-events: none;
+}
+
+.phone-halo.is-pick {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.26), transparent 68%);
+}
+
+.phone-halo.is-sentence {
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.26), transparent 68%);
+}
+
+.phone-halo.is-fridge {
+  background: radial-gradient(circle, rgba(47, 107, 69, 0.24), transparent 68%);
+}
+
+.phone-halo.is-random {
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.25), transparent 68%);
+}
 
 .phone {
   --p-bg: #f2f2f7;
@@ -483,6 +588,8 @@ const icons = {
   --p-orange: #f08700;
   --p-glass: rgba(255, 255, 255, 0.72);
 
+  position: relative;
+  z-index: 1;
   flex: none;
   width: 316px;
   max-width: 100%;
@@ -491,7 +598,7 @@ const icons = {
   background: #11161f;
   box-shadow:
     inset 0 0 0 1.5px #3a4352,
-    0 40px 80px -40px rgba(15, 37, 71, 0.55);
+    0 40px 80px -36px rgba(15, 37, 71, 0.55);
 }
 
 .dark .phone {
@@ -507,7 +614,8 @@ const icons = {
 
   box-shadow:
     inset 0 0 0 1.5px #3a4352,
-    0 0 0 1px rgba(124, 192, 255, 0.12);
+    0 24px 60px -24px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(124, 192, 255, 0.14);
 }
 
 .phone.is-shaking {

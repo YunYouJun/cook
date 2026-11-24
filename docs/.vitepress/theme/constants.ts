@@ -1,5 +1,8 @@
-/** Public product destinations; TestFlight URL verified after opening the release gate. */
+export const appStoreId = '6824589542'
+
+/** Public product destinations; App Store is live at id6824589542. */
 export const links = {
+  appStore: `https://apps.apple.com/app/id${appStoreId}`,
   web: 'https://cook.yunyoujun.cn/',
   testflight: 'https://testflight.apple.com/join/KTTJNhDh',
   betaGuide: '/guide/ios-beta#testflight',
@@ -10,4 +13,4 @@ export const links = {
   github: 'https://github.com/YunYouJun/cook',
 }
 
-export const iosVersion = '2.0.0'
+export const iosVersion = '2.0.1'

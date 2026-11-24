@@ -1,119 +1,227 @@
 <script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, shallowRef } from 'vue'
+import FeatureBento from './FeatureBento.vue'
 import PhoneDemo from './PhoneDemo.vue'
 
 const screens = [
-  { file: '2-cook-selected', alt: '做菜页：已选土豆、番茄和鸡蛋，底部按钮显示能做 239 道' },
-  { file: '4-results', alt: '能做的菜列表：6 阶番茄炒蛋、番茄炒蛋、酱土豆' },
-  { file: '5-detail', alt: '番茄炒蛋详情：已有食材、做法和标签、去 B 站看做法' },
-  { file: '8-random', alt: '今天吃什么：随机抽到胡萝卜炒肉' },
+  { file: '2-cook-selected', label: '食材快选', alt: '做菜页：已选土豆、番茄和鸡蛋，底部按钮显示能做 239 道' },
+  { file: '4-results', label: '即时匹配', alt: '能做的菜列表：6 阶番茄炒蛋、番茄炒蛋、酱土豆' },
+  { file: '5-detail', label: '菜谱详情', alt: '番茄炒蛋详情：已有食材、做法和标签、去 B 站看做法' },
+  { file: '8-random', label: '今天吃什么', alt: '今天吃什么：随机抽到胡萝卜炒肉' },
 ]
 
-const appOnly = [
-  { emoji: '📴', title: '本地菜谱与正文', text: 'iOS 版的本地菜谱与内置文字做法可离线阅读，配图和外部视频需要网络。' },
-  { emoji: '📒', title: '私人菜谱', text: '记下自己的拿手菜，主动导入、导出文件保留备份。私人菜谱不会自动公开。' },
-  { emoji: '☁️', title: '数据与备份', text: '记录保存在本机。iCloud 同步仍待生产环境与双设备验收，不作为已验证能力承诺；与网页版不会自动同步。' },
-  { emoji: '📐', title: 'iPad 和横屏', text: '宽屏时左边选食材、右边出结果，深色模式和大字号也照顾到了。' },
-]
+const lightboxIndex = shallowRef<number | null>(null)
+const currentShot = computed(() => lightboxIndex.value === null ? null : screens[lightboxIndex.value] ?? null)
+
+function openShot(index: number) {
+  lightboxIndex.value = index
+}
+
+function closeLightbox() {
+  lightboxIndex.value = null
+}
+
+function stepShot(delta: number) {
+  if (lightboxIndex.value === null)
+    return
+  lightboxIndex.value = (lightboxIndex.value + delta + screens.length) % screens.length
+}
+
+function onKeydown(event: KeyboardEvent) {
+  if (lightboxIndex.value === null)
+    return
+  if (event.key === 'Escape')
+    closeLightbox()
+  else if (event.key === 'ArrowLeft')
+    stepShot(-1)
+  else if (event.key === 'ArrowRight')
+    stepShot(1)
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
   <div>
     <section id="screens" class="screens" aria-labelledby="screens-title">
-      <h2 id="screens-title" class="section-title">
-        装进口袋的食用手册
-      </h2>
-      <p class="section-lead">
-        还是熟悉的找菜方式，换成了 iPhone 上顺手的样子。
-      </p>
-      <p class="simulation-label">
-        网页交互模拟 · 使用真实菜谱数据，点击章节或播放按钮开始。
-      </p>
-      <PhoneDemo class="demo-block" />
-      <figure class="shots">
-        <ul class="shot-row" tabindex="0" aria-label="iOS 开发版本真实截图，可横向滚动">
-          <li v-for="screen in screens" :key="screen.file" class="shot">
-            <img class="shot-light" :src="`/ios/light-${screen.file}.webp`" :alt="screen.alt" width="640" height="1392" loading="lazy" decoding="async">
-            <img class="shot-dark" :src="`/ios/dark-${screen.file}.webp`" :alt="screen.alt" width="640" height="1392" loading="lazy" decoding="async">
+      <div class="section-head" data-reveal>
+        <span class="section-eyebrow">原生 iOS 体验</span>
+        <h2 id="screens-title" class="section-title">
+          把一座温柔的小厨房，装进口袋
+        </h2>
+        <p class="section-lead">
+          还是你熟悉的找菜默契，换成了 iPhone 与 iPad 上顺手、轻盈又安心的样子。点击任意章节，看看它如何陪你做决定。
+        </p>
+      </div>
+
+      <div class="demo-block" data-reveal style="--reveal-delay: 80ms">
+        <PhoneDemo />
+      </div>
+
+      <figure class="shots" data-reveal style="--reveal-delay: 100ms">
+        <ul class="shot-row" tabindex="0" aria-label="云食册 iOS 实机界面截图，可横向滚动或点击放大">
+          <li v-for="(screen, index) in screens" :key="screen.file" class="shot">
+            <button
+              type="button"
+              class="shot-card"
+              :aria-label="`放大查看：${screen.label}，${screen.alt}`"
+              @click="openShot(index)"
+            >
+              <span class="shot-frame">
+                <img class="shot-light" :src="`/ios/light-${screen.file}.webp`" :alt="screen.alt" width="640" height="1392" loading="lazy" decoding="async">
+                <img class="shot-dark" :src="`/ios/dark-${screen.file}.webp`" :alt="screen.alt" width="640" height="1392" loading="lazy" decoding="async">
+              </span>
+              <span class="shot-label">{{ screen.label }}</span>
+            </button>
           </li>
         </ul>
-        <figcaption>iOS 开发版本真实截图 · 界面可能随版本调整</figcaption>
+        <figcaption>云食册 iOS 实机界面 · 自动适配浅色与深色模式 · 点击可放大查看</figcaption>
       </figure>
     </section>
 
-    <section class="app-only" aria-labelledby="app-only-title">
-      <h2 id="app-only-title" class="section-title">
-        App 里多了这些
-      </h2>
-      <dl class="feature-list">
-        <div v-for="feature in appOnly" :key="feature.title" class="feature">
-          <dt><span class="feature-emoji" aria-hidden="true">{{ feature.emoji }}</span>{{ feature.title }}</dt>
-          <dd>{{ feature.text }}</dd>
-        </div>
-      </dl>
+    <section id="highlights" class="app-only" aria-labelledby="app-only-title">
+      <div class="section-head" data-reveal>
+        <span class="section-eyebrow">为每次开火精心打磨</span>
+        <h2 id="app-only-title" class="section-title">
+          从开火到收尾，每一步都顺手
+        </h2>
+        <p class="section-lead">
+          把云食册装进手机，离线翻菜、跟着工作台下厨、管好冰箱余粮，一切都轻轻接住。
+        </p>
+      </div>
+      <FeatureBento />
     </section>
+
+    <div
+      v-if="currentShot"
+      class="shot-lightbox"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="currentShot.label"
+      @click.self="closeLightbox"
+    >
+      <div class="lightbox-panel">
+        <button type="button" class="lightbox-close" aria-label="关闭大图" @click="closeLightbox">
+          ×
+        </button>
+        <button type="button" class="lightbox-nav is-prev" aria-label="上一张" @click="stepShot(-1)">
+          ‹
+        </button>
+        <div class="lightbox-frame">
+          <img class="shot-light" :src="`/ios/light-${currentShot.file}.webp`" :alt="currentShot.alt" width="640" height="1392">
+          <img class="shot-dark" :src="`/ios/dark-${currentShot.file}.webp`" :alt="currentShot.alt" width="640" height="1392">
+        </div>
+        <button type="button" class="lightbox-nav is-next" aria-label="下一张" @click="stepShot(1)">
+          ›
+        </button>
+        <p class="lightbox-caption">
+          <strong>{{ currentShot.label }}</strong> · {{ currentShot.alt }}
+        </p>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.simulation-label {
-  margin-top: 24px;
-  color: var(--vp-c-text-2);
-  font-size: 14px;
-}
-.shot-row:focus-visible {
-  outline: 3px solid var(--vp-c-brand-1);
-  outline-offset: 4px;
-}
-
 .demo-block {
-  margin-top: 32px;
+  margin-top: 38px;
 }
 
-/* 演示下面一排真机截图，证明不是做出来的效果图 */
 .shots {
-  margin: 72px 0 0;
+  margin: 76px 0 0;
 }
 
 .shot-row {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(150px, 1fr);
-  gap: 16px;
+  grid-auto-columns: minmax(168px, 1fr);
+  gap: 18px;
   margin: 0;
-  padding: 0 0 12px;
+  padding: 6px 2px 14px;
   list-style: none;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
 }
 
+.shot-row:focus-visible {
+  outline: 3px solid var(--vp-c-brand-1);
+  outline-offset: 4px;
+}
+
 @media (min-width: 960px) {
   .shot-row {
-    max-width: 760px;
+    max-width: 840px;
     margin: 0 auto;
-    padding: 0;
+    padding: 6px 0 0;
     overflow: visible;
   }
 }
 
 .shot {
   margin: 0;
-  aspect-ratio: 640 / 1392;
-  padding: 4px;
-  border-radius: 26px;
-  background: #0f172a;
   scroll-snap-align: start;
 }
 
-.dark .shot {
+.shot-card {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  text-align: center;
+  cursor: zoom-in;
+}
+
+.shot-frame {
+  display: block;
+  aspect-ratio: 640 / 1392;
+  padding: 5px;
+  border-radius: 28px;
+  background: #0f172a;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 20px 40px -24px rgba(15, 23, 42, 0.45);
+  transition:
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s ease;
+}
+
+.dark .shot-frame {
   background: #1e293b;
 }
 
-.shot img {
+.shot-card:hover .shot-frame {
+  transform: translateY(-6px) scale(1.015);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 28px 50px -24px rgba(37, 99, 235, 0.35);
+}
+
+.shot-frame img {
   margin: 0;
   width: 100%;
   height: 100%;
-  border-radius: 22px;
+  border-radius: 23px;
   object-fit: cover;
+}
+
+.shot-label {
+  justify-self: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--cook-glass-border);
+  background: var(--cook-glass-bg);
+  color: var(--cook-hero-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.shot-card:hover .shot-label {
+  border-color: var(--sky-2);
+  color: var(--cook-hero-text);
 }
 
 .shot-dark,
@@ -126,54 +234,118 @@ const appOnly = [
 }
 
 .shots figcaption {
-  margin-top: 12px;
+  margin-top: 16px;
   font-size: 13px;
   text-align: center;
-  color: var(--vp-c-text-3);
+  color: var(--cook-hero-muted);
 }
 
-.feature-list {
-  display: grid;
-  gap: 32px 48px;
-  margin: 40px 0 0;
-}
-
-@media (min-width: 640px) {
-  .feature-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 960px) {
-  .feature-list {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-.feature dt {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-family: var(--cook-font-display);
-  font-size: 22px;
-  font-weight: 600;
-}
-
-.feature-emoji {
+/* Lightbox Modal */
+.shot-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: var(--mist);
-  font-family: initial;
-  font-size: 22px;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
-.feature dd {
-  margin: 10px 0 0;
-  font-size: 15px;
-  line-height: 1.7;
-  color: var(--vp-c-text-2);
+.lightbox-panel {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  max-width: min(92vw, 480px);
+}
+
+.lightbox-frame {
+  width: min(76vw, 330px);
+  aspect-ratio: 640 / 1392;
+  padding: 7px;
+  border-radius: 36px;
+  background: #0f172a;
+  box-shadow:
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.22),
+    0 32px 72px rgba(0, 0, 0, 0.55);
+}
+
+.lightbox-frame img {
+  width: 100%;
+  height: 100%;
+  border-radius: 29px;
+  object-fit: cover;
+}
+
+.lightbox-close,
+.lightbox-nav {
+  position: absolute;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(15, 23, 42, 0.7);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.lightbox-close:hover,
+.lightbox-nav:hover {
+  background: rgba(37, 99, 235, 0.9);
+}
+
+.lightbox-close {
+  top: -10px;
+  right: -10px;
+}
+
+.lightbox-nav {
+  top: 44%;
+  transform: translateY(-50%);
+}
+
+.lightbox-nav.is-prev {
+  left: -56px;
+}
+
+.lightbox-nav.is-next {
+  right: -56px;
+}
+
+.lightbox-caption {
+  color: #f1f5f9;
+  font-size: 13.5px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 639px) {
+  .lightbox-nav.is-prev {
+    left: 4px;
+  }
+  .lightbox-nav.is-next {
+    right: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shot-frame,
+  .shot-label,
+  .lightbox-close,
+  .lightbox-nav {
+    transition: none;
+  }
+  .shot-card:hover .shot-frame {
+    transform: none;
+  }
 }
 </style>

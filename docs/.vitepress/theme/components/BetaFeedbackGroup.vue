@@ -5,20 +5,27 @@ const inviteUrl = 'https://qm.qq.com/q/fVHcR8sMQE'
 <template>
   <div class="beta-group vp-raw">
     <div>
+      <span class="beta-group-tag">厨友交流</span>
       <div class="beta-group-name">
-        云食册 APP 内测反馈群
+        云食册交流与反馈群
       </div>
       <div class="beta-group-number">
         QQ 群号 <strong>1108267397</strong>
       </div>
-      <a class="beta-group-link" :href="inviteUrl" target="_blank" rel="noopener noreferrer">加入 QQ 群</a>
+      <p class="beta-group-desc">
+        日常求菜、体验建议或晒晒今晚做的饭，欢迎来群里坐坐。
+      </p>
+      <a class="beta-group-link" :href="inviteUrl" target="_blank" rel="noopener noreferrer">
+        <span>加入 QQ 群</span>
+        <span aria-hidden="true">↗</span>
+      </a>
     </div>
     <img
       class="beta-group-qr"
       src="/landing/qq-beta-group.png"
-      alt="用 QQ 扫码加入云食册 APP 内测反馈群"
-      width="112"
-      height="112"
+      alt="用 QQ 扫码加入云食册交流与反馈群"
+      width="104"
+      height="104"
       loading="lazy"
       decoding="async"
     >
@@ -30,37 +37,73 @@ const inviteUrl = 'https://qm.qq.com/q/fVHcR8sMQE'
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  margin-top: 24px;
-  padding: 16px;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: var(--cook-control-radius, 12px);
-  background: var(--vp-c-bg-soft);
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid var(--cook-glass-border);
+  border-radius: 22px;
+  background: var(--cook-surface-elevated);
+  box-shadow: var(--cook-glass-shadow);
 }
-.beta-group-name {
+
+.beta-group-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--cook-leaf-soft);
+  color: var(--cook-leaf);
+  font-size: 12px;
   font-weight: 650;
-  line-height: 1.45;
 }
+
+.beta-group-name {
+  margin-top: 8px;
+  color: var(--cook-hero-text);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .beta-group-number {
   margin-top: 4px;
-  color: var(--vp-c-text-2);
+  color: var(--cook-hero-muted);
   font-size: 14px;
 }
+
+.beta-group-number strong {
+  color: var(--cook-hero-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.beta-group-desc {
+  margin-top: 8px;
+  color: var(--cook-hero-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
 .beta-group-link {
   display: inline-flex;
-  min-height: 44px;
   align-items: center;
-  color: var(--vp-c-brand-1);
-  font-weight: 600;
+  gap: 5px;
+  min-height: 40px;
+  margin-top: 4px;
+  color: var(--cook-leaf);
+  font-size: 14px;
+  font-weight: 650;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
+
 .beta-group-qr {
   display: block;
   margin: 0;
-  border-radius: 8px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 6px 16px -8px rgba(15, 23, 42, 0.25);
 }
-@media (max-width: 359px) {
+
+@media (max-width: 420px) {
   .beta-group {
     grid-template-columns: 1fr;
   }
