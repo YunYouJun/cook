@@ -253,7 +253,7 @@ struct CookApp: App {
                         if phase == .active {
                             ai.expireManagedCapabilityIfNeeded()
                             Task {
-                                if CookFeatures.proStoreEnabled || CookFeatures.overseasAIEnabled { await pro.refreshEntitlements() }
+                                if CookFeatures.proStoreEnabled || CookFeatures.overseasAIEnabled { await pro.refreshAll() }
                                 ai.updateRegionalAvailability(pro.isOnlineAIAllowedInCurrentRegion)
                                 await accounts.refreshIfNeeded()
                                 if CookFeatures.membershipUIEnabled || CookFeatures.membershipPurchasesEnabled {

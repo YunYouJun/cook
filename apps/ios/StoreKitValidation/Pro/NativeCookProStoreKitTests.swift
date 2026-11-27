@@ -23,6 +23,10 @@ import XCTest
         XCTAssertEqual(catalog[CookProProductID.aiMonth]?.subscription?.subscriptionGroupID,
                        catalog[CookProProductID.aiYear]?.subscription?.subscriptionGroupID)
 
+        let store = CookProStore.live(isolated: false)
+        await store.loadProducts()
+        XCTAssertEqual(store.proProduct?.displayPrice, catalog[CookProProductID.proLifetime]?.displayPrice)
+
         let purchase = try await session.buyProduct(identifier: CookProProductID.proLifetime)
         XCTAssertEqual(purchase.environment, .xcode)
         XCTAssertEqual(purchase.productID, CookProProductID.proLifetime)

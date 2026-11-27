@@ -61,8 +61,6 @@ protocol CookProStoreBackend: Sendable {
 
 @MainActor
 private final class LiveCookProStoreBackend: CookProStoreBackend {
-    private var cachedProducts: [String: Product] = [:]
-
     func currentStorefrontCountryCode() async -> String? {
         await Storefront.current?.countryCode
     }
@@ -108,9 +106,6 @@ private final class LiveCookProStoreBackend: CookProStoreBackend {
     func fetchProducts(ids: Set<String>) async throws -> [CookProProductOption] {
         guard !ids.isEmpty else { return [] }
         let loaded = try await Product.products(for: ids)
-        for product in loaded {
-            cachedProducts[product.id] = product
-        }
         return loaded
             .sorted { CookProProductOption.sortOrder(for: $0.id) < CookProProductOption.sortOrder(for: $1.id) }
             .map { product in
@@ -132,16 +127,8 @@ private final class LiveCookProStoreBackend: CookProStoreBackend {
     }
 
     func purchase(productID: String, purchaseAction: PurchaseAction?) async throws -> CookProPurchaseOutcome {
-        let product: Product
-        if let existing = cachedProducts[productID] {
-            product = existing
-        } else {
-            let loaded = try await Product.products(for: [productID])
-            guard let first = loaded.first else {
-                throw StoreKitError.unknown
-            }
-            cachedProducts[first.id] = first
-            product = first
+        guard let product = try await Product.products(for: [productID]).first else {
+            throw StoreKitError.unknown
         }
 
         let result: Product.PurchaseResult
@@ -211,6 +198,7 @@ final class CookProStore {
     private let watchUpdates: Bool
 
     @ObservationIgnored private var hasStarted = false
+    @ObservationIgnored private var storefrontRevision = 0
     @ObservationIgnored private var transactionUpdatesTask: Task<Void, Never>?
     @ObservationIgnored private var storefrontUpdatesTask: Task<Void, Never>?
 
@@ -318,8 +306,14 @@ final class CookProStore {
         snapshot.hasActiveAISubscription()
     }
 
+    var isProStoreAvailableInCurrentRegion: Bool {
+        proProduct != nil
+    }
+
     var effectiveProAccess: Bool {
-        !CookFeatures.proStoreEnabled || Self.shouldBypassQuotaForUITests || hasProAccess
+        let hasKnownStorefront = storefrontCountryCode?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        return !hasKnownStorefront || !isProStoreAvailableInCurrentRegion
+            || !hasLoadedEntitlements || Self.shouldBypassQuotaForUITests || hasProAccess
     }
 
     var fridgeItemLimit: Int? {
@@ -335,7 +329,8 @@ final class CookProStore {
     }
 
     var proProduct: CookProProductOption? {
-        products.first { $0.id == CookProProductID.proLifetime }
+        guard CookFeatures.proStoreEnabled else { return nil }
+        return products.first { $0.id == CookProProductID.proLifetime }
     }
 
     var aiSubscriptionProducts: [CookProProductOption] {
@@ -369,7 +364,7 @@ final class CookProStore {
         guard !hasStarted else { return }
         hasStarted = true
         startObserversIfNeeded()
-        await refreshEntitlements()
+        await refreshAll()
     }
 
     func refreshAll() async {
@@ -378,7 +373,12 @@ final class CookProStore {
     }
 
     func refreshEntitlements() async {
-        storefrontCountryCode = await backend.currentStorefrontCountryCode()
+        let storefront = await backend.currentStorefrontCountryCode()
+        if storefront != storefrontCountryCode {
+            storefrontCountryCode = storefront
+            storefrontRevision += 1
+            products = []
+        }
         let reading = await backend.currentEntitlements()
         snapshot = reading.snapshot
         aiSubscriptionJWS = reading.aiSubscriptionJWS
@@ -390,19 +390,36 @@ final class CookProStore {
         isLoadingProducts = true
         defer { isLoadingProducts = false }
 
-        let desiredIDs: Set<String> = isAISubscriptionAllowedInCurrentRegion
-            ? Set(CookProProductID.allProductIDs)
-            : [CookProProductID.proLifetime]
-
-        do {
-            products = try await backend.fetchProducts(ids: desiredIDs)
-        } catch {
-            // Keep previously loaded options if a transient StoreKit catalog refresh fails.
-        }
+        var revision: Int
+        repeat {
+            revision = storefrontRevision
+            var desiredIDs = isAISubscriptionAllowedInCurrentRegion ? CookProProductID.aiSubscriptionIDs : []
+            // StoreKit resolves availability for this product across storefronts.
+            if CookFeatures.proStoreEnabled {
+                desiredIDs.insert(CookProProductID.proLifetime)
+            }
+            guard !desiredIDs.isEmpty else {
+                products = []
+                return
+            }
+            do {
+                let fetchedProducts = try await backend.fetchProducts(ids: desiredIDs)
+                if revision == storefrontRevision {
+                    products = fetchedProducts
+                }
+            } catch {
+                // Retain the last successful catalog for the same storefront on a transient failure.
+            }
+        } while revision != storefrontRevision
     }
 
     func purchase(_ productID: String, using purchaseAction: PurchaseAction? = nil) async {
         guard !hasBusyOperation else { return }
+        if productID == CookProProductID.proLifetime, !isProStoreAvailableInCurrentRegion {
+            noticeIsError = true
+            noticeMessage = "暂未读取到 Cook Pro 的 App Store 价格，请重新加载后再试。"
+            return
+        }
         if CookProProductID.aiSubscriptionIDs.contains(productID), !isAISubscriptionAllowedInCurrentRegion {
             noticeIsError = true
             noticeMessage = "当前地区暂不支持云端 AI 订阅。"

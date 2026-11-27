@@ -55,7 +55,7 @@ struct AISettingsView: View {
         case .checking:
             providerLabel(.managedDeepSeek, detail: "正在核验服务资格…", isChecking: true)
         case .loginRequired:
-            if CookFeatures.proStoreEnabled && pro.isOnlineAIAllowedInCurrentRegion && !CookFeatures.membershipUIEnabled {
+            if CookFeatures.proStoreEnabled && pro.isAISubscriptionAllowedInCurrentRegion && !CookFeatures.membershipUIEnabled {
                 Button { showingPaywallHighlight = .cloudAI } label: {
                     providerLabel(.managedDeepSeek, detail: "订阅海外云端 AI · 无需登录云乐坊账号", accessory: "chevron.right")
                 }
@@ -77,7 +77,7 @@ struct AISettingsView: View {
         case .unconfigured:
             providerLabel(.managedDeepSeek, detail: "此版本暂未开放")
         default:
-            if CookFeatures.proStoreEnabled && pro.isOnlineAIAllowedInCurrentRegion
+            if CookFeatures.proStoreEnabled && pro.isAISubscriptionAllowedInCurrentRegion
                 && !CookFeatures.membershipUIEnabled && !pro.hasActiveAISubscription && accounts.account == nil {
                 Button { showingPaywallHighlight = .cloudAI } label: {
                     providerLabel(.managedDeepSeek, detail: "订阅海外云端 AI · 无需登录云乐坊账号", accessory: "chevron.right")
@@ -124,13 +124,13 @@ struct AISettingsView: View {
             }
         } else {
             Button {
-                if !pro.effectiveProAccess && CookFeatures.proStoreEnabled {
+                if !pro.effectiveProAccess {
                     showingPaywallHighlight = .byok
                 } else {
                     showsKeyEditor = true
                 }
             } label: {
-                let detail = (!pro.effectiveProAccess && CookFeatures.proStoreEnabled)
+                let detail = !pro.effectiveProAccess
                     ? "Cook Pro 可用 · 仅支持 DeepSeek"
                     : "仅支持 DeepSeek · 添加 Key"
                 providerLabel(.ownDeepSeek, detail: detail, accessory: "chevron.right")

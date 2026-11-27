@@ -11,10 +11,12 @@ private final class MockCookProStoreBackend: CookProStoreBackend {
     var storefront: String?
     var entitlement: CookProEntitlementReading = .empty
     var catalog: [CookProProductOption]
+    var catalogError: (any Error)?
     var fetchedIDs: [Set<String>] = []
     var purchasedIDs: [String] = []
     var purchaseHandler: ((String) -> CookProPurchaseOutcome)?
     var restoreCount = 0
+    var restoredEntitlement: CookProEntitlementReading?
 
     init(
         storefront: String?,
@@ -58,6 +60,7 @@ private final class MockCookProStoreBackend: CookProStoreBackend {
 
     func fetchProducts(ids: Set<String>) async throws -> [CookProProductOption] {
         fetchedIDs.append(ids)
+        if let catalogError { throw catalogError }
         return catalog.filter { ids.contains($0.id) }
     }
 
@@ -74,6 +77,7 @@ private final class MockCookProStoreBackend: CookProStoreBackend {
 
     func restorePurchases() async throws {
         restoreCount += 1
+        if let restoredEntitlement { entitlement = restoredEntitlement }
     }
 }
 
@@ -114,7 +118,7 @@ final class CookProStoreTests: XCTestCase {
     private let validSampleJWS = ["test-header", "test-payload", "test-signature"].joined(separator: ".")
 
     func testMainlandChinaHidesAndBlocksAISubscriptionWhileAllowingBuyout() async {
-        for region in [Optional<String>.none, Optional("CHN"), Optional("chn")] {
+        for region in ["CHN", "chn"] {
             let backend = MockCookProStoreBackend(storefront: region)
             backend.purchaseHandler = { id in
                 XCTAssertEqual(id, CookProProductID.proLifetime)
@@ -135,7 +139,6 @@ final class CookProStoreTests: XCTestCase {
             )
 
             await store.start()
-            await store.loadProducts()
             XCTAssertTrue(store.isMainlandChinaStorefront)
             XCTAssertFalse(store.isOnlineAIAllowedInCurrentRegion)
             XCTAssertEqual(backend.fetchedIDs, [[CookProProductID.proLifetime]])
@@ -166,6 +169,104 @@ final class CookProStoreTests: XCTestCase {
         }
     }
 
+    func testUnavailableProductKeepsExistingAccessAndBlocksPurchase() async {
+        for region in [nil, "", " ", "GBR"] {
+            let backend = MockCookProStoreBackend(storefront: region, catalog: [])
+            let store = CookProStore(backend: backend, isolated: false, watchUpdates: false, overseasAIEnabled: false)
+            await store.refreshAll()
+
+            XCTAssertFalse(store.isProStoreAvailableInCurrentRegion)
+            XCTAssertNil(store.proProduct)
+            XCTAssertEqual(backend.fetchedIDs, [[CookProProductID.proLifetime]])
+            XCTAssertNil(store.fridgeItemLimit)
+            XCTAssertNil(store.privateRecipeLimit)
+            XCTAssertTrue(store.canOpenSpecialShowcase(index: 10))
+
+            await store.purchase(CookProProductID.proLifetime)
+            XCTAssertTrue(backend.purchasedIDs.isEmpty)
+        }
+    }
+
+    func testRetryCanLoadAndBuyLifetimeProductBeforeStorefrontIsKnown() async {
+        let backend = MockCookProStoreBackend(storefront: nil)
+        backend.catalogError = URLError(.notConnectedToInternet)
+        backend.purchaseHandler = { productID in
+            .purchased(
+                productID: productID,
+                entitlement: CookProEntitlementReading(
+                    snapshot: CookProSnapshot(hasProLifetime: true),
+                    aiSubscriptionJWS: nil
+                )
+            )
+        }
+        let store = CookProStore(backend: backend, isolated: false, watchUpdates: false, overseasAIEnabled: true)
+
+        await store.start()
+        XCTAssertNil(store.proProduct)
+        backend.catalogError = nil
+        await store.refreshAll()
+
+        XCTAssertEqual(backend.fetchedIDs, [[CookProProductID.proLifetime], [CookProProductID.proLifetime]])
+        XCTAssertEqual(store.proProduct?.displayPrice, "$3.99")
+        XCTAssertNil(store.fridgeItemLimit)
+        XCTAssertNil(store.privateRecipeLimit)
+        XCTAssertTrue(store.aiSubscriptionProducts.isEmpty)
+
+        await store.purchase(CookProProductID.proLifetime)
+        XCTAssertEqual(backend.purchasedIDs, [CookProProductID.proLifetime])
+        XCTAssertTrue(store.hasProAccess)
+    }
+
+    func testStorefrontChangeDiscardsPreviousPriceAndAppliesQuotaWhenProductLoads() async {
+        let backend = MockCookProStoreBackend(storefront: "USA")
+        let store = CookProStore(backend: backend, isolated: false, watchUpdates: false, overseasAIEnabled: false)
+        await store.start()
+        XCTAssertEqual(store.proProduct?.displayPrice, "$3.99")
+        XCTAssertEqual(store.fridgeItemLimit, CookEntitlementPolicy.freeFridgeInStockLimit)
+
+        backend.storefront = "JPN"
+        backend.catalogError = URLError(.notConnectedToInternet)
+        await store.refreshEntitlements()
+        XCTAssertFalse(store.isProStoreAvailableInCurrentRegion)
+        XCTAssertNil(store.proProduct)
+        await store.loadProducts()
+        XCTAssertEqual(backend.fetchedIDs, [[CookProProductID.proLifetime], [CookProProductID.proLifetime]])
+        XCTAssertNil(store.fridgeItemLimit)
+        XCTAssertNil(store.privateRecipeLimit)
+        XCTAssertTrue(store.canOpenSpecialShowcase(index: 10))
+
+        backend.catalogError = nil
+        backend.catalog = [CookProProductOption(
+            id: CookProProductID.proLifetime, title: "Cook Pro", subtitle: "",
+            displayPrice: "¥600", periodLabel: nil, kind: .proLifetime
+        )]
+        await store.refreshAll()
+        XCTAssertTrue(store.isProStoreAvailableInCurrentRegion)
+        XCTAssertEqual(store.proProduct?.displayPrice, "¥600")
+        XCTAssertEqual(store.fridgeItemLimit, CookEntitlementPolicy.freeFridgeInStockLimit)
+        XCTAssertEqual(store.privateRecipeLimit, CookEntitlementPolicy.freePrivateRecipeLimit)
+
+        backend.catalog = []
+        await store.refreshAll()
+        XCTAssertNil(store.proProduct)
+        XCTAssertNil(store.fridgeItemLimit)
+    }
+
+    func testRestoreReadsLifetimeEntitlementWhenProductIsUnavailable() async {
+        let backend = MockCookProStoreBackend(storefront: "GBR", catalog: [])
+        let store = CookProStore(backend: backend, isolated: false, watchUpdates: false, overseasAIEnabled: false)
+        await store.start()
+        XCTAssertFalse(store.hasProAccess)
+        backend.restoredEntitlement = CookProEntitlementReading(
+            snapshot: CookProSnapshot(hasProLifetime: true), aiSubscriptionJWS: nil
+        )
+        await store.restorePurchases()
+        XCTAssertEqual(backend.restoreCount, 1)
+        XCTAssertTrue(store.hasProAccess)
+        XCTAssertFalse(store.noticeIsError)
+        XCTAssertNil(store.proProduct)
+    }
+
     func testOverseasSubscriptionGrantsProAccessAndCapturesAppleJWSWithoutLogin() async {
         for region in ["USA", "HKG", "TWN", "JPN"] {
             let expiry = Date().addingTimeInterval(3_600)
@@ -192,7 +293,6 @@ final class CookProStoreTests: XCTestCase {
             )
 
             await store.start()
-            await store.loadProducts()
             XCTAssertFalse(store.isMainlandChinaStorefront)
             XCTAssertTrue(store.isOnlineAIAllowedInCurrentRegion)
             XCTAssertEqual(backend.fetchedIDs, [Set(CookProProductID.allProductIDs)])

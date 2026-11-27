@@ -174,6 +174,7 @@ struct FridgeVisionSheet: View {
 
     private var usesLegacyMembershipUI: Bool {
         CookFeatures.membershipUIEnabled || !CookFeatures.proStoreEnabled || Self.testPhoto != nil
+            || (!pro.isProStoreAvailableInCurrentRegion && !pro.isAISubscriptionAllowedInCurrentRegion)
     }
 
     private var offlineAction: some View {

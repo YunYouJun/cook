@@ -62,11 +62,13 @@ struct CookProPaywallView: View {
                     noticeBanner(message, isError: pro.noticeIsError)
                 }
 
-                buyoutCard
+                if CookFeatures.proStoreEnabled {
+                    buyoutCard
+                }
 
                 if pro.isAISubscriptionAllowedInCurrentRegion {
                     cloudAISection
-                } else {
+                } else if pro.isProStoreAvailableInCurrentRegion || pro.hasProAccess {
                     mainlandComplianceCard
                 }
 
@@ -158,24 +160,36 @@ struct CookProPaywallView: View {
                     .foregroundStyle(.green)
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
-            } else {
+            } else if let product = pro.proProduct {
                 Button {
                     Task { await buy(CookProProductID.proLifetime) }
                 } label: {
                     Group {
                         if pro.purchasingProductID == CookProProductID.proLifetime {
                             ProgressView().frame(maxWidth: .infinity)
-                        } else if let product = pro.proProduct {
-                            Text("立即买断（\(product.displayPrice)）").frame(maxWidth: .infinity)
                         } else {
-                            Text(pro.isLoadingProducts ? "正在读取价格…" : "立即买断 Cook Pro").frame(maxWidth: .infinity)
+                            Text("立即买断（\(product.displayPrice)）").frame(maxWidth: .infinity)
                         }
                     }
                 }
                 .prominentButtonStyle()
                 .controlSize(.large)
-                .disabled(pro.hasBusyOperation || pro.proProduct == nil)
+                .disabled(pro.hasBusyOperation)
                 .accessibilityIdentifier("proPaywall.buyPro")
+            } else if pro.isLoadingProducts {
+                ProgressView("正在读取 App Store 价格…")
+                    .font(.footnote)
+            } else {
+                Text("暂未读取到 App Store 价格。请检查网络与 App Store 账号后重试。")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Button("重新加载价格") {
+                    Task { await pro.refreshAll() }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .disabled(pro.hasBusyOperation)
+                .accessibilityIdentifier("proPaywall.reloadPrice")
             }
         }
         .padding(16)

@@ -270,6 +270,33 @@ final class CookUITests: XCTestCase {
     }
 
     @MainActor
+    func testCookProRemainsDiscoverableWithoutStoreKitProducts() {
+        let app = XCUIApplication()
+        app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
+        app.launchEnvironment["COOK_UI_TEST_DECLINE_CONSENT"] = "1"
+        terminateAppAfterTest(app)
+        app.launch()
+
+        tap(app.buttons["我的"].firstMatch)
+        let entry = app.buttons["settings.pro"]
+        wait(entry, "isHittable == true")
+        XCTAssertEqual(entry.label, "Cook Pro 永久买断")
+        tap(entry)
+
+        XCTAssertTrue(app.staticTexts["Cook Pro 永久买断"].waitForExistence(timeout: timeout))
+        let reloadPrice = app.buttons["proPaywall.reloadPrice"]
+        tap(reloadPrice)
+        wait(reloadPrice, "exists == true AND isEnabled == true")
+        XCTAssertFalse(app.buttons["proPaywall.buyPro"].exists)
+
+        let restore = app.buttons["proPaywall.restore"]
+        if !restore.isHittable {
+            app.scrollViews["proPaywall.scroll"].swipeUp()
+        }
+        wait(restore, "isHittable == true")
+    }
+
+    @MainActor
     func testAccountIsOptionalAndExplainsICloudDataBoundary() {
         let app = XCUIApplication()
         app.launchArguments = XCUIApplication.standardCookingLaunchArguments + ["-ui-testing-reset-consent"]
