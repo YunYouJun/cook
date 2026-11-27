@@ -4,7 +4,7 @@
 - 日期：2026-10-19
 - 关联：[0004 iOS App 命名为「云食册」](./0004-ios-app-name)
 
-> 2026-11-17：iOS 主屏幕改用工坊版俯视锅，见下文。网页版继续使用「蒸汽成云」。
+> 2026-11-25：Android、网页版和备案素材也采用 iOS 的俯视锅图形，见下文。
 
 ## 背景
 
@@ -23,7 +23,7 @@
 | 冒热气的菜谱、云做锅盖       | 元素多，小尺寸下热气或横线糊掉                       |
 | **蒸汽成云（锅 + 勺 + 云）** | 留住老 Logo 的锅和勺，热气就是云，对上「云」和「食」 |
 
-## 决定
+## 原决定
 
 - 采用「蒸汽成云」：白色锅、锅里冒出的热气是一朵云（轮廓取自云乐盘），明黄长勺斜插在锅里。2026-11-14 缩小云并靠近锅口、收细锅沿，底板改为与「找菜」呼应的菜叶绿渐变 `#438453 → #2F6B45`。
 - 源文件在 `apps/web/public/brand/`：`cook-app-icon.svg`（浅色）、`cook-app-icon-dark.svg`（深色）、`cook-app-icon-tinted.svg`（着色灰度原稿）、`cook-mark.svg`（透明 Logo）。其他尺寸都从这些 SVG 导出，不手改 PNG。
@@ -43,4 +43,10 @@
 
 `apps/ios/Cook/Resources/AppIcon.icon` 是 iOS 图标源文件。底色由 Icon Composer 绘制，锅沿为独立矢量层，使用系统高光与轻微折射；锅底、食材用实色。双耳镂空、锅沿与锅内的间隙、番茄星形留白在几个外观中沿用同一轮廓。深色降低底色亮度；Mono 用明度区分食材，由系统生成 Clear 和 Tinted。所有图层不预切圆角，也不预绘阴影。
 
-修改矢量或配色后，在仓库根目录运行 `node apps/ios/scripts/export-app-icon.mjs`，重新导出资源目录中的默认、深色和着色 1024 px 静态图。iOS 的分层资源与静态图共用造型，工坊目录和 Web 资产不需要同步改动。
+修改矢量或配色后，在仓库根目录运行 `node apps/ios/scripts/export-app-icon.mjs`，重新导出 iOS 默认、深色和着色 1024 px 静态图。
+
+## 统一俯视锅图标 · 2026-11-25
+
+- iOS 的 `AppIcon.icon` 提供俯视锅的路径、图层顺序和配色。Android 使用同一图形的自适应启动图标，将前景缩放到系统安全区内。
+- `apps/web/public/brand/` 提供满幅 SVG、深色和着色版本及透明标记，PWA、Apple 触屏图标和 favicon 使用同一造型。
+- `docs/public/brand/cook-app-icon.png` 是备案和商店使用的 512 × 512 满幅 PNG，与 Web 的 `pwa-512x512.png` 共用同一导出。

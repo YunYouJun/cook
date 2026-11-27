@@ -25,7 +25,22 @@ describe('native app metadata', () => {
     expect(iosProject).toContain('PRODUCT_BUNDLE_IDENTIFIER: fun.yunle.cook')
   })
 
-  it('ships the Web brand and all three opaque iOS icon appearances', () => {
+  it('declares the adaptive Android launcher icon', () => {
+    const android = 'apps/android/app/src/main'
+    const manifest = readFileSync(resolve(root, android, 'AndroidManifest.xml'), 'utf8')
+    const icon = readFileSync(resolve(root, android, 'res/mipmap-anydpi-v26/cook_launcher.xml'), 'utf8')
+    const foreground = readFileSync(resolve(root, android, 'res/drawable/cook_launcher_foreground.xml'), 'utf8')
+
+    expect(manifest).toContain('android:icon="@mipmap/cook_launcher"')
+    expect(manifest).toContain('android:roundIcon="@mipmap/cook_launcher"')
+    expect(icon).toContain('<adaptive-icon ')
+    expect(icon).toContain('android:drawable="@drawable/cook_launcher_foreground"')
+    expect(foreground).toContain('android:viewportWidth="1254"')
+    for (const color of ['#F8F3E7', '#458D4B', '#E74532', '#FAA91D'])
+      expect(foreground).toContain(`android:fillColor="${color}"`)
+  })
+
+  it('ships the overhead pot artwork for Web, filing and iOS', () => {
     const appIcon = readFileSync(resolve(root, 'apps/web/public/brand/cook-app-icon.svg'), 'utf8')
     const mark = readFileSync(resolve(root, 'apps/web/public/brand/cook-mark.svg'), 'utf8')
     const iosIconSet = JSON.parse(readFileSync(
@@ -33,14 +48,14 @@ describe('native app metadata', () => {
       'utf8',
     ))
 
-    // Web 继续使用「蒸汽成云」；iOS 用独立的俯视锅图标。
-    expect(appIcon).toContain('viewBox="0 0 64 64"')
-    expect(appIcon).toContain('<stop stop-color="#438453"/>')
-    expect(appIcon).toContain('<stop offset="1" stop-color="#2F6B45"/>')
-    expect(appIcon).toContain('<rect width="64" height="64" fill="url(#cook-leaf)"/>')
-    expect(appIcon).not.toContain('rx="14"')
-    expect(mark).not.toContain('<rect width="64" height="64"')
-    expect(mark).toContain('#FACC15')
+    expect(appIcon).toContain('viewBox="0 0 1254 1254"')
+    expect(appIcon).toContain('<stop stop-color="#0C916B"/>')
+    expect(appIcon).toContain('<rect width="1254" height="1254" fill="url(#background)"/>')
+    expect(mark).not.toContain('<rect')
+    expect(mark).toContain('<circle cx="627" cy="611" r="334"')
+    expect(readFileSync(resolve(root, 'docs/public/brand/cook-app-icon.svg'), 'utf8')).toBe(appIcon)
+    expect(readFileSync(resolve(root, 'docs/public/brand/cook-app-icon.png')))
+      .toEqual(readFileSync(resolve(root, 'apps/web/public/pwa-512x512.png')))
     expect(iosIconSet.images.map((image: { appearances?: { value: string }[] }) => image.appearances?.[0]?.value ?? 'light'))
       .toEqual(['light', 'dark', 'tinted'])
 
