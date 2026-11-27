@@ -68,7 +68,6 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 20px;
   min-height: 64px;
-  margin-top: 8px;
   padding: 8px 16px;
   border: 1px solid transparent;
   border-radius: 999px;

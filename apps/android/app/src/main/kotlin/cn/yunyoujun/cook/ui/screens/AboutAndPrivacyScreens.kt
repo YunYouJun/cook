@@ -85,6 +85,12 @@ internal fun AboutSettingsScreen(snapshot: CookCatalogSnapshot, onOpenRecipeData
                             Text("内置 ${snapshot.data.meta.total} 道菜谱")
                         }
                     }
+                    if (BuildConfig.COOK_ANDROID_APP_FILING_NUMBER.isNotEmpty()) {
+                        HorizontalDivider()
+                        SettingsNavRow("APP 备案", BuildConfig.COOK_ANDROID_APP_FILING_NUMBER) {
+                            context.openExternalLink("https://beian.miit.gov.cn/")
+                        }
+                    }
                     HorizontalDivider()
                     SettingsNavRow("菜谱数据版本", snapshot.data.meta.dataVersion, onOpenRecipeData)
                     HorizontalDivider()

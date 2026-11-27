@@ -66,7 +66,7 @@
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 0 clamp(16px, 4vw, 64px);
+  padding: 8px clamp(16px, 4vw, 64px) 0;
   background:
     radial-gradient(64% 560px at 84% 4%, rgba(253, 224, 178, 0.56), transparent 72%),
     radial-gradient(52% 480px at 14% 8%, rgba(205, 229, 255, 0.4), transparent 74%),

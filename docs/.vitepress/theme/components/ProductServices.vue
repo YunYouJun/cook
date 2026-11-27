@@ -40,6 +40,7 @@ const docs = [
 
         <div class="spotlight-actions">
           <AppStoreBadge size="lg" />
+          <a class="web-fallback-btn vp-raw" href="/guide/android-download">Android 下载</a>
           <a class="web-fallback-btn vp-raw" :href="links.web" target="_self">
             <span>打开网页版</span>
             <span aria-hidden="true">↗</span>

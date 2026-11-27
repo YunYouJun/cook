@@ -121,6 +121,7 @@ export default defineConfig(withYunlefun({
             { text: '第二天带饭', link: '/guide/next-day-lunch' },
             { text: '网页版域名与原有数据', link: '/guide/web-domain' },
             { text: '云食册 iOS 测试安装', link: '/guide/ios-beta#testflight' },
+            { text: '云食册 Android 下载', link: '/guide/android-download' },
           ],
         },
       ],

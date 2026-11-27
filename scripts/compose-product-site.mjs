@@ -38,7 +38,7 @@ const legacyRoutes = [
 const protectedPaths = ['_nuxt', 'auth', '.well-known', 'sw.js', 'about']
 const appleAssociationPath = '.well-known/apple-app-site-association'
 const requiredWebFiles = ['index.html', 'sw.js', appleAssociationPath, '.well-known/cook-build.json', 'auth/wechat/index.html', 'about/index.html', 'about/terms.html']
-const iosBetaGuideRoute = 'guide/ios-beta'
+const cleanGuideRoutes = ['guide/ios-beta', 'guide/android-download']
 const defaultRoot = fileURLToPath(new URL('../', import.meta.url))
 
 function requirePath(path, directory = false) {
@@ -125,7 +125,7 @@ export function composeProductSite(repositoryRoot = defaultRoot) {
   requirePath(join(web, '_nuxt'), true)
   for (const path of requiredWebFiles)
     requirePath(join(web, path))
-  for (const path of ['index.html', '404.html', 'terms.html', `${iosBetaGuideRoute}.html`])
+  for (const path of ['index.html', '404.html', 'terms.html', ...cleanGuideRoutes.map(route => `${route}.html`)])
     requirePath(join(docs, path))
   requirePath(productAssociation)
   requirePath(join(root, 'edgeone.json'))
@@ -163,7 +163,8 @@ export function composeProductSite(repositoryRoot = defaultRoot) {
     // The product domain owns recipe links. Native SSO and WeChat use the web app domain.
     writeFileSync(join(staging, appleAssociationPath), productAssociationJson)
     // EdgeOne can serve the exact asset path even when its clean URL rewrite is unavailable.
-    cpSync(join(staging, `${iosBetaGuideRoute}.html`), join(staging, iosBetaGuideRoute), { force: false, errorOnExist: true })
+    for (const route of cleanGuideRoutes)
+      cpSync(join(staging, `${route}.html`), join(staging, route), { force: false, errorOnExist: true })
     for (const route of legacyRoutes) {
       const page = join(staging, route.slice(1), 'index.html')
       if (!existsSync(page)) {

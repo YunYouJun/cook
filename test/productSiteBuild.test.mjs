@@ -5,6 +5,7 @@ import { basename, dirname, join } from 'node:path'
 // eslint-disable-next-line test/no-import-node-test -- The composer is a standalone build tool tested without Nuxt or Vitest startup.
 import { test } from 'node:test'
 import { composeProductSite } from '../scripts/compose-product-site.mjs'
+import { readAndroidDownload } from '../scripts/lib/android-download.mjs'
 
 const appleAssociationPath = '.well-known/apple-app-site-association'
 const productAssociation = 'docs/.vitepress/apple-app-site-association.json'
@@ -34,6 +35,7 @@ const inputs = {
   'docs/.vitepress/dist/privacy.html': 'privacy policy',
   'docs/.vitepress/dist/guide/start.html': 'getting started',
   'docs/.vitepress/dist/guide/ios-beta.html': '<h1>云食册 iOS 体验测试</h1>',
+  'docs/.vitepress/dist/guide/android-download.html': '<h1>云食册 Android 下载</h1>',
   [productAssociation]: readFileSync(new URL(`../${productAssociation}`, import.meta.url), 'utf8'),
   'edgeone.json': JSON.stringify({
     headers: ['/auth/wechat/*', '/auth/callback', '/auth/callback/*'].map(source => ({
@@ -129,6 +131,39 @@ test('both iOS beta guide URLs serve the same HTML on the product site', () => {
   // EdgeOne's exact match skips requests with a query string.
   const headers = config.headers.find(rule => rule.source === '/guide/ios-beta*')?.headers ?? []
   assert.ok(headers.some(header => header.key === 'Content-Type' && header.value === 'text/html; charset=utf-8'))
+})
+
+test('Android download guide serves HTML at both URLs on the product site', () => {
+  fixture(({ root, read }) => {
+    composeProductSite(root)
+    const route = 'guide/android-download'
+    assert.equal(read(`dist-site/${route}`), inputs[`docs/.vitepress/dist/${route}.html`])
+    assert.equal(read(`dist-site/${route}.html`), read(`dist-site/${route}`))
+  })
+
+  const config = JSON.parse(readFileSync(new URL('../edgeone.json', import.meta.url), 'utf8'))
+  const headers = config.headers.find(rule => rule.source === '/guide/android-download*')?.headers ?? []
+  assert.ok(headers.some(header => header.key === 'Content-Type' && header.value === 'text/html; charset=utf-8'))
+})
+
+test('the APK download is absent until a release is configured with a matching association certificate', () => {
+  const certificate = Array.from({ length: 32 }).fill('AB').join(':')
+  const sha256 = 'a'.repeat(64)
+  const release = { versionName: '2.0.0-alpha.2', versionCode: 2, sha256, certificates: [certificate] }
+  const environment = {
+    COOK_ANDROID_APK_RELEASE: JSON.stringify(release),
+    COOK_ANDROID_LINKS_SHA256: certificate,
+  }
+
+  assert.equal(readAndroidDownload({ COOK_ANDROID_LINKS_SHA256: certificate }), null)
+  assert.throws(() => readAndroidDownload({ ...environment, COOK_ANDROID_LINKS_SHA256: '' }), /signing certificate/)
+  assert.throws(() => readAndroidDownload({ ...environment, COOK_ANDROID_APK_RELEASE: JSON.stringify({ ...release, versionName: '../other' }) }), /Invalid/)
+  assert.deepEqual(readAndroidDownload(environment), {
+    versionName: release.versionName,
+    versionCode: release.versionCode,
+    sha256,
+    url: `https://assets.yunle.fun/cook/android/releases/cook-${release.versionName}-${release.versionCode}-${sha256}.apk`,
+  })
 })
 
 test('only composed marketing aliases navigate to fixed destinations through complete HTML', () => {

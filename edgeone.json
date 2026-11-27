@@ -11,6 +11,15 @@
       ]
     },
     {
+      "source": "/guide/android-download*",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/html; charset=utf-8"
+        }
+      ]
+    },
+    {
       "source": "/auth/wechat/*",
       "headers": [
         {

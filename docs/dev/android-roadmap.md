@@ -7,6 +7,7 @@
 - Android 待办：[#169](https://github.com/YunYouJun/cook/issues/169)
 - 启动证据：[2026-11-06 历史包身份、环境与工具链核对](./android-startup-2026-11-06)；分发和正式签名仍待确认。
 - 实现与构建：[工程说明](https://github.com/YunYouJun/cook/blob/main/apps/android/README.md)、[实施方案](./android-implementation-plan)、[三端共享契约](./cross-platform-core-ci)。
+- 发布准备：[Android 内测与上架](./android-distribution)。
 
 ## 目标与边界
 

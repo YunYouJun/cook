@@ -91,6 +91,10 @@ export function parseApkSignerFingerprints(output) {
 }
 
 export function readAndroidApkFingerprints(apk, { buildTools, environment = process.env } = {}) {
+  return inspectAndroidApk(apk, { buildTools, environment }).fingerprints
+}
+
+export function inspectAndroidApk(apk, { buildTools, environment = process.env } = {}) {
   const directory = buildTools ?? findBuildTools(environment)
   const run = (tool, args) => execFileSync(tool, args, {
     encoding: 'utf8',
@@ -121,7 +125,11 @@ export function readAndroidApkFingerprints(apk, { buildTools, environment = proc
   catch {
     throw new Error('APK signing verification failed; supply an APK signed for the intended distribution channel')
   }
-  return parseApkSignerFingerprints(output)
+  return {
+    fingerprints: parseApkSignerFingerprints(output),
+    versionCode: Number(/\bversionCode='(\d+)'/.exec(badging)?.[1]),
+    versionName: /\bversionName='([^']+)'/.exec(badging)?.[1],
+  }
 }
 
 function androidDeviceCommand(serial, environment) {

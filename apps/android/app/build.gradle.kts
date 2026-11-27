@@ -313,6 +313,12 @@ android {
         versionCode = 2
         versionName = "2.0.0-alpha.2"
 
+        val appFilingNumber = providers.environmentVariable("COOK_ANDROID_APP_FILING_NUMBER").orElse("").get().trim()
+        require(appFilingNumber.isEmpty() || appFilingNumber.matches(Regex("\\p{IsHan}ICP备[0-9]+号-[0-9]+A"))) {
+            "COOK_ANDROID_APP_FILING_NUMBER must be the APP service filing number ending in A."
+        }
+        buildConfigField("String", "COOK_ANDROID_APP_FILING_NUMBER", "\"$appFilingNumber\"")
+
         val feedbackUrl = (project.findProperty("cook.feedback.url") as? String
             ?: System.getenv("COOK_FEEDBACK_URL")
             ?: "")
