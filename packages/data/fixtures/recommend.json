@@ -1,6 +1,6 @@
 {
   "description": "由 pnpm fixtures 生成，勿手改。Web（test/fixtures.test.ts）和 iOS（CookCore）都要和它一致。",
-  "recipeCount": 897,
+  "recipeCount": 906,
   "normalize": [
     {
       "input": [
@@ -251,6 +251,7 @@
         {"id":831,"matched":["鸡蛋"],"pantry":[],"missing":["米","猪肉"],"optional":[]},
         {"id":864,"matched":["鸡蛋"],"pantry":[],"missing":["青椒","猪肉"],"optional":[]},
         {"id":893,"matched":["鸡蛋"],"pantry":[],"missing":["莲藕","辣椒"],"optional":[]},
+        {"id":900,"matched":["鸡蛋"],"pantry":[],"missing":["莲藕","面粉"],"optional":[]},
         {"id":166,"matched":["鸡蛋"],"pantry":[],"missing":["香肠","鸡肉"],"optional":[]},
         {"id":94,"matched":["鸡蛋"],"pantry":[],"missing":["午餐肉","面包"],"optional":[]},
         {"id":223,"matched":["番茄"],"pantry":[],"missing":["面食","米"],"optional":[]},
@@ -476,6 +477,7 @@
         {"id":831,"matched":["鸡蛋"],"pantry":[],"missing":["米","猪肉"],"optional":[]},
         {"id":864,"matched":["鸡蛋"],"pantry":[],"missing":["青椒","猪肉"],"optional":[]},
         {"id":893,"matched":["鸡蛋"],"pantry":[],"missing":["莲藕","辣椒"],"optional":[]},
+        {"id":900,"matched":["鸡蛋"],"pantry":[],"missing":["莲藕","面粉"],"optional":[]},
         {"id":166,"matched":["鸡蛋"],"pantry":[],"missing":["香肠","鸡肉"],"optional":[]},
         {"id":94,"matched":["鸡蛋"],"pantry":[],"missing":["午餐肉","面包"],"optional":[]},
         {"id":223,"matched":["番茄"],"pantry":[],"missing":["面食","米"],"optional":[]},
@@ -1466,6 +1468,7 @@
         {"id":836,"matched":["猪肉"],"pantry":[],"missing":["豆角","面食"],"optional":[]},
         {"id":864,"matched":["猪肉"],"pantry":[],"missing":["青椒","鸡蛋"],"optional":[]},
         {"id":896,"matched":["猪肉"],"pantry":[],"missing":["莲藕","红枣"],"optional":[]},
+        {"id":903,"matched":["猪肉"],"pantry":[],"missing":["莲藕","辣椒"],"optional":[]},
         {"id":312,"matched":["猪肉"],"pantry":[],"missing":["土豆","洋葱"],"optional":[]},
         {"id":314,"matched":["猪肉"],"pantry":[],"missing":["胡萝卜","米"],"optional":[]},
         {"id":518,"matched":["猪肉"],"pantry":[],"missing":["白萝卜","虾"],"optional":[]},
