@@ -335,6 +335,8 @@ for (const [id, entry] of Object.entries(result.recipes)) {
     }
   }
 }
+// 888 原文备料写「油」，计算写「食用油」，补局部别名关联勾选项。
+result.recipes['888']!.quantities.find(q => q.name === '食用油')!.aliases.push('油')
 
 // 把未确定的关系明确阻断，不能因为提取了总量就把它错误地灌入单一步骤。
 for (const [id, entry] of Object.entries(result.recipes)) {
@@ -355,6 +357,8 @@ for (const [id, entry] of Object.entries(result.recipes)) {
 }
 // 番茄炒蛋的确定账本：保持既有盐余量验收；可选糖葱花只提示对应总量，不视为已消耗。
 result.recipes['250']!.blockedIngredients = []
+// 888 仅第 5 步加入 10-15 ml 食用油；后续「油温」「耗油」并非二次加油，解除误阻断以便随份数同步换算。
+result.recipes['888']!.blockedIngredients = result.recipes['888']!.blockedIngredients.filter(name => name !== '食用油')
 // 原文“分成两等份”的蒜末，数量与两处投料明确；葱白/葱绿不可按重量一分为二。
 function use(id: number, ingredient: string, kind: 'amount' | 'total' | 'remaining' | 'unknown' | 'reference', snippet: string, target?: string, formula?: AmountFormula, conditional = false) {
   const lines = sourceLines(source.recipes[id]!)

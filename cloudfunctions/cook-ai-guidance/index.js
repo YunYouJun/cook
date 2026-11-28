@@ -118,6 +118,26 @@ function validSnapshot(snapshot) {
   return true
 }
 
+function validCompatibleVersions(snapshot, compatibleVersions) {
+  if (!validSnapshot(snapshot) || !Array.isArray(compatibleVersions) || compatibleVersions.length > 4)
+    return false
+  const seen = new Set([`${snapshot.schemaVersion}:${snapshot.policyVersion}:${snapshot.dataVersion}`])
+  for (const entry of compatibleVersions) {
+    if (!knownKeys(entry, ['schemaVersion', 'policyVersion', 'dataVersion', 'excludeRecipeIDs'])
+      || entry.schemaVersion !== 1 || entry.policyVersion !== 1
+      || typeof entry.dataVersion !== 'string' || !/^[\w.-]{1,128}$/.test(entry.dataVersion)
+      || !Array.isArray(entry.excludeRecipeIDs)
+      || !entry.excludeRecipeIDs.every(id => typeof id === 'string' && /^(?:0|[1-9]\d*)$/.test(id))) {
+      return false
+    }
+    const key = `${entry.schemaVersion}:${entry.policyVersion}:${entry.dataVersion}`
+    if (seen.has(key))
+      return false
+    seen.add(key)
+  }
+  return true
+}
+
 function response(statusCode, value) {
   return {
     statusCode,
@@ -223,11 +243,21 @@ async function boundedJson(http, maximum, code) {
   }
 }
 
-function resolveContext(snapshot, body, snapshotReady = validSnapshot(snapshot)) {
-  if (!snapshotReady || body.schemaVersion !== snapshot.schemaVersion
-    || body.policyVersion !== snapshot.policyVersion || body.dataVersion !== snapshot.dataVersion) {
+function resolveContext(snapshot, body, snapshotReady = validSnapshot(snapshot), compatibleVersions = []) {
+  if (!snapshotReady)
     throw new GuidanceServiceError('VERSION_MISMATCH')
-  }
+  const matchesCurrent = body.schemaVersion === snapshot.schemaVersion
+    && body.policyVersion === snapshot.policyVersion
+    && body.dataVersion === snapshot.dataVersion
+  const compatible = matchesCurrent
+    ? null
+    : compatibleVersions.find(entry => entry.schemaVersion === body.schemaVersion
+      && entry.policyVersion === body.policyVersion
+      && entry.dataVersion === body.dataVersion)
+  if (!matchesCurrent && !compatible)
+    throw new GuidanceServiceError('VERSION_MISMATCH')
+  if (compatible?.excludeRecipeIDs.includes(String(body.recipeID)))
+    throw new GuidanceServiceError('SOURCE_NOT_FOUND')
   const recipe = snapshot.recipes[String(body.recipeID)]
   if (!recipe)
     throw new GuidanceServiceError('SOURCE_NOT_FOUND')
@@ -471,10 +501,11 @@ function createHandler({
   complete,
   config,
   snapshot,
+  compatibleVersions = [],
   now = Date.now,
   logFailure = () => {},
 }) {
-  const snapshotReady = validSnapshot(snapshot)
+  const snapshotReady = validSnapshot(snapshot) && validCompatibleVersions(snapshot, compatibleVersions)
   return async (event) => {
     try {
       const body = requestBody(event)
@@ -512,7 +543,7 @@ function createHandler({
       if (!ready)
         throw new GuidanceServiceError('GUIDANCE_NOT_DEPLOYED')
 
-      const context = resolveContext(snapshot, body, snapshotReady)
+      const context = resolveContext(snapshot, body, snapshotReady, compatibleVersions)
       await reserveQuota({ uid: identity.uid, now: currentTime })
       // Admission can take time; an expired membership never reaches the provider.
       if (membership.expireAt <= now())
@@ -579,6 +610,15 @@ function loadSources() {
   }
 }
 
+function loadCompatibleVersions() {
+  try {
+    return require('./compatible-versions.json')
+  }
+  catch {
+    return null
+  }
+}
+
 let defaultAppleVerifier
 function getDefaultAppleVerifier() {
   if (!defaultAppleVerifier)
@@ -589,11 +629,13 @@ function getDefaultAppleVerifier() {
 // Each deployed instance keeps one environment and source snapshot; both require a new deployment to change.
 const deploymentConfig = Object.freeze(readConfig())
 const deploymentSnapshot = loadSources()
+const deploymentCompatibleVersions = loadCompatibleVersions()
 const deploymentHandler = createHandler({
   ...createAdapters({ config: deploymentConfig }),
   verifyAppleJWS: (jws, options) => getDefaultAppleVerifier()(jws, options),
   config: deploymentConfig,
   snapshot: deploymentSnapshot,
+  compatibleVersions: deploymentCompatibleVersions,
   logFailure: (code, diagnostic) => console.warn('[cook-ai-guidance]', code, diagnostic),
   reserveQuota: async (input) => {
     const database = getDatabase()
@@ -621,6 +663,7 @@ exports._internal = {
   readConfig,
   requestBody,
   resolveContext,
+  validCompatibleVersions,
   validSnapshot,
   validateDraft,
 }

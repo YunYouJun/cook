@@ -41,6 +41,7 @@ const UNKNOWN_STUFF = /^[\u4E00-\u9FFF]{1,6}$/
 
 function createTerms(extraStuff: string[], extraTools: string[] = []): Map<string, Term> {
   const terms = new Map<string, Term>()
+  const extraSet = new Set(extraStuff)
   // 先放优先级低的，后放的同名词覆盖前面的
   for (const name of extraStuff)
     terms.set(name, { kind: 'stuff', value: STUFF_ALIASES[name] ?? name })
@@ -62,8 +63,11 @@ function createTerms(extraStuff: string[], extraTools: string[] = []): Map<strin
   for (const [alias, name] of Object.entries(rules.tools))
     terms.set(alias, { kind: 'tool', value: name })
   for (const kind of ['have', 'lack', 'avoid', 'noSpicy', 'ignore'] as const) {
-    for (const word of rules[kind])
+    for (const word of rules[kind]) {
+      if (kind === 'ignore' && extraSet.has(word))
+        continue
       terms.set(word, { kind })
+    }
   }
   for (const [level, words] of Object.entries(rules.difficulty)) {
     for (const word of words)

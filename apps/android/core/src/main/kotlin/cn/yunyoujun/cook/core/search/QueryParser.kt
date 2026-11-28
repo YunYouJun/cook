@@ -64,6 +64,7 @@ class CookQueryParser(
 
     init {
         val map = HashMap<String, Term>()
+        val extraSet = extraStuff.toSet()
         for (name in extraStuff) {
             map[name] = Term.Stuff(aliases[name] ?: name)
         }
@@ -94,7 +95,9 @@ class CookQueryParser(
         for (word in rules.lack) map[word] = Term.Lack
         for (word in rules.avoid) map[word] = Term.Avoid
         for (word in rules.noSpicy) map[word] = Term.NoSpicy
-        for (word in rules.ignore) map[word] = Term.Ignore
+        for (word in rules.ignore) {
+            if (word !in extraSet) map[word] = Term.Ignore
+        }
         for ((level, words) in rules.difficulty) {
             for (word in words) {
                 map[word] = Term.Difficulty(level)

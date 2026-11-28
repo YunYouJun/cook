@@ -19,7 +19,7 @@ test('deployed intent vocabulary matches the current public recipe bundle', asyn
 
 test('the distributed build 12 contract remains an immutable production snapshot', async () => {
   const retained = JSON.parse(await readFile(new URL('../cloudfunctions/cook-ai-intent/compatible-contracts.json', import.meta.url), 'utf8'))
-  assert.equal(retained.length, 2)
+  assert.equal(retained.length, 3)
   assert.equal(retained[0].dataVersion, 'faf919fc0041')
   // Verified against the downloaded production package and the archived build 12 data bundle.
   assert.equal(createHash('sha256').update(JSON.stringify(retained[0])).digest('hex'), '7f63acad75d3e4952bc80b82e319940532751e49c3e7a7c1d0ceeb1aa8378926')
@@ -27,6 +27,9 @@ test('the distributed build 12 contract remains an immutable production snapshot
   assert.equal(retained[1].dataVersion, '1878cc5772dc')
   assert.equal(createHash('sha256').update(JSON.stringify(retained[1])).digest('hex'), '089fcf62a50ea1c3ee882f73afe4762e46918afff1dde2714d3acf9ed195b952')
   assert.equal(retained[1].availableGoals.includes('weight-aware'), true)
+  assert.equal(retained[2].dataVersion, '353bc8dab0ea')
+  assert.equal(createHash('sha256').update(JSON.stringify(retained[2])).digest('hex'), '5f6a085b29b131fb039b84e9b8b9ec61ef42eae084e794b0be257c885aee5931')
+  assert.equal(retained[2].availableGoals.includes('weight-aware'), true)
 })
 
 test('the generated AI contract cannot offer a dietary goal with only nine passing records', async () => {

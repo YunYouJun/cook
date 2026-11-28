@@ -441,3 +441,46 @@ test('AppleJWS overseas subscriptions authenticate capabilities and step guidanc
   assert.equal(blocked.statusCode, 503)
   assert.deepEqual(JSON.parse(blocked.body), { ok: false, code: 'SERVICE_UNAVAILABLE' })
 })
+
+test('compatibleVersions serves unchanged recipes for distributed builds while excluding added recipes', async () => {
+  const { validCompatibleVersions } = guidanceModule._internal
+  const committedCompatible = require('../cloudfunctions/cook-ai-guidance/compatible-versions.json')
+  const committedSources = require('../cloudfunctions/cook-ai-guidance/sources.json')
+  assert.equal(validCompatibleVersions(committedSources, committedCompatible), true)
+  assert.equal(committedCompatible.some(entry => entry.dataVersion === '353bc8dab0ea' && entry.excludeRecipeIDs.includes('888')), true)
+
+  const multiSnapshot = {
+    ...SNAPSHOT,
+    recipes: {
+      ...SNAPSHOT.recipes,
+      888: {
+        sourceFingerprint: '6a668dfcf7f35f22',
+        name: '小炒藕丁',
+        ingredients: ['莲藕'],
+        steps: [{ id: '1|翻炒', text: '翻炒 2 分钟' }],
+      },
+    },
+  }
+  const { handler } = fixture({
+    snapshot: multiSnapshot,
+    compatibleVersions: [{ schemaVersion: 1, policyVersion: 1, dataVersion: '353bc8dab0ea', excludeRecipeIDs: ['888'] }],
+  })
+
+  const okRes = await handler(event(input({ dataVersion: '353bc8dab0ea' })))
+  assert.equal(okRes.statusCode, 200)
+  assert.equal(JSON.parse(okRes.body).guidance.dataVersion, '353bc8dab0ea')
+
+  await assertCode(handler, event(input({
+    dataVersion: '353bc8dab0ea',
+    recipeID: 888,
+    sourceFingerprint: '6a668dfcf7f35f22',
+    stepID: '1|翻炒',
+  })), 409, 'SOURCE_NOT_FOUND')
+
+  await assertCode(handler, event(input({ dataVersion: 'unknown-version' })), 409, 'VERSION_MISMATCH')
+
+  for (const invalidCompat of [null, [{ schemaVersion: 1, policyVersion: 1, dataVersion: SNAPSHOT.dataVersion, excludeRecipeIDs: [] }], [{ schemaVersion: 1, policyVersion: 1, dataVersion: 'bad', excludeRecipeIDs: ['not-an-id'] }]]) {
+    const broken = fixture({ snapshot: multiSnapshot, compatibleVersions: invalidCompat }).handler
+    await assertCode(broken, event(input()), 503, 'GUIDANCE_NOT_DEPLOYED')
+  }
+})

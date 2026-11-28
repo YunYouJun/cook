@@ -73479,7 +73479,9 @@
               "text": "每份："
             }
           ],
-          "aliases": [],
+          "aliases": [
+            "油"
+          ],
           "conditional": false
         }
       ],
@@ -73494,27 +73496,33 @@
           "ingredient": "食用油",
           "kind": "amount",
           "formula": {
-            "op": "literal",
-            "lower": 10,
-            "upper": 15,
-            "unit": "ml"
+            "op": "reference",
+            "name": "食用油"
           },
           "target": "10-15 ml 食用油",
-          "display": false,
+          "display": true,
           "conditional": false,
           "evidence": [
             {
               "block": 11,
               "item": 4,
               "text": "将锅中水倒掉后，将锅加热干燥，加入 10-15 ml 食用油"
+            },
+            {
+              "block": 9,
+              "item": 6,
+              "text": "食用油 10-15ml"
+            },
+            {
+              "block": 8,
+              "text": "每份："
             }
           ]
         }
       ],
       "blockedIngredients": [
         "小米辣",
-        "耗油",
-        "食用油"
+        "耗油"
       ],
       "servingDescription": "每次制作前需要确定计划做几份。一份正好够 2 个人吃。；每份："
     }
