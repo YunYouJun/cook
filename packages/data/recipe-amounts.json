@@ -73262,6 +73262,261 @@
         "姜"
       ],
       "servingDescription": "每次制作前需要确定计划做几份。这里一份够 1~2 个人吃。"
+    },
+    "888": {
+      "sourceFingerprint": "6a668dfcf7f35f22",
+      "servingEvidence": [
+        {
+          "block": 7,
+          "text": "每次制作前需要确定计划做几份。一份正好够 2 个人吃。"
+        },
+        {
+          "block": 8,
+          "text": "每份："
+        }
+      ],
+      "quantities": [
+        {
+          "name": "大葱",
+          "formula": {
+            "op": "multiply",
+            "args": [
+              {
+                "op": "literal",
+                "lower": 1,
+                "unit": "段"
+              },
+              {
+                "op": "servings"
+              }
+            ]
+          },
+          "evidence": [
+            {
+              "block": 9,
+              "item": 0,
+              "text": "大葱 1 段"
+            },
+            {
+              "block": 8,
+              "text": "每份："
+            }
+          ],
+          "aliases": [],
+          "conditional": false
+        },
+        {
+          "name": "小米辣",
+          "formula": {
+            "op": "multiply",
+            "args": [
+              {
+                "op": "literal",
+                "lower": 1,
+                "upper": 2,
+                "unit": "根"
+              },
+              {
+                "op": "servings"
+              }
+            ]
+          },
+          "evidence": [
+            {
+              "block": 9,
+              "item": 1,
+              "text": "小米辣 1-2 根 （看个人吃辣程度）"
+            },
+            {
+              "block": 8,
+              "text": "每份："
+            }
+          ],
+          "aliases": [],
+          "note": "看个人吃辣程度",
+          "conditional": false
+        },
+        {
+          "name": "莲藕",
+          "formula": {
+            "op": "multiply",
+            "args": [
+              {
+                "op": "literal",
+                "lower": 1,
+                "unit": "段"
+              },
+              {
+                "op": "servings"
+              }
+            ]
+          },
+          "evidence": [
+            {
+              "block": 9,
+              "item": 2,
+              "text": "莲藕 1 段"
+            },
+            {
+              "block": 8,
+              "text": "每份："
+            }
+          ],
+          "aliases": [],
+          "conditional": false
+        },
+        {
+          "name": "生抽",
+          "formula": {
+            "op": "multiply",
+            "args": [
+              {
+                "op": "literal",
+                "lower": 30,
+                "unit": "ml"
+              },
+              {
+                "op": "servings"
+              }
+            ]
+          },
+          "evidence": [
+            {
+              "block": 9,
+              "item": 3,
+              "text": "生抽 30 ml"
+            },
+            {
+              "block": 8,
+              "text": "每份："
+            }
+          ],
+          "aliases": [],
+          "conditional": false
+        },
+        {
+          "name": "老抽",
+          "formula": {
+            "op": "multiply",
+            "args": [
+              {
+                "op": "literal",
+                "lower": 15,
+                "unit": "ml"
+              },
+              {
+                "op": "servings"
+              }
+            ]
+          },
+          "evidence": [
+            {
+              "block": 9,
+              "item": 4,
+              "text": "老抽 15 ml"
+            },
+            {
+              "block": 8,
+              "text": "每份："
+            }
+          ],
+          "aliases": [],
+          "conditional": false
+        },
+        {
+          "name": "耗油",
+          "formula": {
+            "op": "multiply",
+            "args": [
+              {
+                "op": "literal",
+                "lower": 15,
+                "unit": "ml"
+              },
+              {
+                "op": "servings"
+              }
+            ]
+          },
+          "evidence": [
+            {
+              "block": 9,
+              "item": 5,
+              "text": "耗油 15 ml"
+            },
+            {
+              "block": 8,
+              "text": "每份："
+            }
+          ],
+          "aliases": [],
+          "conditional": false
+        },
+        {
+          "name": "食用油",
+          "formula": {
+            "op": "multiply",
+            "args": [
+              {
+                "op": "literal",
+                "lower": 10,
+                "upper": 15,
+                "unit": "ml"
+              },
+              {
+                "op": "servings"
+              }
+            ]
+          },
+          "evidence": [
+            {
+              "block": 9,
+              "item": 6,
+              "text": "食用油 10-15ml"
+            },
+            {
+              "block": 8,
+              "text": "每份："
+            }
+          ],
+          "aliases": [],
+          "conditional": false
+        }
+      ],
+      "stepSections": [],
+      "usages": [
+        {
+          "anchor": {
+            "block": 11,
+            "item": 4,
+            "text": "将锅中水倒掉后，将锅加热干燥，加入 10-15 ml 食用油"
+          },
+          "ingredient": "食用油",
+          "kind": "amount",
+          "formula": {
+            "op": "literal",
+            "lower": 10,
+            "upper": 15,
+            "unit": "ml"
+          },
+          "target": "10-15 ml 食用油",
+          "display": false,
+          "conditional": false,
+          "evidence": [
+            {
+              "block": 11,
+              "item": 4,
+              "text": "将锅中水倒掉后，将锅加热干燥，加入 10-15 ml 食用油"
+            }
+          ]
+        }
+      ],
+      "blockedIngredients": [
+        "小米辣",
+        "耗油",
+        "食用油"
+      ],
+      "servingDescription": "每次制作前需要确定计划做几份。一份正好够 2 个人吃。；每份："
     }
   }
 }

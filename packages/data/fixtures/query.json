@@ -400,6 +400,35 @@
         "difficulty": [],
         "methodGroups": []
       }
+    },
+    {
+      "input": "家里有藕和排骨，想喝汤",
+      "output": {
+        "stuff": [
+          "莲藕",
+          "猪肉"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": [
+          "汤羹"
+        ]
+      }
+    },
+    {
+      "input": "家里有藕粉，不要辣",
+      "output": {
+        "stuff": [],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": true,
+        "difficulty": [],
+        "methodGroups": []
+      }
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "description": "由 pnpm fixtures 生成，勿手改。Web（test/fixtures.test.ts）和 iOS（CookCore）都要和它一致。",
-  "recipeCount": 887,
+  "recipeCount": 897,
   "normalize": [
     {
       "input": [
@@ -250,6 +250,7 @@
         {"id":811,"matched":["鸡蛋"],"pantry":[],"missing":["米","香肠"],"optional":[]},
         {"id":831,"matched":["鸡蛋"],"pantry":[],"missing":["米","猪肉"],"optional":[]},
         {"id":864,"matched":["鸡蛋"],"pantry":[],"missing":["青椒","猪肉"],"optional":[]},
+        {"id":893,"matched":["鸡蛋"],"pantry":[],"missing":["莲藕","辣椒"],"optional":[]},
         {"id":166,"matched":["鸡蛋"],"pantry":[],"missing":["香肠","鸡肉"],"optional":[]},
         {"id":94,"matched":["鸡蛋"],"pantry":[],"missing":["午餐肉","面包"],"optional":[]},
         {"id":223,"matched":["番茄"],"pantry":[],"missing":["面食","米"],"optional":[]},
@@ -474,6 +475,7 @@
         {"id":811,"matched":["鸡蛋"],"pantry":[],"missing":["米","香肠"],"optional":[]},
         {"id":831,"matched":["鸡蛋"],"pantry":[],"missing":["米","猪肉"],"optional":[]},
         {"id":864,"matched":["鸡蛋"],"pantry":[],"missing":["青椒","猪肉"],"optional":[]},
+        {"id":893,"matched":["鸡蛋"],"pantry":[],"missing":["莲藕","辣椒"],"optional":[]},
         {"id":166,"matched":["鸡蛋"],"pantry":[],"missing":["香肠","鸡肉"],"optional":[]},
         {"id":94,"matched":["鸡蛋"],"pantry":[],"missing":["午餐肉","面包"],"optional":[]},
         {"id":223,"matched":["番茄"],"pantry":[],"missing":["面食","米"],"optional":[]},
@@ -557,6 +559,7 @@
         {"id":736,"matched":["土豆"],"pantry":[],"missing":["猪肉"],"optional":[]},
         {"id":739,"matched":["土豆"],"pantry":[],"missing":["猪肉"],"optional":[]},
         {"id":762,"matched":["土豆"],"pantry":[],"missing":["鸡肉"],"optional":[]},
+        {"id":897,"matched":["土豆"],"pantry":[],"missing":["莲藕"],"optional":[]},
         {"id":50,"matched":["土豆"],"pantry":[],"missing":["鸡肉"],"optional":[]},
         {"id":539,"matched":["土豆"],"pantry":[],"missing":["茄子"],"optional":[]},
         {"id":365,"matched":["土豆"],"pantry":[],"missing":["白菜"],"optional":[]},
@@ -1398,6 +1401,7 @@
         {"id":824,"matched":["猪肉"],"pantry":[],"missing":["面食"],"optional":[]},
         {"id":825,"matched":["猪肉"],"pantry":[],"missing":["面食"],"optional":[]},
         {"id":843,"matched":["白菜"],"pantry":[],"missing":["面食"],"optional":[]},
+        {"id":894,"matched":["猪肉"],"pantry":[],"missing":["莲藕"],"optional":[]},
         {"id":229,"matched":["菌菇"],"pantry":[],"missing":["鸡蛋"],"optional":[]},
         {"id":123,"matched":["菌菇"],"pantry":[],"missing":["虾"],"optional":[]},
         {"id":332,"matched":["猪肉"],"pantry":[],"missing":["莴笋"],"optional":[]},
@@ -1461,6 +1465,7 @@
         {"id":831,"matched":["猪肉"],"pantry":[],"missing":["米","鸡蛋"],"optional":[]},
         {"id":836,"matched":["猪肉"],"pantry":[],"missing":["豆角","面食"],"optional":[]},
         {"id":864,"matched":["猪肉"],"pantry":[],"missing":["青椒","鸡蛋"],"optional":[]},
+        {"id":896,"matched":["猪肉"],"pantry":[],"missing":["莲藕","红枣"],"optional":[]},
         {"id":312,"matched":["猪肉"],"pantry":[],"missing":["土豆","洋葱"],"optional":[]},
         {"id":314,"matched":["猪肉"],"pantry":[],"missing":["胡萝卜","米"],"optional":[]},
         {"id":518,"matched":["猪肉"],"pantry":[],"missing":["白萝卜","虾"],"optional":[]},
@@ -1536,6 +1541,7 @@
         {"id":178,"matched":["鸡肉"],"pantry":[],"missing":["洋葱"],"optional":[]},
         {"id":335,"matched":["土豆"],"pantry":[],"missing":["米"],"optional":[]},
         {"id":708,"matched":["土豆"],"pantry":[],"missing":["猪肉"],"optional":[]},
+        {"id":897,"matched":["土豆"],"pantry":[],"missing":["莲藕"],"optional":[]},
         {"id":539,"matched":["土豆"],"pantry":[],"missing":["茄子"],"optional":[]},
         {"id":54,"matched":["土豆"],"pantry":[],"missing":["鸡蛋"],"optional":[]},
         {"id":80,"matched":["土豆"],"pantry":[],"missing":["牛肉"],"optional":[]},

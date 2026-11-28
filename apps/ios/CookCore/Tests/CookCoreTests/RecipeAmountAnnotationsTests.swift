@@ -60,7 +60,7 @@ final class RecipeAmountAnnotationsTests: XCTestCase {
             }
         }
         XCTAssertEqual(count, library.count)
-        XCTAssertEqual(count, 232)
+        XCTAssertEqual(count, 233)
     }
 
     func testRealRecipeAdditionBatchRangeFloorAndRoundedDependency() throws {
