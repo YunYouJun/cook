@@ -89,7 +89,6 @@ public struct CookQueryParser: Sendable {
         self.food = food
         self.aliases = aliases
         var terms: [String: Term] = [:]
-        let extraSet = Set(extraStuff)
         // 先放优先级低的，后放的同名词覆盖前面的
         for name in extraStuff {
             terms[name] = .stuff(aliases[name] ?? name)
@@ -119,7 +118,7 @@ public struct CookQueryParser: Sendable {
         ]
         for (words, term) in kinds {
             for word in words {
-                if term == .ignore && extraSet.contains(word) { continue }
+                if term == .ignore, case .stuff = terms[word] { continue }
                 terms[word] = term
             }
         }

@@ -490,6 +490,20 @@
         "difficulty": [],
         "methodGroups": []
       }
+    },
+    {
+      "input": "不吃莲藕粉，但有莲藕",
+      "output": {
+        "stuff": [
+          "莲藕"
+        ],
+        "unknown": [],
+        "avoid": [],
+        "tool": null,
+        "noSpicy": false,
+        "difficulty": [],
+        "methodGroups": []
+      }
     }
   ]
 }

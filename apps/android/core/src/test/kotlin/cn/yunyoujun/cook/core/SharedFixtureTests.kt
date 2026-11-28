@@ -200,6 +200,17 @@ class SharedFixtureTests {
             }
             assertEquals("query ${testCase.input}", testCase.output, parser.parse(testCase.input))
         }
+
+        val catalogFood = data.food.copy(
+            staple = data.food.staple + cn.yunyoujun.cook.core.model.StuffItem(name = "藕粉", emoji = "🥣"),
+        )
+        val catalogParser = cn.yunyoujun.cook.core.search.CookQueryParser(data.query, catalogFood, data.aliases)
+        val haveQuery = catalogParser.parse("家里有藕粉，不要辣")
+        assertEquals(listOf("藕粉"), haveQuery.stuff)
+        assertTrue(haveQuery.noSpicy)
+        val avoidQuery = catalogParser.parse("不吃藕粉，但是有排骨")
+        assertEquals(listOf("猪肉"), avoidQuery.stuff)
+        assertEquals(listOf("藕粉"), avoidQuery.avoid)
     }
 
     @Test

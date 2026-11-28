@@ -17,6 +17,16 @@ final class PersonalCatalogTests: XCTestCase {
         let query = CookQueryParser(rules: data.query, food: food, aliases: data.aliases).parse("鹰嘴豆用塔吉锅")
         XCTAssertEqual(query.stuff, ["鹰嘴豆"])
         XCTAssertEqual(query.tool, "塔吉锅")
+
+        var ignoredNameCatalog = PersonalCatalog()
+        ignoredNameCatalog.items = [CatalogEntry(category: .staple, name: "藕粉")]
+        let ignoredNameParser = CookQueryParser(rules: data.query, food: ignoredNameCatalog.applying(to: data.food, includeHidden: true), aliases: data.aliases)
+        let haveQuery = ignoredNameParser.parse("家里有藕粉，不要辣")
+        XCTAssertEqual(haveQuery.stuff, ["藕粉"])
+        XCTAssertTrue(haveQuery.noSpicy)
+        let avoidQuery = ignoredNameParser.parse("不吃藕粉，但是有排骨")
+        XCTAssertEqual(avoidQuery.stuff, ["猪肉"])
+        XCTAssertEqual(avoidQuery.avoid, ["藕粉"])
         if let input = ProcessInfo.processInfo.environment["COOK_CATALOG_BRIDGE_INPUT"], let output = ProcessInfo.processInfo.environment["COOK_CATALOG_BRIDGE_OUTPUT"] {
             let fromWeb = try PersonalCatalog.parse(String(contentsOfFile: input))
             XCTAssertEqual(fromWeb, config)
